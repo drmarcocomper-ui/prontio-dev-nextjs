@@ -1,260 +1,217 @@
 /**
  * ============================================================
- * PRONTIO - API + AUTH (Apps Script WebApp) - AMBIENTE DEV
+ * PRONTIO - Api.gs (FASE 0 + atualização FASE 5 – AUTH)
  * ============================================================
- * Ajustes (sem quebrar compatibilidade):
- * - CORS (doOptions + headers)
- * - request_id no envelope
- * - parseRequestBody_ mais resiliente
- * - mantém roteamento "agenda" -> handleAgendaAction(action, payload)
+ * - doPost recebe JSON { action, payload }
+ * - gera requestId
+ * - cria ctx (timestamp, requestId, user se existir)
+ * - chama Registry para obter handler + metadados
+ * - aplica AUTH/ROLES via Auth.gs quando configurado no Registry
+ * - try/catch global e retorna JSON padrão
+ *
+ * Retorno padrão (novo):
+ * { success:boolean, data:any, errors:[{code,message,details?}], requestId }
+ *
+ * Compatibilidade (legado opcional):
+ * também inclui meta.request_id, meta.action, meta.api_version, meta.env
  */
 
-var PRONTIO_API_VERSION = '1.0.0-DEV';
-var PRONTIO_ENV = 'DEV';
+var PRONTIO_API_VERSION = typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV";
+var PRONTIO_ENV = typeof PRONTIO_ENV !== "undefined" ? PRONTIO_ENV : "DEV";
 
-var AUTH_ENFORCE = false;
-var AUTH_CACHE_PREFIX = "PRONTIO_AUTH_";
-var AUTH_TTL_SECONDS = 60 * 60 * 10;
+// CORS (DEV)
+var CORS_ALLOW_ORIGIN = typeof CORS_ALLOW_ORIGIN !== "undefined" ? CORS_ALLOW_ORIGIN : "*";
+var CORS_ALLOW_METHODS = typeof CORS_ALLOW_METHODS !== "undefined" ? CORS_ALLOW_METHODS : "GET,POST,OPTIONS";
+var CORS_ALLOW_HEADERS = typeof CORS_ALLOW_HEADERS !== "undefined" ? CORS_ALLOW_HEADERS : "Content-Type, Authorization";
 
-// ====== CORS ======
-var CORS_ALLOW_ORIGIN = "*";
-var CORS_ALLOW_METHODS = "GET,POST,OPTIONS";
-var CORS_ALLOW_HEADERS = "Content-Type, Authorization";
+// ======================
+// WebApp entrypoints
+// ======================
 
-// Preflight CORS
 function doOptions(e) {
-  return buildSuccessResponse_({ ok: true, preflight: true }, { request_id: makeRequestId_() });
-}
-
-function doPost(e) {
-  var reqId = makeRequestId_();
-
-  try {
-    var req = parseRequestBody_(e);
-
-    var action = req.action;
-    var payload = req.payload || {};
-
-    if (!action) {
-      throw { code: 'API_MISSING_ACTION', message: 'Campo "action" é obrigatório.' };
-    }
-
-    requireAuthIfEnabled_(action, payload);
-
-    var data = routeAction_(action, payload);
-
-    return buildSuccessResponse_(data, { request_id: reqId, action: action });
-  } catch (err) {
-    return buildErrorResponse_(err, { request_id: reqId });
-  }
+  var requestId = _makeRequestId_();
+  return _withCors_(
+    _jsonOutput_(Errors ? Errors.ok({ requestId: requestId, action: "OPTIONS" }, { ok: true, preflight: true }) : _ok_(requestId, { ok: true, preflight: true }, { action: "OPTIONS" }))
+  );
 }
 
 function doGet(e) {
-  var reqId = makeRequestId_();
-  return buildSuccessResponse_({
-    name: 'PRONTIO API',
+  var requestId = _makeRequestId_();
+  var data = {
+    name: "PRONTIO API",
     version: PRONTIO_API_VERSION,
     env: PRONTIO_ENV,
-    time: new Date()
-  }, { request_id: reqId });
+    time: new Date().toISOString()
+  };
+  return _withCors_(_jsonOutput_(_ok_(requestId, data, { action: "GET" })));
 }
 
-// ======================
-// Helpers
-// ======================
-function makeRequestId_() {
+function doPost(e) {
+  var requestId = _makeRequestId_();
+  var startedAt = new Date();
+
   try {
-    return Utilities.getUuid();
-  } catch (e) {
-    return String(new Date().getTime());
+    var req = _parseRequestBody_(e);
+    var action = String(req.action || "").trim();
+    var payload = req.payload || {};
+
+    if (!action) {
+      return _withCors_(_jsonOutput_(_err_(requestId, [
+        { code: "VALIDATION_ERROR", message: 'Campo "action" é obrigatório.', details: { field: "action" } }
+      ])));
+    }
+
+    var ctx = {
+      requestId: requestId,
+      timestamp: startedAt.toISOString(),
+      startedAtMs: startedAt.getTime(),
+      action: action,
+      env: PRONTIO_ENV,
+      apiVersion: PRONTIO_API_VERSION,
+      user: null
+    };
+
+    // Resolve user (se Auth.gs existir)
+    if (typeof Auth_getUserContext_ === "function") {
+      ctx.user = Auth_getUserContext_(payload);
+    } else {
+      // fallback dev: aceita payload.user sem enforcement
+      ctx.user = (payload && payload.user) ? payload.user : null;
+    }
+
+    // Registry (obrigatório)
+    var entry = Registry_getAction_(action);
+
+    if (!entry) {
+      // fallback legado opcional (mantém compatibilidade)
+      if (typeof routeAction_ === "function") {
+        var legacyData = routeAction_(action, payload);
+        var okLegacy = _ok_(requestId, legacyData, { action: action, legacy: true });
+        return _withCors_(_jsonOutput_(okLegacy));
+      }
+
+      return _withCors_(_jsonOutput_(_err_(requestId, [
+        { code: "NOT_FOUND", message: "Action não registrada.", details: { action: action } }
+      ], { action: action })));
+    }
+
+    // AUTH enforcement por action (FASE 5)
+    if (entry.requiresAuth) {
+      if (typeof Auth_requireAuth_ === "function" && typeof Errors !== "undefined") {
+        var authRes = Auth_requireAuth_(ctx, payload);
+        if (!authRes.success) return _withCors_(_jsonOutput_(authRes));
+      } else if (typeof requireAuthIfEnabled_ === "function") {
+        // fallback legado (se existir)
+        requireAuthIfEnabled_(action, payload);
+      } else {
+        return _withCors_(_jsonOutput_(_err_(requestId, [
+          { code: "INTERNAL_ERROR", message: "Auth requerido, mas Auth.gs não disponível.", details: { action: action } }
+        ], { action: action })));
+      }
+    }
+
+    // ROLES enforcement por action (FASE 5)
+    if (entry.roles && entry.roles.length) {
+      if (typeof Auth_requireRoles_ === "function" && typeof Errors !== "undefined") {
+        var roleRes = Auth_requireRoles_(ctx, entry.roles);
+        if (!roleRes.success) return _withCors_(_jsonOutput_(roleRes));
+      } else {
+        return _withCors_(_jsonOutput_(_err_(requestId, [
+          { code: "INTERNAL_ERROR", message: "Roles requeridas, mas Auth.gs/Errors.gs não disponível.", details: { action: action, roles: entry.roles } }
+        ], { action: action })));
+      }
+    }
+
+    // Validations (FASE 2) se estiverem configuradas no Registry
+    if (entry.validations && entry.validations.length && typeof Validators_run_ === "function") {
+      var vRes = Validators_run_(ctx, entry.validations, payload);
+      if (!vRes.success) return _withCors_(_jsonOutput_(vRes));
+    }
+
+    // Locks (FASE 1) se estiverem configurados no Registry
+    var data;
+    if (entry.requiresLock && typeof Locks_withLock_ === "function") {
+      data = Locks_withLock_(ctx, entry.lockKey || action, function () {
+        return entry.handler(ctx, payload);
+      });
+    } else {
+      data = entry.handler(ctx, payload);
+    }
+
+    var ok = _ok_(requestId, data, { action: action });
+    try {
+      if (typeof Audit_log_ === "function") {
+        Audit_log_(ctx, { outcome: "SUCCESS", durationMs: (new Date().getTime() - startedAt.getTime()) });
+      }
+    } catch (_) {}
+
+    return _withCors_(_jsonOutput_(ok));
+
+  } catch (err) {
+    // Normaliza erro no envelope padrão
+    var out;
+    if (typeof Errors !== "undefined" && Errors && typeof Errors.fromException === "function") {
+      out = Errors.fromException({ requestId: requestId, action: null }, err, "Erro interno.");
+      // garantir compatibilidade meta
+      if (!out.meta) out.meta = { request_id: requestId, api_version: PRONTIO_API_VERSION, env: PRONTIO_ENV };
+    } else {
+      out = _exceptionToErrorResponse_(requestId, err);
+    }
+
+    try {
+      if (typeof Audit_log_ === "function") {
+        Audit_log_({ requestId: requestId, action: null, env: PRONTIO_ENV, apiVersion: PRONTIO_API_VERSION }, { outcome: "ERROR", error: out.errors ? out.errors[0] : null });
+      }
+    } catch (_) {}
+
+    return _withCors_(_jsonOutput_(out));
   }
 }
 
-/**
- * Tenta ler JSON de:
- * - e.postData.contents (padrão)
- * - fallback: e.parameter (quando chamado como querystring)
- */
-function parseRequestBody_(e) {
-  // Caso não tenha corpo (ou esteja vazio), tenta fallback para e.parameter
+// ======================
+// Parsing + Response helpers
+// ======================
+
+function _makeRequestId_() {
+  try {
+    return Utilities.getUuid();
+  } catch (e) {
+    return "req_" + String(new Date().getTime());
+  }
+}
+
+function _parseRequestBody_(e) {
   if (!e || !e.postData || !e.postData.contents) {
-    // Fallback: permite POST/GET via querystring/parameter (útil em debug)
     if (e && e.parameter && (e.parameter.action || e.parameter.payload)) {
       var payloadObj = {};
       try {
         payloadObj = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
       } catch (err) {
-        throw { code: 'API_INVALID_JSON', message: 'payload inválido em e.parameter.payload', details: String(err) };
+        throw { code: "VALIDATION_ERROR", message: "payload inválido em e.parameter.payload", details: String(err) };
       }
-      return { action: e.parameter.action || '', payload: payloadObj || {} };
+      return { action: e.parameter.action || "", payload: payloadObj || {} };
     }
-
-    throw { code: 'API_EMPTY_BODY', message: 'Corpo da requisição vazio.' };
+    throw { code: "VALIDATION_ERROR", message: "Corpo da requisição vazio.", details: { reason: "EMPTY_BODY" } };
   }
 
-  var raw = String(e.postData.contents || '').trim();
-  if (!raw) throw { code: 'API_EMPTY_BODY', message: 'Corpo da requisição vazio.' };
+  var raw = String(e.postData.contents || "").trim();
+  if (!raw) throw { code: "VALIDATION_ERROR", message: "Corpo da requisição vazio.", details: { reason: "EMPTY_BODY" } };
 
   try {
     var json = JSON.parse(raw);
     return { action: json.action, payload: json.payload || {} };
   } catch (err) {
-    throw { code: 'API_INVALID_JSON', message: 'JSON inválido.', details: String(err) };
+    throw { code: "VALIDATION_ERROR", message: "JSON inválido.", details: String(err) };
   }
 }
 
-function routeAction_(action, payload) {
-  var prefix = action;
-  var idxUnd = action.indexOf('_');
-  var idxDot = action.indexOf('.');
-
-  var cut = -1;
-  if (idxUnd >= 0 && idxDot >= 0) cut = Math.min(idxUnd, idxDot);
-  else if (idxUnd >= 0) cut = idxUnd;
-  else if (idxDot >= 0) cut = idxDot;
-
-  if (cut >= 0) prefix = action.substring(0, cut);
-
-  var p = String(prefix || '').toLowerCase();
-
-  switch (p) {
-    case 'pacientes':
-      return handlePacientesAction(action, payload);
-    case 'agenda':
-      return handleAgendaAction(action, payload);
-    case 'agendaconfig':
-      return handleAgendaConfigAction(action, payload);
-    case 'evolucao':
-      return handleEvolucaoAction(action, payload);
-    case 'receita':
-      return handleReceitaAction(action, payload);
-    case 'prontuario':
-      return handleProntuarioAction(action, payload);
-    case 'laudos':
-      return handleLaudosAction(action, payload);
-    case 'docscabecalho':
-      return handleDocsCabecalhoAction(action, payload);
-    case 'config':
-      return handleConfigAction(action, payload);
-    case 'exames':
-      return handleExamesAction(action, payload);
-    case 'medicamentos':
-    case 'remedios':
-      return handleMedicamentosAction(action, payload);
-    case 'usuarios':
-      return handleUsuariosAction(action, payload);
-    case 'chat':
-      return handleChatAction(action, payload);
-    case 'auth':
-      return handleAuthAction(action, payload);
-  }
-
-  throw { code: 'API_UNKNOWN_ACTION', message: 'Ação desconhecida: ' + action };
+function _jsonOutput_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-/* AUTH (inalterado funcionalmente) */
-
-function handleAuthAction(action, payload) {
-  switch (action) {
-    case "Auth_Login":
-      return Auth_Login_(payload);
-    case "Auth_Me":
-      return Auth_Me_(payload);
-    case "Auth_Logout":
-      return Auth_Logout_(payload);
-    default:
-      throw { code: "AUTH_UNKNOWN_ACTION", message: "Ação Auth desconhecida: " + action };
-  }
-}
-
-function Auth_Login_(payload) {
-  payload = payload || {};
-  var login = (payload.login || "").trim();
-  var senha = (payload.senha || "");
-
-  if (!login || !senha) throw { code: "AUTH_MISSING", message: "Login e senha obrigatórios." };
-  if (typeof hashSenha_ !== "function") throw { code: "AUTH_HASH_MISSING", message: "hashSenha_ não encontrada." };
-
-  var sheet = SpreadsheetApp.getActive().getSheetByName("Usuarios");
-  if (!sheet) throw { code: "AUTH_SHEET", message: "Aba Usuarios não encontrada." };
-
-  var rows = sheet.getDataRange().getValues();
-  var header = rows[0];
-
-  var idx = {
-    id: header.indexOf("ID_Usuario"),
-    nome: header.indexOf("Nome"),
-    login: header.indexOf("Login"),
-    email: header.indexOf("Email"),
-    perfil: header.indexOf("Perfil"),
-    ativo: header.indexOf("Ativo"),
-    senhaHash: header.indexOf("SenhaHash"),
-    ultimoLogin: header.indexOf("UltimoLoginEm")
-  };
-
-  var senhaHash = hashSenha_(senha);
-
-  for (var i = 1; i < rows.length; i++) {
-    var r = rows[i];
-    if (String(r[idx.login]).toLowerCase() !== login.toLowerCase()) continue;
-
-    if (r[idx.ativo] !== true && r[idx.ativo] !== "TRUE") throw { code: "AUTH_INACTIVE", message: "Usuário inativo." };
-    if (String(r[idx.senhaHash]) !== senhaHash) throw { code: "AUTH_INVALID", message: "Credenciais inválidas." };
-
-    var user = {
-      id: r[idx.id],
-      nome: r[idx.nome],
-      login: r[idx.login],
-      email: r[idx.email],
-      perfil: r[idx.perfil] || "usuario"
-    };
-
-    var token = Utilities.getUuid();
-    CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(user), AUTH_TTL_SECONDS);
-
-    if (idx.ultimoLogin >= 0) sheet.getRange(i + 1, idx.ultimoLogin + 1).setValue(new Date());
-
-    return { token: token, user: user };
-  }
-
-  throw { code: "AUTH_INVALID", message: "Credenciais inválidas." };
-}
-
-function Auth_Me_(payload) {
-  payload = payload || {};
-  var token = (payload.token || "").trim();
-  var raw = CacheService.getScriptCache().get(AUTH_CACHE_PREFIX + token);
-  if (!raw) throw { code: "AUTH_EXPIRED", message: "Sessão expirada." };
-  return { user: JSON.parse(raw) };
-}
-
-function Auth_Logout_(payload) {
-  payload = payload || {};
-  var token = (payload.token || "").trim();
-  if (token) CacheService.getScriptCache().remove(AUTH_CACHE_PREFIX + token);
-  return { ok: true };
-}
-
-function requireAuthIfEnabled_(action, payload) {
-  if (!AUTH_ENFORCE) return;
-  if (String(action).toLowerCase().indexOf("auth_") === 0) return;
-
-  payload = payload || {};
-  var token = (payload.token || "").trim();
-  var raw = CacheService.getScriptCache().get(AUTH_CACHE_PREFIX + token);
-
-  if (!raw) {
-    throw { code: "AUTH_REQUIRED", message: "Login obrigatório." };
-  }
-}
-
-// ======================
-// Responses + CORS headers
-// ======================
-function withCors_(textOutput) {
-  // Apps Script WebApp não permite setar headers diretamente como Node,
-  // mas o ContentService expõe setHeader (WebApp V8 costuma aceitar).
-  // Se seu ambiente não aceitar, não quebra: apenas ignora.
+function _withCors_(textOutput) {
   try {
     textOutput.setHeader("Access-Control-Allow-Origin", CORS_ALLOW_ORIGIN);
     textOutput.setHeader("Access-Control-Allow-Methods", CORS_ALLOW_METHODS);
@@ -263,41 +220,52 @@ function withCors_(textOutput) {
   return textOutput;
 }
 
-function buildSuccessResponse_(data, meta) {
+function _ok_(requestId, data, meta) {
   meta = meta || {};
-  var out = ContentService.createTextOutput(JSON.stringify({
+  return {
     success: true,
-    data: data || null,
+    data: (data === undefined ? null : data),
     errors: [],
+    requestId: requestId,
     meta: {
-      request_id: meta.request_id || null,
+      request_id: requestId,
+      action: meta.action || null,
+      api_version: PRONTIO_API_VERSION,
+      env: PRONTIO_ENV,
+      legacy: meta.legacy === true
+    }
+  };
+}
+
+function _err_(requestId, errors, meta) {
+  meta = meta || {};
+  return {
+    success: false,
+    data: null,
+    errors: errors || [],
+    requestId: requestId,
+    meta: {
+      request_id: requestId,
       action: meta.action || null,
       api_version: PRONTIO_API_VERSION,
       env: PRONTIO_ENV
     }
-  })).setMimeType(ContentService.MimeType.JSON);
-
-  return withCors_(out);
+  };
 }
 
-function buildErrorResponse_(err, meta) {
-  meta = meta || {};
-  err = err || {};
+function _exceptionToErrorResponse_(requestId, err) {
+  var code = "INTERNAL_ERROR";
+  var message = "Erro interno.";
+  var details = null;
 
-  var out = ContentService.createTextOutput(JSON.stringify({
-    success: false,
-    data: null,
-    errors: [{
-      code: err.code || "UNKNOWN",
-      message: err.message || String(err),
-      details: err.details || null
-    }],
-    meta: {
-      request_id: meta.request_id || null,
-      api_version: PRONTIO_API_VERSION,
-      env: PRONTIO_ENV
-    }
-  })).setMimeType(ContentService.MimeType.JSON);
+  if (err && typeof err === "object") {
+    if (err.code) code = String(err.code);
+    if (err.message) message = String(err.message);
+    if (err.details !== undefined) details = err.details;
+    else if (err.stack) details = String(err.stack).slice(0, 4000);
+  } else if (err !== undefined) {
+    message = String(err);
+  }
 
-  return withCors_(out);
+  return _err_(requestId, [{ code: code, message: message, details: details }]);
 }

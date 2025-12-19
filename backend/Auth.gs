@@ -1,129 +1,158 @@
 /**
  * ============================================================
- * PRONTIO - Auth.gs
- * Autenticação real via aba "Usuarios"
- *
- * Colunas esperadas na aba "Usuarios":
- * ID_Usuario | Nome | Login | Email | Perfil | Ativo | SenhaHash | UltimoLoginEm | Created_At | Updated_At
+ * PRONTIO - Auth.gs (FASE 5)
  * ============================================================
+ * - Identificar usuário (inicialmente simples, via token no payload)
+ * - Roles (admin/medico/recepcao)
+ * - Integração com Registry (permissões por action)
+ *
+ * Regras:
+ * - Não depende de estrutura de Sheets (isso pode ser migrado depois).
+ * - Compatível com o auth legado (Auth_Login_ já existente) que grava no CacheService:
+ *     CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(user), TTL)
+ *
+ * Contrato:
+ * - Token vem em payload.token (por enquanto).
+ * - user.perfil (string) define role principal.
  */
 
-var AUTH_CACHE_PREFIX = "PRONTIO_AUTH_";
-var AUTH_TTL_SECONDS = 60 * 60 * 10; // 10 horas
+var AUTH_CACHE_PREFIX = typeof AUTH_CACHE_PREFIX !== "undefined" ? AUTH_CACHE_PREFIX : "PRONTIO_AUTH_";
+var AUTH_TTL_SECONDS = typeof AUTH_TTL_SECONDS !== "undefined" ? AUTH_TTL_SECONDS : (60 * 60 * 10);
 
-function handleAuthAction(action, payload) {
-  switch (action) {
-    case "Auth_Login":
-      return Auth_Login_(payload);
-    case "Auth_Me":
-      return Auth_Me_(payload);
-    case "Auth_Logout":
-      return Auth_Logout_(payload);
-    default:
-      throw {
-        code: "AUTH_UNKNOWN_ACTION",
-        message: "Ação de autenticação desconhecida: " + action,
-        details: { action: action }
-      };
-  }
-}
-
-function Auth_Login_(payload) {
-  payload = payload || {};
-
-  // compat: aceita login/senha OU usuario/senha (para não quebrar chamadas antigas)
-  var login = (payload.login || payload.usuario || "").toString().trim();
-  var senha = (payload.senha || "").toString();
-
-  if (!login || !senha) {
-    throw { code: "AUTH_MISSING_CREDENTIALS", message: "Informe login e senha.", details: null };
-  }
-
-  if (typeof hashSenha_ !== "function") {
-    throw { code: "AUTH_HASH_FN_MISSING", message: "Função hashSenha_ não encontrada (Usuarios.gs).", details: null };
-  }
-
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Usuarios");
-  if (!sheet) throw { code: "AUTH_SHEET_NOT_FOUND", message: 'Aba "Usuarios" não encontrada.', details: null };
-
-  var values = sheet.getDataRange().getValues();
-  if (values.length < 2) throw { code: "AUTH_NO_USERS", message: "Nenhum usuário cadastrado.", details: null };
-
-  var header = values[0].map(function (h) { return (h || "").toString().trim(); });
-
-  var idx = {
-  id: header.indexOf("ID_Usuario"),
-  nome: header.indexOf("NomeCompleto"),
-  login: header.indexOf("Login"),
-  email: header.indexOf("Email"),
-  perfil: header.indexOf("Perfil"),
-  ativo: header.indexOf("Ativo"),
-  senhaHash: header.indexOf("SenhaHash"),
-  ultimoLoginEm: header.indexOf("UltimoLoginEm")
+var AUTH_ROLES = {
+  admin: "admin",
+  medico: "medico",
+  recepcao: "recepcao"
 };
 
-
-  if (idx.login < 0 || idx.ativo < 0 || idx.senhaHash < 0) {
-    throw { code: "AUTH_BAD_SCHEMA", message: 'Cabeçalho da aba "Usuarios" incompleto.', details: idx };
-  }
-
-  var senhaHash = hashSenha_(senha);
-  var userRow = null;
-  var rowIndex = -1;
-
-  for (var i = 1; i < values.length; i++) {
-    var row = values[i];
-    var rowLogin = (row[idx.login] || "").toString().trim().toLowerCase();
-    if (rowLogin !== login.toLowerCase()) continue;
-
-    var ativo = row[idx.ativo] === true || row[idx.ativo] === "TRUE";
-    if (!ativo) throw { code: "AUTH_USER_INACTIVE", message: "Usuário inativo.", details: null };
-
-    var storedHash = (row[idx.senhaHash] || "").toString().trim();
-    if (!storedHash || storedHash !== senhaHash) {
-      throw { code: "AUTH_INVALID_CREDENTIALS", message: "Login ou senha inválidos.", details: null };
-    }
-
-    userRow = row;
-    rowIndex = i + 1; // 1-based no Sheets
-    break;
-  }
-
-  if (!userRow) throw { code: "AUTH_INVALID_CREDENTIALS", message: "Login ou senha inválidos.", details: null };
-
-  var user = {
-    id: idx.id >= 0 ? (userRow[idx.id] || "") : "",
-    nome: idx.nome >= 0 ? (userRow[idx.nome] || "") : "",
-    login: userRow[idx.login] || "",
-    email: idx.email >= 0 ? (userRow[idx.email] || "") : "",
-    perfil: idx.perfil >= 0 ? (userRow[idx.perfil] || "") : "usuario",
-    ativo: true
-  };
-
-  var token = Utilities.getUuid();
-  CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(user), AUTH_TTL_SECONDS);
-
-  if (idx.ultimoLoginEm >= 0 && rowIndex > 0) {
-    sheet.getRange(rowIndex, idx.ultimoLoginEm + 1).setValue(new Date());
-  }
-
-  return { token: token, user: user, expiresIn: AUTH_TTL_SECONDS };
-}
-
-function Auth_Me_(payload) {
+/**
+ * Retorna user context (ou null) a partir do payload.
+ * Preferência:
+ * 1) payload.user (se já veio resolvido por algum adapter)
+ * 2) payload.token => CacheService (legado)
+ */
+function Auth_getUserContext_(payload) {
   payload = payload || {};
-  var token = (payload.token || "").toString().trim();
-  if (!token) throw { code: "AUTH_NO_TOKEN", message: "Sem token.", details: null };
+
+  // 1) já veio usuário no payload (não confiar em produção; útil em DEV/testes)
+  if (payload.user && typeof payload.user === "object") {
+    return _authNormalizeUser_(payload.user);
+  }
+
+  // 2) token -> cache
+  var token = Auth_getTokenFromPayload_(payload);
+  if (!token) return null;
 
   var raw = CacheService.getScriptCache().get(AUTH_CACHE_PREFIX + token);
-  if (!raw) throw { code: "AUTH_TOKEN_EXPIRED", message: "Sessão expirada. Faça login novamente.", details: null };
+  if (!raw) return null;
 
-  return { user: JSON.parse(raw) };
+  try {
+    var user = JSON.parse(raw);
+    return _authNormalizeUser_(user);
+  } catch (e) {
+    return null;
+  }
 }
 
-function Auth_Logout_(payload) {
+/**
+ * Extrai token do payload (padrão atual do seu projeto).
+ */
+function Auth_getTokenFromPayload_(payload) {
   payload = payload || {};
   var token = (payload.token || "").toString().trim();
+  return token || null;
+}
+
+/**
+ * Enforce auth (retorna response padrão em caso de falha).
+ */
+function Auth_requireAuth_(ctx, payload) {
+  var user = Auth_getUserContext_(payload);
+  if (!user) {
+    return Errors.response(ctx, Errors.CODES.PERMISSION_DENIED, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
+  }
+  ctx.user = user;
+  return Errors.ok(ctx, { ok: true });
+}
+
+/**
+ * Enforce roles (ctx.user precisa existir).
+ * roles: array de strings (ex.: ["admin","medico"])
+ */
+function Auth_requireRoles_(ctx, roles) {
+  roles = roles || [];
+  if (!roles.length) return Errors.ok(ctx, { ok: true });
+
+  var user = ctx && ctx.user ? ctx.user : null;
+  if (!user) {
+    return Errors.response(ctx, Errors.CODES.PERMISSION_DENIED, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
+  }
+
+  var userRoles = Auth_rolesForUser_(user);
+  var allowed = roles.some(function (r) { return userRoles.indexOf(String(r)) >= 0; });
+
+  if (!allowed) {
+    return Errors.response(ctx, Errors.CODES.PERMISSION_DENIED, "Sem permissão para esta ação.", {
+      requiredRoles: roles,
+      userRoles: userRoles
+    });
+  }
+
+  return Errors.ok(ctx, { ok: true });
+}
+
+/**
+ * Retorna roles efetivas de um usuário.
+ * - Perfil principal em user.perfil (string)
+ * - admin inclui medico e recepcao por conveniência (ajustável)
+ */
+function Auth_rolesForUser_(user) {
+  user = user || {};
+  var perfil = (user.perfil || user.role || "").toString().trim().toLowerCase();
+
+  if (!perfil) return [];
+
+  if (perfil === AUTH_ROLES.admin) return [AUTH_ROLES.admin, AUTH_ROLES.medico, AUTH_ROLES.recepcao];
+  if (perfil === AUTH_ROLES.medico) return [AUTH_ROLES.medico];
+  if (perfil === AUTH_ROLES.recepcao) return [AUTH_ROLES.recepcao];
+
+  // fallback: aceita qualquer string como role única
+  return [perfil];
+}
+
+/**
+ * (Opcional) cria sessão (token) para um user, compatível com legado.
+ * Útil caso você queira migrar para Auth.gs no futuro sem depender de Auth_Login_ legado.
+ */
+function Auth_createSession_(user) {
+  user = _authNormalizeUser_(user || {});
+  var token = Utilities.getUuid();
+  CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(user), AUTH_TTL_SECONDS);
+  return { token: token, user: user };
+}
+
+/**
+ * (Opcional) encerra sessão.
+ */
+function Auth_destroySession_(token) {
+  token = (token || "").toString().trim();
   if (token) CacheService.getScriptCache().remove(AUTH_CACHE_PREFIX + token);
   return { ok: true };
+}
+
+// ======================
+// Internals
+// ======================
+
+function _authNormalizeUser_(user) {
+  if (!user || typeof user !== "object") return null;
+
+  // Mantém campos principais usados em audit/permissão
+  return {
+    id: user.id !== undefined ? user.id : (user.ID_Usuario || user.idUsuario || null),
+    nome: user.nome !== undefined ? user.nome : (user.Nome || null),
+    login: user.login !== undefined ? user.login : (user.Login || null),
+    email: user.email !== undefined ? user.email : (user.Email || null),
+    perfil: (user.perfil !== undefined ? user.perfil : (user.Perfil || user.role || "usuario"))
+  };
 }
