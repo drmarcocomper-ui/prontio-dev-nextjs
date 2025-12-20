@@ -139,6 +139,7 @@ function doPost(e) {
     }
 
     var ok = _ok_(requestId, data, { action: action });
+
     try {
       if (typeof Audit_log_ === "function") {
         Audit_log_(ctx, { outcome: "SUCCESS", durationMs: (new Date().getTime() - startedAt.getTime()) });
@@ -180,6 +181,10 @@ function _makeRequestId_() {
   }
 }
 
+/**
+ * IMPORTANTE: NÃO usar "throw { }".
+ * Mantém padrão: Error com code/details.
+ */
 function _parseRequestBody_(e) {
   if (!e || !e.postData || !e.postData.contents) {
     if (e && e.parameter && (e.parameter.action || e.parameter.payload)) {
@@ -187,22 +192,29 @@ function _parseRequestBody_(e) {
       try {
         payloadObj = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
       } catch (err) {
-        throw { code: "VALIDATION_ERROR", message: "payload inválido em e.parameter.payload", details: String(err) };
+        _apiThrow_("VALIDATION_ERROR", "payload inválido em e.parameter.payload", { error: String(err) });
       }
       return { action: e.parameter.action || "", payload: payloadObj || {} };
     }
-    throw { code: "VALIDATION_ERROR", message: "Corpo da requisição vazio.", details: { reason: "EMPTY_BODY" } };
+    _apiThrow_("VALIDATION_ERROR", "Corpo da requisição vazio.", { reason: "EMPTY_BODY" });
   }
 
   var raw = String(e.postData.contents || "").trim();
-  if (!raw) throw { code: "VALIDATION_ERROR", message: "Corpo da requisição vazio.", details: { reason: "EMPTY_BODY" } };
+  if (!raw) _apiThrow_("VALIDATION_ERROR", "Corpo da requisição vazio.", { reason: "EMPTY_BODY" });
 
   try {
     var json = JSON.parse(raw);
     return { action: json.action, payload: json.payload || {} };
   } catch (err) {
-    throw { code: "VALIDATION_ERROR", message: "JSON inválido.", details: String(err) };
+    _apiThrow_("VALIDATION_ERROR", "JSON inválido.", { error: String(err) });
   }
+}
+
+function _apiThrow_(code, message, details) {
+  var err = new Error(String(message || "Erro."));
+  err.code = String(code || "INTERNAL_ERROR");
+  err.details = (details === undefined ? null : details);
+  throw err;
 }
 
 function _jsonOutput_(obj) {

@@ -8,7 +8,10 @@
 var LOCK_TIMEOUT_MS = 30000;
 
 /**
- * Executa função protegida por lock
+ * Executa função protegida por lock.
+ * IMPORTANTE:
+ * - NÃO usar "throw { }" (padroniza com Error + code/details).
+ * - O "key" é usado apenas para diagnóstico (LockService é único no script).
  */
 function Locks_withLock_(ctx, key, fn) {
   var lock = LockService.getScriptLock();
@@ -18,11 +21,10 @@ function Locks_withLock_(ctx, key, fn) {
     lock.waitLock(LOCK_TIMEOUT_MS);
     return fn();
   } catch (e) {
-    throw {
-      code: "CONFLICT",
-      message: "Recurso em uso. Tente novamente.",
-      details: { lockKey: lockKey }
-    };
+    var err = new Error("Recurso em uso. Tente novamente.");
+    err.code = "CONFLICT";
+    err.details = { lockKey: lockKey };
+    throw err;
   } finally {
     try {
       lock.releaseLock();

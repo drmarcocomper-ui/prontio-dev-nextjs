@@ -113,7 +113,7 @@ function buildEvolucaoFromRow_(row) {
     idEvolucao: row[EV_COL.ID_Evolucao] || "",
     idPaciente: row[EV_COL.ID_Paciente] || "",
     idAgenda: row[EV_COL.ID_Agenda] || "",
-    dataEvolucao: row[EV_COL.DataHora] || "",        // data/hora da evolução
+    dataEvolucao: row[EV_COL.DataHora] || "",
     tipoEvolucao: row[EV_COL.Tipo] || "",
     texto: row[EV_COL.Texto] || "",
     profissional: row[EV_COL.Profissional] || "",
@@ -133,6 +133,16 @@ function hojeIsoData_() {
 }
 
 /**
+ * Helpers de leitura segura (ES5)
+ */
+function _evGetStr_(obj, key) {
+  if (!obj) return "";
+  var v = obj[key];
+  if (v === null || typeof v === "undefined") return "";
+  return String(v).trim();
+}
+
+/**
  * Criar ou atualizar evolução.
  *
  * compatCriar = true  → Evolucao.Criar  (sempre força nova evolução, data hoje)
@@ -140,18 +150,20 @@ function hojeIsoData_() {
  */
 function evolucaoSalvar_(payload, compatCriar) {
   var sheet = getEvolucaoSheet_();
+  payload = payload || {};
 
-  var idPaciente   = payload?.idPaciente?.trim() || "";
-  var texto        = payload?.texto?.trim() || "";
-  var tipoEvolucao = payload?.tipoEvolucao?.trim()
-                  || payload?.tipo?.trim()
-                  || "";
-  var profissional = payload?.profissional?.trim() || "";
-  var idEvolucao   = payload?.idEvolucao?.trim() || "";
-  var dataEvolucao = payload?.dataEvolucao?.trim() || "";
-  var idAgenda     = payload?.idAgenda?.trim()
-                  || payload?.ID_Agenda?.trim()
-                  || "";
+  var idPaciente   = _evGetStr_(payload, "idPaciente");
+  var texto        = _evGetStr_(payload, "texto");
+
+  var tipoEvolucao = _evGetStr_(payload, "tipoEvolucao");
+  if (!tipoEvolucao) tipoEvolucao = _evGetStr_(payload, "tipo");
+
+  var profissional = _evGetStr_(payload, "profissional");
+  var idEvolucao   = _evGetStr_(payload, "idEvolucao");
+  var dataEvolucao = _evGetStr_(payload, "dataEvolucao");
+
+  var idAgenda     = _evGetStr_(payload, "idAgenda");
+  if (!idAgenda) idAgenda = _evGetStr_(payload, "ID_Agenda");
 
   if (!idPaciente)
     return createApiResponse_(false, null, ["idPaciente é obrigatório."]);
@@ -245,7 +257,8 @@ function evolucaoSalvar_(payload, compatCriar) {
  * Inativar evolução (soft delete)
  */
 function evolucaoInativar_(payload) {
-  var idEvolucao = payload?.idEvolucao?.trim() || "";
+  payload = payload || {};
+  var idEvolucao = _evGetStr_(payload, "idEvolucao");
 
   if (!idEvolucao)
     return createApiResponse_(false, null, ["idEvolucao é obrigatório."]);
@@ -281,7 +294,8 @@ function evolucaoInativar_(payload) {
  * Listar evoluções ativas de um paciente.
  */
 function evolucaoListarPorPaciente_(payload) {
-  var idPaciente = payload?.idPaciente?.trim() || "";
+  payload = payload || {};
+  var idPaciente = _evGetStr_(payload, "idPaciente");
 
   if (!idPaciente)
     return createApiResponse_(false, null, ["idPaciente é obrigatório."]);
@@ -317,7 +331,8 @@ function evolucaoListarPorPaciente_(payload) {
  * Lista evoluções ativas ligadas a um ID_Agenda.
  */
 function evolucaoListarPorAgenda_(payload) {
-  var idAgenda = payload?.idAgenda?.trim() || "";
+  payload = payload || {};
+  var idAgenda = _evGetStr_(payload, "idAgenda");
 
   if (!idAgenda)
     return createApiResponse_(false, null, ["idAgenda é obrigatório."]);
@@ -334,10 +349,7 @@ function evolucaoListarPorAgenda_(payload) {
   for (var i = 0; i < dados.length; i++) {
     var evoObj = buildEvolucaoFromRow_(dados[i]);
 
-    if (
-      String(evoObj.idAgenda || "") === idAgenda &&
-      evoObj.ativo
-    ) {
+    if (String(evoObj.idAgenda || "") === idAgenda && evoObj.ativo) {
       evolucoes.push(evoObj);
     }
   }
@@ -355,14 +367,7 @@ function evolucaoListarPorAgenda_(payload) {
 }
 
 /**
- * Lista apenas as N últimas evoluções ativas de um paciente,
- * reaproveitando a lógica de evolucaoListarPorPaciente_.
- *
- * payload:
- *   {
- *     idPaciente: "ID",
- *     limite: 5   // opcional, 5 por padrão
- *   }
+ * Lista apenas as N últimas evoluções ativas de um paciente.
  */
 function evolucaoListarRecentesPorPaciente_(payload) {
   var limite = (payload && payload.limite) || 5;

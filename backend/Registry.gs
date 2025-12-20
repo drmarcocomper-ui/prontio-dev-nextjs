@@ -1,12 +1,10 @@
 /**
  * ============================================================
- * PRONTIO - Registry.gs (FASE 0 + FASE 4 + atualização FASE 6)
+ * PRONTIO - Registry.gs
  * ============================================================
- * Catálogo central de actions:
- * - Meta.Ping
- * - Meta.ListActions
- * - Meta.DbStatus
- * - Meta.HealthCheck
+ * Catálogo central de actions.
+ * IMPORTANTE: sem cache em memória para evitar "container quente"
+ * reusar catálogo antigo entre execuções.
  */
 
 function Registry_getAction_(action) {
@@ -31,13 +29,13 @@ function Registry_listActions_() {
 }
 
 function Registry_catalog_() {
-  if (Registry_catalog_._cache) return Registry_catalog_._cache;
-
+  // 🚫 SEM CACHE: evita ficar preso em versão antiga do catálogo.
   var catalog = {};
 
-  // =========
-  // Meta
-  // =========
+  // ============================================================
+  // META
+  // ============================================================
+
   catalog["Meta.Ping"] = {
     handler: Meta_Ping_,
     requiresAuth: false,
@@ -58,7 +56,7 @@ function Registry_catalog_() {
 
   catalog["Meta.DbStatus"] = {
     handler: Meta_DbStatus_,
-    requiresAuth: false, // pode virar true quando quiser
+    requiresAuth: false,
     roles: [],
     requiresLock: false,
     idempotent: true,
@@ -67,43 +65,95 @@ function Registry_catalog_() {
 
   catalog["Meta.HealthCheck"] = {
     handler: Meta_HealthCheck_,
-    requiresAuth: false, // pode virar true quando quiser
+    requiresAuth: false,
     roles: [],
     requiresLock: false,
     idempotent: true,
     validations: []
   };
 
-  // =========
-  // Adapters opcionais para legado (se existir handleXAction no projeto)
-  // =========
-  _tryRegisterLegacyAdapter_(catalog, "Agenda", "agenda", "handleAgendaAction");
-  _tryRegisterLegacyAdapter_(catalog, "Pacientes", "pacientes", "handlePacientesAction");
-  _tryRegisterLegacyAdapter_(catalog, "Evolucao", "evolucao", "handleEvolucaoAction");
-  _tryRegisterLegacyAdapter_(catalog, "Receita", "receita", "handleReceitaAction");
-  _tryRegisterLegacyAdapter_(catalog, "Config", "config", "handleConfigAction");
-  _tryRegisterLegacyAdapter_(catalog, "Usuarios", "usuarios", "handleUsuariosAction");
-  _tryRegisterLegacyAdapter_(catalog, "Laudos", "laudos", "handleLaudosAction");
-  _tryRegisterLegacyAdapter_(catalog, "Exames", "exames", "handleExamesAction");
-  _tryRegisterLegacyAdapter_(catalog, "Auth", "auth", "handleAuthAction");
-  _tryRegisterLegacyAdapter_(catalog, "Prontuario", "prontuario", "handleProntuarioAction");
+  catalog["Meta.BootstrapDb"] = {
+    handler: Meta_BootstrapDb_,
+    requiresAuth: false,
+    roles: [],
+    requiresLock: true,
+    idempotent: false,
+    validations: []
+  };
 
-  Registry_catalog_._cache = catalog;
+  // ============================================================
+  // AGENDA (DEV - SEM AUTH)
+  // ============================================================
+
+  catalog["Agenda.ListarPorPeriodo"] = {
+    handler: Agenda_Action_ListarPorPeriodo_,
+    requiresAuth: false, // 🔓 DEV
+    roles: [],
+    requiresLock: false,
+    idempotent: true,
+    validations: [
+      { field: "inicio", rule: "required" },
+      { field: "fim", rule: "required" },
+      { field: "inicio", rule: "date" },
+      { field: "fim", rule: "date" }
+    ]
+  };
+
+  catalog["Agenda.Criar"] = {
+    handler: Agenda_Action_Criar_,
+    requiresAuth: false, // 🔓 DEV
+    roles: [],
+    requiresLock: true,
+    idempotent: false,
+    validations: []
+  };
+
+  catalog["Agenda.Atualizar"] = {
+    handler: Agenda_Action_Atualizar_,
+    requiresAuth: false, // 🔓 DEV
+    roles: [],
+    requiresLock: true,
+    idempotent: false,
+    validations: [
+      { field: "idAgenda", rule: "required" }
+    ]
+  };
+
+  catalog["Agenda.Cancelar"] = {
+    handler: Agenda_Action_Cancelar_,
+    requiresAuth: false, // 🔓 DEV
+    roles: [],
+    requiresLock: true,
+    idempotent: false,
+    validations: [
+      { field: "idAgenda", rule: "required" }
+    ]
+  };
+
+  // ============================================================
+  // LEGACY ROUTERS (mantidos)
+  // ============================================================
+
+  _tryRegisterLegacyAdapter_(catalog, "Evolucao", "handleEvolucaoAction");
+  _tryRegisterLegacyAdapter_(catalog, "Receita", "handleReceitaAction");
+  _tryRegisterLegacyAdapter_(catalog, "Prontuario", "handleProntuarioAction");
+  _tryRegisterLegacyAdapter_(catalog, "Exames", "handleExamesAction");
+
   return catalog;
 }
 
-// ======================
-// Meta handlers
-// ======================
+// ============================================================
+// META handlers
+// ============================================================
 
 function Meta_Ping_(ctx, payload) {
   return {
     ok: true,
     api: "PRONTIO",
-    version: ctx.apiVersion || null,
-    env: ctx.env || null,
+    version: (ctx && ctx.apiVersion) ? ctx.apiVersion : (typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : null),
+    env: (ctx && ctx.env) ? ctx.env : (typeof PRONTIO_ENV !== "undefined" ? PRONTIO_ENV : null),
     time: new Date().toISOString(),
-    requestId: ctx.requestId
+    requestId: ctx ? ctx.requestId : null
   };
 }
 
@@ -112,33 +162,48 @@ function Meta_ListActions_(ctx, payload) {
   return {
     actions: list,
     count: list.length,
-    requestId: ctx.requestId
+    requestId: ctx ? ctx.requestId : null
   };
 }
 
 function Meta_DbStatus_(ctx, payload) {
   if (typeof Migrations_getDbStatus_ !== "function") {
-    return { ok: false, error: "Migrations_getDbStatus_ não encontrado.", requestId: ctx.requestId };
+    return { ok: false, error: "Migrations_getDbStatus_ não encontrado.", requestId: ctx ? ctx.requestId : null };
   }
-  return { requestId: ctx.requestId, status: Migrations_getDbStatus_() };
+  return { requestId: ctx ? ctx.requestId : null, status: Migrations_getDbStatus_() };
+}
+
+function Meta_BootstrapDb_(ctx, payload) {
+  if (typeof Migrations_bootstrap_ !== "function") {
+    return {
+      ok: false,
+      error: "Migrations_bootstrap_ não encontrado. Verifique se Migrations.gs está no projeto.",
+      requestId: ctx ? ctx.requestId : null
+    };
+  }
+  var result = Migrations_bootstrap_();
+  return { ok: true, requestId: ctx ? ctx.requestId : null, result: result };
 }
 
 // Meta_HealthCheck_ está em Health.gs
 
-// ======================
+// ============================================================
 // Legacy adapter support
-// ======================
+// ============================================================
 
-function _tryRegisterLegacyAdapter_(catalog, prefixTitle, prefixKeyLower, handlerFnName) {
+function _tryRegisterLegacyAdapter_(catalog, prefixTitle, handlerFnName) {
   try {
-    if (typeof this[handlerFnName] !== "function") return;
+    // Captura referência de função no escopo global do script.
+    // Evita depender de "this" (pode variar conforme chamada no Apps Script).
+    var fn = (typeof globalThis !== "undefined" && globalThis[handlerFnName]) ? globalThis[handlerFnName] : this[handlerFnName];
+    if (typeof fn !== "function") return;
 
     var actionName = prefixTitle + "._LegacyRouter";
 
     catalog[actionName] = {
       handler: function (ctx, payload) {
         var action = ctx && ctx.action ? ctx.action : actionName;
-        return this[handlerFnName](action, payload);
+        return fn(action, payload);
       },
       requiresAuth: false,
       roles: [],
