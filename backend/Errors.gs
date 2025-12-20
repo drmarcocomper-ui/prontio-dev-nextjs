@@ -14,7 +14,11 @@ var Errors = (function () {
     NOT_FOUND: "NOT_FOUND",
     CONFLICT: "CONFLICT",
     PERMISSION_DENIED: "PERMISSION_DENIED",
-    INTERNAL_ERROR: "INTERNAL_ERROR"
+    INTERNAL_ERROR: "INTERNAL_ERROR",
+
+    // ✅ NOVOS (não quebram legado; só padronizam AUTH)
+    AUTH_REQUIRED: "AUTH_REQUIRED",
+    AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS"
   };
 
   function make(code, message, details) {

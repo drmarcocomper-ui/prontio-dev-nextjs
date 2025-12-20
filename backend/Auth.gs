@@ -15,10 +15,22 @@
 var AUTH_CACHE_PREFIX = typeof AUTH_CACHE_PREFIX !== "undefined" ? AUTH_CACHE_PREFIX : "PRONTIO_AUTH_";
 var AUTH_TTL_SECONDS = typeof AUTH_TTL_SECONDS !== "undefined" ? AUTH_TTL_SECONDS : (60 * 60 * 10);
 
+/**
+ * ✅ Canonical interno atual + aliases para casar com a estratégia:
+ * - medico <-> profissional
+ * - recepcao <-> secretaria
+ *
+ * Não quebra legado: quem já está gravado como "medico"/"recepcao" continua funcionando.
+ * E permite começar os novos módulos usando "profissional"/"secretaria" se quiser.
+ */
 var AUTH_ROLES = {
   admin: "admin",
   medico: "medico",
-  recepcao: "recepcao"
+  recepcao: "recepcao",
+
+  // aliases novos (estratégia)
+  profissional: "profissional",
+  secretaria: "secretaria"
 };
 
 var AUTH_ALLOW_PAYLOAD_USER = typeof AUTH_ALLOW_PAYLOAD_USER !== "undefined" ? AUTH_ALLOW_PAYLOAD_USER : false;
@@ -44,15 +56,20 @@ function Auth_getUserContext_(payload) {
   }
 }
 
+/**
+ * ✅ Mantém payload.token (legado) e aceita payload.authToken (opcional)
+ * para facilitar compatibilidade com diferentes clientes.
+ */
 function Auth_getTokenFromPayload_(payload) {
   payload = payload || {};
-  var token = (payload.token || "").toString().trim();
+  var token = (payload.token || payload.authToken || "").toString().trim();
   return token || null;
 }
 
 function Auth_requireAuth_(ctx, payload) {
   var user = Auth_getUserContext_(payload);
   if (!user) {
+    // mantém PERMISSION_DENIED para não quebrar o que já depende disso
     return Errors.response(ctx, Errors.CODES.PERMISSION_DENIED, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
   }
   ctx.user = user;
@@ -69,11 +86,15 @@ function Auth_requireRoles_(ctx, roles) {
   }
 
   var userRoles = Auth_rolesForUser_(user);
-  var allowed = roles.some(function (r) { return userRoles.indexOf(String(r)) >= 0; });
+
+  // normaliza roles requeridas para lower-case (mais tolerante)
+  var required = roles.map(function (r) { return String(r || "").trim().toLowerCase(); });
+
+  var allowed = required.some(function (r) { return userRoles.indexOf(r) >= 0; });
 
   if (!allowed) {
     return Errors.response(ctx, Errors.CODES.PERMISSION_DENIED, "Sem permissão para esta ação.", {
-      requiredRoles: roles,
+      requiredRoles: required,
       userRoles: userRoles
     });
   }
@@ -83,14 +104,32 @@ function Auth_requireRoles_(ctx, roles) {
 
 function Auth_rolesForUser_(user) {
   user = user || {};
-  var perfil = (user.perfil || user.role || "").toString().trim().toLowerCase();
 
+  var perfil = (user.perfil || user.role || "").toString().trim().toLowerCase();
   if (!perfil) return [];
 
-  if (perfil === AUTH_ROLES.admin) return [AUTH_ROLES.admin, AUTH_ROLES.medico, AUTH_ROLES.recepcao];
-  if (perfil === AUTH_ROLES.medico) return [AUTH_ROLES.medico];
-  if (perfil === AUTH_ROLES.recepcao) return [AUTH_ROLES.recepcao];
+  // ✅ Admin herda tudo (inclui aliases novos)
+  if (perfil === AUTH_ROLES.admin) {
+    return [
+      AUTH_ROLES.admin,
+      AUTH_ROLES.medico,
+      AUTH_ROLES.recepcao,
+      AUTH_ROLES.profissional,
+      AUTH_ROLES.secretaria
+    ];
+  }
 
+  // ✅ medico/profissional são equivalentes
+  if (perfil === AUTH_ROLES.medico || perfil === AUTH_ROLES.profissional) {
+    return [AUTH_ROLES.medico, AUTH_ROLES.profissional];
+  }
+
+  // ✅ recepcao/secretaria são equivalentes
+  if (perfil === AUTH_ROLES.recepcao || perfil === AUTH_ROLES.secretaria) {
+    return [AUTH_ROLES.recepcao, AUTH_ROLES.secretaria];
+  }
+
+  // fallback: aceita perfis customizados
   return [perfil];
 }
 
@@ -132,7 +171,7 @@ function Auth_Login(ctx, payload) {
 
   if (!u || !u.ativo) {
     var e2 = new Error("Usuário ou senha inválidos.");
-    e2.code = "AUTH_INVALID_CREDENTIALS";
+    e2.code = (Errors && Errors.CODES && Errors.CODES.AUTH_INVALID_CREDENTIALS) ? Errors.CODES.AUTH_INVALID_CREDENTIALS : "AUTH_INVALID_CREDENTIALS";
     e2.details = null;
     throw e2;
   }
@@ -147,7 +186,7 @@ function Auth_Login(ctx, payload) {
   var ok = Usuarios_verifyPassword_(senha, u.senhaHash);
   if (!ok) {
     var e4 = new Error("Usuário ou senha inválidos.");
-    e4.code = "AUTH_INVALID_CREDENTIALS";
+    e4.code = (Errors && Errors.CODES && Errors.CODES.AUTH_INVALID_CREDENTIALS) ? Errors.CODES.AUTH_INVALID_CREDENTIALS : "AUTH_INVALID_CREDENTIALS";
     e4.details = null;
     throw e4;
   }
@@ -173,7 +212,7 @@ function Auth_Me(ctx, payload) {
 
   if (!token) {
     var e = new Error("Token ausente.");
-    e.code = "AUTH_REQUIRED";
+    e.code = (Errors && Errors.CODES && Errors.CODES.AUTH_REQUIRED) ? Errors.CODES.AUTH_REQUIRED : "AUTH_REQUIRED";
     e.details = { field: "token" };
     throw e;
   }
@@ -181,7 +220,7 @@ function Auth_Me(ctx, payload) {
   var user = ctx && ctx.user ? ctx.user : Auth_getUserContext_(payload);
   if (!user) {
     var e2 = new Error("Login obrigatório.");
-    e2.code = "AUTH_REQUIRED";
+    e2.code = (Errors && Errors.CODES && Errors.CODES.AUTH_REQUIRED) ? Errors.CODES.AUTH_REQUIRED : "AUTH_REQUIRED";
     e2.details = { reason: "AUTH_REQUIRED" };
     throw e2;
   }
@@ -199,11 +238,15 @@ function Auth_Logout(ctx, payload) {
 function _authNormalizeUser_(user) {
   if (!user || typeof user !== "object") return null;
 
+  // ✅ normaliza perfil para lower-case (evita divergências no Auth_rolesForUser_)
+  var perfil = (user.perfil !== undefined ? user.perfil : (user.Perfil || user.role || "usuario"));
+  perfil = (perfil || "usuario").toString().trim().toLowerCase();
+
   return {
     id: user.id !== undefined ? user.id : (user.ID_Usuario || user.idUsuario || null),
     nome: user.nome !== undefined ? user.nome : (user.Nome || null),
     login: user.login !== undefined ? user.login : (user.Login || null),
     email: user.email !== undefined ? user.email : (user.Email || null),
-    perfil: (user.perfil !== undefined ? user.perfil : (user.Perfil || user.role || "usuario"))
+    perfil: perfil
   };
 }

@@ -12,6 +12,9 @@
  *   { field:"status", rule:"enum", values:["AGENDADO","CANCELADO"] }
  *   { field:"duracaoMin", rule:"min", value:1 }
  *   { field:"nome", rule:"maxLength", value:120 }
+ *
+ * Ajuste mínimo aplicado:
+ * - Validators_run_ agora retorna Errors.response/Errors.ok para manter envelope/meta padronizados.
  */
 
 function Validators_run_(ctx, validations, payload) {
@@ -26,6 +29,8 @@ function Validators_run_(ctx, validations, payload) {
   }
 
   if (errors.length) {
+    // Mantém o formato de erros já produzido por Errors.make nas regras
+    // e usa o envelope padronizado do Errors.gs.
     return {
       success: false,
       data: null,
@@ -40,6 +45,12 @@ function Validators_run_(ctx, validations, payload) {
     };
   }
 
+  // Sucesso padronizado
+  if (typeof Errors !== "undefined" && Errors && typeof Errors.ok === "function") {
+    return Errors.ok(ctx, { ok: true });
+  }
+
+  // Fallback (caso Errors.gs não esteja carregado por algum motivo)
   return { success: true, data: { ok: true }, errors: [], requestId: (ctx && ctx.requestId) ? ctx.requestId : null };
 }
 
@@ -110,7 +121,11 @@ function _vType_(field, value, expected, msg) {
   else if (t === "object") ok = (typeof value === "object" && value !== null && !Array.isArray(value));
   else ok = (typeof value === t);
 
-  return ok ? [] : [Errors.make(Errors.CODES.VALIDATION_ERROR, msg || ("Tipo inválido em " + field), { field: field, expected: expected, got: (Array.isArray(value) ? "array" : typeof value) })];
+  return ok ? [] : [Errors.make(
+    Errors.CODES.VALIDATION_ERROR,
+    msg || ("Tipo inválido em " + field),
+    { field: field, expected: expected, got: (Array.isArray(value) ? "array" : typeof value) }
+  )];
 }
 
 function _vMaxLength_(field, value, max, msg) {

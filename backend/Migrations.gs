@@ -12,14 +12,32 @@
  * - Usa PRONTIO_getDb_() (Utils.gs) para selecionar DEV/PROD.
  */
 
-var MIGRATIONS_LATEST_VERSION = 1;
+var MIGRATIONS_LATEST_VERSION = 2;
 
 var MIGRATIONS_META_SHEET = "__meta";
 var MIGRATIONS_META_HEADERS = ["key", "value", "updatedAt"];
 
+/**
+ * ============================================================
+ * MIGRATIONS_SHEETS
+ * ============================================================
+ * IMPORTANTE:
+ * - Estes nomes/campos são internos do backend.
+ * - Ajuste de headers aqui NÃO quebra o front.
+ * - Pode impactar módulos que leem planilha direto (ex.: Usuarios.gs legado).
+ *
+ * Estratégia:
+ * - Manter abas legadas (Agenda, Pacientes, Evolucao) intactas.
+ * - Adicionar novas abas para os 4 módulos:
+ *   Clinica, Profissionais, Usuarios (compatível com Usuarios.gs),
+ *   AgendaDisponibilidade, AgendaExcecoes, AgendaEventos, AgendaAcl.
+ */
 var MIGRATIONS_SHEETS = {
   "__meta": MIGRATIONS_META_HEADERS,
 
+  // =========================
+  // LEGADO (mantido)
+  // =========================
   "Agenda": [
     "idAgenda",
     "idPaciente",
@@ -77,6 +95,141 @@ var MIGRATIONS_SHEETS = {
     "durationMs",
     "error",
     "extra"
+  ],
+
+  // =========================
+  // NOVO (Fase 4 módulos)
+  // =========================
+
+  /**
+   * Clínica (single clinic mode, pronto para multi-clínica)
+   * Observação: no modo 1 clínica, teremos só 1 linha.
+   */
+  "Clinica": [
+    "idClinica",
+    "nome",
+    "endereco",
+    "telefone",
+    "email",
+    "logoUrl",
+    "timezone",
+    "templatesDocumentos",
+    "parametrosGlobais",
+    "criadoEm",
+    "atualizadoEm",
+    "ativo"
+  ],
+
+  /**
+   * Profissionais
+   */
+  "Profissionais": [
+    "idProfissional",
+    "idClinica",
+    "tipoProfissional",          // MEDICO | NUTRICIONISTA | OUTRO
+    "nomeCompleto",
+    "documentoRegistro",         // CRM/CRN/etc
+    "especialidade",
+    "assinaturaDigitalBase64",
+    "corInterface",
+    "ativo",
+    "criadoEm",
+    "atualizadoEm"
+  ],
+
+  /**
+   * Usuarios
+   * Compatível com Usuarios.gs atual (que procura cabeçalhos em PT-BR com maiúsculas).
+   * Mantemos colunas "ID_Usuario", "Nome", etc.
+   *
+   * Campos novos para estratégia (idClinica/idProfissional) são opcionais e não quebram o legado.
+   */
+  "Usuarios": [
+    "ID_Usuario",
+    "Nome",
+    "Login",
+    "Email",
+    "Perfil",
+    "Ativo",
+    "SenhaHash",
+    "CriadoEm",
+    "AtualizadoEm",
+    "UltimoLoginEm",
+
+    // novos (estratégia)
+    "idClinica",
+    "idProfissional",
+    "permissoesCustomizadas"
+  ],
+
+  /**
+   * Agenda 4.1 - Disponibilidade semanal
+   */
+  "AgendaDisponibilidade": [
+    "idDisponibilidade",
+    "idClinica",
+    "idProfissional",
+    "diaSemana",                 // SEG, TER, QUA, QUI, SEX, SAB, DOM
+    "horaInicio",                // "08:00"
+    "horaFim",                   // "12:00"
+    "intervaloMinutos",          // number
+    "localSala",                 // opcional
+    "ativo",
+    "criadoEm",
+    "atualizadoEm"
+  ],
+
+  /**
+   * Agenda 4.2 - Exceções
+   */
+  "AgendaExcecoes": [
+    "idExcecao",
+    "idClinica",
+    "idProfissional",
+    "dataInicio",                // ISO date/datetime
+    "dataFim",                   // ISO date/datetime
+    "tipo",                      // BLOQUEIO_TOTAL | HORARIO_ESPECIAL
+    "blocosEspeciais",           // JSON string ou objeto serializado
+    "motivo",
+    "criadoEm",
+    "atualizadoEm",
+    "ativo"
+  ],
+
+  /**
+   * Agenda 4.3 - Eventos
+   */
+  "AgendaEventos": [
+    "idEvento",
+    "idClinica",
+    "idProfissional",
+    "idPaciente",
+    "inicioDateTime",
+    "fimDateTime",
+    "tipo",                      // CONSULTA | RETORNO | PROCEDIMENTO | BLOQUEIO
+    "status",                    // MARCADO | CONFIRMADO | ATENDIDO | CANCELADO | FALTOU
+    "titulo",
+    "notas",
+    "permiteEncaixe",
+    "canceladoEm",
+    "canceladoMotivo",
+    "criadoEm",
+    "atualizadoEm",
+    "ativo"
+  ],
+
+  /**
+   * ACL - Acesso à agenda
+   */
+  "AgendaAcl": [
+    "idAcesso",
+    "idClinica",
+    "idUsuario",
+    "idProfissional",
+    "permissoes",                // JSON string ou "VER|CRIAR|EDITAR|CANCELAR"
+    "ativo",
+    "criadoEm",
+    "atualizadoEm"
   ]
 };
 
@@ -129,7 +282,6 @@ function Migrations_bootstrap_() {
   var meta = _migTryReadMeta_();
   var currentVersion = meta.dbVersion !== null ? Number(meta.dbVersion) : 0;
 
-  // Se não existia, consideramos 0 e migramos até latest
   if (!currentVersion || currentVersion < 0) currentVersion = 0;
 
   // 3) Aplica migrations incrementais (placeholder para evolução futura)
@@ -150,12 +302,9 @@ function Migrations_bootstrap_() {
 
 /**
  * Aplica mudanças específicas de versão.
- * Nesta primeira versão (v1), o bootstrap já garante tudo.
+ * Nesta versão (v2), o bootstrap já garante as novas abas.
  */
 function _migApplyVersion_(version) {
-  // Reservado para futuras evoluções:
-  // v2: adicionar novas colunas, novas abas, ajustes etc.
-  // Aqui mantemos idempotente.
   _migSetMeta_("lastMigrationVersion", String(version));
   _migSetMeta_("lastMigrationAt", new Date().toISOString());
 }
@@ -267,8 +416,6 @@ function _migGetDb_() {
 
 function _migTryGetDbId_() {
   try {
-    // Se aberto por ID, o SpreadsheetApp não expõe o ID diretamente daqui de forma simples.
-    // Mantemos null para não vazar detalhes.
     return null;
   } catch (_) {
     return null;

@@ -10,6 +10,10 @@
  * Objetivos:
  * - evitar "magic numbers" espalhados (ex.: duração padrão de consulta)
  * - preparar para evoluir (aba Config via Migrations, se quiser) sem quebrar o front
+ *
+ * Ajustes mínimos aplicados (fase 4 módulos):
+ * - Suporte a "single clinic mode" com idClinica_default estável.
+ * - Helpers para obter/garantir esse idClinica sem front conhecer nada.
  */
 
 var CONFIG_PREFIX = "PRONTIO_CFG_";
@@ -27,6 +31,13 @@ function Config_defaults_() {
     clinica_endereco: "",
     clinica_telefone: "",
     clinica_email: "",
+
+    /**
+     * ✅ Single clinic mode:
+     * - idClinica_default é o ID estável da clínica usada como escopo padrão.
+     * - Se vazio, Config_ensureDefaultClinicId_() cria automaticamente.
+     */
+    idClinica_default: "",
 
     // Agenda (parâmetros de negócio)
     agenda_duracao_padrao_min: 30,
@@ -134,6 +145,43 @@ function Config_getAgendaParams_() {
     slotMin: Number(Config_get_("agenda_slot_min")),
     permiteSobreposicao: Boolean(Config_get_("agenda_permite_sobreposicao"))
   };
+}
+
+/**
+ * ============================================================
+ * Single Clinic Mode helpers
+ * ============================================================
+ */
+
+/**
+ * Retorna o idClinica padrão.
+ * - Se não existir, cria e persiste automaticamente.
+ */
+function Config_getClinicId_() {
+  var id = String(Config_get_("idClinica_default") || "").trim();
+  if (id) return id;
+  return Config_ensureDefaultClinicId_();
+}
+
+/**
+ * Garante que exista idClinica_default persistido.
+ * Usa Ids_nextId_("CLINICA") se Ids.gs estiver disponível;
+ * senão usa UUID com prefixo.
+ */
+function Config_ensureDefaultClinicId_() {
+  var cur = String(Config_get_("idClinica_default") || "").trim();
+  if (cur) return cur;
+
+  var newId;
+  if (typeof Ids_nextId_ === "function") {
+    // mantém padrão: ID_CLINICA_000001
+    newId = Ids_nextId_("CLINICA");
+  } else {
+    newId = "ID_CLINICA_" + Utilities.getUuid().split("-")[0].toUpperCase();
+  }
+
+  Config_set_("idClinica_default", newId);
+  return newId;
 }
 
 // ======================

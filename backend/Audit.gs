@@ -4,18 +4,23 @@
  * ============================================================
  * Log estruturado para observabilidade.
  *
- * Nesta fase (antes de Migrations), registramos:
+ * Nesta fase, registramos:
  * - Logger.log (Stackdriver/Executions)
  * - Buffer persistente opcional em Script Properties (para debug)
+ * - Persistência em aba "Audit" (quando Repository + Migrations estiverem disponíveis)
  *
  * IMPORTANTÍSSIMO:
- * - Não acessa Google Sheets diretamente (regra: Sheets só via Repository/Migrations).
- * - Persistência em aba "Audit" será implementada na FASE 4 (Migrations) com Repository apropriado.
+ * - Não acessa Google Sheets diretamente.
+ * - Persistência na aba "Audit" é feita via Repo_insert_ (Repository.gs).
  */
 
 var AUDIT_BUFFER_ENABLED = true;
 var AUDIT_BUFFER_KEY = "PRONTIO_AUDIT_BUFFER";
 var AUDIT_BUFFER_MAX = 200; // mantém últimos N eventos
+
+// Persistência em sheet "Audit"
+var AUDIT_PERSIST_ENABLED = true;
+var AUDIT_SHEET_NAME = "Audit";
 
 /**
  * Audit_log_(ctx, event)
@@ -28,6 +33,9 @@ function Audit_log_(ctx, event) {
     ctx = ctx || {};
     event = event || {};
 
+    var safeUser = _auditSafeUser_(ctx.user);
+
+    // Formato interno do entry (para Logger/Buffer)
     var entry = {
       ts: now.toISOString(),
       requestId: ctx.requestId || null,
@@ -35,7 +43,7 @@ function Audit_log_(ctx, event) {
       env: (typeof PRONTIO_ENV !== "undefined") ? PRONTIO_ENV : null,
       apiVersion: (typeof PRONTIO_API_VERSION !== "undefined") ? PRONTIO_API_VERSION : null,
 
-      user: _auditSafeUser_(ctx.user),
+      user: safeUser,
 
       outcome: event.outcome || "UNKNOWN",
       entity: event.entity || null,
@@ -52,6 +60,11 @@ function Audit_log_(ctx, event) {
     // 2) Buffer persistente opcional (para debug)
     if (AUDIT_BUFFER_ENABLED) {
       _auditAppendBuffer_(entry);
+    }
+
+    // 3) Persistência em planilha (via Repository) se disponível
+    if (AUDIT_PERSIST_ENABLED) {
+      _auditTryPersist_(entry);
     }
 
     return true;
@@ -126,4 +139,58 @@ function _auditSafeUser_(user) {
   if (user.nome !== undefined) safe.nome = user.nome;
 
   return safe;
+}
+
+/**
+ * Persiste em "Audit" via Repo_insert_ quando existir.
+ * NÃO quebra se Repository/Migrations não estiverem carregados.
+ *
+ * Migrations.gs define o header da aba Audit como:
+ * ["ts","requestId","action","env","apiVersion","userId","userLogin","userPerfil","outcome","entity","entityId","durationMs","error","extra"]
+ */
+function _auditTryPersist_(entry) {
+  try {
+    if (typeof Repo_insert_ !== "function") return false;
+
+    var u = entry.user || {};
+    var row = {
+      ts: entry.ts,
+      requestId: entry.requestId,
+      action: entry.action,
+      env: entry.env,
+      apiVersion: entry.apiVersion,
+
+      userId: (u && u.id !== undefined) ? u.id : null,
+      userLogin: (u && u.login !== undefined) ? u.login : null,
+      userPerfil: (u && u.perfil !== undefined) ? u.perfil : null,
+
+      outcome: entry.outcome,
+      entity: entry.entity,
+      entityId: entry.entityId,
+      durationMs: entry.durationMs,
+
+      // Armazenar como string para não estourar limites
+      error: entry.error ? _auditStringifySafe_(entry.error, 2000) : null,
+      extra: entry.extra ? _auditStringifySafe_(entry.extra, 4000) : null
+    };
+
+    Repo_insert_(AUDIT_SHEET_NAME, row);
+    return true;
+  } catch (_) {
+    // best-effort: se falhar, não quebra request
+    return false;
+  }
+}
+
+function _auditStringifySafe_(obj, maxLen) {
+  maxLen = typeof maxLen === "number" ? maxLen : 2000;
+  var s;
+  try {
+    if (typeof obj === "string") s = obj;
+    else s = JSON.stringify(obj);
+  } catch (e) {
+    s = String(obj);
+  }
+  if (s.length > maxLen) s = s.slice(0, maxLen);
+  return s;
 }

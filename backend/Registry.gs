@@ -34,22 +34,15 @@ function Registry_getAction_(action) {
 }
 
 function _Registry_build_() {
-  /**
-   * Dica: mantenha aqui SOMENTE o mapeamento.
-   * A lógica fica nos módulos (Auth.gs, Usuarios.gs, etc).
-   */
   var map = {};
 
   // =========================
   // DIAGNÓSTICO (DEV)
   // =========================
-  // ✅ Use esta action para confirmar quais actions o backend *publicado* conhece.
-  // Se ela não listar "Auth_Login", então você NÃO publicou a versão certa
-  // ou está chamando outra URL/projeto.
   map["Registry_ListActions"] = {
     action: "Registry_ListActions",
     handler: Registry_ListActions,
-    requiresAuth: false, // DEV: deixe false para diagnóstico rápido
+    requiresAuth: false, // DEV: false. (Em PROD, sugiro true + roles:["admin"])
     roles: [],
     validations: [],
     requiresLock: false,
@@ -122,6 +115,87 @@ function _Registry_build_() {
     lockKey: "Usuarios_Atualizar"
   };
 
+  map["Usuarios_AlterarSenha"] = {
+    action: "Usuarios_AlterarSenha",
+    handler: function (ctx, payload) { return handleUsuariosAction("Usuarios_AlterarSenha", payload); },
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
+    requiresLock: true,
+    lockKey: "Usuarios_AlterarSenha"
+  };
+
+  // =========================
+  // CLÍNICA
+  // =========================
+
+  // Qualquer usuário autenticado pode ler (o front precisa para exibir nome/logo, etc)
+  map["Clinica_Get"] = {
+    action: "Clinica_Get",
+    handler: Clinica_Get,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  // Somente admin atualiza identidade/config institucional
+  map["Clinica_Update"] = {
+    action: "Clinica_Update",
+    handler: Clinica_Update,
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
+    requiresLock: true,
+    lockKey: "Clinica_Update"
+  };
+
+  // =========================
+  // PROFISSIONAIS
+  // =========================
+
+  // Listagem pode ser útil para secretária e profissional (ex.: selecionar agenda)
+  map["Profissionais_List"] = {
+    action: "Profissionais_List",
+    handler: Profissionais_List,
+    requiresAuth: true,
+    roles: [], // controlamos depois via ACL se necessário
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  map["Profissionais_Create"] = {
+    action: "Profissionais_Create",
+    handler: Profissionais_Create,
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
+    requiresLock: true,
+    lockKey: "Profissionais_Create"
+  };
+
+  map["Profissionais_Update"] = {
+    action: "Profissionais_Update",
+    handler: Profissionais_Update,
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
+    requiresLock: true,
+    lockKey: "Profissionais_Update"
+  };
+
+  map["Profissionais_SetActive"] = {
+    action: "Profissionais_SetActive",
+    handler: Profissionais_SetActive,
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
+    requiresLock: true,
+    lockKey: "Profissionais_SetActive"
+  };
+
   return map;
 }
 
@@ -131,13 +205,15 @@ function _Registry_build_() {
  * ============================================================
  */
 function Registry_ListActions(ctx, payload) {
-  // garante que REGISTRY_ACTIONS existe
   if (!REGISTRY_ACTIONS) REGISTRY_ACTIONS = _Registry_build_();
 
   var keys = Object.keys(REGISTRY_ACTIONS || {}).sort();
   return {
     count: keys.length,
     actions: keys,
-    hasAuthLogin: keys.indexOf("Auth_Login") >= 0
+    hasAuthLogin: keys.indexOf("Auth_Login") >= 0,
+    hasUsuariosAlterarSenha: keys.indexOf("Usuarios_AlterarSenha") >= 0,
+    hasClinica: keys.indexOf("Clinica_Get") >= 0 && keys.indexOf("Clinica_Update") >= 0,
+    hasProfissionais: keys.indexOf("Profissionais_List") >= 0
   };
 }

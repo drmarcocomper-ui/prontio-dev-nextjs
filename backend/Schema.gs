@@ -16,11 +16,152 @@ function Schema_get_(entityName) {
 }
 
 function Schema_all_() {
-  // Convenção:
-  // - fields: { nomeCampo: { type, required?, maxLength?, enum?, description? } }
-  // - idField: nome do campo de ID estável gerado no backend
-  // - softDelete: campos usados para inativação
   return {
+    // =========================
+    // NOVOS (estratégia oficial)
+    // =========================
+
+    Clinica: {
+      entity: "Clinica",
+      idField: "idClinica",
+      softDelete: { field: "ativo", inactiveValue: false },
+      fields: {
+        idClinica: { type: "string", required: true },
+        nome: { type: "string", required: true, maxLength: 200 },
+        endereco: { type: "string", required: false, maxLength: 500 },
+        telefone: { type: "string", required: false, maxLength: 50 },
+        email: { type: "string", required: false, maxLength: 120 },
+        logoUrl: { type: "string", required: false, maxLength: 500 },
+        timezone: { type: "string", required: false, maxLength: 60 },
+        templatesDocumentos: { type: "object", required: false },
+        parametrosGlobais: { type: "object", required: false },
+        criadoEm: { type: "date", required: true },
+        atualizadoEm: { type: "date", required: true },
+        ativo: { type: "boolean", required: true }
+      }
+    },
+
+    Profissional: {
+      entity: "Profissional",
+      idField: "idProfissional",
+      softDelete: { field: "ativo", inactiveValue: false },
+      fields: {
+        idProfissional: { type: "string", required: true },
+        idClinica: { type: "string", required: true },
+        tipoProfissional: { type: "string", required: true, enum: ["MEDICO", "NUTRICIONISTA", "OUTRO"] },
+        nomeCompleto: { type: "string", required: true, maxLength: 200 },
+        documentoRegistro: { type: "string", required: false, maxLength: 40 },
+        especialidade: { type: "string", required: false, maxLength: 120 },
+        assinaturaDigitalBase64: { type: "string", required: false, maxLength: 100000 },
+        corInterface: { type: "string", required: false, maxLength: 30 },
+        ativo: { type: "boolean", required: true },
+        criadoEm: { type: "date", required: true },
+        atualizadoEm: { type: "date", required: true }
+      }
+    },
+
+    Usuario: {
+      entity: "Usuario",
+      idField: "idUsuario",
+      softDelete: { field: "ativo", inactiveValue: false },
+      fields: {
+        idUsuario: { type: "string", required: true },
+        idClinica: { type: "string", required: true },
+        nomeCompleto: { type: "string", required: true, maxLength: 200 },
+        login: { type: "string", required: true, maxLength: 120 },
+        email: { type: "string", required: false, maxLength: 120 },
+        perfil: { type: "string", required: true, enum: ["admin", "profissional", "secretaria"] },
+        idProfissional: { type: "string", required: false },
+        permissoesCustomizadas: { type: "object", required: false },
+        ativo: { type: "boolean", required: true },
+        ultimoLoginEm: { type: "date", required: false },
+        criadoEm: { type: "date", required: true },
+        atualizadoEm: { type: "date", required: true }
+      }
+    },
+
+    AgendaDisponibilidade: {
+      entity: "AgendaDisponibilidade",
+      idField: "idDisponibilidade",
+      softDelete: { field: "ativo", inactiveValue: false },
+      fields: {
+        idDisponibilidade: { type: "string", required: true },
+        idClinica: { type: "string", required: true },
+        idProfissional: { type: "string", required: true },
+        diaSemana: { type: "string", required: true, enum: ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"] },
+        horaInicio: { type: "string", required: true, maxLength: 5 },
+        horaFim: { type: "string", required: true, maxLength: 5 },
+        intervaloMinutos: { type: "string", required: true },
+        localSala: { type: "string", required: false, maxLength: 120 },
+        ativo: { type: "boolean", required: true },
+        criadoEm: { type: "date", required: true },
+        atualizadoEm: { type: "date", required: true }
+      }
+    },
+
+    AgendaExcecao: {
+      entity: "AgendaExcecao",
+      idField: "idExcecao",
+      softDelete: { field: "ativo", inactiveValue: false },
+      fields: {
+        idExcecao: { type: "string", required: true },
+        idClinica: { type: "string", required: true },
+        idProfissional: { type: "string", required: true },
+        dataInicio: { type: "date", required: true },
+        dataFim: { type: "date", required: true },
+        tipo: { type: "string", required: true, enum: ["BLOQUEIO_TOTAL", "HORARIO_ESPECIAL"] },
+        blocosEspeciais: { type: "object", required: false },
+        motivo: { type: "string", required: false, maxLength: 500 },
+        criadoEm: { type: "date", required: true },
+        atualizadoEm: { type: "date", required: true },
+        ativo: { type: "boolean", required: true }
+      }
+    },
+
+    AgendaEvento: {
+      entity: "AgendaEvento",
+      idField: "idEvento",
+      softDelete: { field: "ativo", inactiveValue: false },
+      fields: {
+        idEvento: { type: "string", required: true },
+        idClinica: { type: "string", required: true },
+        idProfissional: { type: "string", required: true },
+        idPaciente: { type: "string", required: false },
+        inicioDateTime: { type: "date", required: true },
+        fimDateTime: { type: "date", required: true },
+        tipo: { type: "string", required: true, enum: ["CONSULTA", "RETORNO", "PROCEDIMENTO", "BLOQUEIO"] },
+        status: { type: "string", required: true, enum: ["MARCADO", "CONFIRMADO", "ATENDIDO", "CANCELADO", "FALTOU"] },
+        titulo: { type: "string", required: false, maxLength: 200 },
+        notas: { type: "string", required: false, maxLength: 2000 },
+        permiteEncaixe: { type: "boolean", required: false },
+        canceladoEm: { type: "date", required: false },
+        canceladoMotivo: { type: "string", required: false, maxLength: 500 },
+        criadoEm: { type: "date", required: true },
+        atualizadoEm: { type: "date", required: true },
+        ativo: { type: "boolean", required: true }
+      }
+    },
+
+    AcessoAgenda: {
+      entity: "AcessoAgenda",
+      idField: "idAcesso",
+      softDelete: { field: "ativo", inactiveValue: false },
+      fields: {
+        idAcesso: { type: "string", required: true },
+        idClinica: { type: "string", required: true },
+        idUsuario: { type: "string", required: true },
+        idProfissional: { type: "string", required: true },
+        permissoes: { type: "object", required: true }, // {ver:true, criar:true...} ou lista
+        ativo: { type: "boolean", required: true },
+        criadoEm: { type: "date", required: true },
+        atualizadoEm: { type: "date", required: true }
+      }
+    },
+
+    // =========================
+    // LEGADO (mantido)
+    // =========================
+
     Paciente: {
       entity: "Paciente",
       idField: "idPaciente",
@@ -45,28 +186,21 @@ function Schema_all_() {
       }
     },
 
+    // Mantida como "Agenda" legado (se ainda existir uso no sistema)
     Agenda: {
       entity: "Agenda",
       idField: "idAgenda",
       softDelete: { field: "status", inactiveValue: "CANCELADO" },
       fields: {
         idAgenda: { type: "string", required: true },
-
-        // Relações por ID (nunca por nome)
-        idPaciente: { type: "string", required: false, description: "Opcional para bloqueios/slots sem paciente." },
-
-        // Core
+        idPaciente: { type: "string", required: false },
         inicio: { type: "date", required: true },
         fim: { type: "date", required: true },
-
         titulo: { type: "string", required: false, maxLength: 120 },
         notas: { type: "string", required: false, maxLength: 2000 },
-
         tipo: { type: "string", required: false, enum: ["CONSULTA", "RETORNO", "PROCEDIMENTO", "BLOQUEIO", "OUTRO"] },
         status: { type: "string", required: true, enum: ["AGENDADO", "CANCELADO", "CONCLUIDO", "FALTOU"] },
-
         origem: { type: "string", required: false, enum: ["RECEPCAO", "MEDICO", "SISTEMA"] },
-
         criadoEm: { type: "date", required: true },
         atualizadoEm: { type: "date", required: true },
         canceladoEm: { type: "date", required: false },
@@ -81,11 +215,8 @@ function Schema_all_() {
       fields: {
         idEvolucao: { type: "string", required: true },
         idPaciente: { type: "string", required: true },
-
         data: { type: "date", required: true },
         texto: { type: "string", required: true, maxLength: 20000 },
-
-        // Metadados
         criadoEm: { type: "date", required: true },
         atualizadoEm: { type: "date", required: true },
         ativo: { type: "boolean", required: true }

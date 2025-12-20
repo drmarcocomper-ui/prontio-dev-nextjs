@@ -14,13 +14,30 @@ function handleUsuariosAction(action, payload) {
       return Usuarios_Criar_(payload);
     case "Usuarios_Atualizar":
       return Usuarios_Atualizar_(payload);
+
+    // ✅ NOVO: admin altera/reset senha pelo sistema
+    case "Usuarios_AlterarSenha":
+      return Usuarios_AlterarSenha_(payload);
+
     default:
       _usuariosThrow_("USUARIOS_UNKNOWN_ACTION", "Ação de usuários desconhecida: " + action, { action: action });
   }
 }
 
+/**
+ * ✅ Ajuste mínimo para não perder nada:
+ * - Se PRONTIO_getDb_ existir (DEV/PROD), usa ele.
+ * - Senão, cai no SpreadsheetApp.getActiveSpreadsheet() (legado).
+ */
 function getUsuariosSheet_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss;
+  try {
+    if (typeof PRONTIO_getDb_ === "function") ss = PRONTIO_getDb_();
+    else ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch (_) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+
   var sheet = ss.getSheetByName(USUARIOS_SHEET_NAME);
   if (!sheet) {
     _usuariosThrow_("USUARIOS_SHEET_NOT_FOUND", 'Aba de usuários não encontrada: "' + USUARIOS_SHEET_NAME + '".', null);
@@ -348,4 +365,61 @@ function Usuarios_Atualizar_(payload) {
     ativo: ativo,
     atualizadoEm: agora
   };
+}
+
+/**
+ * ✅ NOVO: altera/reset senha de um usuário (admin).
+ *
+ * payload: { id, senha }
+ *
+ * Requisitos da aba "Usuarios":
+ * - Colunas: ID_Usuario, SenhaHash
+ * - (Opcional) AtualizadoEm
+ */
+function Usuarios_AlterarSenha_(payload) {
+  payload = payload || {};
+
+  var id = (payload.id || "").toString().trim();
+  var senha = (payload.senha || "").toString();
+
+  if (!id) _usuariosThrow_("USUARIOS_ID_OBRIGATORIO", "ID é obrigatório.", null);
+  if (!senha) _usuariosThrow_("USUARIOS_SENHA_OBRIGATORIA", "Senha é obrigatória.", null);
+
+  var sheet = getUsuariosSheet_();
+  var values = sheet.getDataRange().getValues();
+  if (values.length <= 1) _usuariosThrow_("USUARIOS_NAO_ENCONTRADO", "Usuário não encontrado.", { id: id });
+
+  var header = values[0].map(function (h) { return (h || "").toString().trim(); });
+
+  var idx = {
+    id: header.indexOf("ID_Usuario"),
+    senhaHash: header.indexOf("SenhaHash"),
+    atualizadoEm: header.indexOf("AtualizadoEm")
+  };
+
+  if (idx.id < 0 || idx.senhaHash < 0) {
+    _usuariosThrow_("USUARIOS_BAD_SCHEMA", 'Cabeçalho deve conter "ID_Usuario" e "SenhaHash".', idx);
+  }
+
+  var linha = -1;
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    if (row[idx.id] && String(row[idx.id]) === id) {
+      linha = i + 1; // 1-based
+      break;
+    }
+  }
+
+  if (linha === -1) {
+    _usuariosThrow_("USUARIOS_NAO_ENCONTRADO", "Usuário não encontrado.", { id: id });
+  }
+
+  var senhaHash = hashSenha_(senha);
+  sheet.getRange(linha, idx.senhaHash + 1).setValue(senhaHash);
+
+  if (idx.atualizadoEm >= 0) {
+    sheet.getRange(linha, idx.atualizadoEm + 1).setValue(new Date());
+  }
+
+  return { ok: true, id: id };
 }
