@@ -196,6 +196,31 @@ function _Registry_build_() {
     lockKey: "Profissionais_SetActive"
   };
 
+  // =========================
+  // META / MIGRATIONS (admin)
+  // =========================
+  // ✅ Serve para rodar bootstrap/status do banco via API (contorna UI do Apps Script travada).
+  // Requer Meta.gs com Meta_BootstrapDb e Meta_DbStatus.
+  map["Meta_BootstrapDb"] = {
+    action: "Meta_BootstrapDb",
+    handler: Meta_BootstrapDb,
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
+    requiresLock: true,
+    lockKey: "Meta_BootstrapDb"
+  };
+
+  map["Meta_DbStatus"] = {
+    action: "Meta_DbStatus",
+    handler: Meta_DbStatus,
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
   return map;
 }
 
@@ -214,6 +239,7 @@ function Registry_ListActions(ctx, payload) {
     hasAuthLogin: keys.indexOf("Auth_Login") >= 0,
     hasUsuariosAlterarSenha: keys.indexOf("Usuarios_AlterarSenha") >= 0,
     hasClinica: keys.indexOf("Clinica_Get") >= 0 && keys.indexOf("Clinica_Update") >= 0,
-    hasProfissionais: keys.indexOf("Profissionais_List") >= 0
+    hasProfissionais: keys.indexOf("Profissionais_List") >= 0,
+    hasMetaBootstrap: keys.indexOf("Meta_BootstrapDb") >= 0
   };
 }
