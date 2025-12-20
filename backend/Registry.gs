@@ -41,6 +41,22 @@ function _Registry_build_() {
   var map = {};
 
   // =========================
+  // DIAGNÓSTICO (DEV)
+  // =========================
+  // ✅ Use esta action para confirmar quais actions o backend *publicado* conhece.
+  // Se ela não listar "Auth_Login", então você NÃO publicou a versão certa
+  // ou está chamando outra URL/projeto.
+  map["Registry_ListActions"] = {
+    action: "Registry_ListActions",
+    handler: Registry_ListActions,
+    requiresAuth: false, // DEV: deixe false para diagnóstico rápido
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  // =========================
   // AUTH
   // =========================
   map["Auth_Login"] = {
@@ -48,7 +64,7 @@ function _Registry_build_() {
     handler: Auth_Login,
     requiresAuth: false,
     roles: [],
-    validations: [], // pode plugar Validators depois
+    validations: [],
     requiresLock: true,
     lockKey: "Auth_Login"
   };
@@ -107,4 +123,21 @@ function _Registry_build_() {
   };
 
   return map;
+}
+
+/**
+ * ============================================================
+ * Handler de diagnóstico: retorna as actions registradas.
+ * ============================================================
+ */
+function Registry_ListActions(ctx, payload) {
+  // garante que REGISTRY_ACTIONS existe
+  if (!REGISTRY_ACTIONS) REGISTRY_ACTIONS = _Registry_build_();
+
+  var keys = Object.keys(REGISTRY_ACTIONS || {}).sort();
+  return {
+    count: keys.length,
+    actions: keys,
+    hasAuthLogin: keys.indexOf("Auth_Login") >= 0
+  };
 }
