@@ -23,7 +23,9 @@ function Registry_listActions_() {
       roles: a.roles || [],
       requiresLock: !!a.requiresLock,
       idempotent: !!a.idempotent,
-      validations: (a.validations || []).map(function (v) { return _stringifyValidationHint_(v); })
+      validations: (a.validations || []).map(function (v) {
+        return _stringifyValidationHint_(v);
+      })
     };
   });
 }
@@ -79,6 +81,22 @@ function Registry_catalog_() {
     requiresLock: true,
     idempotent: false,
     validations: []
+  };
+
+  // ============================================================
+  // AUTH
+  // ============================================================
+
+  catalog["Auth.Login"] = {
+    handler: Auth_Action_Login_,
+    requiresAuth: false,
+    roles: [],
+    requiresLock: false,
+    idempotent: false,
+    validations: [
+      { field: "login", rule: "required" },
+      { field: "senha", rule: "required" }
+    ]
   };
 
   // ============================================================
@@ -150,8 +168,12 @@ function Meta_Ping_(ctx, payload) {
   return {
     ok: true,
     api: "PRONTIO",
-    version: (ctx && ctx.apiVersion) ? ctx.apiVersion : (typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : null),
-    env: (ctx && ctx.env) ? ctx.env : (typeof PRONTIO_ENV !== "undefined" ? PRONTIO_ENV : null),
+    version: (ctx && ctx.apiVersion)
+      ? ctx.apiVersion
+      : (typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : null),
+    env: (ctx && ctx.env)
+      ? ctx.env
+      : (typeof PRONTIO_ENV !== "undefined" ? PRONTIO_ENV : null),
     time: new Date().toISOString(),
     requestId: ctx ? ctx.requestId : null
   };
@@ -168,9 +190,16 @@ function Meta_ListActions_(ctx, payload) {
 
 function Meta_DbStatus_(ctx, payload) {
   if (typeof Migrations_getDbStatus_ !== "function") {
-    return { ok: false, error: "Migrations_getDbStatus_ não encontrado.", requestId: ctx ? ctx.requestId : null };
+    return {
+      ok: false,
+      error: "Migrations_getDbStatus_ não encontrado.",
+      requestId: ctx ? ctx.requestId : null
+    };
   }
-  return { requestId: ctx ? ctx.requestId : null, status: Migrations_getDbStatus_() };
+  return {
+    requestId: ctx ? ctx.requestId : null,
+    status: Migrations_getDbStatus_()
+  };
 }
 
 function Meta_BootstrapDb_(ctx, payload) {
@@ -193,9 +222,11 @@ function Meta_BootstrapDb_(ctx, payload) {
 
 function _tryRegisterLegacyAdapter_(catalog, prefixTitle, handlerFnName) {
   try {
-    // Captura referência de função no escopo global do script.
-    // Evita depender de "this" (pode variar conforme chamada no Apps Script).
-    var fn = (typeof globalThis !== "undefined" && globalThis[handlerFnName]) ? globalThis[handlerFnName] : this[handlerFnName];
+    var fn =
+      (typeof globalThis !== "undefined" && globalThis[handlerFnName])
+        ? globalThis[handlerFnName]
+        : this[handlerFnName];
+
     if (typeof fn !== "function") return;
 
     var actionName = prefixTitle + "._LegacyRouter";
