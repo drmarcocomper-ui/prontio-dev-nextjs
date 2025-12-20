@@ -14,6 +14,12 @@
  *
  * Compatibilidade (legado opcional):
  * também inclui meta.request_id, meta.action, meta.api_version, meta.env
+ *
+ * ✅ Ajuste (CORS + GitHub Pages):
+ * - _parseRequestBody_ agora aceita:
+ *   1) JSON body (application/json)
+ *   2) form-urlencoded body (application/x-www-form-urlencoded)
+ *   3) fallback via e.parameter.action / e.parameter.payload
  */
 
 var PRONTIO_API_VERSION = typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV";
@@ -94,14 +100,11 @@ function doPost(e) {
 
     /**
      * ✅ Resolve user APÓS conhecer a action (Registry).
-     * - Evita resolver user "cedo demais"
-     * - Mantém ctx.user disponível para audit/handlers mesmo em actions sem requiresAuth
-     * - Segurança: não faz fallback perigoso para payload.user
      */
     if (typeof Auth_getUserContext_ === "function") {
       ctx.user = Auth_getUserContext_(payload);
     } else {
-      ctx.user = null; // sem bypass dev aqui
+      ctx.user = null;
     }
 
     // AUTH enforcement por action (FASE 5)
@@ -110,7 +113,6 @@ function doPost(e) {
         var authRes = Auth_requireAuth_(ctx, payload);
         if (!authRes.success) return _withCors_(_jsonOutput_(authRes));
       } else if (typeof requireAuthIfEnabled_ === "function") {
-        // fallback legado (se existir)
         requireAuthIfEnabled_(action, payload);
       } else {
         return _withCors_(_jsonOutput_(_err_(requestId, [
@@ -131,13 +133,13 @@ function doPost(e) {
       }
     }
 
-    // Validations (FASE 2) se estiverem configuradas no Registry
+    // Validations (FASE 2)
     if (entry.validations && entry.validations.length && typeof Validators_run_ === "function") {
       var vRes = Validators_run_(ctx, entry.validations, payload);
       if (!vRes.success) return _withCors_(_jsonOutput_(vRes));
     }
 
-    // Locks (FASE 1) se estiverem configurados no Registry
+    // Locks (FASE 1)
     var data;
     if (entry.requiresLock && typeof Locks_withLock_ === "function") {
       data = Locks_withLock_(ctx, entry.lockKey || action, function () {
@@ -158,11 +160,9 @@ function doPost(e) {
     return _withCors_(_jsonOutput_(ok));
 
   } catch (err) {
-    // Normaliza erro no envelope padrão
     var out;
     if (typeof Errors !== "undefined" && Errors && typeof Errors.fromException === "function") {
       out = Errors.fromException({ requestId: requestId, action: null }, err, "Erro interno.");
-      // garantir compatibilidade meta
       if (!out.meta) out.meta = { request_id: requestId, api_version: PRONTIO_API_VERSION, env: PRONTIO_ENV };
     } else {
       out = _exceptionToErrorResponse_(requestId, err);
@@ -196,29 +196,100 @@ function _makeRequestId_() {
 /**
  * IMPORTANTE: NÃO usar "throw { }".
  * Mantém padrão: Error com code/details.
+ *
+ * ✅ Agora aceita 3 formatos:
+ * - JSON body: {action, payload}
+ * - x-www-form-urlencoded: action=...&payload={...}
+ * - e.parameter.action/e.parameter.payload (fallback)
  */
 function _parseRequestBody_(e) {
-  if (!e || !e.postData || !e.postData.contents) {
-    if (e && e.parameter && (e.parameter.action || e.parameter.payload)) {
-      var payloadObj = {};
-      try {
-        payloadObj = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
-      } catch (err) {
-        _apiThrow_("VALIDATION_ERROR", "payload inválido em e.parameter.payload", { error: String(err) });
-      }
-      return { action: e.parameter.action || "", payload: payloadObj || {} };
+  // 1) fallback por querystring/parameters (GET-like)
+  if (e && e.parameter && (e.parameter.action || e.parameter.payload)) {
+    var payloadObj1 = {};
+    try {
+      payloadObj1 = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
+    } catch (err1) {
+      _apiThrow_("VALIDATION_ERROR", "payload inválido em e.parameter.payload", { error: String(err1) });
     }
+    return { action: e.parameter.action || "", payload: payloadObj1 || {} };
+  }
+
+  // 2) sem body
+  if (!e || !e.postData || !e.postData.contents) {
     _apiThrow_("VALIDATION_ERROR", "Corpo da requisição vazio.", { reason: "EMPTY_BODY" });
   }
 
   var raw = String(e.postData.contents || "").trim();
   if (!raw) _apiThrow_("VALIDATION_ERROR", "Corpo da requisição vazio.", { reason: "EMPTY_BODY" });
 
+  // 3) tenta JSON
+  if (raw[0] === "{" || raw[0] === "[") {
+    try {
+      var json = JSON.parse(raw);
+      return { action: json.action, payload: json.payload || {} };
+    } catch (errJson) {
+      _apiThrow_("VALIDATION_ERROR", "JSON inválido.", { error: String(errJson) });
+    }
+  }
+
+  // 4) tenta form-urlencoded (ex.: "action=X&payload=%7B%7D")
+  // (muito comum em chamadas do browser para evitar preflight/CORS)
+  if (raw.indexOf("action=") >= 0) {
+    var parsed = _parseFormUrlEncoded_(raw);
+
+    var action = parsed.action ? String(parsed.action) : "";
+    var payloadRaw = parsed.payload !== undefined ? String(parsed.payload || "") : "";
+
+    var payloadObj2 = {};
+    if (payloadRaw) {
+      try {
+        payloadObj2 = JSON.parse(payloadRaw);
+      } catch (err2) {
+        _apiThrow_("VALIDATION_ERROR", "payload inválido em form-urlencoded.", {
+          error: String(err2),
+          payloadSnippet: payloadRaw.slice(0, 200)
+        });
+      }
+    }
+
+    return { action: action, payload: payloadObj2 || {} };
+  }
+
+  // 5) se não reconheceu o formato
+  _apiThrow_("VALIDATION_ERROR", "Formato de requisição não suportado.", {
+    hint: "Envie JSON {action,payload} ou form-urlencoded action=...&payload=...",
+    rawSnippet: raw.slice(0, 200)
+  });
+}
+
+/**
+ * Parse simples de x-www-form-urlencoded.
+ * Retorna objeto {key:value}.
+ */
+function _parseFormUrlEncoded_(raw) {
+  var out = {};
+  var parts = raw.split("&");
+  for (var i = 0; i < parts.length; i++) {
+    var kv = parts[i].split("=");
+    if (!kv.length) continue;
+
+    var k = _decodeForm_(kv[0] || "");
+    var v = kv.length > 1 ? _decodeForm_(kv.slice(1).join("=")) : "";
+
+    if (k) out[k] = v;
+  }
+  return out;
+}
+
+function _decodeForm_(s) {
+  s = String(s || "");
+  // '+' em form-urlencoded significa espaço
+  s = s.replace(/\+/g, " ");
   try {
-    var json = JSON.parse(raw);
-    return { action: json.action, payload: json.payload || {} };
-  } catch (err) {
-    _apiThrow_("VALIDATION_ERROR", "JSON inválido.", { error: String(err) });
+    return decodeURIComponent(s);
+  } catch (_) {
+    // se vier quebrado, devolve bruto
+    return s;
   }
 }
 
