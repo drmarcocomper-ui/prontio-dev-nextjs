@@ -228,7 +228,6 @@
       tryAutoLogout_();
     }
 
-    // mensagem mais útil (inclui code)
     const msg = primary.code && primary.code !== "UNKNOWN"
       ? `[${primary.code}] ${primary.message}`
       : primary.message;

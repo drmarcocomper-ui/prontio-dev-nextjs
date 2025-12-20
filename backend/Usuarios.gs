@@ -1,17 +1,6 @@
 /**
  * ============================================================
  * PRONTIO - Usuarios.gs
- * Módulo de usuários (multiusuário)
- *
- * Responsabilidades:
- * - handleUsuariosAction(action, payload)
- * - Usuarios_Listar
- * - Usuarios_Criar
- * - Usuarios_Atualizar
- *
- * Futuro:
- * - Usuarios_AlterarSenha
- * - Usuarios_Arquivar
  * ============================================================
  */
 
@@ -21,19 +10,12 @@ function handleUsuariosAction(action, payload) {
   switch (action) {
     case "Usuarios_Listar":
       return Usuarios_Listar_(payload);
-
     case "Usuarios_Criar":
       return Usuarios_Criar_(payload);
-
     case "Usuarios_Atualizar":
       return Usuarios_Atualizar_(payload);
-
     default:
-      throw {
-        code: "USUARIOS_UNKNOWN_ACTION",
-        message: "Ação de usuários desconhecida: " + action,
-        details: { action: action }
-      };
+      _usuariosThrow_("USUARIOS_UNKNOWN_ACTION", "Ação de usuários desconhecida: " + action, { action: action });
   }
 }
 
@@ -41,34 +23,29 @@ function getUsuariosSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(USUARIOS_SHEET_NAME);
   if (!sheet) {
-    throw {
-      code: "USUARIOS_SHEET_NOT_FOUND",
-      message: 'Aba de usuários não encontrada: "' + USUARIOS_SHEET_NAME + '".',
-      details: null
-    };
+    _usuariosThrow_("USUARIOS_SHEET_NOT_FOUND", 'Aba de usuários não encontrada: "' + USUARIOS_SHEET_NAME + '".', null);
   }
   return sheet;
 }
 
-/**
- * Gera um novo ID de usuário (USR_XXXXXX)
- * (Não depende do número de linhas, evita colisão)
- */
 function gerarNovoUsuarioId_() {
   return "USR_" + Utilities.getUuid().split("-")[0].toUpperCase();
 }
 
-/**
- * Hash de senha (SHA-256 + Base64).
- * NÃO armazena senha em texto puro.
- */
 function hashSenha_(senha) {
   if (!senha) return "";
   var bytes = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
-    senha
+    String(senha) // ✅ normaliza
   );
   return Utilities.base64Encode(bytes);
+}
+
+function Usuarios_verifyPassword_(senha, senhaHash) {
+  senha = (senha || "").toString();
+  senhaHash = (senhaHash || "").toString();
+  if (!senha || !senhaHash) return false;
+  return hashSenha_(senha) === senhaHash;
 }
 
 function boolFromCell_(v) {
@@ -78,6 +55,13 @@ function boolFromCell_(v) {
   if (s === "true" || s === "1" || s === "sim" || s === "yes") return true;
   if (s === "false" || s === "0" || s === "nao" || s === "não" || s === "no") return false;
   return false;
+}
+
+function _usuariosThrow_(code, message, details) {
+  var err = new Error(String(message || "Erro."));
+  err.code = String(code || (Errors && Errors.CODES ? Errors.CODES.INTERNAL_ERROR : "INTERNAL_ERROR"));
+  err.details = (details === undefined ? null : details);
+  throw err;
 }
 
 /**
@@ -102,12 +86,9 @@ function Usuarios_Listar_(payload) {
     ultimoLoginEm: header.indexOf("UltimoLoginEm")
   };
 
-  if (idx.id < 0) {
-    throw { code: "USUARIOS_BAD_SCHEMA", message: 'Coluna "ID_Usuario" não encontrada.', details: idx };
-  }
+  if (idx.id < 0) _usuariosThrow_("USUARIOS_BAD_SCHEMA", 'Coluna "ID_Usuario" não encontrada.', idx);
 
   var lista = [];
-
   for (var i = 1; i < values.length; i++) {
     var row = values[i];
     if (!row[idx.id]) continue;
@@ -129,10 +110,89 @@ function Usuarios_Listar_(payload) {
 }
 
 /**
- * Cria um novo usuário.
- *
- * payload:
- * { nome, login, email, perfil, senha }
+ * Busca usuário por login para autenticação (inclui senhaHash).
+ */
+function Usuarios_findByLoginForAuth_(login) {
+  login = (login || "").toString().trim().toLowerCase();
+  if (!login) return null;
+
+  var sheet = getUsuariosSheet_();
+  var values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return null;
+
+  var header = values[0].map(function (h) { return (h || "").toString().trim(); });
+
+  var idx = {
+    id: header.indexOf("ID_Usuario"),
+    nome: header.indexOf("Nome"),
+    login: header.indexOf("Login"),
+    email: header.indexOf("Email"),
+    perfil: header.indexOf("Perfil"),
+    ativo: header.indexOf("Ativo"),
+    senhaHash: header.indexOf("SenhaHash")
+  };
+
+  if (idx.id < 0 || idx.login < 0 || idx.senhaHash < 0 || idx.ativo < 0) {
+    _usuariosThrow_("USUARIOS_BAD_SCHEMA", "Cabeçalho da aba Usuarios incompleto para autenticação.", idx);
+  }
+
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    if (!row[idx.id]) continue;
+
+    var rowLogin = (row[idx.login] || "").toString().trim().toLowerCase();
+    if (rowLogin && rowLogin === login) {
+      return {
+        id: (row[idx.id] || "").toString(),
+        nome: idx.nome >= 0 ? (row[idx.nome] || "") : "",
+        login: idx.login >= 0 ? (row[idx.login] || "") : "",
+        email: idx.email >= 0 ? (row[idx.email] || "") : "",
+        perfil: idx.perfil >= 0 ? (row[idx.perfil] || "") : "",
+        ativo: idx.ativo >= 0 ? boolFromCell_(row[idx.ativo]) : false,
+        senhaHash: idx.senhaHash >= 0 ? (row[idx.senhaHash] || "") : ""
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Marca UltimoLoginEm (best-effort).
+ */
+function Usuarios_markUltimoLogin_(id) {
+  id = (id || "").toString().trim();
+  if (!id) return { ok: false };
+
+  var sheet = getUsuariosSheet_();
+  var values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return { ok: false };
+
+  var header = values[0].map(function (h) { return (h || "").toString().trim(); });
+
+  var idx = {
+    id: header.indexOf("ID_Usuario"),
+    ultimoLoginEm: header.indexOf("UltimoLoginEm")
+  };
+
+  if (idx.id < 0 || idx.ultimoLoginEm < 0) return { ok: false };
+
+  var linha = -1;
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    if (row[idx.id] && String(row[idx.id]) === id) {
+      linha = i + 1;
+      break;
+    }
+  }
+  if (linha < 0) return { ok: false };
+
+  sheet.getRange(linha, idx.ultimoLoginEm + 1).setValue(new Date());
+  return { ok: true };
+}
+
+/**
+ * Cria usuário.
  */
 function Usuarios_Criar_(payload) {
   payload = payload || {};
@@ -143,13 +203,13 @@ function Usuarios_Criar_(payload) {
   var perfil = (payload.perfil || "").trim() || "secretaria";
   var senha = payload.senha || "";
 
-  if (!nome) throw { code: "USUARIOS_NOME_OBRIGATORIO", message: "Nome é obrigatório.", details: null };
-  if (!login) throw { code: "USUARIOS_LOGIN_OBRIGATORIO", message: "Login é obrigatório.", details: null };
-  if (!senha) throw { code: "USUARIOS_SENHA_OBRIGATORIA", message: "Senha é obrigatória.", details: null };
+  if (!nome) _usuariosThrow_("USUARIOS_NOME_OBRIGATORIO", "Nome é obrigatório.", null);
+  if (!login) _usuariosThrow_("USUARIOS_LOGIN_OBRIGATORIO", "Login é obrigatório.", null);
+  if (!senha) _usuariosThrow_("USUARIOS_SENHA_OBRIGATORIA", "Senha é obrigatória.", null);
 
   var sheet = getUsuariosSheet_();
   var values = sheet.getDataRange().getValues();
-  if (values.length < 1) throw { code: "USUARIOS_BAD_SCHEMA", message: "Cabeçalho ausente na aba Usuarios.", details: null };
+  if (values.length < 1) _usuariosThrow_("USUARIOS_BAD_SCHEMA", "Cabeçalho ausente na aba Usuarios.", null);
 
   var header = values[0].map(function (h) { return (h || "").toString().trim(); });
 
@@ -166,15 +226,14 @@ function Usuarios_Criar_(payload) {
   };
 
   if (idx.id < 0 || idx.login < 0 || idx.senhaHash < 0 || idx.ativo < 0) {
-    throw { code: "USUARIOS_BAD_SCHEMA", message: "Cabeçalho da aba Usuarios incompleto.", details: idx };
+    _usuariosThrow_("USUARIOS_BAD_SCHEMA", "Cabeçalho da aba Usuarios incompleto.", idx);
   }
 
-  // login duplicado
   for (var i = 1; i < values.length; i++) {
     var row = values[i];
     var rowLogin = (row[idx.login] || "").toString().trim().toLowerCase();
     if (rowLogin && rowLogin === login.toLowerCase()) {
-      throw { code: "USUARIOS_LOGIN_DUPLICADO", message: "Já existe um usuário com este login.", details: { login: login } };
+      _usuariosThrow_("USUARIOS_LOGIN_DUPLICADO", "Já existe um usuário com este login.", { login: login });
     }
   }
 
@@ -208,10 +267,7 @@ function Usuarios_Criar_(payload) {
 }
 
 /**
- * Atualiza dados básicos de um usuário existente.
- *
- * payload:
- * { id, nome, login, email, perfil, ativo }
+ * Atualiza usuário.
  */
 function Usuarios_Atualizar_(payload) {
   payload = payload || {};
@@ -226,13 +282,13 @@ function Usuarios_Atualizar_(payload) {
   if (typeof payload.ativo === "boolean") ativo = payload.ativo;
   else ativo = boolFromCell_(payload.ativo);
 
-  if (!id) throw { code: "USUARIOS_ID_OBRIGATORIO", message: "ID é obrigatório.", details: null };
-  if (!nome) throw { code: "USUARIOS_NOME_OBRIGATORIO", message: "Nome é obrigatório.", details: null };
-  if (!login) throw { code: "USUARIOS_LOGIN_OBRIGATORIO", message: "Login é obrigatório.", details: null };
+  if (!id) _usuariosThrow_("USUARIOS_ID_OBRIGATORIO", "ID é obrigatório.", null);
+  if (!nome) _usuariosThrow_("USUARIOS_NOME_OBRIGATORIO", "Nome é obrigatório.", null);
+  if (!login) _usuariosThrow_("USUARIOS_LOGIN_OBRIGATORIO", "Login é obrigatório.", null);
 
   var sheet = getUsuariosSheet_();
   var values = sheet.getDataRange().getValues();
-  if (values.length <= 1) throw { code: "USUARIOS_NAO_ENCONTRADO", message: "Usuário não encontrado.", details: { id: id } };
+  if (values.length <= 1) _usuariosThrow_("USUARIOS_NAO_ENCONTRADO", "Usuário não encontrado.", { id: id });
 
   var header = values[0].map(function (h) { return (h || "").toString().trim(); });
 
@@ -246,25 +302,18 @@ function Usuarios_Atualizar_(payload) {
     atualizadoEm: header.indexOf("AtualizadoEm")
   };
 
-  if (idx.id < 0 || idx.login < 0) {
-    throw { code: "USUARIOS_BAD_SCHEMA", message: "Cabeçalho da aba Usuarios incompleto.", details: idx };
-  }
+  if (idx.id < 0 || idx.login < 0) _usuariosThrow_("USUARIOS_BAD_SCHEMA", "Cabeçalho da aba Usuarios incompleto.", idx);
 
   var linha = -1;
-
   for (var i = 1; i < values.length; i++) {
     var row = values[i];
     if (row[idx.id] && String(row[idx.id]) === id) {
-      linha = i + 1; // 1-based
+      linha = i + 1;
       break;
     }
   }
+  if (linha === -1) _usuariosThrow_("USUARIOS_NAO_ENCONTRADO", "Usuário não encontrado.", { id: id });
 
-  if (linha === -1) {
-    throw { code: "USUARIOS_NAO_ENCONTRADO", message: "Usuário não encontrado.", details: { id: id } };
-  }
-
-  // login duplicado em outro ID
   var loginLower = login.toLowerCase();
   for (var j = 1; j < values.length; j++) {
     var r = values[j];
@@ -274,7 +323,7 @@ function Usuarios_Atualizar_(payload) {
     var loginCheck = (r[idx.login] || "").toString().trim().toLowerCase();
 
     if (idCheck !== id && loginCheck === loginLower) {
-      throw { code: "USUARIOS_LOGIN_DUPLICADO", message: "Já existe outro usuário com este login.", details: { login: login } };
+      _usuariosThrow_("USUARIOS_LOGIN_DUPLICADO", "Já existe outro usuário com este login.", { login: login });
     }
   }
 

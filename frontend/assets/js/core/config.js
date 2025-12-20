@@ -2,6 +2,18 @@
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
   PRONTIO.config = PRONTIO.config || {};
 
+  function metaApiUrl_() {
+    try {
+      const doc = global.document;
+      if (!doc || !doc.querySelector) return "";
+      const meta = doc.querySelector('meta[name="prontio-api-url"]');
+      const v = meta && meta.content ? String(meta.content).trim() : "";
+      return v || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
   function detectEnv_() {
     const host = (global.location && global.location.hostname) || "";
     const path = (global.location && global.location.pathname) || "";
@@ -12,6 +24,8 @@
       if (path.startsWith("/prontio-prod/")) return "prod";
       return "dev";
     }
+
+    // Observação: qualquer outro host cai em "prod" (como já era)
     return "prod";
   }
 
@@ -23,7 +37,11 @@
   };
 
   PRONTIO.config.env = ENV;
-  PRONTIO.config.apiUrl = API_URLS[ENV] || API_URLS.dev;
+
+  // ✅ prioridade: meta prontio-api-url (se preenchido) -> senão, usa ENV
+  const metaUrl = metaApiUrl_();
+  PRONTIO.config.apiUrl = metaUrl || API_URLS[ENV] || API_URLS.dev;
+
   PRONTIO.config.apiTimeout = 20000;
 
   if (global.console) {

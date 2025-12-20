@@ -2,18 +2,14 @@
  * ============================================================
  * PRONTIO - Auth.gs (FASE 5)
  * ============================================================
- * - Identificar usuário (inicialmente simples, via token no payload)
+ * - Identificar usuário via token no payload (CacheService)
  * - Roles (admin/medico/recepcao)
- * - Integração com Registry (permissões por action)
+ * - Sessão (token) compatível com legado
  *
- * Regras:
- * - Não depende de estrutura de Sheets (isso pode ser migrado depois).
- * - Compatível com o auth legado (Auth_Login_ já existente) que grava no CacheService:
- *     CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(user), TTL)
- *
- * Contrato:
- * - Token vem em payload.token (por enquanto).
- * - user.perfil (string) define role principal.
+ * Actions (API):
+ * - Auth_Login  (payload: { login, senha })
+ * - Auth_Me     (payload: { token })
+ * - Auth_Logout (payload: { token })
  */
 
 var AUTH_CACHE_PREFIX = typeof AUTH_CACHE_PREFIX !== "undefined" ? AUTH_CACHE_PREFIX : "PRONTIO_AUTH_";
@@ -25,21 +21,15 @@ var AUTH_ROLES = {
   recepcao: "recepcao"
 };
 
-/**
- * Retorna user context (ou null) a partir do payload.
- * Preferência:
- * 1) payload.user (se já veio resolvido por algum adapter)
- * 2) payload.token => CacheService (legado)
- */
+var AUTH_ALLOW_PAYLOAD_USER = typeof AUTH_ALLOW_PAYLOAD_USER !== "undefined" ? AUTH_ALLOW_PAYLOAD_USER : false;
+
 function Auth_getUserContext_(payload) {
   payload = payload || {};
 
-  // 1) já veio usuário no payload (não confiar em produção; útil em DEV/testes)
-  if (payload.user && typeof payload.user === "object") {
+  if (AUTH_ALLOW_PAYLOAD_USER && payload.user && typeof payload.user === "object") {
     return _authNormalizeUser_(payload.user);
   }
 
-  // 2) token -> cache
   var token = Auth_getTokenFromPayload_(payload);
   if (!token) return null;
 
@@ -54,18 +44,12 @@ function Auth_getUserContext_(payload) {
   }
 }
 
-/**
- * Extrai token do payload (padrão atual do seu projeto).
- */
 function Auth_getTokenFromPayload_(payload) {
   payload = payload || {};
   var token = (payload.token || "").toString().trim();
   return token || null;
 }
 
-/**
- * Enforce auth (retorna response padrão em caso de falha).
- */
 function Auth_requireAuth_(ctx, payload) {
   var user = Auth_getUserContext_(payload);
   if (!user) {
@@ -75,10 +59,6 @@ function Auth_requireAuth_(ctx, payload) {
   return Errors.ok(ctx, { ok: true });
 }
 
-/**
- * Enforce roles (ctx.user precisa existir).
- * roles: array de strings (ex.: ["admin","medico"])
- */
 function Auth_requireRoles_(ctx, roles) {
   roles = roles || [];
   if (!roles.length) return Errors.ok(ctx, { ok: true });
@@ -101,11 +81,6 @@ function Auth_requireRoles_(ctx, roles) {
   return Errors.ok(ctx, { ok: true });
 }
 
-/**
- * Retorna roles efetivas de um usuário.
- * - Perfil principal em user.perfil (string)
- * - admin inclui medico e recepcao por conveniência (ajustável)
- */
 function Auth_rolesForUser_(user) {
   user = user || {};
   var perfil = (user.perfil || user.role || "").toString().trim().toLowerCase();
@@ -116,38 +91,114 @@ function Auth_rolesForUser_(user) {
   if (perfil === AUTH_ROLES.medico) return [AUTH_ROLES.medico];
   if (perfil === AUTH_ROLES.recepcao) return [AUTH_ROLES.recepcao];
 
-  // fallback: aceita qualquer string como role única
   return [perfil];
 }
 
-/**
- * (Opcional) cria sessão (token) para um user, compatível com legado.
- * Útil caso você queira migrar para Auth.gs no futuro sem depender de Auth_Login_ legado.
- */
 function Auth_createSession_(user) {
   user = _authNormalizeUser_(user || {});
   var token = Utilities.getUuid();
   CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(user), AUTH_TTL_SECONDS);
-  return { token: token, user: user };
+  return { token: token, user: user, expiresIn: AUTH_TTL_SECONDS };
 }
 
-/**
- * (Opcional) encerra sessão.
- */
 function Auth_destroySession_(token) {
   token = (token || "").toString().trim();
   if (token) CacheService.getScriptCache().remove(AUTH_CACHE_PREFIX + token);
   return { ok: true };
 }
 
-// ======================
-// Internals
-// ======================
+// Actions
+
+function Auth_Login(ctx, payload) {
+  payload = payload || {};
+  var login = (payload.login || "").toString().trim();
+  var senha = (payload.senha || "").toString();
+
+  if (!login || !senha) {
+    var err = new Error("Informe login e senha.");
+    err.code = (Errors && Errors.CODES) ? Errors.CODES.VALIDATION_ERROR : "VALIDATION_ERROR";
+    err.details = { fields: ["login", "senha"] };
+    throw err;
+  }
+
+  if (typeof Usuarios_findByLoginForAuth_ !== "function") {
+    var e1 = new Error("Módulo de usuários não disponível para autenticação.");
+    e1.code = (Errors && Errors.CODES) ? Errors.CODES.INTERNAL_ERROR : "INTERNAL_ERROR";
+    e1.details = { missing: "Usuarios_findByLoginForAuth_" };
+    throw e1;
+  }
+
+  var u = Usuarios_findByLoginForAuth_(login);
+
+  if (!u || !u.ativo) {
+    var e2 = new Error("Usuário ou senha inválidos.");
+    e2.code = "AUTH_INVALID_CREDENTIALS";
+    e2.details = null;
+    throw e2;
+  }
+
+  if (typeof Usuarios_verifyPassword_ !== "function") {
+    var e3 = new Error("Validação de senha indisponível.");
+    e3.code = (Errors && Errors.CODES) ? Errors.CODES.INTERNAL_ERROR : "INTERNAL_ERROR";
+    e3.details = { missing: "Usuarios_verifyPassword_" };
+    throw e3;
+  }
+
+  var ok = Usuarios_verifyPassword_(senha, u.senhaHash);
+  if (!ok) {
+    var e4 = new Error("Usuário ou senha inválidos.");
+    e4.code = "AUTH_INVALID_CREDENTIALS";
+    e4.details = null;
+    throw e4;
+  }
+
+  try {
+    if (typeof Usuarios_markUltimoLogin_ === "function") {
+      Usuarios_markUltimoLogin_(u.id);
+    }
+  } catch (_) {}
+
+  return Auth_createSession_({
+    id: u.id,
+    nome: u.nome,
+    login: u.login,
+    email: u.email,
+    perfil: u.perfil
+  });
+}
+
+function Auth_Me(ctx, payload) {
+  payload = payload || {};
+  var token = Auth_getTokenFromPayload_(payload);
+
+  if (!token) {
+    var e = new Error("Token ausente.");
+    e.code = "AUTH_REQUIRED";
+    e.details = { field: "token" };
+    throw e;
+  }
+
+  var user = ctx && ctx.user ? ctx.user : Auth_getUserContext_(payload);
+  if (!user) {
+    var e2 = new Error("Login obrigatório.");
+    e2.code = "AUTH_REQUIRED";
+    e2.details = { reason: "AUTH_REQUIRED" };
+    throw e2;
+  }
+
+  return { user: _authNormalizeUser_(user) };
+}
+
+function Auth_Logout(ctx, payload) {
+  payload = payload || {};
+  var token = Auth_getTokenFromPayload_(payload);
+  if (!token) return { ok: true };
+  return Auth_destroySession_(token);
+}
 
 function _authNormalizeUser_(user) {
   if (!user || typeof user !== "object") return null;
 
-  // Mantém campos principais usados em audit/permissão
   return {
     id: user.id !== undefined ? user.id : (user.ID_Usuario || user.idUsuario || null),
     nome: user.nome !== undefined ? user.nome : (user.Nome || null),

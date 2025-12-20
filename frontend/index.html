@@ -5,6 +5,10 @@
     <title>PRONTIO - Login</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+    <!-- (Opcional) API URL via meta. O core/api.js já lê isso.
+         Se você já define em PRONTIO.config.apiUrl (config.js), pode ignorar. -->
+    <meta name="prontio-api-url" content="" />
+
     <!-- CSS principal -->
     <link rel="stylesheet" href="assets/css/style.css" />
     <!-- CSS específico da página de login -->
@@ -63,6 +67,12 @@
     </div>
 
     <!-- CORE -->
+    <!-- Ordem recomendada:
+         1) config (define apiUrl)
+         2) helpers/utils
+         3) api (callApiData)
+         4) auth (login/me/logout)
+         5) app/main -->
     <script src="assets/js/core/config.js"></script>
     <script src="assets/js/core/dom.js"></script>
     <script src="assets/js/core/utils.js"></script>

@@ -13,7 +13,8 @@
   const STORAGE_KEYS = {
     TOKEN: "prontio.auth.token",
     USER: "prontio.auth.user",
-    EXPIRES_IN: "prontio.auth.expiresIn"
+    EXPIRES_IN: "prontio.auth.expiresIn",
+    POST_LOGIN_REDIRECT: "prontio.auth.postLoginRedirect"
   };
 
   let currentToken = null;
@@ -49,12 +50,9 @@
   initFromStorage();
 
   function setSession(session) {
-    // Auth_Login retorna { token, user, expiresIn }
-    // Auth_Me retorna { user }
     if (session && session.token) currentToken = String(session.token);
     if (session && session.user) currentUser = session.user;
 
-    // ✅ melhoria: se expiresIn vier, grava; se NÃO vier, não deixa valor antigo “fantasma”
     if (session && session.expiresIn !== undefined && session.expiresIn !== null) {
       currentExpiresIn = String(session.expiresIn);
     } else if (session && Object.prototype.hasOwnProperty.call(session, "expiresIn")) {
@@ -88,10 +86,6 @@
   function resolveLoginUrl(explicitUrl) {
     if (explicitUrl) return explicitUrl;
     if (typeof global.PRONTIO_LOGIN_URL === "string") return global.PRONTIO_LOGIN_URL;
-
-    // ✅ melhoria: relativo explícito evita surpresa dependendo do path atual
-    // (ex.: se abrir /frontend/pacientes.html -> index.html pode virar /frontend/index.html ok,
-    // mas se em subpasta, ./index.html garante relativo à página atual)
     return "./index.html";
   }
 
@@ -115,7 +109,25 @@
   }
 
   function isAuthenticated() {
-    return !!(currentToken || currentUser);
+    return !!currentToken;
+  }
+
+  function setPostLoginRedirect(url) {
+    try {
+      const u = (url || "").toString().trim();
+      if (!u) { lsSet(STORAGE_KEYS.POST_LOGIN_REDIRECT, null); return; }
+      lsSet(STORAGE_KEYS.POST_LOGIN_REDIRECT, u);
+    } catch (e) {}
+  }
+
+  function popPostLoginRedirect() {
+    try {
+      const u = lsGet(STORAGE_KEYS.POST_LOGIN_REDIRECT);
+      lsSet(STORAGE_KEYS.POST_LOGIN_REDIRECT, null);
+      return (u || "").toString().trim() || null;
+    } catch (e) {
+      return null;
+    }
   }
 
   function requireAuth(options) {
@@ -126,19 +138,22 @@
     if (isAuthenticated()) return true;
 
     if (redirect) {
+      try {
+        const here = global.location ? (global.location.pathname + global.location.search + global.location.hash) : "";
+        if (here) setPostLoginRedirect(here);
+      } catch (e) {}
+
       const loginUrl = resolveLoginUrl(opts.loginUrl);
       try { global.location.href = loginUrl; } catch (e) {}
     }
     return false;
   }
 
-  // ✅ helpers “profissionais”: centralizam as actions
   async function login(payload) {
     if (!PRONTIO.api || typeof PRONTIO.api.callApiData !== "function") {
       throw new Error("PRONTIO.api.callApiData não está disponível.");
     }
     const data = await PRONTIO.api.callApiData({ action: "Auth_Login", payload: payload || {} });
-    // Login retorna { token, user, expiresIn }
     setSession(data || {});
     return data;
   }
@@ -154,7 +169,10 @@
     return data;
   }
 
-  // ✅ guard server-side (sua realidade): Auth_Me
+  /**
+   * ✅ Sessão server-side: usa Auth_Me.
+   * Em falha, usa requireAuth() (salva redirect).
+   */
   async function ensureSession(options) {
     const opts = options || {};
     const redirect = typeof opts.redirect === "boolean" ? opts.redirect : true;
@@ -177,8 +195,9 @@
     } catch (e) {
       clearSession();
       if (redirect) {
-        const loginUrl = resolveLoginUrl(opts.loginUrl);
-        try { global.location.href = loginUrl; } catch (err) {}
+        try {
+          requireAuth({ redirect: true, loginUrl: opts.loginUrl });
+        } catch (_) {}
       }
       return false;
     }
@@ -241,12 +260,14 @@
   authNS.requireAuth = requireAuth;
   authNS.ensureSession = ensureSession;
 
-  // ✅ novos helpers
   authNS.login = login;
   authNS.me = me;
 
   authNS.logout = logout;
   authNS.bindLogoutButtons = bindLogoutButtons;
   authNS.renderUserLabel = renderUserLabel;
+
+  authNS.setPostLoginRedirect = setPostLoginRedirect;
+  authNS.popPostLoginRedirect = popPostLoginRedirect;
 
 })(window);

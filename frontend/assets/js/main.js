@@ -31,7 +31,6 @@
       ? global.location.pathname.toLowerCase()
       : "";
 
-    // ✅ agora reconhece index.html como login (e mantém login.html por compat)
     return (
       path.endsWith("/index.html") ||
       path.endsWith("index.html") ||
@@ -180,6 +179,15 @@
     });
   }
 
+  function escapeHtml_(s) {
+    return String(s || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
   function mountTopbar_() {
     const mount = document.getElementById("topbarMount");
     if (!mount) return;
@@ -277,16 +285,6 @@
     });
   }
 
-  function escapeHtml_(s) {
-    return String(s || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  // ✅ valida sessão no backend usando Auth_Me (conforme seu Auth.gs)
   async function ensureSessionIfAvailable_() {
     if (isLoginPage_()) return true;
     if (!PRONTIO.auth || typeof PRONTIO.auth.ensureSession !== "function") return true;
@@ -300,51 +298,64 @@
   }
 
   async function bootstrap_() {
-    // ✅ 1) Infra primeiro
-    await ensureApiLoaded_();
-    await ensureAuthLoaded_();
+    // ✅ idempotência
+    if (PRONTIO._bootstrapRunning) return;
+    if (PRONTIO._bootstrapDone) return;
+    PRONTIO._bootstrapRunning = true;
 
-    // ✅ 2) Guard local
-    if (!isLoginPage_() && PRONTIO.auth && typeof PRONTIO.auth.requireAuth === "function") {
-      const ok = PRONTIO.auth.requireAuth({ redirect: true });
-      if (!ok) return;
-    }
+    // ✅ main.js é a fonte de verdade do guard
+    PRONTIO._mainBootstrapped = true;
 
-    // ✅ 3) Guard server-side (Auth_Me)
-    const okSession = await ensureSessionIfAvailable_();
-    if (!okSession) return;
+    try {
+      // 1) Infra primeiro
+      await ensureApiLoaded_();
+      await ensureAuthLoaded_();
 
-    // ✅ 4) Só depois monta UI (evita "flash" em página protegida)
-    if (!isLoginPage_()) {
-      mountTopbar_();
-      initSidebar_();
-      initModals_();
-      initThemeToggle_();
-    }
+      // 2) Guard local
+      if (!isLoginPage_() && PRONTIO.auth && typeof PRONTIO.auth.requireAuth === "function") {
+        const ok = PRONTIO.auth.requireAuth({ redirect: true });
+        if (!ok) return;
+      }
 
-    // ✅ 5) Logout + label
-    if (!isLoginPage_() && PRONTIO.auth) {
-      try {
-        if (typeof PRONTIO.auth.bindLogoutButtons === "function") PRONTIO.auth.bindLogoutButtons();
-        if (typeof PRONTIO.auth.renderUserLabel === "function") PRONTIO.auth.renderUserLabel();
-      } catch (e) {}
-    }
+      // 3) Guard server-side (Auth_Me)
+      const okSession = await ensureSessionIfAvailable_();
+      if (!okSession) return;
 
-    const pageId = getPageId_();
-    if (!pageId) return;
+      // 4) Só depois monta UI (evita "flash")
+      if (!isLoginPage_()) {
+        mountTopbar_();
+        initSidebar_();
+        initModals_();
+        initThemeToggle_();
+      }
 
-    if (!PRONTIO.pages[pageId]) {
-      let ok = await loadOnce_("assets/js/pages/page-" + pageId + ".js");
-      if (!ok) ok = await loadOnce_("assets/js/page-" + pageId + ".js");
-    }
+      // 5) Logout + label
+      if (!isLoginPage_() && PRONTIO.auth) {
+        try {
+          if (typeof PRONTIO.auth.bindLogoutButtons === "function") PRONTIO.auth.bindLogoutButtons();
+          if (typeof PRONTIO.auth.renderUserLabel === "function") PRONTIO.auth.renderUserLabel();
+        } catch (e) {}
+      }
 
-    if (pageId === "prontuario") {
-      await loadOnce_("assets/js/pages/page-receita.js");
-    }
+      const pageId = getPageId_();
+      if (!pageId) return;
 
-    const page = PRONTIO.pages[pageId];
-    if (page && typeof page.init === "function") {
-      try { page.init(); } catch (e) {}
+      if (!PRONTIO.pages[pageId]) {
+        let ok = await loadOnce_("assets/js/pages/page-" + pageId + ".js");
+        if (!ok) ok = await loadOnce_("assets/js/page-" + pageId + ".js");
+      }
+
+      if (pageId === "prontuario") {
+        await loadOnce_("assets/js/pages/page-receita.js");
+      }
+
+      const page = PRONTIO.pages[pageId];
+      if (page && typeof page.init === "function") {
+        try { page.init(); } catch (e) {}
+      }
+    } finally {
+      PRONTIO._bootstrapRunning = false;
+      PRONTIO._bootstrapDone = true;
     }
   }
 

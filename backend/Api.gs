@@ -31,7 +31,11 @@ var CORS_ALLOW_HEADERS = typeof CORS_ALLOW_HEADERS !== "undefined" ? CORS_ALLOW_
 function doOptions(e) {
   var requestId = _makeRequestId_();
   return _withCors_(
-    _jsonOutput_(Errors ? Errors.ok({ requestId: requestId, action: "OPTIONS" }, { ok: true, preflight: true }) : _ok_(requestId, { ok: true, preflight: true }, { action: "OPTIONS" }))
+    _jsonOutput_(
+      (typeof Errors !== "undefined" && Errors && typeof Errors.ok === "function")
+        ? Errors.ok({ requestId: requestId, action: "OPTIONS" }, { ok: true, preflight: true })
+        : _ok_(requestId, { ok: true, preflight: true }, { action: "OPTIONS" })
+    )
   );
 }
 
@@ -61,6 +65,7 @@ function doPost(e) {
       ])));
     }
 
+    // ctx base (user será resolvido depois do Registry)
     var ctx = {
       requestId: requestId,
       timestamp: startedAt.toISOString(),
@@ -70,14 +75,6 @@ function doPost(e) {
       apiVersion: PRONTIO_API_VERSION,
       user: null
     };
-
-    // Resolve user (se Auth.gs existir)
-    if (typeof Auth_getUserContext_ === "function") {
-      ctx.user = Auth_getUserContext_(payload);
-    } else {
-      // fallback dev: aceita payload.user sem enforcement
-      ctx.user = (payload && payload.user) ? payload.user : null;
-    }
 
     // Registry (obrigatório)
     var entry = Registry_getAction_(action);
@@ -95,9 +92,21 @@ function doPost(e) {
       ], { action: action })));
     }
 
+    /**
+     * ✅ Resolve user APÓS conhecer a action (Registry).
+     * - Evita resolver user "cedo demais"
+     * - Mantém ctx.user disponível para audit/handlers mesmo em actions sem requiresAuth
+     * - Segurança: não faz fallback perigoso para payload.user
+     */
+    if (typeof Auth_getUserContext_ === "function") {
+      ctx.user = Auth_getUserContext_(payload);
+    } else {
+      ctx.user = null; // sem bypass dev aqui
+    }
+
     // AUTH enforcement por action (FASE 5)
     if (entry.requiresAuth) {
-      if (typeof Auth_requireAuth_ === "function" && typeof Errors !== "undefined") {
+      if (typeof Auth_requireAuth_ === "function" && typeof Errors !== "undefined" && Errors) {
         var authRes = Auth_requireAuth_(ctx, payload);
         if (!authRes.success) return _withCors_(_jsonOutput_(authRes));
       } else if (typeof requireAuthIfEnabled_ === "function") {
@@ -105,14 +114,14 @@ function doPost(e) {
         requireAuthIfEnabled_(action, payload);
       } else {
         return _withCors_(_jsonOutput_(_err_(requestId, [
-          { code: "INTERNAL_ERROR", message: "Auth requerido, mas Auth.gs não disponível.", details: { action: action } }
+          { code: "INTERNAL_ERROR", message: "Auth requerido, mas Auth.gs/Errors.gs não disponível.", details: { action: action } }
         ], { action: action })));
       }
     }
 
     // ROLES enforcement por action (FASE 5)
     if (entry.roles && entry.roles.length) {
-      if (typeof Auth_requireRoles_ === "function" && typeof Errors !== "undefined") {
+      if (typeof Auth_requireRoles_ === "function" && typeof Errors !== "undefined" && Errors) {
         var roleRes = Auth_requireRoles_(ctx, entry.roles);
         if (!roleRes.success) return _withCors_(_jsonOutput_(roleRes));
       } else {
@@ -161,7 +170,10 @@ function doPost(e) {
 
     try {
       if (typeof Audit_log_ === "function") {
-        Audit_log_({ requestId: requestId, action: null, env: PRONTIO_ENV, apiVersion: PRONTIO_API_VERSION }, { outcome: "ERROR", error: out.errors ? out.errors[0] : null });
+        Audit_log_(
+          { requestId: requestId, action: null, env: PRONTIO_ENV, apiVersion: PRONTIO_API_VERSION },
+          { outcome: "ERROR", error: out.errors ? out.errors[0] : null }
+        );
       }
     } catch (_) {}
 

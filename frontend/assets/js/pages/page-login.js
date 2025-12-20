@@ -13,7 +13,6 @@
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
 
   // ✅ Defina aqui a "home" pós-login (módulo principal)
-  // Sugestão: "agenda.html" (ou "atendimento.html", conforme sua decisão)
   const DEFAULT_HOME = "atendimento.html";
 
   function qs(id) {
@@ -62,6 +61,29 @@
     return DEFAULT_HOME;
   }
 
+  function setFormBusy_(busy) {
+    const form = qs("formLogin");
+    if (!form) return;
+
+    const btn = form.querySelector('button[type="submit"]');
+    const inpUser = qs("loginUsuario");
+    const inpPass = qs("loginSenha");
+
+    if (btn) {
+      btn.disabled = !!busy;
+      btn.setAttribute("aria-busy", busy ? "true" : "false");
+    }
+    if (inpUser) inpUser.disabled = !!busy;
+    if (inpPass) inpPass.disabled = !!busy;
+  }
+
+  function cleanLoginErrorMessage_(msg) {
+    // Opcional: remove prefixo "[CODE]" se vier do api.js
+    const s = String(msg || "").trim();
+    const m = s.match(/^\[[A-Z0-9_\-]+\]\s+(.*)$/);
+    return m ? m[1] : s;
+  }
+
   async function handleSubmit(ev) {
     ev.preventDefault();
     hideMessage();
@@ -74,34 +96,35 @@
       return;
     }
 
-    // ✅ exige que o helper exista (padrão profissional do PRONTIO)
     if (!PRONTIO.auth || typeof PRONTIO.auth.login !== "function") {
       showMessage("Módulo de autenticação não disponível.", "error");
       return;
     }
 
-    const btn = document.querySelector("#formLogin button[type='submit']");
-    if (btn) btn.disabled = true;
+    setFormBusy_(true);
 
     try {
-      // ✅ centraliza regra: auth.login chama Auth_Login e já salva sessão (token/user/expiresIn)
       await PRONTIO.auth.login({ login: usuario, senha });
-
       global.location.href = resolvePostLoginUrl_();
     } catch (err) {
-      showMessage(err && err.message ? err.message : "Falha no login.", "error");
+      // log técnico opcional (sem poluir UI)
+      try { console.warn("[PRONTIO.login] erro:", err); } catch (e) {}
+
+      const msg = err && err.message ? err.message : "Falha no login.";
+      showMessage(cleanLoginErrorMessage_(msg), "error");
     } finally {
-      if (btn) btn.disabled = false;
+      setFormBusy_(false);
     }
   }
 
   function init() {
     setYear();
 
-    // ✅ Se já estiver logado, não fica preso no login: manda para HOME
+    // ✅ Se já estiver logado (token), não fica preso no login
+    // Melhor: respeita redirect pendente (se existir)
     try {
       if (PRONTIO.auth && typeof PRONTIO.auth.isAuthenticated === "function" && PRONTIO.auth.isAuthenticated()) {
-        global.location.href = DEFAULT_HOME;
+        global.location.href = resolvePostLoginUrl_();
         return;
       }
     } catch (e) {}

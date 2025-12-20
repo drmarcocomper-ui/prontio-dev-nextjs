@@ -2,6 +2,14 @@
 // PRONTIO - core/guard.js
 // Caminho: frontend/assets/js/core/guard.js
 // =====================================
+//
+// ✅ Melhor prática adotada:
+// - Guard oficial fica no main.js (carrega infra + evita flash).
+// - Este arquivo fica como fallback/compat.
+// - Se main.js já rodou, este guard não interfere.
+//
+// Isso preserva seu histórico e evita comportamento duplicado.
+// =====================================
 
 (function (global) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
@@ -29,6 +37,9 @@
     // Não roda no login
     if (isLoginPage_()) return;
 
+    // ✅ Se main.js já rodou, não faz nada
+    if (PRONTIO._mainBootstrapped) return;
+
     if (!PRONTIO.auth || typeof PRONTIO.auth.requireAuth !== "function") {
       console.warn("[PRONTIO.guard] PRONTIO.auth.requireAuth não encontrado.");
       return;
@@ -38,27 +49,19 @@
     const ok = PRONTIO.auth.requireAuth({ redirect: true });
     if (!ok) return;
 
-    // 2) Validação no servidor (mais profissional)
+    // 2) Validação server-side (se existir)
     try {
-      if (typeof PRONTIO.auth.validateSession === "function") {
-        const result = await PRONTIO.auth.validateSession();
-        if (!result || result.ok === false) {
-          PRONTIO.auth.clearSession && PRONTIO.auth.clearSession();
-          PRONTIO.auth.requireAuth({ redirect: true });
-          return;
-        }
+      if (typeof PRONTIO.auth.ensureSession === "function") {
+        const okServer = await PRONTIO.auth.ensureSession({ redirect: true });
+        if (!okServer) return;
       }
-    } catch (e) {}
-
-    // 3) Helpers de UI
-    try {
-      if (typeof PRONTIO.auth.bindLogoutButtons === "function") {
-        PRONTIO.auth.bindLogoutButtons();
-      }
-      if (typeof PRONTIO.auth.renderUserLabel === "function") {
-        PRONTIO.auth.renderUserLabel();
-      }
-    } catch (e) {}
+    } catch (e) {
+      try {
+        PRONTIO.auth.clearSession && PRONTIO.auth.clearSession();
+        PRONTIO.auth.requireAuth({ redirect: true });
+      } catch (_) {}
+      return;
+    }
   }
 
   global.document?.addEventListener("DOMContentLoaded", boot_);

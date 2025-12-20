@@ -2,258 +2,109 @@
  * ============================================================
  * PRONTIO - Registry.gs
  * ============================================================
- * Catálogo central de actions.
- * IMPORTANTE: sem cache em memória para evitar "container quente"
- * reusar catálogo antigo entre execuções.
+ * Responsabilidade:
+ * - Registrar actions disponíveis na API.
+ * - Definir metadados: requiresAuth, roles, validations, locks.
+ *
+ * Contrato:
+ * - Api.gs chama: Registry_getAction_(action)
+ * - Retorna:
+ *   {
+ *     action: string,
+ *     handler: function(ctx, payload) -> any,
+ *     requiresAuth: boolean,
+ *     roles: string[],
+ *     validations: array,
+ *     requiresLock: boolean,
+ *     lockKey: string|null
+ *   }
  */
 
+var REGISTRY_ACTIONS = null;
+
 function Registry_getAction_(action) {
-  var catalog = Registry_catalog_();
-  return catalog[action] || null;
+  action = String(action || "").trim();
+  if (!action) return null;
+
+  if (!REGISTRY_ACTIONS) {
+    REGISTRY_ACTIONS = _Registry_build_();
+  }
+
+  return REGISTRY_ACTIONS[action] || null;
 }
 
-function Registry_listActions_() {
-  var catalog = Registry_catalog_();
-  var keys = Object.keys(catalog).sort();
-  return keys.map(function (k) {
-    var a = catalog[k];
-    return {
-      action: k,
-      requiresAuth: !!a.requiresAuth,
-      roles: a.roles || [],
-      requiresLock: !!a.requiresLock,
-      idempotent: !!a.idempotent,
-      validations: (a.validations || []).map(function (v) {
-        return _stringifyValidationHint_(v);
-      })
-    };
-  });
-}
+function _Registry_build_() {
+  /**
+   * Dica: mantenha aqui SOMENTE o mapeamento.
+   * A lógica fica nos módulos (Auth.gs, Usuarios.gs, etc).
+   */
+  var map = {};
 
-function Registry_catalog_() {
-  // 🚫 SEM CACHE: evita ficar preso em versão antiga do catálogo.
-  var catalog = {};
-
-  // ============================================================
-  // META
-  // ============================================================
-
-  catalog["Meta.Ping"] = {
-    handler: Meta_Ping_,
-    requiresAuth: false,
-    roles: [],
-    requiresLock: false,
-    idempotent: true,
-    validations: []
-  };
-
-  catalog["Meta.ListActions"] = {
-    handler: Meta_ListActions_,
-    requiresAuth: false,
-    roles: [],
-    requiresLock: false,
-    idempotent: true,
-    validations: []
-  };
-
-  catalog["Meta.DbStatus"] = {
-    handler: Meta_DbStatus_,
-    requiresAuth: false,
-    roles: [],
-    requiresLock: false,
-    idempotent: true,
-    validations: []
-  };
-
-  catalog["Meta.HealthCheck"] = {
-    handler: Meta_HealthCheck_,
-    requiresAuth: false,
-    roles: [],
-    requiresLock: false,
-    idempotent: true,
-    validations: []
-  };
-
-  catalog["Meta.BootstrapDb"] = {
-    handler: Meta_BootstrapDb_,
-    requiresAuth: false,
-    roles: [],
-    requiresLock: true,
-    idempotent: false,
-    validations: []
-  };
-
-  // ============================================================
+  // =========================
   // AUTH
-  // ============================================================
-
-  catalog["Auth.Login"] = {
-    handler: Auth_Action_Login_,
+  // =========================
+  map["Auth_Login"] = {
+    action: "Auth_Login",
+    handler: Auth_Login,
     requiresAuth: false,
     roles: [],
+    validations: [], // pode plugar Validators depois
+    requiresLock: true,
+    lockKey: "Auth_Login"
+  };
+
+  map["Auth_Me"] = {
+    action: "Auth_Me",
+    handler: Auth_Me,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
     requiresLock: false,
-    idempotent: false,
-    validations: [
-      { field: "login", rule: "required" },
-      { field: "senha", rule: "required" }
-    ]
+    lockKey: null
   };
 
-  // ============================================================
-  // AGENDA (DEV - SEM AUTH)
-  // ============================================================
-
-  catalog["Agenda.ListarPorPeriodo"] = {
-    handler: Agenda_Action_ListarPorPeriodo_,
-    requiresAuth: false, // 🔓 DEV
+  map["Auth_Logout"] = {
+    action: "Auth_Logout",
+    handler: Auth_Logout,
+    requiresAuth: true,
     roles: [],
+    validations: [],
     requiresLock: false,
-    idempotent: true,
-    validations: [
-      { field: "inicio", rule: "required" },
-      { field: "fim", rule: "required" },
-      { field: "inicio", rule: "date" },
-      { field: "fim", rule: "date" }
-    ]
+    lockKey: null
   };
 
-  catalog["Agenda.Criar"] = {
-    handler: Agenda_Action_Criar_,
-    requiresAuth: false, // 🔓 DEV
-    roles: [],
+  // =========================
+  // USUÁRIOS (admin)
+  // =========================
+  map["Usuarios_Listar"] = {
+    action: "Usuarios_Listar",
+    handler: function (ctx, payload) { return handleUsuariosAction("Usuarios_Listar", payload); },
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  map["Usuarios_Criar"] = {
+    action: "Usuarios_Criar",
+    handler: function (ctx, payload) { return handleUsuariosAction("Usuarios_Criar", payload); },
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
     requiresLock: true,
-    idempotent: false,
-    validations: []
+    lockKey: "Usuarios_Criar"
   };
 
-  catalog["Agenda.Atualizar"] = {
-    handler: Agenda_Action_Atualizar_,
-    requiresAuth: false, // 🔓 DEV
-    roles: [],
+  map["Usuarios_Atualizar"] = {
+    action: "Usuarios_Atualizar",
+    handler: function (ctx, payload) { return handleUsuariosAction("Usuarios_Atualizar", payload); },
+    requiresAuth: true,
+    roles: ["admin"],
+    validations: [],
     requiresLock: true,
-    idempotent: false,
-    validations: [
-      { field: "idAgenda", rule: "required" }
-    ]
+    lockKey: "Usuarios_Atualizar"
   };
 
-  catalog["Agenda.Cancelar"] = {
-    handler: Agenda_Action_Cancelar_,
-    requiresAuth: false, // 🔓 DEV
-    roles: [],
-    requiresLock: true,
-    idempotent: false,
-    validations: [
-      { field: "idAgenda", rule: "required" }
-    ]
-  };
-
-  // ============================================================
-  // LEGACY ROUTERS (mantidos)
-  // ============================================================
-
-  _tryRegisterLegacyAdapter_(catalog, "Evolucao", "handleEvolucaoAction");
-  _tryRegisterLegacyAdapter_(catalog, "Receita", "handleReceitaAction");
-  _tryRegisterLegacyAdapter_(catalog, "Prontuario", "handleProntuarioAction");
-  _tryRegisterLegacyAdapter_(catalog, "Exames", "handleExamesAction");
-
-  return catalog;
-}
-
-// ============================================================
-// META handlers
-// ============================================================
-
-function Meta_Ping_(ctx, payload) {
-  return {
-    ok: true,
-    api: "PRONTIO",
-    version: (ctx && ctx.apiVersion)
-      ? ctx.apiVersion
-      : (typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : null),
-    env: (ctx && ctx.env)
-      ? ctx.env
-      : (typeof PRONTIO_ENV !== "undefined" ? PRONTIO_ENV : null),
-    time: new Date().toISOString(),
-    requestId: ctx ? ctx.requestId : null
-  };
-}
-
-function Meta_ListActions_(ctx, payload) {
-  var list = Registry_listActions_();
-  return {
-    actions: list,
-    count: list.length,
-    requestId: ctx ? ctx.requestId : null
-  };
-}
-
-function Meta_DbStatus_(ctx, payload) {
-  if (typeof Migrations_getDbStatus_ !== "function") {
-    return {
-      ok: false,
-      error: "Migrations_getDbStatus_ não encontrado.",
-      requestId: ctx ? ctx.requestId : null
-    };
-  }
-  return {
-    requestId: ctx ? ctx.requestId : null,
-    status: Migrations_getDbStatus_()
-  };
-}
-
-function Meta_BootstrapDb_(ctx, payload) {
-  if (typeof Migrations_bootstrap_ !== "function") {
-    return {
-      ok: false,
-      error: "Migrations_bootstrap_ não encontrado. Verifique se Migrations.gs está no projeto.",
-      requestId: ctx ? ctx.requestId : null
-    };
-  }
-  var result = Migrations_bootstrap_();
-  return { ok: true, requestId: ctx ? ctx.requestId : null, result: result };
-}
-
-// Meta_HealthCheck_ está em Health.gs
-
-// ============================================================
-// Legacy adapter support
-// ============================================================
-
-function _tryRegisterLegacyAdapter_(catalog, prefixTitle, handlerFnName) {
-  try {
-    var fn =
-      (typeof globalThis !== "undefined" && globalThis[handlerFnName])
-        ? globalThis[handlerFnName]
-        : this[handlerFnName];
-
-    if (typeof fn !== "function") return;
-
-    var actionName = prefixTitle + "._LegacyRouter";
-
-    catalog[actionName] = {
-      handler: function (ctx, payload) {
-        var action = ctx && ctx.action ? ctx.action : actionName;
-        return fn(action, payload);
-      },
-      requiresAuth: false,
-      roles: [],
-      requiresLock: false,
-      idempotent: false,
-      validations: []
-    };
-  } catch (e) {
-    // silêncio
-  }
-}
-
-function _stringifyValidationHint_(v) {
-  try {
-    if (v === null || v === undefined) return String(v);
-    if (typeof v === "string") return v;
-    if (typeof v === "function") return "fn:" + (v.name || "anonymous");
-    return JSON.stringify(v);
-  } catch (e) {
-    return "validation";
-  }
+  return map;
 }
