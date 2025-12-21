@@ -7,6 +7,12 @@
  * Exporta:
  * - PRONTIO.api.callApiEnvelope({ action, payload }) -> envelope completo
  * - PRONTIO.api.callApiData({ action, payload })     -> somente data (throw se success=false)
+ *
+ * ✅ Patch CORS/Preflight (Apps Script WebApp):
+ * - Envia POST como application/x-www-form-urlencoded:
+ *   action=...&payload=JSON.stringify(...)
+ * - NÃO define headers custom (evita preflight/OPTIONS)
+ * - Seu Api.gs já suporta form-urlencoded.
  */
 
 (function (global) {
@@ -81,7 +87,7 @@
   // ============================================================
   // ✅ NORMALIZAÇÃO DEFINITIVA (sem quebrar backend atual):
   // - Remedios.*  -> Medicamentos.*  (backend aceita)
-  // - Medicamentos.* fica como está  (NÃO converter para Remedios.*)
+  // - Medicamentos.* fica como está
   // ============================================================
 
   function normalizeAction_(action) {
@@ -95,7 +101,7 @@
   }
 
   // ============================================================
-  // Token injection
+  // Token injection (mantém como está no seu padrão)
   // ============================================================
 
   function getAuthToken_() {
@@ -130,7 +136,7 @@
   }
 
   // ============================================================
-  // Auto-logout opcional (quando backend exige login)
+  // Auto-logout opcional
   // ============================================================
 
   function shouldAutoLogout_(errCode) {
@@ -166,14 +172,26 @@
     }
   }
 
+  /**
+   * ✅ Envia como form-urlencoded SEM headers custom para evitar CORS preflight.
+   * Api.gs já suporta:
+   * - form-urlencoded: action=...&payload={...}
+   */
   async function fetchJson_(apiUrl, bodyObj) {
     let resp;
+
+    // Monta body action=...&payload=...
+    const action = String(bodyObj && bodyObj.action ? bodyObj.action : "");
+    const payload = bodyObj && bodyObj.payload ? bodyObj.payload : {};
+    const form = new URLSearchParams();
+    form.set("action", action);
+    form.set("payload", JSON.stringify(payload || {}));
 
     try {
       resp = await fetch(apiUrl, {
         method: "POST",
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-        body: JSON.stringify(bodyObj),
+        // ✅ não setar headers aqui
+        body: form.toString()
       });
     } catch (e) {
       throw new Error("Falha de rede ao chamar API: " + normalizeError_(e));
@@ -208,7 +226,6 @@
 
     const actionRaw = args && args.action ? String(args.action) : "";
     const action = normalizeAction_(actionRaw);
-
     if (!action) throw new Error("Parâmetro obrigatório ausente: action");
 
     const payloadRaw = (args && args.payload) || {};
@@ -223,7 +240,6 @@
 
     const primary = getPrimaryError_(envelope);
 
-    // ✅ se o backend estiver exigindo login, derruba sessão e manda pro login
     if (shouldAutoLogout_(primary.code)) {
       tryAutoLogout_();
     }
