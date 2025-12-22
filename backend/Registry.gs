@@ -33,6 +33,19 @@ function Registry_getAction_(action) {
   return REGISTRY_ACTIONS[action] || null;
 }
 
+/**
+ * Cria um handler seguro para quando uma função não existe no deploy.
+ * Isso evita que o Registry "quebre" durante a construção do map.
+ */
+function _Registry_missingHandler_(fnName) {
+  return function (ctx, payload) {
+    var err = new Error("Handler não disponível no deploy: " + String(fnName));
+    err.code = "INTERNAL_ERROR";
+    err.details = { missingHandler: String(fnName) };
+    throw err;
+  };
+}
+
 function _Registry_build_() {
   var map = {};
 
@@ -85,12 +98,17 @@ function _Registry_build_() {
   /**
    * ✅ DEV ONLY: Reset de senha (apenas para destravar ambiente DEV)
    * IMPORTANTE:
-   * - A função Auth_ResetSenhaDev deve existir (ex.: AuthDebug.gs / AuthDev.gs)
-   * - Remover esta action quando terminar o diagnóstico/reset
+   * - A função Auth_ResetSenhaDev pode NÃO existir no deploy publicado.
+   * - O Registry NÃO pode quebrar por isso.
+   *
+   * Se a função existir, usa ela.
+   * Se não existir, registra um handler que falha de forma controlada.
    */
   map["Auth_ResetSenhaDev"] = {
     action: "Auth_ResetSenhaDev",
-    handler: Auth_ResetSenhaDev,
+    handler: (typeof Auth_ResetSenhaDev === "function")
+      ? Auth_ResetSenhaDev
+      : _Registry_missingHandler_("Auth_ResetSenhaDev"),
     requiresAuth: false,
     roles: [],
     validations: [],
