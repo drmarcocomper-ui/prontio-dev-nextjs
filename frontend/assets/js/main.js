@@ -4,9 +4,72 @@
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
   PRONTIO.pages = PRONTIO.pages || {};
 
+  /**
+   * ============================================================
+   * COMPAT: DOMContentLoaded para scripts lazy-loaded
+   * ============================================================
+   * Problema:
+   * - main.js lazy-load de page-*.js acontece após DOMContentLoaded.
+   * - Se page-*.js faz: document.addEventListener("DOMContentLoaded", boot_)
+   *   o boot_ nunca roda.
+   *
+   * Solução:
+   * - Se DOM já está pronto, intercepta addEventListener("DOMContentLoaded", fn)
+   *   e executa fn imediatamente (async), uma única vez.
+   *
+   * Observação:
+   * - Isso evita retrabalho imediato em todas as pages e estabiliza o app.
+   */
+  (function patchDOMContentLoadedOnce_() {
+    if (PRONTIO._domContentLoadedPatched) return;
+    PRONTIO._domContentLoadedPatched = true;
+
+    const alreadyLoaded = document.readyState !== "loading";
+    PRONTIO._domContentAlreadyLoaded = alreadyLoaded;
+
+    const origAdd = document.addEventListener.bind(document);
+
+    document.addEventListener = function (type, listener, options) {
+      // comportamento padrão
+      origAdd(type, listener, options);
+
+      // compat: se DOMContentLoaded já ocorreu, chama imediatamente
+      if (type === "DOMContentLoaded" && PRONTIO._domContentAlreadyLoaded) {
+        try {
+          // evita chamar 2x o mesmo listener (best-effort)
+          if (listener && typeof listener === "function") {
+            const key = "__prontio_dcl_" + String(listener);
+            PRONTIO._dclOnce = PRONTIO._dclOnce || {};
+            if (PRONTIO._dclOnce[key]) return;
+            PRONTIO._dclOnce[key] = true;
+
+            global.setTimeout(function () {
+              try { listener.call(document, new Event("DOMContentLoaded")); } catch (_) {}
+            }, 0);
+          }
+        } catch (_) {}
+      }
+    };
+
+    // se ainda não carregou, marca quando carregar
+    if (!alreadyLoaded) {
+      origAdd("DOMContentLoaded", function () {
+        PRONTIO._domContentAlreadyLoaded = true;
+      });
+    }
+  })();
+
+  // ============================================================
+  // Registry de páginas
+  // ============================================================
   PRONTIO.registerPage = function registerPage(pageId, initFn) {
     if (!pageId || typeof initFn !== "function") return;
     PRONTIO.pages[pageId] = { init: initFn };
+  };
+
+  // Compat com versões antigas que usavam outro nome
+  PRONTIO.registerPageInitializer = function registerPageInitializer(pageId, initFn) {
+    PRONTIO.registerPage(pageId, initFn);
   };
 
   function getPageId_() {
@@ -298,12 +361,12 @@
   }
 
   async function bootstrap_() {
-    // ✅ idempotência
+    // idempotência
     if (PRONTIO._bootstrapRunning) return;
     if (PRONTIO._bootstrapDone) return;
     PRONTIO._bootstrapRunning = true;
 
-    // ✅ main.js é a fonte de verdade do guard
+    // main.js é a fonte de verdade do guard
     PRONTIO._mainBootstrapped = true;
 
     try {
@@ -340,15 +403,18 @@
       const pageId = getPageId_();
       if (!pageId) return;
 
+      // 6) Lazy load page script (page can register itself OR rely on DOMContentLoaded compat)
       if (!PRONTIO.pages[pageId]) {
         let ok = await loadOnce_("assets/js/pages/page-" + pageId + ".js");
         if (!ok) ok = await loadOnce_("assets/js/page-" + pageId + ".js");
       }
 
+      // 7) Compat legado específico
       if (pageId === "prontuario") {
         await loadOnce_("assets/js/pages/page-receita.js");
       }
 
+      // 8) Se a página registrou init, executa. Se não, o compat DOMContentLoaded cobre.
       const page = PRONTIO.pages[pageId];
       if (page && typeof page.init === "function") {
         try { page.init(); } catch (e) {}
