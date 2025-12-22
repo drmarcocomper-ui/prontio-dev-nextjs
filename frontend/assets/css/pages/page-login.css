@@ -150,6 +150,12 @@
   text-align: center;
 }
 
+#loginCapsLockHint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #f59e0b; /* âmbar */
+}
+
 /* Responsivo */
 @media (max-width: 480px) {
   .login-card {

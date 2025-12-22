@@ -9,10 +9,12 @@
 // - Normalizar identificador (trim + lower) para reduzir erro humano
 // - Chamar Auth_Login via PRONTIO.auth.login (centralizado)
 // - Redirecionar (prioridade: destino salvo; fallback: HOME do sistema)
-// - Melhorias UX (não exigem mudar HTML):
+// - Melhorias UX:
 //   - Placeholder: "Login ou e-mail" (se estiver vazio)
 //   - Autocomplete correto
 //   - Lembrar último login digitado (localStorage)
+//   - Detectar Caps Lock
+//   - Mostrar/Ocultar senha (botão toggleSenha)
 
 (function (global, document) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
@@ -91,6 +93,7 @@
     const btn = form.querySelector('button[type="submit"]');
     const inpUser = qs("loginUsuario");
     const inpPass = qs("loginSenha");
+    const btnToggle = qs("toggleSenha");
 
     if (btn) {
       btn.disabled = !!busy;
@@ -98,6 +101,9 @@
     }
     if (inpUser) inpUser.disabled = !!busy;
     if (inpPass) inpPass.disabled = !!busy;
+
+    // mantém toggle coerente (opcional)
+    if (btnToggle) btnToggle.disabled = !!busy;
   }
 
   function cleanLoginErrorMessage_(msg) {
@@ -120,7 +126,6 @@
     if (inpUser) {
       if (!inpUser.getAttribute("placeholder")) inpUser.setAttribute("placeholder", "Login ou e-mail");
       if (!inpUser.getAttribute("autocomplete")) inpUser.setAttribute("autocomplete", "username");
-      // inputmode ajuda no mobile (teclado com @)
       inpUser.setAttribute("inputmode", "email");
 
       // Preenche com último identificador usado
@@ -132,6 +137,51 @@
       if (!inpPass.getAttribute("placeholder")) inpPass.setAttribute("placeholder", "Senha");
       if (!inpPass.getAttribute("autocomplete")) inpPass.setAttribute("autocomplete", "current-password");
     }
+  }
+
+  function bindCapsLockDetector_() {
+    const input = qs("loginSenha");
+    const hint = qs("loginCapsLockHint");
+    if (!input || !hint) return;
+
+    // começa escondido (evita "sempre ativo")
+    hint.classList.add("is-hidden");
+
+    function update(ev) {
+      if (!ev || typeof ev.getModifierState !== "function") {
+        hint.classList.add("is-hidden");
+        return;
+      }
+      const caps = ev.getModifierState("CapsLock");
+      hint.classList.toggle("is-hidden", !caps);
+    }
+
+    input.addEventListener("keydown", update);
+    input.addEventListener("keyup", update);
+    input.addEventListener("blur", () => hint.classList.add("is-hidden"));
+    input.addEventListener("focus", (ev) => update(ev));
+  }
+
+  function bindTogglePassword_() {
+    const input = qs("loginSenha");
+    const btn = qs("toggleSenha");
+    if (!input || !btn) return;
+
+    // estado inicial coerente
+    btn.textContent = (input.type === "text") ? "Ocultar" : "Mostrar";
+    btn.setAttribute("aria-pressed", (input.type === "text") ? "true" : "false");
+
+    btn.addEventListener("click", function (ev) {
+      ev.preventDefault();
+
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+
+      btn.textContent = isPassword ? "Ocultar" : "Mostrar";
+      btn.setAttribute("aria-pressed", isPassword ? "true" : "false");
+
+      try { input.focus(); } catch (_) {}
+    });
   }
 
   async function handleSubmit(ev) {
@@ -162,13 +212,11 @@
       await PRONTIO.auth.login({ login: identifier, senha: senha });
       global.location.href = resolvePostLoginUrl_();
     } catch (err) {
-      // log técnico opcional
       try { console.warn("[PRONTIO.login] erro:", err); } catch (e) {}
 
       const msgRaw = err && err.message ? err.message : "Falha no login.";
       const msg = cleanLoginErrorMessage_(msgRaw);
 
-      // Mensagem amigável padrão
       if (/usu[aá]rio|senha inv[aá]lid/i.test(msg)) {
         showMessage("Login (ou e-mail) ou senha inválidos.", "error");
       } else {
@@ -182,6 +230,8 @@
   function init() {
     setYear();
     applyUxHints_();
+    bindCapsLockDetector_();
+    bindTogglePassword_();
 
     // ✅ Se já estiver logado (token), não fica preso no login
     try {
