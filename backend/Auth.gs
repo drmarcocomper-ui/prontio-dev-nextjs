@@ -3,6 +3,7 @@
  * PRONTIO - Auth.gs (FASE 5)
  * ============================================================
  * + Pilar G: Auditoria (best-effort)
+ * + Pilar H: invalidar todas as sessões do usuário (índice por userId)
  *
  * Actions:
  * - Auth_Login
@@ -12,6 +13,11 @@
 
 var AUTH_CACHE_PREFIX = typeof AUTH_CACHE_PREFIX !== "undefined" ? AUTH_CACHE_PREFIX : "PRONTIO_AUTH_";
 var AUTH_TTL_SECONDS = typeof AUTH_TTL_SECONDS !== "undefined" ? AUTH_TTL_SECONDS : (60 * 60 * 10);
+
+// ✅ Pilar H: índice de sessões por usuário (para invalidar todas)
+var AUTH_USER_SESSIONS_PREFIX = typeof AUTH_USER_SESSIONS_PREFIX !== "undefined"
+  ? AUTH_USER_SESSIONS_PREFIX
+  : "PRONTIO_AUTH_USER_SESSIONS_";
 
 var AUTH_ROLES = {
   admin: "admin",
@@ -44,6 +50,9 @@ function Auth_getUserContext_(payload) {
   }
 }
 
+/**
+ * ✅ Mantém payload.token (legado) e aceita payload.authToken (opcional)
+ */
 function Auth_getTokenFromPayload_(payload) {
   payload = payload || {};
   var token = (payload.token || payload.authToken || "").toString().trim();
@@ -88,6 +97,7 @@ function Auth_rolesForUser_(user) {
   var perfil = (user.perfil || user.role || "").toString().trim().toLowerCase();
   if (!perfil) return [];
 
+  // ✅ Admin herda tudo (inclui aliases novos)
   if (perfil === AUTH_ROLES.admin) {
     return [
       AUTH_ROLES.admin,
@@ -98,27 +108,128 @@ function Auth_rolesForUser_(user) {
     ];
   }
 
+  // ✅ medico/profissional são equivalentes
   if (perfil === AUTH_ROLES.medico || perfil === AUTH_ROLES.profissional) {
     return [AUTH_ROLES.medico, AUTH_ROLES.profissional];
   }
 
+  // ✅ recepcao/secretaria são equivalentes
   if (perfil === AUTH_ROLES.recepcao || perfil === AUTH_ROLES.secretaria) {
     return [AUTH_ROLES.recepcao, AUTH_ROLES.secretaria];
   }
 
+  // fallback: aceita perfis customizados
   return [perfil];
+}
+
+/**
+ * ============================================================
+ * Pilar H: Índice de sessões por usuário (Cache)
+ * ============================================================
+ * Objetivo: permitir invalidar TODAS as sessões do usuário após recovery.
+ * - Guarda uma lista JSON de tokens por userId (TTL igual ao das sessões).
+ */
+
+function Auth__sessionsKey_(userId) {
+  return AUTH_USER_SESSIONS_PREFIX + String(userId || "").trim();
+}
+
+function Auth__getUserTokenList_(userId) {
+  userId = String(userId || "").trim();
+  if (!userId) return [];
+
+  var cache = CacheService.getScriptCache();
+  var raw = cache.get(Auth__sessionsKey_(userId));
+  var list = [];
+  try { list = raw ? JSON.parse(raw) : []; } catch (_) { list = []; }
+  if (!Array.isArray(list)) list = [];
+  return list;
+}
+
+function Auth__setUserTokenList_(userId, list) {
+  userId = String(userId || "").trim();
+  if (!userId) return;
+
+  var cache = CacheService.getScriptCache();
+  if (!Array.isArray(list)) list = [];
+
+  // TTL acompanha o TTL das sessões
+  cache.put(Auth__sessionsKey_(userId), JSON.stringify(list), AUTH_TTL_SECONDS);
+}
+
+function Auth__addTokenToUserIndex_(userId, token) {
+  userId = String(userId || "").trim();
+  token = String(token || "").trim();
+  if (!userId || !token) return;
+
+  var list = Auth__getUserTokenList_(userId);
+  if (list.indexOf(token) < 0) list.push(token);
+  Auth__setUserTokenList_(userId, list);
+}
+
+function Auth__removeTokenFromUserIndex_(userId, token) {
+  userId = String(userId || "").trim();
+  token = String(token || "").trim();
+  if (!userId || !token) return;
+
+  var list = Auth__getUserTokenList_(userId);
+  var idx = list.indexOf(token);
+  if (idx >= 0) list.splice(idx, 1);
+  Auth__setUserTokenList_(userId, list);
+}
+
+/**
+ * ✅ Pilar H: invalidar TODAS as sessões ativas do usuário
+ * Usado no AuthRecovery.gs após redefinir senha.
+ */
+function Auth_destroyAllSessionsForUser_(userId) {
+  userId = String(userId || "").trim();
+  if (!userId) return { ok: true, removed: 0 };
+
+  var cache = CacheService.getScriptCache();
+  var list = Auth__getUserTokenList_(userId);
+
+  for (var i = 0; i < list.length; i++) {
+    var token = String(list[i] || "").trim();
+    if (!token) continue;
+    try { cache.remove(AUTH_CACHE_PREFIX + token); } catch (_) {}
+  }
+
+  // remove o índice
+  try { cache.remove(Auth__sessionsKey_(userId)); } catch (_) {}
+
+  return { ok: true, removed: list.length };
 }
 
 function Auth_createSession_(user) {
   user = _authNormalizeUser_(user || {});
   var token = Utilities.getUuid();
+
   CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(user), AUTH_TTL_SECONDS);
+
+  // ✅ Pilar H: registra token no índice do usuário
+  try {
+    if (user && user.id) Auth__addTokenToUserIndex_(user.id, token);
+  } catch (_) {}
+
   return { token: token, user: user, expiresIn: AUTH_TTL_SECONDS };
 }
 
 function Auth_destroySession_(token) {
   token = (token || "").toString().trim();
-  if (token) CacheService.getScriptCache().remove(AUTH_CACHE_PREFIX + token);
+  if (!token) return { ok: true };
+
+  // ✅ Pilar H: remove token do índice do usuário (best-effort)
+  try {
+    var raw = CacheService.getScriptCache().get(AUTH_CACHE_PREFIX + token);
+    if (raw) {
+      var u = JSON.parse(raw);
+      u = _authNormalizeUser_(u);
+      if (u && u.id) Auth__removeTokenFromUserIndex_(u.id, token);
+    }
+  } catch (_) {}
+
+  CacheService.getScriptCache().remove(AUTH_CACHE_PREFIX + token);
   return { ok: true };
 }
 
@@ -228,6 +339,7 @@ function Auth_Logout(ctx, payload) {
 function _authNormalizeUser_(user) {
   if (!user || typeof user !== "object") return null;
 
+  // ✅ normaliza perfil para lower-case
   var perfil = (user.perfil !== undefined ? user.perfil : (user.Perfil || user.role || "usuario"));
   perfil = (perfil || "usuario").toString().trim().toLowerCase();
 

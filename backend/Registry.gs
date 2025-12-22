@@ -316,3 +316,35 @@ function Registry_ListActions(ctx, payload) {
     hasUsuariosResetSenhaAdmin: keys.indexOf("Usuarios_ResetSenhaAdmin") >= 0
   };
 }
+  // =========================
+  // AUTH RECOVERY (Pilar H) - públicas
+  // =========================
+  map["Auth_ForgotPassword_Request"] = {
+    action: "Auth_ForgotPassword_Request",
+    handler: Auth_ForgotPassword_Request,
+    requiresAuth: false,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "Auth_ForgotPassword_Request"
+  };
+
+  map["Auth_ForgotPassword_ValidateToken"] = {
+    action: "Auth_ForgotPassword_ValidateToken",
+    handler: Auth_ForgotPassword_ValidateToken,
+    requiresAuth: false,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  map["Auth_ForgotPassword_Reset"] = {
+    action: "Auth_ForgotPassword_Reset",
+    handler: Auth_ForgotPassword_Reset,
+    requiresAuth: false,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "Auth_ForgotPassword_Reset"
+  };
