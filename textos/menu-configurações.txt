@@ -1,0 +1,67 @@
+Menu Completo do Dono do Sistema (Atualizado)
+Configurações
+Configurações Gerais
+
+
+Dados do Consultório
+
+
+Configurações de Impressão
+
+
+Layout de Documentos
+
+
+Configurações de Sistema Avançadas
+
+
+Backup e Restauração
+
+
+Integrações
+
+
+Personalização de Layout
+
+
+Gerenciamento de Usuários
+
+
+Perfis e Permissões
+
+
+Meu Perfil
+
+
+Configurações de Notificações
+
+
+Relatórios
+Relatórios de Atendimento
+
+
+Relatórios de Pacientes
+
+
+Relatórios de Procedimentos/Serviços
+
+
+Relatórios de Uso do Sistema
+
+
+Financeiro
+Financeiro Geral
+
+
+Relatórios Financeiros
+
+
+Gestão de Convênios
+
+
+Despesas e Custos
+
+
+
+
+

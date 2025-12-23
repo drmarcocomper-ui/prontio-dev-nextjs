@@ -1,11 +1,11 @@
 // =====================================
 // PRONTIO - pages/page-reset-password.js
-// Pilar H: Redefinir senha via token
+// Pilar H: Redefinir senha via token (UX/Segurança final)
 //
-// Fluxo:
-// - Lê token da URL (?token=...)
-// - (Opcional) valida token chamando Auth_ForgotPassword_ValidateToken
-// - Envia nova senha para Auth_ForgotPassword_Reset
+// Melhorias:
+// - Loading "Validando link..."
+// - Desabilita formulário se token ausente/inválido
+// - Mantém mensagens genéricas (não vaza detalhes)
 // =====================================
 
 (function (global, document) {
@@ -65,11 +65,29 @@
       ev.preventDefault();
       inp.type = (inp.type === "password") ? "text" : "password";
       apply();
+      try { inp.focus(); } catch (_) {}
     });
   }
 
-  async function validateTokenIfPossible_(token) {
-    // Opcional: valida antecipadamente (melhor UX)
+  function setFormEnabled_(enabled) {
+    const form = $("formReset");
+    const btn = $("btnReset");
+    const s1 = $("rpSenha1");
+    const s2 = $("rpSenha2");
+    const t1 = $("toggleSenha1");
+    const t2 = $("toggleSenha2");
+
+    const on = !!enabled;
+    if (form) form.setAttribute("aria-disabled", on ? "false" : "true");
+    if (btn) btn.disabled = !on;
+    if (s1) s1.disabled = !on;
+    if (s2) s2.disabled = !on;
+    if (t1) t1.disabled = !on;
+    if (t2) t2.disabled = !on;
+  }
+
+  async function validateToken_(token) {
+    // valida antecipadamente para UX (sem vazar detalhes)
     try {
       assertApi();
       const res = await PRONTIO.api.callApiData({
@@ -78,7 +96,7 @@
       });
       return !!(res && res.valid === true);
     } catch (_) {
-      // Se falhar, não bloqueia (o Reset vai validar de qualquer forma)
+      // se falhar, deixa o Reset validar (não bloqueia)
       return true;
     }
   }
@@ -90,6 +108,7 @@
     const token = getTokenFromUrl();
     if (!token) {
       showMsg("Token ausente. Abra o link do e-mail novamente.", "error");
+      setFormEnabled_(false);
       return;
     }
 
@@ -113,16 +132,11 @@
     if (btn) {
       btn.disabled = true;
       btn.setAttribute("aria-busy", "true");
+      btn.textContent = "Salvando...";
     }
 
     try {
       assertApi();
-
-      const okToken = await validateTokenIfPossible_(token);
-      if (!okToken) {
-        showMsg("Este link é inválido ou expirou. Solicite um novo.", "error");
-        return;
-      }
 
       await PRONTIO.api.callApiData({
         action: "Auth_ForgotPassword_Reset",
@@ -130,34 +144,51 @@
       });
 
       showMsg("Senha redefinida com sucesso. Faça login novamente.", "success");
+      setFormEnabled_(false);
 
-      // Opcional: redireciona para login após 2s
       global.setTimeout(() => {
         try { global.location.href = "./index.html"; } catch (_) {}
       }, 2000);
 
     } catch (e) {
-      // Mensagem intencionalmente genérica
       showMsg(e?.message || "Falha ao redefinir senha. O link pode estar inválido ou expirado.", "error");
     } finally {
       if (btn) {
         btn.disabled = false;
         btn.setAttribute("aria-busy", "false");
+        btn.textContent = "Salvar nova senha";
       }
     }
   }
 
-  function init() {
+  async function init() {
     togglePassword("toggleSenha1", "rpSenha1");
     togglePassword("toggleSenha2", "rpSenha2");
+
+    const form = $("formReset");
+    if (form) form.addEventListener("submit", onSubmit);
 
     const token = getTokenFromUrl();
     if (!token) {
       showMsg("Token ausente. Abra o link do e-mail novamente.", "error");
+      setFormEnabled_(false);
+      return;
     }
 
-    $("formReset")?.addEventListener("submit", onSubmit);
+    // UX: valida token no carregamento
+    showMsg("Validando link...", "info");
+    setFormEnabled_(false);
+
+    const ok = await validateToken_(token);
+    if (!ok) {
+      showMsg("Este link é inválido ou expirou. Solicite um novo.", "error");
+      setFormEnabled_(false);
+      return;
+    }
+
+    showMsg("", "info");
+    setFormEnabled_(true);
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", () => { init(); });
 })(window, document);

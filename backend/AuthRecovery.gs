@@ -21,10 +21,21 @@
  * - PRONTIO_PUBLIC_BASE_URL (string, sem barra final)
  *   Ex.: "https://app.prontio.com.br"
  *   (se vazio, link gerado será relativo: reset-password.html?token=...)
+ *
+ * Segurança adicional (ITEM ATUAL):
+ * - Rate limit por identifier (anti-abuso), sem vazar informação
  */
 
 var RECOVERY_TOKEN_TTL_MINUTES = 30;
 var RECOVERY_MIN_PASSWORD_LEN = 6;
+
+// ============================================================
+// Rate limit (backend) - ajuste aqui se quiser
+// Ex.: para 10 tentativas, coloque RECOVERY_RATE_LIMIT_MAX = 10
+// ============================================================
+var RECOVERY_RATE_LIMIT_MAX = typeof RECOVERY_RATE_LIMIT_MAX !== "undefined" ? RECOVERY_RATE_LIMIT_MAX : 3;
+var RECOVERY_RATE_LIMIT_WINDOW_MIN = typeof RECOVERY_RATE_LIMIT_WINDOW_MIN !== "undefined" ? RECOVERY_RATE_LIMIT_WINDOW_MIN : 15;
+var RECOVERY_RATE_LIMIT_PREFIX = typeof RECOVERY_RATE_LIMIT_PREFIX !== "undefined" ? RECOVERY_RATE_LIMIT_PREFIX : "PRONTIO_RECOVERY_RL_";
 
 function Auth_ForgotPassword_Request(ctx, payload) {
   payload = payload || {};
@@ -40,6 +51,26 @@ function Auth_ForgotPassword_Request(ctx, payload) {
   if (!identifier) {
     try { Audit_securityEvent_(ctx, "Auth_ForgotPassword_Request", "PASSWORD_RECOVERY_REQUEST", "DENY", { reason: "MISSING_IDENTIFIER" }, {}); } catch (_) {}
     return response;
+  }
+
+  // ✅ Rate limit (anti-abuso) — SEMPRE resposta genérica
+  try {
+    var allowed = _Recovery_rateLimitConsume_(identifier);
+    if (!allowed) {
+      try {
+        Audit_securityEvent_(
+          ctx,
+          "Auth_ForgotPassword_Request",
+          "PASSWORD_RECOVERY_REQUEST",
+          "DENY",
+          { reason: "RATE_LIMIT", windowMin: RECOVERY_RATE_LIMIT_WINDOW_MIN, max: RECOVERY_RATE_LIMIT_MAX },
+          {}
+        );
+      } catch (_) {}
+      return response;
+    }
+  } catch (_) {
+    // Se rate-limit falhar, não derruba request (best-effort)
   }
 
   // Localiza usuário (login ou email) sem vazar resultado
@@ -317,4 +348,56 @@ function _Recovery_findValidTokenRow_(token) {
   }
 
   return null;
+}
+
+/**
+ * ------------------------------------------------------------
+ * Rate-limit helpers (backend)
+ * - Best-effort via CacheService
+ * - Nunca vaza informação
+ * ------------------------------------------------------------
+ */
+function _Recovery_rlKey_(identifier) {
+  identifier = String(identifier || "").trim().toLowerCase();
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, identifier);
+  var key = RECOVERY_RATE_LIMIT_PREFIX + Utilities.base64EncodeWebSafe(digest);
+  // ScriptCache key limit safety
+  return key.slice(0, 240);
+}
+
+/**
+ * Consome 1 tentativa e retorna:
+ * - true = permitido
+ * - false = bloqueado (rate-limit)
+ */
+function _Recovery_rateLimitConsume_(identifier) {
+  var cache = CacheService.getScriptCache();
+  var key = _Recovery_rlKey_(identifier);
+
+  var now = new Date().getTime();
+  var windowMs = RECOVERY_RATE_LIMIT_WINDOW_MIN * 60 * 1000;
+
+  var state = { start: now, count: 0 };
+
+  try {
+    var raw = cache.get(key);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") state = parsed;
+    }
+  } catch (_) {}
+
+  // reset janela se expirou
+  if (!state.start || (now - state.start) > windowMs) {
+    state = { start: now, count: 0 };
+  }
+
+  state.count = (state.count || 0) + 1;
+
+  // TTL do cache = janela
+  try {
+    cache.put(key, JSON.stringify(state), Math.max(60, RECOVERY_RATE_LIMIT_WINDOW_MIN * 60));
+  } catch (_) {}
+
+  return state.count <= RECOVERY_RATE_LIMIT_MAX;
 }
