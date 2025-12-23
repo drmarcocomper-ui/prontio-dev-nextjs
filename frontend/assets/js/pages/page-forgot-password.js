@@ -43,7 +43,7 @@
   }
 
   function clearMsg_() {
-    const el = qs("mensagemForgot");
+    const el = qs("mensagemForgot"); // ✅ precisa existir no HTML
     if (!el) return;
     el.textContent = "";
     el.classList.add("is-hidden");
@@ -51,7 +51,7 @@
   }
 
   function showMsg_(msg, type) {
-    const el = qs("mensagemForgot");
+    const el = qs("mensagemForgot"); // ✅ precisa existir no HTML
     if (!el) return;
 
     el.textContent = msg || "";
@@ -73,6 +73,7 @@
   function setBusy_(busy, label) {
     const btn = qs("btnSend");
     const inp = qs("forgotIdentifier");
+
     if (btn) {
       btn.disabled = !!busy;
       btn.setAttribute("aria-busy", busy ? "true" : "false");
@@ -96,6 +97,7 @@
     if (!btn) return;
 
     const until = getCooldownUntil_();
+
     const tick = () => {
       const left = until - nowMs_();
       if (left <= 0) {
@@ -112,7 +114,6 @@
       btn.textContent = "Aguarde " + formatCountdown_(left) + " para reenviar";
     };
 
-    // já começa
     tick();
 
     if (cooldownTimer) clearInterval(cooldownTimer);
@@ -132,7 +133,10 @@
     // se ainda estiver em cooldown, só informa
     const until = getCooldownUntil_();
     if (until && until > nowMs_()) {
-      showMsg_("Aguarde um pouco antes de reenviar. " + "Tente novamente em " + formatCountdown_(until - nowMs_()) + ".", "warning");
+      showMsg_(
+        "Aguarde um pouco antes de reenviar. Tente novamente em " + formatCountdown_(until - nowMs_()) + ".",
+        "warning"
+      );
       startCooldownUI_();
       return;
     }
@@ -147,8 +151,11 @@
         payload: { identifier }
       });
 
-      // resposta sempre genérica (Pilar H)
-      showMsg_("Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.", "success");
+      // ✅ mensagem genérica de sucesso (não vaza existência)
+      showMsg_(
+        "Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.",
+        "success"
+      );
 
       // inicia cooldown (UX anti-spam)
       const newUntil = nowMs_() + UX.COOLDOWN_SECONDS * 1000;
@@ -156,21 +163,26 @@
       startCooldownUI_();
 
     } catch (e) {
-      // Mesmo no erro, mantém mensagem genérica (não vaza)
-      showMsg_("Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.", "success");
+      // ✅ Mesmo no erro, mantém mensagem genérica
+      showMsg_(
+        "Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.",
+        "success"
+      );
 
       const newUntil = nowMs_() + UX.COOLDOWN_SECONDS * 1000;
       setCooldownUntil_(newUntil);
       startCooldownUI_();
     } finally {
-      // não libera imediatamente por causa do cooldown
-      setBusy_(false, null);
+      // não “pisca” texto do botão se já entrou em cooldown
+      const until2 = getCooldownUntil_();
+      const inCooldown = until2 && until2 > nowMs_();
+      if (!inCooldown) setBusy_(false, null);
       startCooldownUI_();
     }
   }
 
   function init() {
-    const form = qs("formForgotPassword");
+    const form = qs("formForgotPassword"); // ✅ precisa existir no HTML
     if (!form) return;
 
     // se voltar para a página e estava em cooldown, aplica UI
