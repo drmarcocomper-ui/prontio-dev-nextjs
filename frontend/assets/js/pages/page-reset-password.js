@@ -53,6 +53,10 @@
     const inp = $(inputId);
     if (!btn || !inp) return;
 
+    // evita bind duplicado
+    if (btn.dataset.boundToggle === "1") return;
+    btn.dataset.boundToggle = "1";
+
     const apply = () => {
       const visible = inp.type === "text";
       btn.setAttribute("aria-pressed", visible ? "true" : "false");
@@ -166,7 +170,12 @@
     togglePassword("toggleSenha2", "rpSenha2");
 
     const form = $("formReset");
-    if (form) form.addEventListener("submit", onSubmit);
+    if (form) {
+      if (form.dataset.boundSubmit !== "1") {
+        form.dataset.boundSubmit = "1";
+        form.addEventListener("submit", onSubmit);
+      }
+    }
 
     const token = getTokenFromUrl();
     if (!token) {
@@ -190,5 +199,11 @@
     setFormEnabled_(true);
   }
 
+  // compat: standalone
   document.addEventListener("DOMContentLoaded", () => { init(); });
+
+  // compat: lazy-load
+  if (PRONTIO.registerPage) {
+    PRONTIO.registerPage("reset-password", init);
+  }
 })(window, document);

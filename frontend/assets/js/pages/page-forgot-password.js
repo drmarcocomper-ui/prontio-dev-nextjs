@@ -185,9 +185,11 @@
     const form = qs("formForgotPassword"); // ✅ precisa existir no HTML
     if (!form) return;
 
-    // se voltar para a página e estava em cooldown, aplica UI
-    startCooldownUI_();
+    // evita bind duplicado
+    if (form.dataset.boundSubmit === "1") return;
+    form.dataset.boundSubmit = "1";
 
+    startCooldownUI_();
     form.addEventListener("submit", handleSubmit);
   }
 
