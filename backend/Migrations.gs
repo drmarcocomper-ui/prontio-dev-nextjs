@@ -234,6 +234,17 @@ var MIGRATIONS_SHEETS = {
 };
 
 /**
+ * ============================================================
+ * ✅ Handler esperado pelo Registry (Meta_BootstrapDb)
+ * ============================================================
+ * Registry.gs já registra "Meta_BootstrapDb" apontando para Meta_BootstrapDb.
+ * Este wrapper conecta a action ao bootstrap real (Migrations_bootstrap_).
+ */
+function Meta_BootstrapDb(ctx, payload) {
+  return Migrations_bootstrap_();
+}
+
+/**
  * Retorna o status do banco, sem alterar nada.
  */
 function Migrations_getDbStatus_() {
