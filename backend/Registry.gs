@@ -323,6 +323,69 @@ function _Registry_build_() {
     lockKey: null
   };
 
+  // =========================
+  // ATENDIMENTO (novo)
+  // =========================
+  map["Atendimento.ListarFilaHoje"] = {
+    action: "Atendimento.ListarFilaHoje",
+    handler: Atendimento_Action_ListarFilaHoje_,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  map["Atendimento.MarcarChegada"] = {
+    action: "Atendimento.MarcarChegada",
+    handler: Atendimento_Action_MarcarChegada_,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "ATENDIMENTO"
+  };
+
+  map["Atendimento.ChamarProximo"] = {
+    action: "Atendimento.ChamarProximo",
+    handler: Atendimento_Action_ChamarProximo_,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "ATENDIMENTO"
+  };
+
+  map["Atendimento.Iniciar"] = {
+    action: "Atendimento.Iniciar",
+    handler: Atendimento_Action_Iniciar_,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "ATENDIMENTO"
+  };
+
+  map["Atendimento.Concluir"] = {
+    action: "Atendimento.Concluir",
+    handler: Atendimento_Action_Concluir_,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "ATENDIMENTO"
+  };
+
+  map["Atendimento.Cancelar"] = {
+    action: "Atendimento.Cancelar",
+    handler: Atendimento_Action_Cancelar_,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "ATENDIMENTO"
+  };
+
   return map;
 }
 
