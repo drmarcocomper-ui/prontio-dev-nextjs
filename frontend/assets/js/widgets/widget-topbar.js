@@ -1,14 +1,9 @@
 /**
  * PRONTIO - widget-topbar.js
  *
- * RESPONSABILIDADES:
- * 1) Montar o partial da topbar dentro de #topbarMount
- * 2) Preencher textos da topbar a partir do <body>
- * 3) Se data-has-chat="true", injetar o botão do chat no #topbar-chat-slot e inicializar ChatUI
- * 4) ✅ Rebind do tema (dark mode) após a topbar existir no DOM
- *
- * Caminho real confirmado:
- * - /partials/topbar.html
+ * ✅ Correções:
+ * - NÃO usa location.origin (quebra em file:// e alguns ambientes). Usa caminho RELATIVO.
+ * - Cache com versionamento, mas com fallback se falhar.
  */
 
 (function (global, document) {
@@ -19,7 +14,12 @@
   PRONTIO.widgets.topbar = PRONTIO.widgets.topbar || {};
 
   const CHAT_CSS_HREF = "assets/css/components/chat-topbar.css";
-  const PARTIAL_TOPBAR_PATH = `${location.origin}/partials/topbar.html`;
+
+  // Bump quando mudar o HTML do partial
+  const PARTIAL_VERSION = "1.0.4";
+
+  // ✅ RELATIVO (não depende de origin)
+  const PARTIAL_TOPBAR_PATH = `partials/topbar.html?v=${encodeURIComponent(PARTIAL_VERSION)}`;
 
   function hasChatEnabled_() {
     return document.body?.getAttribute("data-has-chat") === "true";
@@ -42,7 +42,12 @@
   }
 
   async function fetchPartial_(path) {
-    const res = await fetch(path, { cache: "no-store" });
+    // ✅ cache bom em navegação (com v=...), mas sem forçar demais
+    let res = await fetch(path, { cache: "default" });
+    if (!res.ok) {
+      // fallback: tenta sem cache
+      res = await fetch(path, { cache: "no-store" });
+    }
     if (!res.ok) throw new Error("Falha ao carregar partial: " + path + " (HTTP " + res.status + ")");
     return await res.text();
   }
@@ -72,23 +77,16 @@
     }
   }
 
-  /**
-   * ✅ Rebind do tema:
-   * O theme toggle estava sendo inicializado antes do partial existir.
-   * Chamamos novamente o init do tema (deve ser idempotente no seu projeto).
-   */
   function rebindThemeToggle_() {
     try {
       if (PRONTIO.theme && typeof PRONTIO.theme.init === "function") {
         PRONTIO.theme.init();
         return;
       }
-      // fallback para implementações antigas
       if (PRONTIO.ui && typeof PRONTIO.ui.initTheme === "function") {
         PRONTIO.ui.initTheme();
         return;
       }
-      // fallback global (se existir)
       if (typeof global.initTheme === "function") {
         global.initTheme();
       }
@@ -184,14 +182,10 @@
     }
   }
 
-  // ========= PUBLIC INIT =========
-  PRONTIO.widgets.topbar.init = async function initTopbar(opts) {
+  PRONTIO.widgets.topbar.init = async function initTopbar() {
     try {
       const mount = document.getElementById("topbarMount");
-      if (!mount) {
-        console.warn("[PRONTIO.topbar] #topbarMount não encontrado. Topbar não será montada.");
-        return;
-      }
+      if (!mount) return;
 
       if (mount.getAttribute("data-mounted") !== "1") {
         const html = await fetchPartial_(PARTIAL_TOPBAR_PATH);
@@ -201,13 +195,8 @@
       }
 
       fillTopbarTexts_();
-
-      // ✅ agora que o botão do tema existe, rebind do tema
       rebindThemeToggle_();
-
-      // Chat
       await initChatIfEnabled_();
-
     } catch (err) {
       console.error("[PRONTIO.topbar] Erro ao inicializar topbar:", err);
     }

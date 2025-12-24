@@ -6,62 +6,106 @@
   PRONTIO.ui = PRONTIO.ui || {};
   PRONTIO.ui.modals = PRONTIO.ui.modals || {};
 
-  /**
-   * ============================================================
-   * COMPAT: DOMContentLoaded para scripts lazy-loaded
-   * ============================================================
-   */
-  (function patchDOMContentLoadedOnce_() {
-    if (PRONTIO._domContentLoadedPatched) return;
-    PRONTIO._domContentLoadedPatched = true;
+  // ✅ Marca cedo para loaders não auto-iniciarem em duplicidade
+  PRONTIO._mainBootstrapped = true;
 
-    const alreadyLoaded = document.readyState !== "loading";
-    PRONTIO._domContentAlreadyLoaded = alreadyLoaded;
+  // ============================================================
+  // Skeleton (leve) + timeout de segurança
+  // ============================================================
+  function ensureSkeletonStyle_() {
+    if (document.getElementById("prontio-skeleton-style")) return;
 
-    const origAdd = document.addEventListener.bind(document);
-
-    document.addEventListener = function (type, listener, options) {
-      origAdd(type, listener, options);
-
-      if (type === "DOMContentLoaded" && PRONTIO._domContentAlreadyLoaded) {
-        try {
-          if (listener && typeof listener === "function") {
-            const key = "__prontio_dcl_" + String(listener);
-            PRONTIO._dclOnce = PRONTIO._dclOnce || {};
-            if (PRONTIO._dclOnce[key]) return;
-            PRONTIO._dclOnce[key] = true;
-
-            global.setTimeout(function () {
-              try { listener.call(document, new Event("DOMContentLoaded")); } catch (_) {}
-            }, 0);
-          }
-        } catch (_) {}
+    const style = document.createElement("style");
+    style.id = "prontio-skeleton-style";
+    style.textContent = `
+      .prontio-skeleton {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: var(--cor-fundo-app, #f4f6fb);
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        pointer-events: none;
       }
-    };
+      .prontio-skeleton__sidebar {
+        border-right: 1px solid rgba(0,0,0,0.06);
+        background: var(--cor-fundo-card, #fff);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .prontio-skeleton__brand { height: 18px; width: 120px; border-radius: 8px; background: rgba(0,0,0,0.08); }
+      .prontio-skeleton__navitem { height: 14px; border-radius: 8px; background: rgba(0,0,0,0.08); }
+      .prontio-skeleton__navitem:nth-child(2) { width: 85%; }
+      .prontio-skeleton__navitem:nth-child(3) { width: 75%; }
+      .prontio-skeleton__navitem:nth-child(4) { width: 90%; }
+      .prontio-skeleton__navitem:nth-child(5) { width: 70%; }
+      .prontio-skeleton__navitem:nth-child(6) { width: 88%; }
 
-    if (!alreadyLoaded) {
-      origAdd("DOMContentLoaded", function () {
-        PRONTIO._domContentAlreadyLoaded = true;
-      });
-    }
-  })();
+      .prontio-skeleton__main { display: flex; flex-direction: column; min-width: 0; }
+      .prontio-skeleton__topbar { height: 64px; border-bottom: 1px solid rgba(0,0,0,0.06); background: var(--cor-fundo-card, #fff); }
+      .prontio-skeleton__content { padding: 24px; display: grid; gap: 14px; }
+      .prontio-skeleton__card { height: 120px; border-radius: 14px; background: rgba(0,0,0,0.06); }
 
-  // ============================================================
-  // Registry de páginas
-  // ============================================================
-  PRONTIO.registerPage = function registerPage(pageId, initFn) {
-    if (!pageId || typeof initFn !== "function") return;
-    PRONTIO.pages[pageId] = { init: initFn };
-  };
+      .prontio-skeleton__brand,
+      .prontio-skeleton__navitem,
+      .prontio-skeleton__card {
+        background-image: linear-gradient(90deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.10) 40%, rgba(0,0,0,0.06) 80%);
+        background-size: 220% 100%;
+        animation: prontioShimmer 1.0s ease-in-out infinite;
+      }
+      @keyframes prontioShimmer { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
 
-  PRONTIO.registerPageInitializer = function registerPageInitializer(pageId, initFn) {
-    PRONTIO.registerPage(pageId, initFn);
-  };
-
-  function getPageId_() {
-    return (document.body && document.body.getAttribute("data-page-id")) || "";
+      @media (max-width: 768px) {
+        .prontio-skeleton { grid-template-columns: 1fr; }
+        .prontio-skeleton__sidebar { display: none; }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
+  function shouldUseShell_() {
+    return !!document.querySelector("[data-include-sidebar]") || !!document.getElementById("topbarMount");
+  }
+
+  function showSkeleton_() {
+    if (!shouldUseShell_()) return;
+    if (document.getElementById("prontioSkeleton")) return;
+    ensureSkeletonStyle_();
+    const el = document.createElement("div");
+    el.id = "prontioSkeleton";
+    el.className = "prontio-skeleton";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = `
+      <div class="prontio-skeleton__sidebar">
+        <div class="prontio-skeleton__brand"></div>
+        <div class="prontio-skeleton__navitem"></div>
+        <div class="prontio-skeleton__navitem"></div>
+        <div class="prontio-skeleton__navitem"></div>
+        <div class="prontio-skeleton__navitem"></div>
+        <div class="prontio-skeleton__navitem"></div>
+      </div>
+      <div class="prontio-skeleton__main">
+        <div class="prontio-skeleton__topbar"></div>
+        <div class="prontio-skeleton__content">
+          <div class="prontio-skeleton__card"></div>
+          <div class="prontio-skeleton__card" style="height: 180px;"></div>
+          <div class="prontio-skeleton__card" style="height: 140px;"></div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(el);
+  }
+
+  function hideSkeleton_() {
+    const el = document.getElementById("prontioSkeleton");
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+
+  // ============================================================
+  // Helpers
+  // ============================================================
   function getDataPage_() {
     try {
       const body = document.body;
@@ -74,18 +118,7 @@
 
   function isLoginPage_() {
     const p = getDataPage_();
-    if (p === "login") return true;
-
-    const path = (global.location && global.location.pathname)
-      ? global.location.pathname.toLowerCase()
-      : "";
-
-    return (
-      path.endsWith("/index.html") ||
-      path.endsWith("index.html") ||
-      path.endsWith("/login.html") ||
-      path.endsWith("login.html")
-    );
+    return p === "login";
   }
 
   function isChatStandalone_() {
@@ -94,6 +127,10 @@
     } catch (e) {
       return false;
     }
+  }
+
+  function getPageId_() {
+    return (document.body && document.body.getAttribute("data-page-id")) || "";
   }
 
   // ============================================================
@@ -119,61 +156,7 @@
   }
 
   // ============================================================
-  // Infra
-  // ============================================================
-  async function ensureApiLoaded_() {
-    const hasApi =
-      PRONTIO.api &&
-      typeof PRONTIO.api.callApiEnvelope === "function" &&
-      typeof PRONTIO.api.callApiData === "function";
-
-    if (hasApi) return true;
-
-    await loadOnce_("assets/js/core/config.js");
-    const ok = await loadOnce_("assets/js/core/api.js");
-
-    const hasApiAfter =
-      ok &&
-      PRONTIO.api &&
-      typeof PRONTIO.api.callApiEnvelope === "function" &&
-      typeof PRONTIO.api.callApiData === "function";
-
-    return !!hasApiAfter;
-  }
-
-  async function ensureAuthLoaded_() {
-    const hasAuth =
-      PRONTIO.auth &&
-      typeof PRONTIO.auth.requireAuth === "function" &&
-      typeof PRONTIO.auth.bindLogoutButtons === "function";
-
-    if (hasAuth) return true;
-
-    const ok = await loadOnce_("assets/js/core/auth.js");
-
-    const hasAuthAfter =
-      ok &&
-      PRONTIO.auth &&
-      typeof PRONTIO.auth.requireAuth === "function" &&
-      typeof PRONTIO.auth.bindLogoutButtons === "function";
-
-    return !!hasAuthAfter;
-  }
-
-  async function ensureSessionIfAvailable_() {
-    if (isLoginPage_()) return true;
-    if (!PRONTIO.auth || typeof PRONTIO.auth.ensureSession !== "function") return true;
-
-    try {
-      const ok = await PRONTIO.auth.ensureSession({ redirect: true });
-      return !!ok;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // ============================================================
-  // Modais (mantém compat com sidebar-loader)
+  // Modais (para sidebar-loader rebind)
   // ============================================================
   function bindModalTriggers_(doc) {
     const root = doc || document;
@@ -201,30 +184,11 @@
         modal.setAttribute("aria-hidden", "true");
       });
     });
-
-    root.querySelectorAll(".modal-backdrop").forEach(function (modal) {
-      modal.addEventListener("click", function (ev) {
-        if (ev.target !== modal) return;
-        modal.classList.remove("is-open");
-        modal.hidden = true;
-        modal.setAttribute("aria-hidden", "true");
-      });
-    });
-
-    document.addEventListener("keydown", function (ev) {
-      if (ev.key !== "Escape" && ev.key !== "Esc") return;
-      document.querySelectorAll(".modal-backdrop.is-open").forEach(function (modal) {
-        modal.classList.remove("is-open");
-        modal.hidden = true;
-        modal.setAttribute("aria-hidden", "true");
-      });
-    });
   }
-
   PRONTIO.ui.modals.bindTriggers = bindModalTriggers_;
 
   // ============================================================
-  // Tema (exposto para widget-topbar rebind)
+  // Tema (para widget-topbar rebind)
   // ============================================================
   function initThemeToggle_() {
     const btn = document.querySelector(".js-toggle-theme");
@@ -237,145 +201,69 @@
       const sun = document.querySelector(".js-theme-icon-sun");
       const moon = document.querySelector(".js-theme-icon-moon");
       if (sun && moon) {
-        if (theme === "dark") {
-          sun.style.display = "none";
-          moon.style.display = "";
-        } else {
-          sun.style.display = "";
-          moon.style.display = "none";
-        }
+        if (theme === "dark") { sun.style.display = "none"; moon.style.display = ""; }
+        else { sun.style.display = ""; moon.style.display = "none"; }
       }
       btn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
     }
 
     let theme = "light";
-    try {
-      theme = localStorage.getItem("prontio_theme") || (document.body.getAttribute("data-theme") || "light");
-    } catch (e) {
-      theme = document.body.getAttribute("data-theme") || "light";
-    }
+    try { theme = localStorage.getItem("prontio_theme") || (document.body.getAttribute("data-theme") || "light"); }
+    catch (e) { theme = document.body.getAttribute("data-theme") || "light"; }
 
     apply(theme);
-
     btn.addEventListener("click", function () {
       const cur = document.body.getAttribute("data-theme") || "light";
       apply(cur === "dark" ? "light" : "dark");
     });
   }
-
-  // ✅ Para o widget-topbar conseguir rebind:
   PRONTIO.ui.initTheme = initThemeToggle_;
-
-  // ============================================================
-  // Anti-flash (esconde UI até sidebar + topbar prontas)
-  // ============================================================
-  function ensureShellLoadingStyle_() {
-    if (document.getElementById("prontio-shell-loading-style")) return;
-
-    const style = document.createElement("style");
-    style.id = "prontio-shell-loading-style";
-    style.textContent = `
-      html.prontio-shell-loading body { visibility: hidden; }
-      html.prontio-shell-loading .app-shell { visibility: hidden; }
-    `;
-    document.head.appendChild(style);
-  }
 
   // ============================================================
   // Bootstrap
   // ============================================================
   async function bootstrap_() {
-    if (PRONTIO._bootstrapRunning) return;
-    if (PRONTIO._bootstrapDone) return;
-    PRONTIO._bootstrapRunning = true;
+    // ✅ Skeleton aparece já
+    if (!isLoginPage_()) showSkeleton_();
 
-    PRONTIO._mainBootstrapped = true;
+    // ✅ Timeout de segurança: nunca fica “preso”
+    const safety = global.setTimeout(function () {
+      hideSkeleton_();
+    }, 1800);
 
     try {
-      // ✅ esconde o shell logo de cara (evita aparecer miolo antes do menu/topo)
+      // Carrega UI (sem duplicar loader)
       if (!isLoginPage_()) {
-        ensureShellLoadingStyle_();
-        document.documentElement.classList.add("prontio-shell-loading");
-      }
-
-      // 1) Infra
-      await ensureApiLoaded_();
-      await ensureAuthLoaded_();
-
-      // 2) Guard local
-      if (!isLoginPage_() && PRONTIO.auth && typeof PRONTIO.auth.requireAuth === "function") {
-        const ok = PRONTIO.auth.requireAuth({ redirect: true });
-        if (!ok) return;
-      }
-
-      // 3) Guard server-side
-      const okSession = await ensureSessionIfAvailable_();
-      if (!okSession) return;
-
-      // 4) UI (sidebar + topbar via widgets)
-      if (!isLoginPage_()) {
-        // Sidebar (controlador + loader)
         await loadOnce_("assets/js/ui/sidebar.js");
         await loadOnce_("assets/js/ui/sidebar-loader.js");
 
-        // Aguarda sidebar carregar para evitar flash
         if (PRONTIO.ui && PRONTIO.ui.sidebarLoader && typeof PRONTIO.ui.sidebarLoader.load === "function") {
           await PRONTIO.ui.sidebarLoader.load();
         }
 
-        // Topbar: ✅ consolidado via widget + partial
         if (!isChatStandalone_()) {
           await loadOnce_("assets/js/widgets/widget-topbar.js");
           if (PRONTIO.widgets && PRONTIO.widgets.topbar && typeof PRONTIO.widgets.topbar.init === "function") {
             await PRONTIO.widgets.topbar.init();
           }
-
-          // bind modais (conteúdo da página) – sidebar-loader já rebinda o que ele injeta
           bindModalTriggers_(document);
         }
       }
 
-      // ✅ revela a UI após montar sidebar/topbar
-      if (!isLoginPage_()) {
-        document.documentElement.classList.remove("prontio-shell-loading");
-      }
-
-      // 5) Logout + label
-      if (!isLoginPage_() && PRONTIO.auth) {
-        try {
-          if (typeof PRONTIO.auth.bindLogoutButtons === "function") PRONTIO.auth.bindLogoutButtons();
-          if (typeof PRONTIO.auth.renderUserLabel === "function") PRONTIO.auth.renderUserLabel();
-        } catch (e) {}
-      }
-
+      // Lazy-load da página (mantido)
       const pageId = getPageId_();
-      if (!pageId) return;
-
-      // 6) Lazy load page script
-      if (!PRONTIO.pages[pageId]) {
+      if (pageId && !PRONTIO.pages[pageId]) {
         let ok = await loadOnce_("assets/js/pages/page-" + pageId + ".js");
         if (!ok) ok = await loadOnce_("assets/js/page-" + pageId + ".js");
       }
 
-      // 7) Compat legado específico
-      if (pageId === "prontuario") {
-        await loadOnce_("assets/js/pages/page-receita.js");
-      }
-
-      // 8) Se a página registrou init, executa
       const page = PRONTIO.pages[pageId];
       if (page && typeof page.init === "function") {
         try { page.init(); } catch (e) {}
       }
-
     } finally {
-      PRONTIO._bootstrapRunning = false;
-      PRONTIO._bootstrapDone = true;
-
-      // fallback: se algo der ruim no meio, não deixe a UI invisível pra sempre
-      if (!isLoginPage_()) {
-        document.documentElement.classList.remove("prontio-shell-loading");
-      }
+      global.clearTimeout(safety);
+      hideSkeleton_();
     }
   }
 
