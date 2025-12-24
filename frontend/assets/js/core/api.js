@@ -1,19 +1,9 @@
 /**
  * PRONTIO - Camada oficial de API (Front-end)
  *
- * Contrato esperado do backend (Apps Script):
- *   { success: boolean, data: any, errors: any[] }
- *
- * Exporta:
- * - PRONTIO.api.callApiEnvelope({ action, payload }) -> envelope completo
- * - PRONTIO.api.callApiData({ action, payload })     -> somente data (throw se success=false)
- *
  * ✅ Transporte CORS-free (GitHub Pages + Apps Script):
- * - Usa JSONP via <script> + callback=
- * - Requer Api.gs suportando callback= (doGet action/payload)
- *
- * ✅ Pilar I (UX sessão):
- * - Ao detectar AUTH_REQUIRED/AUTH_EXPIRED/etc, grava motivo em localStorage
+ * - Usa JSONP via <script> com callback=
+ * - Requer Api.gs suportando callback no doGet quando action estiver presente.
  */
 
 (function (global) {
@@ -128,7 +118,7 @@
     } catch (_) {}
   }
 
-  function jsonpRequest_(url, timeoutMs) {
+  function jsonp_(url, timeoutMs) {
     timeoutMs = typeof timeoutMs === "number" ? timeoutMs : 20000;
 
     return new Promise((resolve, reject) => {
@@ -181,7 +171,6 @@
     const payloadRaw = (args && args.payload) || {};
     const payload = withAuthToken_(payloadRaw);
 
-    // JSONP: action/payload por querystring (Api.gs suporta e.parameter.action/payload)
     const url =
       apiUrl +
       (apiUrl.indexOf("?") >= 0 ? "&" : "?") +
@@ -190,7 +179,7 @@
 
     let json;
     try {
-      json = await jsonpRequest_(url, 20000);
+      json = await jsonp_(url, 20000);
     } catch (e) {
       throw new Error("Falha de rede ao chamar API: " + normalizeError_(e));
     }
