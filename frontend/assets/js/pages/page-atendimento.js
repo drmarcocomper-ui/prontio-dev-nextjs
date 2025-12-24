@@ -1,7 +1,8 @@
 // frontend/assets/js/pages/page-atendimento.js
 // Módulo: Atendimento
-// Lista atendimentos do dia de hoje para frente.
-// Hoje usa Agenda.ListarAFuturo (sem precisar Atendimento.gs).
+// ✅ Agora prioriza Atendimento.ListarFilaHoje (Atendimento.gs).
+// ✅ Mantém fallback para Agenda.ListarAFuturo (compatibilidade).
+// OBS: enquanto o backend de Atendimento não retornar nome/hora/tipo, a tabela exibe placeholders.
 
 (function (global, document) {
   "use strict";
@@ -22,10 +23,23 @@
     utils.formatarDataBR ||
     function (iso) {
       if (!iso) return "";
-      const parts = String(iso).split("-");
-      if (parts.length !== 3) return iso;
-      const [ano, mes, dia] = parts;
-      return `${dia}/${mes}/${ano}`;
+      // aceita YYYY-MM-DD ou ISO
+      const s = String(iso);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const [ano, mes, dia] = s.split("-");
+        return `${dia}/${mes}/${ano}`;
+      }
+      // tenta ISO -> YYYY-MM-DD
+      try {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+          const dd = String(d.getDate()).padStart(2, "0");
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const yyyy = String(d.getFullYear());
+          return `${dd}/${mm}/${yyyy}`;
+        }
+      } catch (_) {}
+      return s;
     };
 
   const createPageMessages =
@@ -57,10 +71,10 @@
   // seleção atual
   let selected = null;
 
-  function setSelected_(ag) {
-    selected = ag || null;
+  function setSelected_(row) {
+    selected = row || null;
     if (btnAbrirProntuario) {
-      const ok = !!(selected && (selected.idPaciente || selected.ID_Paciente) && (selected.idAgenda || selected.ID_Agenda));
+      const ok = !!(selected && selected.idPaciente && selected.idAgenda);
       btnAbrirProntuario.disabled = !ok;
     }
   }
@@ -82,7 +96,34 @@
     tbody.appendChild(tr);
   }
 
-  function criarBadgeStatus(status) {
+  // Normaliza "linha" para o formato usado na tabela
+  // Saída esperada:
+  // { fonte, idAgenda, idPaciente, data, hora, pacienteNome, tipo, status }
+  function normalizeRow_(raw, fonte) {
+    // 1) Atendimento (novo)
+    if (fonte === "atendimento") {
+      const idAgenda = raw.idAgenda || raw.ID_Agenda || "";
+      const idPaciente = raw.idPaciente || raw.ID_Paciente || "";
+      const data = raw.dataRef || ""; // YYYY-MM-DD
+      const hora = raw.hora || raw.horaConsulta || ""; // (ainda não vem do backend)
+      const pacienteNome = raw.nomePaciente || raw.paciente || raw.pacienteNome || idPaciente || "";
+      const tipo = raw.tipo || ""; // (ainda não vem do backend)
+      const status = raw.status || "";
+      return { fonte, idAgenda, idPaciente, data, hora, pacienteNome, tipo, status, _raw: raw };
+    }
+
+    // 2) Agenda (legado)
+    const idAgenda2 = raw.idAgenda || raw.ID_Agenda || "";
+    const idPaciente2 = raw.idPaciente || raw.ID_Paciente || "";
+    const data2 = raw.dataConsulta || raw.data || "";
+    const hora2 = raw.horaConsulta || raw.hora || "";
+    const pacienteNome2 = raw.nomePaciente || raw.paciente || "";
+    const tipo2 = raw.tipo || "";
+    const status2 = raw.status || "";
+    return { fonte: "agenda", idAgenda: idAgenda2, idPaciente: idPaciente2, data: data2, hora: hora2, pacienteNome: pacienteNome2, tipo: tipo2, status: status2, _raw: raw };
+  }
+
+  function criarBadgeStatus(status, fonte) {
     const span = document.createElement("span");
     span.classList.add("badge-status");
 
@@ -95,6 +136,19 @@
     const s = String(status).toUpperCase();
     span.textContent = status;
 
+    // Atendimento (novo): AGUARDANDO | CHEGOU | CHAMADO | EM_ATENDIMENTO | CONCLUIDO | CANCELADO
+    if (fonte === "atendimento") {
+      if (s === "AGUARDANDO") span.classList.add("badge-outro");
+      else if (s === "CHEGOU") span.classList.add("badge-confirmado");
+      else if (s === "CHAMADO") span.classList.add("badge-agendado");
+      else if (s === "EM_ATENDIMENTO") span.classList.add("badge-agendado");
+      else if (s === "CONCLUIDO") span.classList.add("badge-confirmado");
+      else if (s === "CANCELADO") span.classList.add("badge-cancelado");
+      else span.classList.add("badge-outro");
+      return span;
+    }
+
+    // Agenda (legado)
     if (s === "AGENDADO") span.classList.add("badge-agendado");
     else if (s === "CONFIRMADO") span.classList.add("badge-confirmado");
     else if (s === "CANCELADO") span.classList.add("badge-cancelado");
@@ -104,60 +158,70 @@
     return span;
   }
 
-  function renderizarLinhas(agendamentos) {
+  function renderizarLinhas(rows) {
     limparTabela();
     setSelected_(null);
 
     if (!tbody) return;
 
-    if (!agendamentos || agendamentos.length === 0) {
+    if (!rows || rows.length === 0) {
       const tr = document.createElement("tr");
       const td = document.createElement("td");
       td.colSpan = 5;
       td.classList.add("linha-vazia");
-      td.textContent = "Nenhum atendimento a partir de hoje.";
+      td.textContent = "Nenhum atendimento encontrado.";
       tr.appendChild(td);
       tbody.appendChild(tr);
       return;
     }
 
-    agendamentos.forEach((ag) => {
+    rows.forEach((row) => {
       const tr = document.createElement("tr");
 
       const tdData = document.createElement("td");
       tdData.classList.add("col-data");
-      tdData.textContent = formatarDataBR(ag.dataConsulta || ag.data || "");
+      tdData.textContent = formatarDataBR(row.data || "");
       tr.appendChild(tdData);
 
       const tdHora = document.createElement("td");
       tdHora.classList.add("col-hora");
-      tdHora.textContent = ag.horaConsulta || ag.hora || "";
+      tdHora.textContent = row.hora || "—";
       tr.appendChild(tdHora);
 
       const tdPaciente = document.createElement("td");
       tdPaciente.classList.add("col-paciente");
-      tdPaciente.textContent = ag.nomePaciente || ag.paciente || "";
+      tdPaciente.textContent = row.pacienteNome || "—";
       tr.appendChild(tdPaciente);
 
       const tdTipo = document.createElement("td");
       tdTipo.classList.add("col-tipo");
-      tdTipo.textContent = ag.tipo || "";
+      tdTipo.textContent = row.tipo || "—";
       tr.appendChild(tdTipo);
 
       const tdStatus = document.createElement("td");
       tdStatus.classList.add("col-status");
-      tdStatus.appendChild(criarBadgeStatus(ag.status));
+      tdStatus.appendChild(criarBadgeStatus(row.status, row.fonte));
       tr.appendChild(tdStatus);
 
       tr.addEventListener("click", function () {
-        // marca seleção visual
-        tbody.querySelectorAll("tr.is-selected").forEach((row) => row.classList.remove("is-selected"));
+        tbody.querySelectorAll("tr.is-selected").forEach((r) => r.classList.remove("is-selected"));
         tr.classList.add("is-selected");
-        setSelected_(ag);
+        setSelected_(row);
       });
 
       tbody.appendChild(tr);
     });
+  }
+
+  function setUltimaAtualizacao_() {
+    if (!infoUltimaAtualizacao) return;
+    const agora = new Date();
+    const dd = String(agora.getDate()).padStart(2, "0");
+    const mm = String(agora.getMonth() + 1).padStart(2, "0");
+    const yyyy = agora.getFullYear();
+    const hh = String(agora.getHours()).padStart(2, "0");
+    const min = String(agora.getMinutes()).padStart(2, "0");
+    infoUltimaAtualizacao.textContent = `Atualizado em ${dd}/${mm}/${yyyy} às ${hh}:${min}`;
   }
 
   async function carregarListaAtendimento() {
@@ -166,31 +230,47 @@
     if (btnRecarregar) btnRecarregar.disabled = true;
 
     try {
-      let data;
+      // 1) NOVO: Atendimento.ListarFilaHoje
+      // Retorno esperado: { items: [...], count, dataRef }
+      let dataAtd = null;
       try {
-        data = await callApiData({ action: "Agenda.ListarAFuturo", payload: {} });
+        dataAtd = await callApiData({ action: "Atendimento.ListarFilaHoje", payload: {} });
       } catch (_) {
-        data = await callApiData({ action: "Agenda_ListarAFuturo", payload: {} });
+        dataAtd = null;
       }
 
-      const agendamentos = (data && data.agendamentos) || [];
-      renderizarLinhas(agendamentos);
+      if (dataAtd && Array.isArray(dataAtd.items)) {
+        const rows = dataAtd.items.map((it) => normalizeRow_(it, "atendimento"));
+        renderizarLinhas(rows);
+
+        msgs.sucesso(
+          rows.length === 0
+            ? "Fila vazia para hoje."
+            : `Fila do dia: ${rows.length} atendimento(s).`
+        );
+        setUltimaAtualizacao_();
+        return;
+      }
+
+      // 2) FALLBACK: Agenda.ListarAFuturo
+      let dataAgenda;
+      try {
+        dataAgenda = await callApiData({ action: "Agenda.ListarAFuturo", payload: {} });
+      } catch (_) {
+        dataAgenda = await callApiData({ action: "Agenda_ListarAFuturo", payload: {} });
+      }
+
+      const agendamentos = (dataAgenda && dataAgenda.agendamentos) || [];
+      const rowsLegacy = agendamentos.map((it) => normalizeRow_(it, "agenda"));
+      renderizarLinhas(rowsLegacy);
 
       msgs.sucesso(
-        agendamentos.length === 0
+        rowsLegacy.length === 0
           ? "Nenhum atendimento a partir de hoje."
-          : `Encontrado(s) ${agendamentos.length} atendimento(s) a partir de hoje.`
+          : `Encontrado(s) ${rowsLegacy.length} atendimento(s) a partir de hoje.`
       );
+      setUltimaAtualizacao_();
 
-      if (infoUltimaAtualizacao) {
-        const agora = new Date();
-        const dd = String(agora.getDate()).padStart(2, "0");
-        const mm = String(agora.getMonth() + 1).padStart(2, "0");
-        const yyyy = agora.getFullYear();
-        const hh = String(agora.getHours()).padStart(2, "0");
-        const min = String(agora.getMinutes()).padStart(2, "0");
-        infoUltimaAtualizacao.textContent = `Atualizado em ${dd}/${mm}/${yyyy} às ${hh}:${min}`;
-      }
     } catch (erro) {
       console.error("[PRONTIO.atendimento] erro:", erro);
       msgs.erro((erro && erro.message) || "Falha ao carregar atendimentos.");
@@ -204,12 +284,11 @@
   function abrirProntuarioSelecionado_() {
     if (!selected) return;
 
-    const idPaciente = selected.idPaciente || selected.ID_Paciente;
-    const idAgenda = selected.idAgenda || selected.ID_Agenda;
+    const idPaciente = selected.idPaciente || "";
+    const idAgenda = selected.idAgenda || "";
 
     if (!idPaciente || !idAgenda) return;
 
-    // navegação simples (página prontuário pode ler querystring)
     const url = `prontuario.html?idPaciente=${encodeURIComponent(idPaciente)}&idAgenda=${encodeURIComponent(idAgenda)}`;
     global.location.href = url;
   }
