@@ -5,6 +5,14 @@
   <title>PRONTIO - Modelo de Página</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- ✅ Anti-flash: aplica ANTES do primeiro paint -->
+  <style>
+    html.prontio-shell-loading body { visibility: hidden; }
+  </style>
+  <script>
+    document.documentElement.classList.add("prontio-shell-loading");
+  </script>
+
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="stylesheet" href="assets/css/components/modals.css">
   <link rel="stylesheet" href="assets/css/components/topbar.css">
@@ -18,7 +26,6 @@
   data-context="Geral"
 >
   <div class="app-shell">
-    <!-- ✅ Sidebar compartilhada (partial) -->
     <div data-include-sidebar></div>
 
     <main class="main-area">
