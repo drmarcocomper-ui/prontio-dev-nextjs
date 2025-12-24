@@ -3,23 +3,23 @@
  * PRONTIO - Api.gs (FASE 0 + atualização FASE 5 – AUTH)
  * ============================================================
  * - doPost recebe JSON { action, payload }
- * - gera requestId
- * - cria ctx (timestamp, requestId, user se existir)
- * - chama Registry para obter handler + metadados
- * - aplica AUTH/ROLES via Auth.gs quando configurado no Registry
- * - try/catch global e retorna JSON padrão
+ * - doGet: mantém status/info, MAS se receber query action/payload,
+ *   executa action e pode responder em JSONP (callback=...).
  *
  * Retorno padrão (novo):
  * { success:boolean, data:any, errors:[{code,message,details?}], requestId }
  *
- * Compatibilidade (legado opcional):
- * também inclui meta.request_id, meta.action, meta.api_version, meta.env
- *
  * ✅ Ajuste (CORS + GitHub Pages):
- * - _parseRequestBody_ agora aceita:
- *   1) JSON body (application/json)
- *   2) form-urlencoded body (application/x-www-form-urlencoded)
+ * - Mantém _parseRequestBody_ com:
+ *   1) JSON body
+ *   2) form-urlencoded body
  *   3) fallback via e.parameter.action / e.parameter.payload
+ *
+ * ✅ NOVO (CORS definitivo):
+ * - Suporte a JSONP via doGet quando e.parameter.action existir:
+ *     ?action=...&payload=...&callback=cb123
+ * - Responde JavaScript: cb123(<JSON>);
+ * - Evita CORS/preflight completamente.
  */
 
 var PRONTIO_API_VERSION = typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV";
@@ -46,6 +46,100 @@ function doOptions(e) {
 }
 
 function doGet(e) {
+  // ✅ Se vier action/payload por querystring, executa action (JSONP opcional)
+  try {
+    if (e && e.parameter && e.parameter.action) {
+      var requestId = _makeRequestId_();
+      var startedAt = new Date();
+
+      var req = _parseRequestBody_(e); // usa e.parameter.action/payload
+      var action = String(req.action || "").trim();
+      var payload = req.payload || {};
+
+      if (!action) {
+        var errRes = _err_(requestId, [
+          { code: "VALIDATION_ERROR", message: 'Campo "action" é obrigatório.', details: { field: "action" } }
+        ], { action: action });
+        return _respondMaybeJsonp_(e, errRes);
+      }
+
+      var ctx = {
+        requestId: requestId,
+        timestamp: startedAt.toISOString(),
+        startedAtMs: startedAt.getTime(),
+        action: action,
+        env: PRONTIO_ENV,
+        apiVersion: PRONTIO_API_VERSION,
+        user: null
+      };
+
+      var entry = Registry_getAction_(action);
+      if (!entry) {
+        var nf = _err_(requestId, [
+          { code: "NOT_FOUND", message: "Action não registrada.", details: { action: action } }
+        ], { action: action });
+        return _respondMaybeJsonp_(e, nf);
+      }
+
+      // Resolve user (Auth via payload.token)
+      if (typeof Auth_getUserContext_ === "function") {
+        ctx.user = Auth_getUserContext_(payload);
+      }
+
+      // AUTH enforcement
+      if (entry.requiresAuth) {
+        if (typeof Auth_requireAuth_ === "function" && typeof Errors !== "undefined" && Errors) {
+          var authRes = Auth_requireAuth_(ctx, payload);
+          if (!authRes.success) return _respondMaybeJsonp_(e, authRes);
+        } else if (typeof requireAuthIfEnabled_ === "function") {
+          requireAuthIfEnabled_(action, payload);
+        } else {
+          var ae = _err_(requestId, [
+            { code: "INTERNAL_ERROR", message: "Auth requerido, mas Auth.gs/Errors.gs não disponível.", details: { action: action } }
+          ], { action: action });
+          return _respondMaybeJsonp_(e, ae);
+        }
+      }
+
+      // ROLES enforcement
+      if (entry.roles && entry.roles.length) {
+        if (typeof Auth_requireRoles_ === "function" && typeof Errors !== "undefined" && Errors) {
+          var roleRes = Auth_requireRoles_(ctx, entry.roles);
+          if (!roleRes.success) return _respondMaybeJsonp_(e, roleRes);
+        } else {
+          var re = _err_(requestId, [
+            { code: "INTERNAL_ERROR", message: "Roles requeridas, mas Auth.gs/Errors.gs não disponível.", details: { action: action, roles: entry.roles } }
+          ], { action: action });
+          return _respondMaybeJsonp_(e, re);
+        }
+      }
+
+      // Validations
+      if (entry.validations && entry.validations.length && typeof Validators_run_ === "function") {
+        var vRes = Validators_run_(ctx, entry.validations, payload);
+        if (!vRes.success) return _respondMaybeJsonp_(e, vRes);
+      }
+
+      // Locks
+      var data;
+      if (entry.requiresLock && typeof Locks_withLock_ === "function") {
+        data = Locks_withLock_(ctx, entry.lockKey || action, function () {
+          return entry.handler(ctx, payload);
+        });
+      } else {
+        data = entry.handler(ctx, payload);
+      }
+
+      var ok = _ok_(requestId, data, { action: action });
+      return _respondMaybeJsonp_(e, ok);
+    }
+  } catch (err) {
+    var requestId2 = _makeRequestId_();
+    var out2 = _exceptionToErrorResponse_(requestId2, err);
+    return _respondMaybeJsonp_(e, out2);
+  }
+
+  // ✅ fallback original: endpoint info/health
   var requestId = _makeRequestId_();
   var data = {
     name: "PRONTIO API",
@@ -182,7 +276,35 @@ function doPost(e) {
 }
 
 // ======================
-// Parsing + Response helpers
+// JSONP + Response helpers
+// ======================
+
+function _respondMaybeJsonp_(e, obj) {
+  try {
+    var cb = e && e.parameter ? String(e.parameter.callback || "") : "";
+    cb = cb.trim();
+
+    if (cb) {
+      return _jsonpOutput_(cb, obj);
+    }
+  } catch (_) {}
+
+  return _withCors_(_jsonOutput_(obj));
+}
+
+function _jsonpOutput_(callbackName, obj) {
+  // callbackName sanitização simples
+  var cb = String(callbackName || "").replace(/[^\w.$]/g, "");
+  if (!cb) cb = "__cb";
+
+  var js = cb + "(" + JSON.stringify(obj) + ");";
+  return ContentService
+    .createTextOutput(js)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+// ======================
+// Parsing + Response helpers (mantidos)
 // ======================
 
 function _makeRequestId_() {
@@ -193,15 +315,6 @@ function _makeRequestId_() {
   }
 }
 
-/**
- * IMPORTANTE: NÃO usar "throw { }".
- * Mantém padrão: Error com code/details.
- *
- * ✅ Agora aceita 3 formatos:
- * - JSON body: {action, payload}
- * - x-www-form-urlencoded: action=...&payload={...}
- * - e.parameter.action/e.parameter.payload (fallback)
- */
 function _parseRequestBody_(e) {
   // 1) fallback por querystring/parameters (GET-like)
   if (e && e.parameter && (e.parameter.action || e.parameter.payload)) {
@@ -232,8 +345,7 @@ function _parseRequestBody_(e) {
     }
   }
 
-  // 4) tenta form-urlencoded (ex.: "action=X&payload=%7B%7D")
-  // (muito comum em chamadas do browser para evitar preflight/CORS)
+  // 4) tenta form-urlencoded
   if (raw.indexOf("action=") >= 0) {
     var parsed = _parseFormUrlEncoded_(raw);
 
@@ -255,17 +367,12 @@ function _parseRequestBody_(e) {
     return { action: action, payload: payloadObj2 || {} };
   }
 
-  // 5) se não reconheceu o formato
   _apiThrow_("VALIDATION_ERROR", "Formato de requisição não suportado.", {
     hint: "Envie JSON {action,payload} ou form-urlencoded action=...&payload=...",
     rawSnippet: raw.slice(0, 200)
   });
 }
 
-/**
- * Parse simples de x-www-form-urlencoded.
- * Retorna objeto {key:value}.
- */
 function _parseFormUrlEncoded_(raw) {
   var out = {};
   var parts = raw.split("&");
@@ -283,12 +390,10 @@ function _parseFormUrlEncoded_(raw) {
 
 function _decodeForm_(s) {
   s = String(s || "");
-  // '+' em form-urlencoded significa espaço
   s = s.replace(/\+/g, " ");
   try {
     return decodeURIComponent(s);
   } catch (_) {
-    // se vier quebrado, devolve bruto
     return s;
   }
 }

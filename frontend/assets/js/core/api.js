@@ -8,24 +8,17 @@
  * - PRONTIO.api.callApiEnvelope({ action, payload }) -> envelope completo
  * - PRONTIO.api.callApiData({ action, payload })     -> somente data (throw se success=false)
  *
- * ✅ Patch CORS DEFINITIVO (GitHub Pages + Apps Script WebApp):
- * - NÃO usa fetch (evita CORS/preflight).
- * - Usa JSONP via <script> com querystring:
- *     ?action=...&payload=...&callback=...
- * - Backend já aceita e.parameter.action/e.parameter.payload (Api.gs).
+ * ✅ Transporte CORS-free (GitHub Pages + Apps Script):
+ * - Usa JSONP via <script> + callback=
+ * - Requer Api.gs suportando callback= (doGet action/payload)
  *
  * ✅ Pilar I (UX sessão):
  * - Ao detectar AUTH_REQUIRED/AUTH_EXPIRED/etc, grava motivo em localStorage
- *   para o login exibir mensagem amigável.
  */
 
 (function (global) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
   PRONTIO.api = PRONTIO.api || {};
-
-  // ============================================================
-  // Config / URL
-  // ============================================================
 
   function getApiUrl_() {
     if (PRONTIO.config && PRONTIO.config.apiUrl) return PRONTIO.config.apiUrl;
@@ -43,25 +36,15 @@
     return "";
   }
 
-  // ============================================================
-  // Helpers
-  // ============================================================
-
   function normalizeError_(err) {
     if (!err) return "Erro desconhecido";
     if (typeof err === "string") return err;
     if (err.message) return err.message;
-    try {
-      return JSON.stringify(err);
-    } catch (e) {
-      return String(err);
-    }
+    try { return JSON.stringify(err); } catch (_) { return String(err); }
   }
 
   function ensureEnvelope_(json) {
-    if (!json || typeof json !== "object") {
-      throw new Error("Resposta inválida da API (não é JSON objeto).");
-    }
+    if (!json || typeof json !== "object") throw new Error("Resposta inválida da API (não é JSON objeto).");
     if (!("success" in json) || !("data" in json) || !("errors" in json)) {
       throw new Error("Resposta inválida da API (envelope fora do padrão PRONTIO).");
     }
@@ -80,25 +63,13 @@
     };
   }
 
-  // ============================================================
-  // ✅ NORMALIZAÇÃO DEFINITIVA (sem quebrar backend atual):
-  // - Remedios.*  -> Medicamentos.*  (backend aceita)
-  // - Medicamentos.* fica como está
-  // ============================================================
-
   function normalizeAction_(action) {
     const a = String(action || "").trim();
     if (!a) return "";
-
     if (a.indexOf("Remedios.") === 0) return "Medicamentos." + a.substring("Remedios.".length);
     if (a.indexOf("Remedios_") === 0) return "Medicamentos_" + a.substring("Remedios_".length);
-
     return a;
   }
-
-  // ============================================================
-  // Token injection (mantém como está no seu padrão)
-  // ============================================================
 
   function getAuthToken_() {
     try {
@@ -106,7 +77,7 @@
         const t = PRONTIO.auth.getToken();
         if (t) return String(t);
       }
-    } catch (e) {}
+    } catch (_) {}
 
     try {
       const ls = global.localStorage;
@@ -115,7 +86,7 @@
       if (t1) return String(t1);
       const t2 = ls.getItem("prontio_auth_token");
       if (t2) return String(t2);
-    } catch (e) {}
+    } catch (_) {}
 
     return "";
   }
@@ -129,13 +100,7 @@
     return p;
   }
 
-  // ============================================================
-  // Auto-logout opcional + Pilar I (motivo de sessão)
-  // ============================================================
-
-  const UX_AUTH_KEYS = {
-    LAST_AUTH_REASON: "prontio.auth.lastAuthReason"
-  };
+  const UX_AUTH_KEYS = { LAST_AUTH_REASON: "prontio.auth.lastAuthReason" };
 
   function shouldAutoLogout_(errCode) {
     const c = String(errCode || "").toUpperCase();
@@ -152,40 +117,19 @@
     try {
       if (!global.localStorage) return;
       global.localStorage.setItem(UX_AUTH_KEYS.LAST_AUTH_REASON, String(code || "AUTH_REQUIRED"));
-    } catch (e) {}
+    } catch (_) {}
   }
 
   function tryAutoLogout_(reasonCode) {
     try {
       saveAuthReason_(reasonCode);
-
-      if (PRONTIO.auth && typeof PRONTIO.auth.clearSession === "function") {
-        PRONTIO.auth.clearSession();
-      }
-      if (PRONTIO.auth && typeof PRONTIO.auth.requireAuth === "function") {
-        PRONTIO.auth.requireAuth({ redirect: true });
-      }
-    } catch (e) {}
+      if (PRONTIO.auth && typeof PRONTIO.auth.clearSession === "function") PRONTIO.auth.clearSession();
+      if (PRONTIO.auth && typeof PRONTIO.auth.requireAuth === "function") PRONTIO.auth.requireAuth({ redirect: true });
+    } catch (_) {}
   }
 
-  // ============================================================
-  // JSONP transport (CORS-free)
-  // ============================================================
-
-  function buildJsonpUrl_(apiUrl, action, payload, callbackName) {
-    const u = new URL(apiUrl);
-
-    // garante callback (Api.gs ignora campos desconhecidos; callback é para o wrapper abaixo)
-    u.searchParams.set("callback", callbackName);
-
-    u.searchParams.set("action", String(action || ""));
-    u.searchParams.set("payload", JSON.stringify(payload || {}));
-
-    return u.toString();
-  }
-
-  function jsonp_(url, timeoutMs) {
-    timeoutMs = typeof timeoutMs === "number" ? timeoutMs : 15000;
+  function jsonpRequest_(url, timeoutMs) {
+    timeoutMs = typeof timeoutMs === "number" ? timeoutMs : 20000;
 
     return new Promise((resolve, reject) => {
       const cbName = "__prontio_jsonp_cb_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
@@ -204,7 +148,6 @@
         reject(new Error("Timeout ao chamar API (JSONP)."));
       }, timeoutMs);
 
-      // callback global
       global[cbName] = (data) => {
         if (done) return;
         done = true;
@@ -214,7 +157,7 @@
 
       const script = document.createElement("script");
       script.async = true;
-      script.src = url.replace("callback=", "callback=" + encodeURIComponent(cbName)); // mantém compat
+      script.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "callback=" + encodeURIComponent(cbName);
 
       script.onerror = () => {
         if (done) return;
@@ -227,17 +170,6 @@
     });
   }
 
-  async function transport_(apiUrl, action, payload) {
-    // Apps Script não suporta JSONP nativo; então usamos callback manual.
-    const cbName = "__prontio_jsonp_cb_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
-    const url = buildJsonpUrl_(apiUrl, action, payload, cbName);
-    return await jsonp_(url, 20000);
-  }
-
-  // ============================================================
-  // Public API
-  // ============================================================
-
   async function callApiEnvelope(args) {
     const apiUrl = getApiUrl_();
     if (!apiUrl) throw new Error("URL da API não configurada (apiUrl).");
@@ -249,9 +181,16 @@
     const payloadRaw = (args && args.payload) || {};
     const payload = withAuthToken_(payloadRaw);
 
+    // JSONP: action/payload por querystring (Api.gs suporta e.parameter.action/payload)
+    const url =
+      apiUrl +
+      (apiUrl.indexOf("?") >= 0 ? "&" : "?") +
+      "action=" + encodeURIComponent(action) +
+      "&payload=" + encodeURIComponent(JSON.stringify(payload || {}));
+
     let json;
     try {
-      json = await transport_(apiUrl, action, payload);
+      json = await jsonpRequest_(url, 20000);
     } catch (e) {
       throw new Error("Falha de rede ao chamar API: " + normalizeError_(e));
     }
@@ -284,12 +223,10 @@
     return envelope.data;
   }
 
-  // Exports
   PRONTIO.api.callApiEnvelope = callApiEnvelope;
   PRONTIO.api.callApiData = callApiData;
   PRONTIO.api.assertSuccess = assertSuccess_;
 
-  // Compat global
   global.callApi = callApiEnvelope;
   global.callApiData = callApiData;
 
