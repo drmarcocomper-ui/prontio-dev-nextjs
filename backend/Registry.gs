@@ -488,12 +488,16 @@ function _Registry_build_() {
   };
 
   // =========================================================
-  // PACIENTES - LEGACY (typeahead Agenda)
+  // PACIENTES - Typeahead da Agenda
+  // IMPORTANTE:
+  // - Agora deve apontar para a função Repo-based que você
+  //   adicionou no final do Pacientes.gs:
+  //   Pacientes_BuscarSimples_Repo_(payload)
   // =========================================================
   map["Pacientes_BuscarSimples"] = {
     action: "Pacientes_BuscarSimples",
     handler: function (ctx, payload) {
-      return Pacientes_BuscarSimples(payload);
+      return Pacientes_BuscarSimples_Repo_(payload);
     },
     requiresAuth: true,
     roles: [],
