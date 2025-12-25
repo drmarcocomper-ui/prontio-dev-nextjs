@@ -1,9 +1,10 @@
 // frontend/assets/js/pages/page-atendimento.js
 // Módulo: Atendimento (Fila)
-// ✅ SyncHoje + ListarFilaHoje (Atendimento.gs)
-// ✅ Ações por linha: Chegou / Chamar / Iniciar / Concluir / Cancelar
-// ✅ Botão "Chamar próximo"
-// ✅ Mantém fallback para Agenda.ListarAFuturo (compatibilidade)
+// ✅ Preferencial: SyncAPartirDeHoje + ListarFilaAPartirDeHoje (range, ex.: 30 dias)
+// ✅ Fallback: SyncHoje + ListarFilaHoje
+// ✅ Ações por linha: Chegou / Chamar / Iniciar / Concluir / Cancelar (mantidas)
+// ✅ Botão "Chamar próximo" (mantido)
+// ✅ Mantém fallback para Agenda.ListarAFuturo (compatibilidade) (mantido)
 
 (function (global, document) {
   "use strict";
@@ -70,6 +71,9 @@
 
   let selected = null;
 
+  // ✅ Quantos dias mostrar na fila "a partir de hoje"
+  const DEFAULT_RANGE_DIAS = 30;
+
   function setSelected_(row) {
     selected = row || null;
     if (btnAbrirProntuario) {
@@ -99,9 +103,10 @@
     if (fonte === "atendimento") {
       const idAgenda = raw.idAgenda || raw.ID_Agenda || "";
       const idPaciente = raw.idPaciente || raw.ID_Paciente || "";
-      const data = raw.dataRef || raw.data || "";
+      const data = raw.dataRef || raw.data || ""; // dataRef no backend
       const hora = raw.hora || raw.horaConsulta || "";
-      const pacienteNome = raw.nomePaciente || raw.paciente || raw.pacienteNome || idPaciente || "";
+      const pacienteNome =
+        raw.nomePaciente || raw.pacienteNome || raw.paciente || raw.nome || idPaciente || "";
       const tipo = raw.tipo || "";
       const status = raw.status || "";
       const idAtendimento = raw.idAtendimento || raw.ID_Atendimento || "";
@@ -156,19 +161,10 @@
 
     const s = String(row.status || "").toUpperCase();
 
-    // ação "Chegou" faz sentido só se ainda não chegou (aguardando)
     if (action === "chegou") return (s === "AGUARDANDO");
-
-    // "Chamar" pode para CHEGOU ou AGUARDANDO (backend prioriza CHEGOU no chamar próximo, mas aqui é manual)
     if (action === "chamar") return (s === "CHEGOU" || s === "AGUARDANDO");
-
-    // "Iniciar" normalmente depois de chamado ou chegou
     if (action === "iniciar") return (s === "CHAMADO" || s === "CHEGOU");
-
-    // "Concluir" só em atendimento
     if (action === "concluir") return (s === "EM_ATENDIMENTO");
-
-    // "Cancelar" pode quase sempre, exceto concluído/cancelado
     if (action === "cancelar") return !(s === "CONCLUIDO" || s === "CANCELADO");
 
     return false;
@@ -178,7 +174,6 @@
     const wrap = document.createElement("div");
     wrap.className = "atendimento-row-actions";
 
-    // Se é fallback "agenda" (sem idAtendimento), não habilita ações de fila
     if (row.fonte !== "atendimento") {
       const small = document.createElement("span");
       small.className = "muted";
@@ -207,7 +202,6 @@
       await acaoCancelar_(row);
     });
 
-    // Habilita/desabilita conforme status
     btnChegou.disabled = !canDo_(row, "chegou");
     btnChamar.disabled = !canDo_(row, "chamar");
     btnIniciar.disabled = !canDo_(row, "iniciar");
@@ -230,7 +224,7 @@
     b.className = cls;
     b.addEventListener("click", async (ev) => {
       ev.preventDefault();
-      ev.stopPropagation(); // não seleciona a linha ao clicar no botão
+      ev.stopPropagation();
       try {
         b.disabled = true;
         await onClick();
@@ -314,18 +308,40 @@
     infoUltimaAtualizacao.textContent = `Atualizado em ${dd}/${mm}/${yyyy} às ${hh}:${min}`;
   }
 
+  // ✅ NOVO: tenta carregar "a partir de hoje" (range). Se não existir, cai pro fluxo antigo.
   async function carregarListaAtendimento() {
     msgs.info("Carregando atendimentos...");
     renderizarEstadoCarregando();
     if (btnRecarregar) btnRecarregar.disabled = true;
 
     try {
-      // 0) Sync (idempotente)
+      // 1) Preferencial: range (a partir de hoje)
+      let dataRange = null;
+      try {
+        await callApiData({ action: "Atendimento.SyncAPartirDeHoje", payload: { dias: DEFAULT_RANGE_DIAS, resetOrdem: true } });
+        dataRange = await callApiData({ action: "Atendimento.ListarFilaAPartirDeHoje", payload: { dias: DEFAULT_RANGE_DIAS } });
+      } catch (_) {
+        dataRange = null;
+      }
+
+      if (dataRange && Array.isArray(dataRange.items)) {
+        const rows = dataRange.items.map((it) => normalizeRow_(it, "atendimento"));
+        renderizarLinhas(rows);
+
+        msgs.sucesso(
+          rows.length === 0
+            ? "Nenhum atendimento a partir de hoje."
+            : `Atendimentos (próx. ${DEFAULT_RANGE_DIAS} dias): ${rows.length}.`
+        );
+        setUltimaAtualizacao_();
+        return;
+      }
+
+      // 2) Fallback: HOJE (comportamento antigo)
       try {
         await callApiData({ action: "Atendimento.SyncHoje", payload: {} });
       } catch (_) {}
 
-      // 1) Atendimento.ListarFilaHoje (preferencial)
       let dataAtd = null;
       try {
         dataAtd = await callApiData({ action: "Atendimento.ListarFilaHoje", payload: {} });
@@ -342,7 +358,7 @@
         return;
       }
 
-      // 2) Fallback: Agenda.ListarAFuturo
+      // 3) Fallback final: legado (se existir)
       let dataAgenda;
       try {
         dataAgenda = await callApiData({ action: "Agenda.ListarAFuturo", payload: {} });
@@ -376,7 +392,6 @@
 
     const idPaciente = selected.idPaciente || "";
     const idAgenda = selected.idAgenda || "";
-
     if (!idPaciente || !idAgenda) return;
 
     const url = `prontuario.html?idPaciente=${encodeURIComponent(idPaciente)}&idAgenda=${encodeURIComponent(idAgenda)}`;
@@ -389,38 +404,27 @@
     await carregarListaAtendimento();
   }
 
-  // Chamar manualmente uma pessoa específica:
-  // não existe action "Chamar(idAtendimento)" no backend, então fazemos:
-  // 1) Marcar chegada (se ainda aguardando) e
-  // 2) Chamar próximo (backend prioriza CHEGOU, e com ordem tende a puxar o correto)
   async function acaoChamarManual_(row) {
     if (!row || !row.idAgenda) return;
     const s = String(row.status || "").toUpperCase();
     if (s === "AGUARDANDO") {
       await callApiData({ action: "Atendimento.MarcarChegada", payload: { idAgenda: row.idAgenda, idPaciente: row.idPaciente || "" } });
     }
-    // Chama próximo (pode chamar este se estiver no topo; funciona bem com ordem)
     await callApiData({ action: "Atendimento.ChamarProximo", payload: {} });
     await carregarListaAtendimento();
   }
 
   async function acaoIniciar_(row) {
     if (!row) return;
-    if (row.idAtendimento) {
-      await callApiData({ action: "Atendimento.Iniciar", payload: { idAtendimento: row.idAtendimento } });
-    } else if (row.idAgenda) {
-      await callApiData({ action: "Atendimento.Iniciar", payload: { idAgenda: row.idAgenda } });
-    }
+    if (row.idAtendimento) await callApiData({ action: "Atendimento.Iniciar", payload: { idAtendimento: row.idAtendimento } });
+    else if (row.idAgenda) await callApiData({ action: "Atendimento.Iniciar", payload: { idAgenda: row.idAgenda } });
     await carregarListaAtendimento();
   }
 
   async function acaoConcluir_(row) {
     if (!row) return;
-    if (row.idAtendimento) {
-      await callApiData({ action: "Atendimento.Concluir", payload: { idAtendimento: row.idAtendimento } });
-    } else if (row.idAgenda) {
-      await callApiData({ action: "Atendimento.Concluir", payload: { idAgenda: row.idAgenda } });
-    }
+    if (row.idAtendimento) await callApiData({ action: "Atendimento.Concluir", payload: { idAtendimento: row.idAtendimento } });
+    else if (row.idAgenda) await callApiData({ action: "Atendimento.Concluir", payload: { idAgenda: row.idAgenda } });
     await carregarListaAtendimento();
   }
 
@@ -429,11 +433,9 @@
     const ok = confirm("Cancelar este atendimento? (Ação não pode ser desfeita facilmente)");
     if (!ok) return;
 
-    if (row.idAtendimento) {
-      await callApiData({ action: "Atendimento.Cancelar", payload: { idAtendimento: row.idAtendimento, motivo: "Cancelado pela fila" } });
-    } else if (row.idAgenda) {
-      await callApiData({ action: "Atendimento.Cancelar", payload: { idAgenda: row.idAgenda, motivo: "Cancelado pela fila" } });
-    }
+    if (row.idAtendimento) await callApiData({ action: "Atendimento.Cancelar", payload: { idAtendimento: row.idAtendimento, motivo: "Cancelado pela fila" } });
+    else if (row.idAgenda) await callApiData({ action: "Atendimento.Cancelar", payload: { idAgenda: row.idAgenda, motivo: "Cancelado pela fila" } });
+
     await carregarListaAtendimento();
   }
 
@@ -456,26 +458,9 @@
     btnAbrirProntuario = document.getElementById("btnAbrirProntuario");
     btnChamarProximo = document.getElementById("btnChamarProximo");
 
-    if (btnRecarregar) {
-      btnRecarregar.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        carregarListaAtendimento();
-      });
-    }
-
-    if (btnAbrirProntuario) {
-      btnAbrirProntuario.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        abrirProntuarioSelecionado_();
-      });
-    }
-
-    if (btnChamarProximo) {
-      btnChamarProximo.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        acaoChamarProximo_();
-      });
-    }
+    if (btnRecarregar) btnRecarregar.addEventListener("click", (ev) => { ev.preventDefault(); carregarListaAtendimento(); });
+    if (btnAbrirProntuario) btnAbrirProntuario.addEventListener("click", (ev) => { ev.preventDefault(); abrirProntuarioSelecionado_(); });
+    if (btnChamarProximo) btnChamarProximo.addEventListener("click", (ev) => { ev.preventDefault(); acaoChamarProximo_(); });
 
     carregarListaAtendimento();
   }

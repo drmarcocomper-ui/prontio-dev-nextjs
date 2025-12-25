@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * PRONTIO - Atendimento.gs (MÓDULO NOVO)
+ * PRONTIO - Atendimento.gs
  * ============================================================
  * Domínio: Atendimento = fluxo operacional do dia (fila, chegada, chamado, início, conclusão).
  * NÃO substitui Agenda.gs (calendário/compromissos).
@@ -8,7 +8,7 @@
  * IMPORTANTE:
  * - NÃO usa SpreadsheetApp (Sheets só via Repository).
  * - IDs: Ids_nextId_("ATENDIMENTO")
- * - Locks: aplicados no Api.gs via entry.requiresLock (este módulo NÃO trava aqui).
+ * - Locks: aplicados no Api.gs via entry.requiresLock
  *
  * Entidade (backend-only):
  * - sheet/entity: "Atendimento"
@@ -22,16 +22,17 @@
  * - Atendimento.Iniciar
  * - Atendimento.Concluir
  * - Atendimento.Cancelar
+ *
+ * ✅ NOVO:
+ * - Atendimento.SyncAPartirDeHoje
+ * - Atendimento.ListarFilaAPartirDeHoje
  */
 
 var ATENDIMENTO_ENTITY = "Atendimento";
 var ATENDIMENTO_ID_FIELD = "idAtendimento";
 
-// Entidade da agenda (mesma usada no Migrations/Repository)
 var AGENDA_SHEET_NAME = "Agenda";
 
-// Entidade de pacientes (para enriquecer nome do paciente)
-// Se no seu Schema/Repo a entidade tiver outro nome, ajuste aqui.
 var PACIENTES_ENTITY = "Pacientes";
 var PACIENTES_ID_FIELD = "idPaciente";
 
@@ -76,7 +77,6 @@ function Atendimento_Action_SyncHoje_(ctx, payload) {
 
     var ini = _atdParseDate_(e.inicio);
     var fim = _atdParseDate_(e.fim);
-
     if (!ini || !fim) continue;
 
     var overlaps = (ini.getTime() <= dayEnd.getTime()) && (fim.getTime() >= dayStart.getTime());
@@ -92,9 +92,7 @@ function Atendimento_Action_SyncHoje_(ctx, payload) {
     });
   }
 
-  agendaDia.sort(function (a, b) {
-    return a.inicio.getTime() - b.inicio.getTime();
-  });
+  agendaDia.sort(function (a, b) { return a.inicio.getTime() - b.inicio.getTime(); });
 
   var existingAll = Repo_list_(ATENDIMENTO_ENTITY) || [];
   var existingByAgenda = {};
@@ -172,94 +170,25 @@ function Atendimento_Action_SyncHoje_(ctx, payload) {
     }
   }
 
-  return {
-    dataRef: dataRef,
-    created: created,
-    updated: updated,
-    skipped: skipped,
-    totalAgendaDia: agendaDia.length
-  };
+  return { dataRef: dataRef, created: created, updated: updated, skipped: skipped, totalAgendaDia: agendaDia.length };
 }
 
 /**
- * ============================================================
  * Atendimento.ListarFilaHoje
- * ============================================================
- * ✅ Agora enriquece cada item com:
- * - hora (HH:MM) e tipo (da Agenda)
- * - nomePaciente (do Pacientes, se disponível)
- *
- * payload: { dataRef?: "YYYY-MM-DD", incluirConcluidos?: boolean, incluirCancelados?: boolean }
  */
 function Atendimento_Action_ListarFilaHoje_(ctx, payload) {
   payload = payload || {};
-
   var dataRef = _atdNormalizeDateRef_(payload.dataRef);
-  var incluirConcluidos = payload.incluirConcluidos === true;
-  var incluirCancelados = payload.incluirCancelados === true;
-
-  var all = Repo_list_(ATENDIMENTO_ENTITY) || [];
-  var out = [];
-
-  // Cache simples por execução (evita N chamadas iguais no Repo)
-  var agendaCache = {};
-  var pacienteCache = {};
-
-  for (var i = 0; i < all.length; i++) {
-    var a = _atdNormalizeRowToDto_(all[i]);
-    if (!a.ativo) continue;
-    if (String(a.dataRef || "") !== dataRef) continue;
-
-    var st = _atdNormalizeStatus_(a.status);
-    a.status = st;
-
-    if (!incluirCancelados && st === ATENDIMENTO_STATUS.CANCELADO) continue;
-    if (!incluirConcluidos && st === ATENDIMENTO_STATUS.CONCLUIDO) continue;
-
-    // Enriquecimento via Agenda
-    if (a.idAgenda) {
-      var ag = agendaCache[a.idAgenda];
-      if (ag === undefined) {
-        ag = Repo_getById_(AGENDA_SHEET_NAME, "idAgenda", a.idAgenda);
-        agendaCache[a.idAgenda] = ag || null;
-      }
-
-      if (ag) {
-        var ini = _atdParseDate_(ag.inicio);
-        if (ini) a.hora = _atdFormatHHMM_(ini);
-        a.tipo = ag.tipo || a.tipo || "";
-        // Se dataRef vier vazia/inconsistente, preserva a do atendimento (não reescreve).
-      }
-    }
-
-    // Enriquecimento via Pacientes (se existir entidade no Repo)
-    if (a.idPaciente) {
-      var p = pacienteCache[a.idPaciente];
-      if (p === undefined) {
-        // pode não existir no seu Repo; se não existir, fica null e seguimos
-        try {
-          p = Repo_getById_(PACIENTES_ENTITY, PACIENTES_ID_FIELD, a.idPaciente);
-        } catch (_) {
-          p = null;
-        }
-        pacienteCache[a.idPaciente] = p || null;
-      }
-
-      if (p) {
-        a.nomePaciente = p.nome || p.Nome || p.nomePaciente || a.nomePaciente || "";
-      }
-    }
-
-    out.push(a);
-  }
-
-  out.sort(_atdCompareFila_);
-  return { items: out, count: out.length, dataRef: dataRef };
+  return Atendimento_Action_ListarFilaAPartirDeHoje_(ctx, {
+    dias: 1,
+    dataRefInicio: dataRef,
+    incluirConcluidos: payload.incluirConcluidos === true,
+    incluirCancelados: payload.incluirCancelados === true
+  });
 }
 
 /**
  * Atendimento.MarcarChegada
- * payload: { idAgenda: string, idPaciente?: string, dataRef?: "YYYY-MM-DD", sala?: string, observacoes?: string, ordem?: number }
  */
 function Atendimento_Action_MarcarChegada_(ctx, payload) {
   payload = payload || {};
@@ -282,10 +211,7 @@ function Atendimento_Action_MarcarChegada_(ctx, payload) {
   }
 
   var st = _atdNormalizeStatus_(existing.status);
-  var patch = {
-    status: (st === ATENDIMENTO_STATUS.AGUARDANDO) ? ATENDIMENTO_STATUS.CHEGOU : st,
-    atualizadoEm: nowIso
-  };
+  var patch = { status: (st === ATENDIMENTO_STATUS.AGUARDANDO) ? ATENDIMENTO_STATUS.CHEGOU : st, atualizadoEm: nowIso };
 
   if (!existing.chegadaEm) patch.chegadaEm = nowIso;
   if (payload.sala !== undefined) patch.sala = String(payload.sala || "");
@@ -299,7 +225,6 @@ function Atendimento_Action_MarcarChegada_(ctx, payload) {
 
 /**
  * Atendimento.ChamarProximo
- * payload: { dataRef?: "YYYY-MM-DD" }
  */
 function Atendimento_Action_ChamarProximo_(ctx, payload) {
   payload = payload || {};
@@ -327,10 +252,7 @@ function Atendimento_Action_ChamarProximo_(ctx, payload) {
   }
 
   candidates.sort(_atdCompareFila_);
-
-  if (!candidates.length) {
-    return { item: null, dataRef: dataRef, message: "Fila vazia." };
-  }
+  if (!candidates.length) return { item: null, dataRef: dataRef, message: "Fila vazia." };
 
   candidates.sort(function (x, y) {
     var px = (x.status === ATENDIMENTO_STATUS.CHEGOU) ? 0 : 1;
@@ -340,11 +262,7 @@ function Atendimento_Action_ChamarProximo_(ctx, payload) {
   });
 
   var next = candidates[0];
-  var patch = {
-    status: ATENDIMENTO_STATUS.CHAMADO,
-    chamadoEm: next.chamadoEm || nowIso,
-    atualizadoEm: nowIso
-  };
+  var patch = { status: ATENDIMENTO_STATUS.CHAMADO, chamadoEm: next.chamadoEm || nowIso, atualizadoEm: nowIso };
 
   Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, next.idAtendimento, patch);
   var after = Repo_getById_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, next.idAtendimento);
@@ -353,7 +271,6 @@ function Atendimento_Action_ChamarProximo_(ctx, payload) {
 
 /**
  * Atendimento.Iniciar
- * payload: { idAtendimento?: string, idAgenda?: string, dataRef?: "YYYY-MM-DD" }
  */
 function Atendimento_Action_Iniciar_(ctx, payload) {
   payload = payload || {};
@@ -363,17 +280,10 @@ function Atendimento_Action_Iniciar_(ctx, payload) {
   if (!a) _atdThrow_("NOT_FOUND", "Atendimento não encontrado.", { payload: payload });
 
   var st = _atdNormalizeStatus_(a.status);
-
-  if (st === ATENDIMENTO_STATUS.CANCELADO) {
-    _atdThrow_("VALIDATION_ERROR", "Atendimento cancelado não pode iniciar.", { idAtendimento: a.idAtendimento });
-  }
+  if (st === ATENDIMENTO_STATUS.CANCELADO) _atdThrow_("VALIDATION_ERROR", "Atendimento cancelado não pode iniciar.", { idAtendimento: a.idAtendimento });
   if (st === ATENDIMENTO_STATUS.CONCLUIDO) return { item: a };
 
-  var patch = {
-    status: ATENDIMENTO_STATUS.EM_ATENDIMENTO,
-    inicioAtendimentoEm: a.inicioAtendimentoEm || nowIso,
-    atualizadoEm: nowIso
-  };
+  var patch = { status: ATENDIMENTO_STATUS.EM_ATENDIMENTO, inicioAtendimentoEm: a.inicioAtendimentoEm || nowIso, atualizadoEm: nowIso };
 
   Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento, patch);
   var after = Repo_getById_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento);
@@ -382,7 +292,6 @@ function Atendimento_Action_Iniciar_(ctx, payload) {
 
 /**
  * Atendimento.Concluir
- * payload: { idAtendimento?: string, idAgenda?: string, dataRef?: "YYYY-MM-DD", observacoes?: string }
  */
 function Atendimento_Action_Concluir_(ctx, payload) {
   payload = payload || {};
@@ -392,16 +301,9 @@ function Atendimento_Action_Concluir_(ctx, payload) {
   if (!a) _atdThrow_("NOT_FOUND", "Atendimento não encontrado.", { payload: payload });
 
   var st = _atdNormalizeStatus_(a.status);
-  if (st === ATENDIMENTO_STATUS.CANCELADO) {
-    _atdThrow_("VALIDATION_ERROR", "Atendimento cancelado não pode concluir.", { idAtendimento: a.idAtendimento });
-  }
+  if (st === ATENDIMENTO_STATUS.CANCELADO) _atdThrow_("VALIDATION_ERROR", "Atendimento cancelado não pode concluir.", { idAtendimento: a.idAtendimento });
 
-  var patch = {
-    status: ATENDIMENTO_STATUS.CONCLUIDO,
-    concluidoEm: a.concluidoEm || nowIso,
-    atualizadoEm: nowIso
-  };
-
+  var patch = { status: ATENDIMENTO_STATUS.CONCLUIDO, concluidoEm: a.concluidoEm || nowIso, atualizadoEm: nowIso };
   if (payload.observacoes !== undefined) patch.observacoes = String(payload.observacoes || "");
 
   Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento, patch);
@@ -411,7 +313,6 @@ function Atendimento_Action_Concluir_(ctx, payload) {
 
 /**
  * Atendimento.Cancelar
- * payload: { idAtendimento?: string, idAgenda?: string, dataRef?: "YYYY-MM-DD", motivo?: string }
  */
 function Atendimento_Action_Cancelar_(ctx, payload) {
   payload = payload || {};
@@ -420,11 +321,7 @@ function Atendimento_Action_Cancelar_(ctx, payload) {
   var a = _atdResolveTarget_(payload);
   if (!a) _atdThrow_("NOT_FOUND", "Atendimento não encontrado.", { payload: payload });
 
-  var patch = {
-    status: ATENDIMENTO_STATUS.CANCELADO,
-    atualizadoEm: nowIso
-  };
-
+  var patch = { status: ATENDIMENTO_STATUS.CANCELADO, atualizadoEm: nowIso };
   if (payload.motivo !== undefined) patch.observacoes = String(payload.motivo || "");
 
   Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento, patch);
@@ -433,7 +330,228 @@ function Atendimento_Action_Cancelar_(ctx, payload) {
 }
 
 /* ============================================================
- * Helpers
+ * ✅ NOVO: A partir de hoje (range)
+ * ============================================================ */
+
+/**
+ * Atendimento.SyncAPartirDeHoje
+ * payload:
+ * { dias?: number, dataRefInicio?: "YYYY-MM-DD", incluirBloqueios?: boolean, incluirCancelados?: boolean, resetOrdem?: boolean }
+ * default: dias=30, dataRefInicio=hoje
+ */
+function Atendimento_Action_SyncAPartirDeHoje_(ctx, payload) {
+  payload = payload || {};
+  var dias = Number(payload.dias || 30);
+  if (isNaN(dias) || dias <= 0) dias = 30;
+  if (dias > 365) dias = 365;
+
+  var dataRefInicio = _atdNormalizeDateRef_(payload.dataRefInicio);
+  var incluirBloqueios = payload.incluirBloqueios === true;
+  var incluirCancelados = payload.incluirCancelados === true;
+  var resetOrdem = payload.resetOrdem === true;
+
+  var start = _atdBuildDayStart_(dataRefInicio);
+  var end = new Date(start.getTime() + (dias * 24 * 60 * 60 * 1000) - 1);
+
+  // 1) pega agenda no período
+  var agendaAll = Repo_list_(AGENDA_SHEET_NAME) || [];
+  var agendaInRange = [];
+
+  for (var i = 0; i < agendaAll.length; i++) {
+    var e = agendaAll[i] || {};
+    var idAgenda = e.idAgenda || e.ID_Agenda || "";
+    if (!idAgenda) continue;
+
+    var status = String(e.status || "").toUpperCase();
+    var tipo = String(e.tipo || "").toUpperCase();
+    if (!incluirCancelados && status === "CANCELADO") continue;
+    if (!incluirBloqueios && tipo === "BLOQUEIO") continue;
+
+    var ini = _atdParseDate_(e.inicio);
+    var fim = _atdParseDate_(e.fim);
+    if (!ini || !fim) continue;
+
+    // overlap com [start,end]
+    var overlaps = (ini.getTime() <= end.getTime()) && (fim.getTime() >= start.getTime());
+    if (!overlaps) continue;
+
+    var dataRef = _atdNormalizeDateRef_(ini); // dia do início
+    agendaInRange.push({
+      idAgenda: String(idAgenda),
+      idPaciente: String(e.idPaciente || e.ID_Paciente || ""),
+      inicio: ini,
+      fim: fim,
+      tipo: String(e.tipo || ""),
+      status: String(e.status || ""),
+      dataRef: dataRef
+    });
+  }
+
+  // 2) agrupa por dataRef e ordena por hora
+  var byDay = {};
+  for (var j = 0; j < agendaInRange.length; j++) {
+    var a = agendaInRange[j];
+    if (!byDay[a.dataRef]) byDay[a.dataRef] = [];
+    byDay[a.dataRef].push(a);
+  }
+  Object.keys(byDay).forEach(function (dref) {
+    byDay[dref].sort(function (x, y) { return x.inicio.getTime() - y.inicio.getTime(); });
+  });
+
+  // 3) indexa atendimentos existentes por (dataRef + idAgenda)
+  var existingAll = Repo_list_(ATENDIMENTO_ENTITY) || [];
+  var existingMap = {};
+  for (var k = 0; k < existingAll.length; k++) {
+    var ex = _atdNormalizeRowToDto_(existingAll[k]);
+    if (!ex.ativo) continue;
+    if (!ex.idAgenda) continue;
+    existingMap[String(ex.dataRef) + "::" + String(ex.idAgenda)] = ex;
+  }
+
+  var nowIso = new Date().toISOString();
+  var created = 0, updated = 0, skipped = 0, totalAgenda = 0;
+
+  // 4) upsert por dia
+  var days = Object.keys(byDay).sort();
+  for (var di = 0; di < days.length; di++) {
+    var dref2 = days[di];
+    var arr = byDay[dref2] || [];
+    totalAgenda += arr.length;
+
+    for (var idx = 0; idx < arr.length; idx++) {
+      var ag = arr[idx];
+      var ordemCalc = idx + 1;
+
+      var key = dref2 + "::" + ag.idAgenda;
+      var exists = existingMap[key];
+
+      if (!exists) {
+        var dto = _atdBuildNew_(
+          { idAgenda: ag.idAgenda, idPaciente: ag.idPaciente, dataRef: dref2, ordem: ordemCalc, observacoes: "", sala: "" },
+          { idAgenda: ag.idAgenda, idPaciente: ag.idPaciente, dataRef: dref2, status: ATENDIMENTO_STATUS.AGUARDANDO }
+        );
+        dto.criadoEm = nowIso;
+        dto.atualizadoEm = nowIso;
+        Repo_insert_(ATENDIMENTO_ENTITY, dto);
+        created++;
+        continue;
+      }
+
+      var patch = {};
+      var needUpdate = false;
+
+      if (!exists.idPaciente && ag.idPaciente) {
+        patch.idPaciente = ag.idPaciente;
+        needUpdate = true;
+      }
+
+      if (resetOrdem) {
+        var st2 = _atdNormalizeStatus_(exists.status);
+        if (st2 !== ATENDIMENTO_STATUS.EM_ATENDIMENTO && st2 !== ATENDIMENTO_STATUS.CONCLUIDO && st2 !== ATENDIMENTO_STATUS.CANCELADO) {
+          patch.ordem = ordemCalc;
+          needUpdate = true;
+        }
+      }
+
+      if (needUpdate) {
+        patch.atualizadoEm = nowIso;
+        Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, exists.idAtendimento, patch);
+        updated++;
+      } else {
+        skipped++;
+      }
+    }
+  }
+
+  return { dataRefInicio: dataRefInicio, dias: dias, created: created, updated: updated, skipped: skipped, totalAgenda: totalAgenda };
+}
+
+/**
+ * Atendimento.ListarFilaAPartirDeHoje
+ * payload:
+ * { dias?: number, dataRefInicio?: "YYYY-MM-DD", incluirConcluidos?: boolean, incluirCancelados?: boolean }
+ */
+function Atendimento_Action_ListarFilaAPartirDeHoje_(ctx, payload) {
+  payload = payload || {};
+  var dias = Number(payload.dias || 30);
+  if (isNaN(dias) || dias <= 0) dias = 30;
+  if (dias > 365) dias = 365;
+
+  var dataRefInicio = _atdNormalizeDateRef_(payload.dataRefInicio);
+  var incluirConcluidos = payload.incluirConcluidos === true;
+  var incluirCancelados = payload.incluirCancelados === true;
+
+  var start = _atdBuildDayStart_(dataRefInicio);
+  var end = new Date(start.getTime() + (dias * 24 * 60 * 60 * 1000) - 1);
+
+  var all = Repo_list_(ATENDIMENTO_ENTITY) || [];
+  var out = [];
+
+  var agendaCache = {};
+  var pacienteCache = {};
+
+  for (var i = 0; i < all.length; i++) {
+    var a = _atdNormalizeRowToDto_(all[i]);
+    if (!a.ativo) continue;
+
+    // filtra por dataRef no intervalo
+    if (!a.dataRef) continue;
+    var d0 = _atdBuildDayStart_(String(a.dataRef));
+    if (d0.getTime() < start.getTime() || d0.getTime() > end.getTime()) continue;
+
+    var st = _atdNormalizeStatus_(a.status);
+    a.status = st;
+
+    if (!incluirCancelados && st === ATENDIMENTO_STATUS.CANCELADO) continue;
+    if (!incluirConcluidos && st === ATENDIMENTO_STATUS.CONCLUIDO) continue;
+
+    // Enriquecimento via Agenda (hora/tipo)
+    if (a.idAgenda) {
+      var ag = agendaCache[a.idAgenda];
+      if (ag === undefined) {
+        try { ag = Repo_getById_(AGENDA_SHEET_NAME, "idAgenda", a.idAgenda); } catch (_) { ag = null; }
+        agendaCache[a.idAgenda] = ag || null;
+      }
+      if (ag) {
+        var ini = _atdParseDate_(ag.inicio);
+        if (ini) a.hora = _atdFormatHHMM_(ini);
+        a.tipo = ag.tipo || a.tipo || "";
+      }
+    }
+
+    // Enriquecimento via Pacientes (nome)
+    if (a.idPaciente) {
+      var p = pacienteCache[a.idPaciente];
+      if (p === undefined) {
+        try { p = Repo_getById_(PACIENTES_ENTITY, PACIENTES_ID_FIELD, a.idPaciente); } catch (_) { p = null; }
+        pacienteCache[a.idPaciente] = p || null;
+      }
+      if (p) a.nomePaciente = p.nome || p.nomePaciente || a.nomePaciente || "";
+    }
+
+    out.push(a);
+  }
+
+  // ordena por dataRef, depois ordem, depois hora
+  out.sort(function (x, y) {
+    var dx = String(x.dataRef || "");
+    var dy = String(y.dataRef || "");
+    if (dx !== dy) return dx < dy ? -1 : 1;
+
+    var ox = (typeof x.ordem === "number") ? x.ordem : 999999;
+    var oy = (typeof y.ordem === "number") ? y.ordem : 999999;
+    if (ox !== oy) return ox - oy;
+
+    var hx = String(x.hora || "");
+    var hy = String(y.hora || "");
+    return hx.localeCompare(hy);
+  });
+
+  return { items: out, count: out.length, dataRefInicio: dataRefInicio, dias: dias };
+}
+
+/* ============================================================
+ * Helpers (mantidos)
  * ============================================================ */
 
 function _atdResolveTarget_(payload) {
@@ -487,7 +605,6 @@ function _atdBuildNew_(payload, overrides) {
     sala: (overrides.sala !== undefined) ? String(overrides.sala || "") : (payload.sala ? String(payload.sala) : ""),
     observacoes: (overrides.observacoes !== undefined) ? String(overrides.observacoes || "") : (payload.observacoes ? String(payload.observacoes) : ""),
 
-    // Campos enriquecidos (opcionais; podem ser gravados ou só retornados)
     hora: "",
     tipo: "",
     nomePaciente: "",
@@ -520,7 +637,6 @@ function _atdNormalizeRowToDto_(rowObj) {
     sala: rowObj.sala || "",
     observacoes: rowObj.observacoes || "",
 
-    // Enriquecidos (podem existir ou não)
     hora: rowObj.hora || "",
     tipo: rowObj.tipo || "",
     nomePaciente: rowObj.nomePaciente || "",
@@ -543,13 +659,6 @@ function _atdNormalizeStatus_(status) {
   if (s.indexOf("CHAM") >= 0) return ATENDIMENTO_STATUS.CHAMADO;
   if (s.indexOf("CHEG") >= 0) return ATENDIMENTO_STATUS.CHEGOU;
   if (s.indexOf("AGUAR") >= 0) return ATENDIMENTO_STATUS.AGUARDANDO;
-
-  if (s === ATENDIMENTO_STATUS.AGUARDANDO) return s;
-  if (s === ATENDIMENTO_STATUS.CHEGOU) return s;
-  if (s === ATENDIMENTO_STATUS.CHAMADO) return s;
-  if (s === ATENDIMENTO_STATUS.EM_ATENDIMENTO) return s;
-  if (s === ATENDIMENTO_STATUS.CONCLUIDO) return s;
-  if (s === ATENDIMENTO_STATUS.CANCELADO) return s;
 
   return ATENDIMENTO_STATUS.AGUARDANDO;
 }
