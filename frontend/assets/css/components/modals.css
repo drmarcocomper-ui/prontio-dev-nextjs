@@ -6,6 +6,10 @@
    - Usando apenas tokens globais
 ===================================== */
 
+/* =========================================================
+   1) BACKDROP "antigo" (usado em modalSobreSistema)
+   ========================================================= */
+
 /* BACKDROP (fundo escurecido) */
 .modal-backdrop {
   position: fixed;
@@ -22,7 +26,36 @@
   display: flex;
 }
 
-/* CAIXA DO MODAL */
+/* =========================================================
+   2) OVERLAY "novo" (usado nos modais da Agenda)
+   - HTML: class="modal-overlay hidden"
+   - JS (page-agenda.js): remove .hidden e adiciona .visible
+   ========================================================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+
+/* compatível com o seu JS */
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-overlay.visible {
+  display: flex;
+}
+
+/* =========================================================
+   3) CAIXA DO MODAL (vale para backdrop e overlay)
+   ========================================================= */
+
 .modal {
   background: var(--cor-fundo-card, #ffffff);
   color: var(--cor-texto-principal, #111827);
@@ -36,7 +69,7 @@
   flex-direction: column;
   overflow: hidden;
 
-  /* ✅ NOVO: garante que o modal nunca estoure a altura da tela */
+  /* ✅ garante que o modal não estoure a viewport */
   max-height: 90vh;
 }
 
@@ -47,6 +80,11 @@
 
 /* VARIAÇÃO MAIOR (para formulários grandes) */
 .modal--lg {
+  max-width: 720px;
+}
+
+/* Compatibilidade: no agenda.html você tem "modal-large" (não "modal--lg") */
+.modal-large {
   max-width: 720px;
 }
 
@@ -62,6 +100,14 @@
 }
 
 .modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cor-texto-principal, #111827);
+}
+
+/* (Agenda.html não usa .modal-title no h2, mas mantemos para consistência) */
+.modal-header h2 {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
@@ -107,7 +153,7 @@
   color: var(--cor-texto-principal, #111827);
   background: var(--cor-fundo-card, #ffffff);
 
-  /* ✅ NOVO: quando o conteúdo for grande, rola só o corpo */
+  /* ✅ rolagem interna quando o conteúdo é grande */
   overflow: auto;
   max-height: calc(90vh - 120px); /* header+footer aproximados */
 }
@@ -158,7 +204,7 @@
 @media (max-width: 480px) {
   .modal {
     margin: 0 8px;
-    max-height: 92vh; /* ✅ ligeiramente mais alto no mobile */
+    max-height: 92vh;
   }
 
   .modal-body {
@@ -170,5 +216,9 @@
     padding: 8px 12px;
     flex-wrap: wrap;
     justify-content: flex-start;
+  }
+
+  .modal-overlay {
+    padding: 10px;
   }
 }
