@@ -45,9 +45,9 @@ function _Registry_missingHandler_(fnName) {
 function _Registry_build_() {
   var map = {};
 
-  // =========================
+  // =========================================================
   // DIAGNÓSTICO (DEV)
-  // =========================
+  // =========================================================
   map["Registry_ListActions"] = {
     action: "Registry_ListActions",
     handler: Registry_ListActions,
@@ -58,9 +58,9 @@ function _Registry_build_() {
     lockKey: null
   };
 
-  // =========================
+  // =========================================================
   // AUTH
-  // =========================
+  // =========================================================
   map["Auth_Login"] = {
     action: "Auth_Login",
     handler: Auth_Login,
@@ -103,9 +103,9 @@ function _Registry_build_() {
     };
   }
 
-  // =========================
+  // =========================================================
   // AUTH RECOVERY
-  // =========================
+  // =========================================================
   map["Auth_ForgotPassword_Request"] = {
     action: "Auth_ForgotPassword_Request",
     handler: Auth_ForgotPassword_Request,
@@ -136,9 +136,9 @@ function _Registry_build_() {
     lockKey: "Auth_ForgotPassword_Reset"
   };
 
-  // =========================
+  // =========================================================
   // USUÁRIOS (admin)
-  // =========================
+  // =========================================================
   map["Usuarios_Listar"] = {
     action: "Usuarios_Listar",
     handler: function (ctx, payload) { return handleUsuariosAction("Usuarios_Listar", payload); },
@@ -199,9 +199,9 @@ function _Registry_build_() {
     lockKey: "Usuarios_AlterarMinhaSenha"
   };
 
-  // =========================
+  // =========================================================
   // CLÍNICA
-  // =========================
+  // =========================================================
   map["Clinica_Get"] = {
     action: "Clinica_Get",
     handler: Clinica_Get,
@@ -222,9 +222,9 @@ function _Registry_build_() {
     lockKey: "Clinica_Update"
   };
 
-  // =========================
+  // =========================================================
   // PROFISSIONAIS
-  // =========================
+  // =========================================================
   map["Profissionais_List"] = {
     action: "Profissionais_List",
     handler: Profissionais_List,
@@ -265,9 +265,9 @@ function _Registry_build_() {
     lockKey: "Profissionais_SetActive"
   };
 
-  // =========================
+  // =========================================================
   // META / MIGRATIONS (admin)
-  // =========================
+  // =========================================================
   map["Meta_BootstrapDb"] = {
     action: "Meta_BootstrapDb",
     handler: Meta_BootstrapDb,
@@ -288,9 +288,9 @@ function _Registry_build_() {
     lockKey: null
   };
 
-  // =========================
-  // ATENDIMENTO (fila)
-  // =========================
+  // =========================================================
+  // ATENDIMENTO
+  // =========================================================
   map["Atendimento.SyncHoje"] = {
     action: "Atendimento.SyncHoje",
     handler: Atendimento_Action_SyncHoje_,
@@ -362,7 +362,7 @@ function _Registry_build_() {
   };
 
   // =========================================================
-  // ✅ AGENDA - NOVA (API-first, estável)
+  // AGENDA - NOVA (API-first)
   // =========================================================
   map["Agenda.ListarPorPeriodo"] = {
     action: "Agenda.ListarPorPeriodo",
@@ -405,7 +405,7 @@ function _Registry_build_() {
   };
 
   // =========================================================
-  // ✅ AGENDA - LEGACY (para o front atual page-agenda.js)
+  // AGENDA - LEGACY (page-agenda.js)
   // =========================================================
   map["Agenda_ListarDia"] = {
     action: "Agenda_ListarDia",
@@ -480,6 +480,21 @@ function _Registry_build_() {
   map["Agenda_ValidarConflito"] = {
     action: "Agenda_ValidarConflito",
     handler: Agenda_Legacy_ValidarConflito_,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  // =========================================================
+  // PACIENTES - LEGACY (typeahead Agenda)
+  // =========================================================
+  map["Pacientes_BuscarSimples"] = {
+    action: "Pacientes_BuscarSimples",
+    handler: function (ctx, payload) {
+      return Pacientes_BuscarSimples(payload);
+    },
     requiresAuth: true,
     roles: [],
     validations: [],
