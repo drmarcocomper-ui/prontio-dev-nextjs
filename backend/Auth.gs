@@ -7,7 +7,7 @@
  *
  * FIX (estabilidade):
  * - Sessões NÃO ficam só no CacheService (cache é volátil/evictável).
- * - Agora persistimos sessão em Planilha (aba AuthSessions) e usamos cache como acelerador.
+ * - Persistimos sessão em Planilha (aba AuthSessions) e usamos cache como acelerador.
  *
  * Actions:
  * - Auth_Login
@@ -50,9 +50,14 @@ var AUTH_SESSIONS_SHEET = typeof AUTH_SESSIONS_SHEET !== "undefined" ? AUTH_SESS
  */
 
 function Auth__getDb_() {
-  if (typeof PRONTIO_getDb_ !== "function") return SpreadsheetApp.getActiveSpreadsheet();
-  var ss = PRONTIO_getDb_();
-  return ss || SpreadsheetApp.getActiveSpreadsheet();
+  // Usa PRONTIO_getDb_ se existir (mesma fonte do resto do sistema)
+  try {
+    if (typeof PRONTIO_getDb_ === "function") {
+      var ss = PRONTIO_getDb_();
+      if (ss) return ss;
+    }
+  } catch (_) {}
+  return SpreadsheetApp.getActiveSpreadsheet();
 }
 
 function Auth__getSessionsSheet_() {
@@ -79,13 +84,10 @@ function Auth__findSessionRowByToken_(token) {
   var lastRow = sh.getLastRow();
   if (lastRow < 2) return null;
 
-  // Busca linear (ok para início). Se crescer, dá para indexar.
   var values = sh.getRange(2, 1, lastRow - 1, 5).getValues();
   for (var i = 0; i < values.length; i++) {
     var t = String(values[i][0] || "").trim();
-    if (t === token) {
-      return { rowIndex: i + 2, row: values[i] };
-    }
+    if (t === token) return { rowIndex: i + 2, row: values[i] };
   }
   return null;
 }
@@ -108,11 +110,8 @@ function Auth__persistSession_(token, user, expiresAtIso) {
     userId
   ];
 
-  if (found && found.rowIndex) {
-    sh.getRange(found.rowIndex, 1, 1, 5).setValues([row]);
-  } else {
-    sh.getRange(sh.getLastRow() + 1, 1, 1, 5).setValues([row]);
-  }
+  if (found && found.rowIndex) sh.getRange(found.rowIndex, 1, 1, 5).setValues([row]);
+  else sh.getRange(sh.getLastRow() + 1, 1, 1, 5).setValues([row]);
 }
 
 function Auth__revokeSession_(token) {
@@ -123,8 +122,7 @@ function Auth__revokeSession_(token) {
   if (!found) return;
 
   var sh = Auth__getSessionsSheet_();
-  var revokedAt = new Date().toISOString();
-  sh.getRange(found.rowIndex, 4, 1, 1).setValue(revokedAt);
+  sh.getRange(found.rowIndex, 4, 1, 1).setValue(new Date().toISOString());
 }
 
 function Auth__loadSessionUser_(token) {
@@ -134,30 +132,22 @@ function Auth__loadSessionUser_(token) {
   // 1) Cache primeiro
   var raw = CacheService.getScriptCache().get(AUTH_CACHE_PREFIX + token);
   if (raw) {
-    try {
-      var cachedUser = JSON.parse(raw);
-      return _authNormalizeUser_(cachedUser);
-    } catch (_) {}
+    try { return _authNormalizeUser_(JSON.parse(raw)); } catch (_) {}
   }
 
   // 2) Fallback em Sheets
   var found = Auth__findSessionRowByToken_(token);
   if (!found || !found.row) return null;
 
-  var row = found.row;
-
-  var userJson = String(row[1] || "").trim();
-  var expiresAtIso = String(row[2] || "").trim();
-  var revokedAtIso = String(row[3] || "").trim();
+  var userJson = String(found.row[1] || "").trim();
+  var expiresAtIso = String(found.row[2] || "").trim();
+  var revokedAtIso = String(found.row[3] || "").trim();
 
   if (revokedAtIso) return null;
 
   if (expiresAtIso) {
     var expMs = Date.parse(expiresAtIso);
-    if (isFinite(expMs) && expMs > 0 && expMs < Date.now()) {
-      // expirou
-      return null;
-    }
+    if (isFinite(expMs) && expMs > 0 && expMs < Date.now()) return null;
   }
 
   try {
@@ -166,12 +156,9 @@ function Auth__loadSessionUser_(token) {
     if (!u) return null;
 
     // rehidrata cache (best-effort)
-    try {
-      CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(u), AUTH_TTL_SECONDS);
-    } catch (_) {}
-
+    try { CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(u), AUTH_TTL_SECONDS); } catch (_) {}
     return u;
-  } catch (e) {
+  } catch (_) {
     return null;
   }
 }
@@ -192,7 +179,6 @@ function Auth_getUserContext_(payload) {
   var token = Auth_getTokenFromPayload_(payload);
   if (!token) return null;
 
-  // ✅ Agora usa cache + fallback persistente em Sheets
   return Auth__loadSessionUser_(token);
 }
 
@@ -239,32 +225,14 @@ function Auth_requireRoles_(ctx, roles) {
 
 function Auth_rolesForUser_(user) {
   user = user || {};
-
   var perfil = (user.perfil || user.role || "").toString().trim().toLowerCase();
   if (!perfil) return [];
 
-  // ✅ Admin herda tudo (inclui aliases novos)
   if (perfil === AUTH_ROLES.admin) {
-    return [
-      AUTH_ROLES.admin,
-      AUTH_ROLES.medico,
-      AUTH_ROLES.recepcao,
-      AUTH_ROLES.profissional,
-      AUTH_ROLES.secretaria
-    ];
+    return [AUTH_ROLES.admin, AUTH_ROLES.medico, AUTH_ROLES.recepcao, AUTH_ROLES.profissional, AUTH_ROLES.secretaria];
   }
-
-  // ✅ medico/profissional são equivalentes
-  if (perfil === AUTH_ROLES.medico || perfil === AUTH_ROLES.profissional) {
-    return [AUTH_ROLES.medico, AUTH_ROLES.profissional];
-  }
-
-  // ✅ recepcao/secretaria são equivalentes
-  if (perfil === AUTH_ROLES.recepcao || perfil === AUTH_ROLES.secretaria) {
-    return [AUTH_ROLES.recepcao, AUTH_ROLES.secretaria];
-  }
-
-  // fallback: aceita perfis customizados
+  if (perfil === AUTH_ROLES.medico || perfil === AUTH_ROLES.profissional) return [AUTH_ROLES.medico, AUTH_ROLES.profissional];
+  if (perfil === AUTH_ROLES.recepcao || perfil === AUTH_ROLES.secretaria) return [AUTH_ROLES.recepcao, AUTH_ROLES.secretaria];
   return [perfil];
 }
 
@@ -296,7 +264,6 @@ function Auth__setUserTokenList_(userId, list) {
 
   var cache = CacheService.getScriptCache();
   if (!Array.isArray(list)) list = [];
-
   cache.put(Auth__sessionsKey_(userId), JSON.stringify(list), AUTH_TTL_SECONDS);
 }
 
@@ -321,10 +288,6 @@ function Auth__removeTokenFromUserIndex_(userId, token) {
   Auth__setUserTokenList_(userId, list);
 }
 
-/**
- * ✅ Pilar H: invalidar TODAS as sessões ativas do usuário
- * Usado no AuthRecovery.gs após redefinir senha.
- */
 function Auth_destroyAllSessionsForUser_(userId) {
   userId = String(userId || "").trim();
   if (!userId) return { ok: true, removed: 0 };
@@ -332,18 +295,14 @@ function Auth_destroyAllSessionsForUser_(userId) {
   var cache = CacheService.getScriptCache();
   var list = Auth__getUserTokenList_(userId);
 
-  // remove do cache
   for (var i = 0; i < list.length; i++) {
     var token = String(list[i] || "").trim();
     if (!token) continue;
     try { cache.remove(AUTH_CACHE_PREFIX + token); } catch (_) {}
-    // revoke persistente (best-effort)
     try { Auth__revokeSession_(token); } catch (_) {}
   }
 
-  // remove o índice
   try { cache.remove(Auth__sessionsKey_(userId)); } catch (_) {}
-
   return { ok: true, removed: list.length };
 }
 
@@ -358,10 +317,8 @@ function Auth_createSession_(user) {
   var expiresAtIso = new Date(Date.now() + (AUTH_TTL_SECONDS * 1000)).toISOString();
   try { Auth__persistSession_(token, user, expiresAtIso); } catch (_) {}
 
-  // ✅ Pilar H: registra token no índice do usuário
-  try {
-    if (user && user.id) Auth__addTokenToUserIndex_(user.id, token);
-  } catch (_) {}
+  // índice por user
+  try { if (user && user.id) Auth__addTokenToUserIndex_(user.id, token); } catch (_) {}
 
   return { token: token, user: user, expiresIn: AUTH_TTL_SECONDS };
 }
@@ -370,19 +327,15 @@ function Auth_destroySession_(token) {
   token = (token || "").toString().trim();
   if (!token) return { ok: true };
 
-  // ✅ Pilar H: remove token do índice do usuário (best-effort)
   try {
     var raw = CacheService.getScriptCache().get(AUTH_CACHE_PREFIX + token);
     if (raw) {
-      var u = JSON.parse(raw);
-      u = _authNormalizeUser_(u);
+      var u = _authNormalizeUser_(JSON.parse(raw));
       if (u && u.id) Auth__removeTokenFromUserIndex_(u.id, token);
     }
   } catch (_) {}
 
-  // revoke persistente (best-effort)
   try { Auth__revokeSession_(token); } catch (_) {}
-
   CacheService.getScriptCache().remove(AUTH_CACHE_PREFIX + token);
   return { ok: true };
 }
@@ -413,9 +366,7 @@ function Auth_Login(ctx, payload) {
   var u = Usuarios_findByLoginForAuth_(login);
 
   if (!u || !u.ativo) {
-    try {
-      Audit_securityEvent_(ctx, "Auth_Login", "AUTH_LOGIN", "DENY", { reason: "INVALID_CREDENTIALS", loginHint: String(login).slice(0, 80) }, {});
-    } catch (_) {}
+    try { Audit_securityEvent_(ctx, "Auth_Login", "AUTH_LOGIN", "DENY", { reason: "INVALID_CREDENTIALS", loginHint: String(login).slice(0, 80) }, {}); } catch (_) {}
     var e2 = new Error("Usuário ou senha inválidos.");
     e2.code = (Errors && Errors.CODES && Errors.CODES.AUTH_INVALID_CREDENTIALS) ? Errors.CODES.AUTH_INVALID_CREDENTIALS : "AUTH_INVALID_CREDENTIALS";
     e2.details = null;
@@ -431,20 +382,14 @@ function Auth_Login(ctx, payload) {
 
   var ok = Usuarios_verifyPassword_(senha, u.senhaHash);
   if (!ok) {
-    try {
-      Audit_securityEvent_(ctx, "Auth_Login", "AUTH_LOGIN", "DENY", { reason: "INVALID_CREDENTIALS", loginHint: String(login).slice(0, 80) }, {});
-    } catch (_) {}
+    try { Audit_securityEvent_(ctx, "Auth_Login", "AUTH_LOGIN", "DENY", { reason: "INVALID_CREDENTIALS", loginHint: String(login).slice(0, 80) }, {}); } catch (_) {}
     var e4 = new Error("Usuário ou senha inválidos.");
     e4.code = (Errors && Errors.CODES && Errors.CODES.AUTH_INVALID_CREDENTIALS) ? Errors.CODES.AUTH_INVALID_CREDENTIALS : "AUTH_INVALID_CREDENTIALS";
     e4.details = null;
     throw e4;
   }
 
-  try {
-    if (typeof Usuarios_markUltimoLogin_ === "function") {
-      Usuarios_markUltimoLogin_(u.id);
-    }
-  } catch (_) {}
+  try { if (typeof Usuarios_markUltimoLogin_ === "function") Usuarios_markUltimoLogin_(u.id); } catch (_) {}
 
   var session = Auth_createSession_({
     id: u.id,
@@ -454,7 +399,6 @@ function Auth_Login(ctx, payload) {
     perfil: u.perfil
   });
 
-  // para auditoria do sucesso
   try { ctx.user = _authNormalizeUser_(session.user); } catch (_) {}
   try { Audit_securityEvent_(ctx, "Auth_Login", "AUTH_LOGIN", "SUCCESS", {}, {}); } catch (_) {}
 
