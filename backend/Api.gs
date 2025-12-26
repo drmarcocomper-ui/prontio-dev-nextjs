@@ -12,6 +12,11 @@
  * - Headers no-cache (reduz risco de cachear JSONP/GET)
  * - meta inclui duration_ms
  * - higiene extra do JSONP (sem alterar contrato)
+ *
+ * ✅ UPDATE (retrocompatível):
+ * - Fallback LEGADO também no doGet (igual doPost):
+ *   Se action não estiver registrada no Registry, tenta routeAction_ (se existir)
+ *   ou PRONTIO_routeAction_ (router legado padrão incluído aqui).
  */
 
 var PRONTIO_API_VERSION = typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV";
@@ -70,7 +75,14 @@ function doGet(e) {
       };
 
       var entry = Registry_getAction_(action);
+
+      // ✅ UPDATE: fallback legado (também no GET)
       if (!entry) {
+        var legacyDataGet = _tryLegacyRoute_(action, payload, ctx);
+        if (legacyDataGet !== null) {
+          return _respondMaybeJsonp_(e, _ok_(requestId, legacyDataGet, { action: action, legacy: true, startedAt: startedAt }));
+        }
+
         return _respondMaybeJsonp_(e, _err_(requestId, [
           { code: "NOT_FOUND", message: "Action não registrada.", details: { action: action } }
         ], { action: action, startedAt: startedAt }));
@@ -169,9 +181,10 @@ function doPost(e) {
     var entry = Registry_getAction_(action);
 
     if (!entry) {
-      if (typeof routeAction_ === "function") {
-        var legacyData = routeAction_(action, payload);
-        var okLegacy = _ok_(requestId, legacyData, { action: action, legacy: true, startedAt: startedAt });
+      // ✅ Mantém seu fallback legado, mas agora tenta também PRONTIO_routeAction_
+      var legacyDataPost = _tryLegacyRoute_(action, payload, ctx);
+      if (legacyDataPost !== null) {
+        var okLegacy = _ok_(requestId, legacyDataPost, { action: action, legacy: true, startedAt: startedAt });
         return _withCors_(_jsonOutput_(okLegacy));
       }
 
@@ -188,8 +201,8 @@ function doPost(e) {
 
     if (entry.requiresAuth) {
       if (typeof Auth_requireAuth_ === "function" && typeof Errors !== "undefined" && Errors) {
-        var authRes = Auth_requireAuth_(ctx, payload);
-        if (!authRes.success) return _withCors_(_jsonOutput_(_withMetaDuration_(authRes, startedAt)));
+        var authRes2 = Auth_requireAuth_(ctx, payload);
+        if (!authRes2.success) return _withCors_(_jsonOutput_(_withMetaDuration_(authRes2, startedAt)));
       } else {
         return _withCors_(_jsonOutput_(_err_(requestId, [
           { code: "INTERNAL_ERROR", message: "Auth requerido, mas Auth.gs/Errors.gs não disponível.", details: { action: action } }
@@ -199,8 +212,8 @@ function doPost(e) {
 
     if (entry.roles && entry.roles.length) {
       if (typeof Auth_requireRoles_ === "function" && typeof Errors !== "undefined" && Errors) {
-        var roleRes = Auth_requireRoles_(ctx, entry.roles);
-        if (!roleRes.success) return _withCors_(_jsonOutput_(_withMetaDuration_(roleRes, startedAt)));
+        var roleRes2 = Auth_requireRoles_(ctx, entry.roles);
+        if (!roleRes2.success) return _withCors_(_jsonOutput_(_withMetaDuration_(roleRes2, startedAt)));
       } else {
         return _withCors_(_jsonOutput_(_err_(requestId, [
           { code: "INTERNAL_ERROR", message: "Roles requeridas, mas Auth.gs/Errors.gs não disponível.", details: { action: action, roles: entry.roles } }
@@ -228,6 +241,59 @@ function doPost(e) {
   } catch (err) {
     return _withCors_(_jsonOutput_(_exceptionToErrorResponse_(requestId, err)));
   }
+}
+
+// ======================
+// Legacy routing helpers
+// ======================
+
+/**
+ * Tenta rotear actions que não estão no Registry, sem quebrar instalações antigas.
+ * Ordem:
+ * 1) routeAction_ (se existir em algum arquivo do projeto)
+ * 2) PRONTIO_routeAction_ (router padrão deste Api.gs)
+ *
+ * Retorna:
+ * - data (qualquer valor) se roteou com sucesso
+ * - null se não existe roteador legado
+ */
+function _tryLegacyRoute_(action, payload, ctx) {
+  try {
+    if (typeof routeAction_ === "function") {
+      // Alguns legados aceitam (action,payload) apenas; outros aceitam (action,payload,ctx)
+      try { return routeAction_(action, payload, ctx); } catch (_) { return routeAction_(action, payload); }
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof PRONTIO_routeAction_ === "function") {
+      try { return PRONTIO_routeAction_(action, payload, ctx); } catch (_) { return PRONTIO_routeAction_(action, payload); }
+    }
+  } catch (_) {}
+
+  return null;
+}
+
+/**
+ * Router legado padrão (não conflita com routeAction_ se você já tiver outro).
+ * ✅ Aqui incluímos suporte direto para Pacientes via handlePacientesAction (Pacientes.gs),
+ * mantendo o máximo de retrocompatibilidade.
+ *
+ * Se você tiver outros módulos legados, você pode expandir aqui depois.
+ */
+function PRONTIO_routeAction_(action, payload, ctx) {
+  // Pacientes (novo/antigo)
+  if (String(action || "").indexOf("Pacientes") === 0) {
+    if (typeof handlePacientesAction !== "function") {
+      _apiThrow_("INTERNAL_ERROR", "handlePacientesAction não está disponível (Pacientes.gs não carregado?).", { action: action });
+    }
+    return handlePacientesAction(action, payload);
+  }
+
+  // Se quiser, adicione outros módulos legados aqui:
+  // if (String(action||"").indexOf("Agenda")===0) return handleAgendaAction(action,payload);
+
+  _apiThrow_("NOT_FOUND", "Action não registrada (Registry) e não suportada no legado.", { action: action });
 }
 
 // ======================
