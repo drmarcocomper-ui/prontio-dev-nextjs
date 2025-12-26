@@ -1,273 +1,222 @@
-// =====================================
-// PRONTIO - core/auth.js
-// Compatível com Auth.gs atual:
-// - Login:   Auth_Login
-// - Me:      Auth_Me
-// - Logout:  Auth_Logout
-// =====================================
+// frontend/assets/js/core/auth.js
+// ============================================================
+// PRONTIO - Auth (Front-end) - FINAL CONSOLIDADO
+// ============================================================
+// Ajuste extra:
+// - suporta botão "Sair" do sidebar.html via data-nav-action="logout"
+// ============================================================
 
-(function (global) {
+(function (global, document) {
+  "use strict";
+
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
-  const authNS = (PRONTIO.auth = PRONTIO.auth || {});
+  PRONTIO.auth = PRONTIO.auth || {};
 
-  const STORAGE_KEYS = {
-    TOKEN: "prontio.auth.token",
-    USER: "prontio.auth.user",
-    EXPIRES_IN: "prontio.auth.expiresIn",
-    POST_LOGIN_REDIRECT: "prontio.auth.postLoginRedirect"
+  const LS_KEYS = {
+    TOKEN_1: "prontio.auth.token",
+    TOKEN_2: "prontio_auth_token",
+    USER_INFO: "medpronto_user_info", // usado pelo chat
+    LAST_AUTH_REASON: "prontio.auth.lastAuthReason"
   };
 
-  let currentToken = null;
-  let currentUser = null;
-  let currentExpiresIn = null;
-
-  function lsGet(key) {
-    try { return global.localStorage ? global.localStorage.getItem(key) : null; }
-    catch (e) { return null; }
-  }
-
-  function lsSet(key, value) {
+  function safeGet_(k) {
     try {
-      if (!global.localStorage) return;
-      if (value === null || value === undefined || value === "") global.localStorage.removeItem(key);
-      else global.localStorage.setItem(key, value);
-    } catch (e) {}
-  }
-
-  function initFromStorage() {
-    currentToken = lsGet(STORAGE_KEYS.TOKEN) || null;
-    const userJson = lsGet(STORAGE_KEYS.USER);
-    currentExpiresIn = lsGet(STORAGE_KEYS.EXPIRES_IN) || null;
-
-    if (userJson) {
-      try { currentUser = JSON.parse(userJson); }
-      catch (e) { currentUser = null; }
-    } else {
-      currentUser = null;
+      const ls = global.localStorage;
+      if (!ls) return "";
+      return ls.getItem(k) || "";
+    } catch (_) {
+      return "";
     }
   }
 
-  initFromStorage();
-
-  function setSession(session) {
-    if (session && session.token) currentToken = String(session.token);
-    if (session && session.user) currentUser = session.user;
-
-    if (session && session.expiresIn !== undefined && session.expiresIn !== null) {
-      currentExpiresIn = String(session.expiresIn);
-    } else if (session && Object.prototype.hasOwnProperty.call(session, "expiresIn")) {
-      currentExpiresIn = null;
-    }
-
-    lsSet(STORAGE_KEYS.TOKEN, currentToken);
-    lsSet(STORAGE_KEYS.EXPIRES_IN, currentExpiresIn);
-
-    if (currentUser) {
-      try { lsSet(STORAGE_KEYS.USER, JSON.stringify(currentUser)); }
-      catch (e) { lsSet(STORAGE_KEYS.USER, null); }
-    } else {
-      lsSet(STORAGE_KEYS.USER, null);
-    }
-  }
-
-  function clearSession() {
-    currentToken = null;
-    currentUser = null;
-    currentExpiresIn = null;
-
-    lsSet(STORAGE_KEYS.TOKEN, null);
-    lsSet(STORAGE_KEYS.USER, null);
-    lsSet(STORAGE_KEYS.EXPIRES_IN, null);
-  }
-
-  function getToken() { return currentToken || null; }
-  function getUser() { return currentUser ? { ...currentUser } : null; }
-
-  function resolveLoginUrl(explicitUrl) {
-    if (explicitUrl) return explicitUrl;
-    if (typeof global.PRONTIO_LOGIN_URL === "string") return global.PRONTIO_LOGIN_URL;
-    return "./index.html";
-  }
-
-  function isLoginPage_() {
+  function safeSet_(k, v) {
     try {
-      const body = global.document && global.document.body;
-      const pid = (body && body.dataset && (body.dataset.pageId || body.dataset.page)) || "";
-      if (String(pid).toLowerCase() === "login") return true;
-    } catch (e) {}
-
-    const path = (global.location && global.location.pathname)
-      ? global.location.pathname.toLowerCase()
-      : "";
-
-    return (
-      path.endsWith("/index.html") ||
-      path.endsWith("index.html") ||
-      path.endsWith("/login.html") ||
-      path.endsWith("login.html")
-    );
+      const ls = global.localStorage;
+      if (!ls) return;
+      ls.setItem(k, String(v == null ? "" : v));
+    } catch (_) {}
   }
 
-  function isAuthenticated() {
-    return !!currentToken;
-  }
-
-  function setPostLoginRedirect(url) {
+  function safeRemove_(k) {
     try {
-      const u = (url || "").toString().trim();
-      if (!u) { lsSet(STORAGE_KEYS.POST_LOGIN_REDIRECT, null); return; }
-      lsSet(STORAGE_KEYS.POST_LOGIN_REDIRECT, u);
-    } catch (e) {}
+      const ls = global.localStorage;
+      if (!ls) return;
+      ls.removeItem(k);
+    } catch (_) {}
   }
 
-  function popPostLoginRedirect() {
-    try {
-      const u = lsGet(STORAGE_KEYS.POST_LOGIN_REDIRECT);
-      lsSet(STORAGE_KEYS.POST_LOGIN_REDIRECT, null);
-      return (u || "").toString().trim() || null;
-    } catch (e) {
-      return null;
+  // ------------------------------------------------------------
+  // Token/session helpers
+  // ------------------------------------------------------------
+
+  function getToken() {
+    return safeGet_(LS_KEYS.TOKEN_1) || safeGet_(LS_KEYS.TOKEN_2) || "";
+  }
+
+  function setToken(token) {
+    const t = String(token || "").trim();
+    if (!t) {
+      clearToken();
+      return;
     }
+    safeSet_(LS_KEYS.TOKEN_1, t);
+    safeSet_(LS_KEYS.TOKEN_2, t); // compat
   }
 
-  function requireAuth(options) {
-    const opts = options || {};
-    const redirect = typeof opts.redirect === "boolean" ? opts.redirect : true;
+  function clearToken() {
+    safeRemove_(LS_KEYS.TOKEN_1);
+    safeRemove_(LS_KEYS.TOKEN_2);
+  }
 
-    if (isLoginPage_()) return true;
-    if (isAuthenticated()) return true;
+  function clearChatUser() {
+    safeRemove_(LS_KEYS.USER_INFO);
+  }
+
+  function setLastAuthReason(code) {
+    safeSet_(LS_KEYS.LAST_AUTH_REASON, String(code || "AUTH_REQUIRED"));
+  }
+
+  function getLastAuthReason() {
+    return safeGet_(LS_KEYS.LAST_AUTH_REASON) || "";
+  }
+
+  // ------------------------------------------------------------
+  // Logout (sempre funciona)
+  // ------------------------------------------------------------
+
+  function forceLogoutLocal(reasonCode, opts) {
+    opts = opts || {};
+    const redirect = opts.redirect !== false;
+    const clearChat = opts.clearChat !== false; // default true
+
+    setLastAuthReason(reasonCode || "AUTH_REQUIRED");
+    clearToken();
+    if (clearChat) clearChatUser();
 
     if (redirect) {
       try {
-        const here = global.location ? (global.location.pathname + global.location.search + global.location.hash) : "";
-        if (here) setPostLoginRedirect(here);
-      } catch (e) {}
-
-      const loginUrl = resolveLoginUrl(opts.loginUrl);
-      try { global.location.href = loginUrl; } catch (e) {}
+        global.location.href = "login.html";
+      } catch (_) {}
     }
+  }
+
+  async function logout(opts) {
+    opts = opts || {};
+    const redirect = opts.redirect !== false;
+    const clearChat = opts.clearChat !== false;
+
+    const token = getToken();
+
+    // Se não tem token, só limpa local.
+    if (!token) {
+      forceLogoutLocal("AUTH_NO_TOKEN", { redirect, clearChat });
+      return { ok: true, local: true, reason: "NO_TOKEN" };
+    }
+
+    const callApiData =
+      (PRONTIO.api && typeof PRONTIO.api.callApiData === "function")
+        ? PRONTIO.api.callApiData
+        : (typeof global.callApiData === "function" ? global.callApiData : null);
+
+    // Sem API disponível: logout local.
+    if (!callApiData) {
+      forceLogoutLocal("AUTH_LOGOUT_FALLBACK", { redirect, clearChat });
+      return { ok: true, local: true, reason: "NO_API" };
+    }
+
+    try {
+      await callApiData({ action: "Auth_Logout", payload: { token } });
+      forceLogoutLocal("AUTH_LOGOUT", { redirect, clearChat });
+      return { ok: true, local: true, remote: true };
+    } catch (e) {
+      // Falha comum: sessão no backend não encontrada -> PERMISSION_DENIED
+      forceLogoutLocal("AUTH_LOGOUT_FALLBACK", { redirect, clearChat });
+      return {
+        ok: true,
+        local: true,
+        remote: false,
+        fallback: true,
+        error: (e && e.message) ? e.message : String(e)
+      };
+    }
+  }
+
+  function requireAuth(opts) {
+    opts = opts || {};
+    const redirect = opts.redirect !== false;
+
+    const token = getToken();
+    if (token) return true;
+
+    if (redirect) forceLogoutLocal("AUTH_REQUIRED", { redirect: true });
     return false;
   }
 
-  async function login(payload) {
-    if (!PRONTIO.api || typeof PRONTIO.api.callApiData !== "function") {
-      throw new Error("PRONTIO.api.callApiData não está disponível.");
-    }
-    const data = await PRONTIO.api.callApiData({ action: "Auth_Login", payload: payload || {} });
-    setSession(data || {});
-    return data;
+  function clearSession(opts) {
+    opts = opts || {};
+    const clearChat = opts.clearChat !== false;
+    clearToken();
+    if (clearChat) clearChatUser();
   }
 
-  async function me() {
-    if (!PRONTIO.api || typeof PRONTIO.api.callApiData !== "function") {
-      throw new Error("PRONTIO.api.callApiData não está disponível.");
-    }
-    const token = getToken();
-    if (!token) throw new Error("Sem token.");
-    const data = await PRONTIO.api.callApiData({ action: "Auth_Me", payload: { token } });
-    if (data && data.user) setSession({ user: data.user });
-    return data;
-  }
+  // ------------------------------------------------------------
+  // Bind do botão "Sair"
+  // ------------------------------------------------------------
 
   /**
-   * ✅ Sessão server-side: usa Auth_Me.
-   * Em falha, usa requireAuth() (salva redirect).
+   * Captura:
+   * - [data-action="logout"]
+   * - [data-logout]
+   * - .js-logout
+   * - [data-nav-action="logout"]   ✅ (seu sidebar.html)
+   * - [data-nav-action="signout"]  ✅ (alias)
    */
-  async function ensureSession(options) {
-    const opts = options || {};
-    const redirect = typeof opts.redirect === "boolean" ? opts.redirect : true;
+  function bindLogoutButtons(root) {
+    const doc = root || document;
+    if (!doc) return;
 
-    if (isLoginPage_()) return true;
+    const selector =
+      '[data-action="logout"], [data-logout], .js-logout, [data-nav-action="logout"], [data-nav-action="signout"]';
 
-    const token = getToken();
-    if (!token) {
-      if (redirect) requireAuth({ redirect: true, loginUrl: opts.loginUrl });
-      return false;
-    }
-
-    if (!PRONTIO.api || typeof PRONTIO.api.callApiData !== "function") {
-      return true;
-    }
-
-    try {
-      await me();
-      return true;
-    } catch (e) {
-      clearSession();
-      if (redirect) {
-        try {
-          requireAuth({ redirect: true, loginUrl: opts.loginUrl });
-        } catch (_) {}
-      }
-      return false;
-    }
-  }
-
-  async function logout(options) {
-    const opts = options || {};
-    const redirect = typeof opts.redirect === "boolean" ? opts.redirect : true;
-
-    const token = getToken();
-
-    try {
-      if (token && PRONTIO.api && typeof PRONTIO.api.callApiData === "function") {
-        await PRONTIO.api.callApiData({ action: "Auth_Logout", payload: { token } });
-      }
-    } catch (e) {}
-
-    clearSession();
-
-    if (redirect) {
-      const loginUrl = resolveLoginUrl(opts.loginUrl);
-      try { global.location.href = loginUrl; } catch (e) {}
-    }
-  }
-
-  function bindLogoutButtons(selector) {
-    const sel = selector || '[data-nav-action="logout"]';
-    try {
-      const els = global.document ? Array.from(global.document.querySelectorAll(sel)) : [];
-      els.forEach((el) => {
-        el.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          logout({ redirect: true });
-        });
-      });
-    } catch (e) {}
-  }
-
-  function renderUserLabel() {
-    try {
-      const el = global.document && global.document.getElementById("sidebarUser");
+    const nodes = doc.querySelectorAll(selector);
+    nodes.forEach((el) => {
       if (!el) return;
+      if (el.getAttribute("data-logout-bound") === "1") return;
+      el.setAttribute("data-logout-bound", "1");
 
-      const u = getUser();
-      if (!u) { el.textContent = ""; return; }
-
-      const nome = u.nome || u.name || "Usuário";
-      const perfil = u.perfil ? ` (${u.perfil})` : "";
-      el.textContent = nome + perfil;
-    } catch (e) {}
+      el.addEventListener("click", (ev) => {
+        try { ev.preventDefault(); } catch (_) {}
+        logout({ redirect: true, clearChat: true });
+      });
+    });
   }
 
+  // ------------------------------------------------------------
   // Exports
-  authNS.setSession = setSession;
-  authNS.clearSession = clearSession;
-  authNS.getToken = getToken;
-  authNS.getUser = getUser;
-  authNS.isAuthenticated = isAuthenticated;
+  // ------------------------------------------------------------
 
-  authNS.requireAuth = requireAuth;
-  authNS.ensureSession = ensureSession;
+  PRONTIO.auth.getToken = getToken;
+  PRONTIO.auth.setToken = setToken;
+  PRONTIO.auth.clearToken = clearToken;
 
-  authNS.login = login;
-  authNS.me = me;
+  PRONTIO.auth.getLastAuthReason = getLastAuthReason;
+  PRONTIO.auth.setLastAuthReason = setLastAuthReason;
 
-  authNS.logout = logout;
-  authNS.bindLogoutButtons = bindLogoutButtons;
-  authNS.renderUserLabel = renderUserLabel;
+  PRONTIO.auth.clearSession = clearSession;
+  PRONTIO.auth.forceLogoutLocal = forceLogoutLocal;
 
-  authNS.setPostLoginRedirect = setPostLoginRedirect;
-  authNS.popPostLoginRedirect = popPostLoginRedirect;
+  PRONTIO.auth.logout = logout;
+  PRONTIO.auth.requireAuth = requireAuth;
 
-})(window);
+  PRONTIO.auth.bindLogoutButtons = bindLogoutButtons;
+
+  // Bind automático (caso auth.js seja carregado após DOM)
+  try {
+    if (document && document.readyState !== "loading") {
+      bindLogoutButtons(document);
+    } else if (document) {
+      document.addEventListener("DOMContentLoaded", () => bindLogoutButtons(document));
+    }
+  } catch (_) {}
+
+})(window, document);
