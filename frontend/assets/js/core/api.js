@@ -1,14 +1,6 @@
 /**
  * PRONTIO - Camada oficial de API (Front-end)
- *
- * ✅ Transporte CORS-free (GitHub Pages + Apps Script):
- * - Usa JSONP via <script> com callback=
- * - Requer Api.gs suportando callback no doGet quando action estiver presente.
- *
- * Melhorias (retrocompatíveis):
- * - Anti-cache no JSONP (evita respostas cacheadas)
- * - Timeout configurável via PRONTIO.config.apiTimeoutMs
- * - Proteção se JSON.stringify(payload) falhar
+ * (mantido)
  */
 
 (function (global) {
@@ -130,7 +122,6 @@
     } catch (_) {}
   }
 
-  // JSONP
   function jsonp_(url, timeoutMs) {
     timeoutMs = typeof timeoutMs === "number" ? timeoutMs : getTimeoutMs_();
 
@@ -177,9 +168,8 @@
   }
 
   function safeStringify_(obj) {
-    try {
-      return JSON.stringify(obj || {});
-    } catch (e) {
+    try { return JSON.stringify(obj || {}); }
+    catch (e) {
       const err = new Error("Falha ao serializar payload (JSON.stringify).");
       err.code = "CLIENT_PAYLOAD_SERIALIZE_ERROR";
       err.details = { message: normalizeError_(e) };
@@ -252,7 +242,9 @@
   PRONTIO.api.callApiData = callApiData;
   PRONTIO.api.assertSuccess = assertSuccess_;
 
+  // ✅ Globals (para debug e compat)
   global.callApi = callApiEnvelope;
+  global.callApiEnvelope = callApiEnvelope; // alias
   global.callApiData = callApiData;
 
 })(window);

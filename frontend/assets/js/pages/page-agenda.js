@@ -2,14 +2,19 @@
 /**
  * PRONTIO - Página de Agenda (front)
  *
- * Inclui:
- * - Typeahead (autocomplete) de pacientes em Novo/Editar
- * - Vínculo por ID sempre que selecionar resultado
- * - Pré-validar conflito antes de salvar (Criar/Atualizar/Bloquear)
- * - Encaixe explícito no modal (checkbox): novo-permite-encaixe / edit-permite-encaixe
+ * ✅ MIGRAÇÃO (API-first, sem routeAction_):
+ * - Substitui actions legadas por actions novas do backend:
+ *   - Agenda_ListarDia / Agenda_ListarSemana -> Agenda.ListarPorPeriodo
+ *   - Agenda_Criar -> Agenda.Criar
+ *   - Agenda_Atualizar -> Agenda.Atualizar
+ *   - Agenda_MudarStatus -> Agenda.Atualizar (ou Agenda.Cancelar)
+ *   - Agenda_BloquearHorario -> Agenda.Criar (tipo BLOQUEIO)
+ *   - Agenda_RemoverBloqueio -> Agenda.Cancelar (remove bloqueio cancelando)
  *
- * Padrão PRONTIO (api.js):
- * - window.callApiData => retorna SOMENTE data e lança erro se success=false
+ * Mantém:
+ * - Typeahead (Pacientes_BuscarSimples)
+ * - Pré-validar conflito (Agenda_ValidarConflito)
+ * - Modais e UX original
  */
 
 (function (global, document) {
@@ -19,12 +24,8 @@
     (PRONTIO.api && PRONTIO.api.callApiData) ||
     global.callApiData ||
     function () {
-      console.error(
-        "[PRONTIO.agenda] callApiData não está definido. Verifique carregamento de assets/js/api.js."
-      );
-      return Promise.reject(
-        new Error("API não inicializada (callApiData indefinido).")
-      );
+      console.error("[PRONTIO.agenda] callApiData não está definido.");
+      return Promise.reject(new Error("API não inicializada (callApiData indefinido)."));
     };
 
   function initAgendaPage() {
@@ -70,9 +71,7 @@
     const selectFiltroStatus = get("filtro-status");
 
     let modoVisao =
-      localStorage.getItem("prontio.agenda.modoVisao") === "semana"
-        ? "semana"
-        : "dia";
+      localStorage.getItem("prontio.agenda.modoVisao") === "semana" ? "semana" : "dia";
 
     let agendamentosOriginaisDia = [];
     let horaFocoDia = null;
@@ -98,7 +97,6 @@
 
     const btnSelecionarPaciente = get("btn-selecionar-paciente");
     const btnLimparPaciente = get("btn-limpar-paciente");
-
     const btnSubmitNovo = get("btn-submit-novo");
 
     // =====================
@@ -123,7 +121,6 @@
 
     const btnEditSelecionarPaciente = get("btn-edit-selecionar-paciente");
     const btnEditLimparPaciente = get("btn-edit-limpar-paciente");
-
     const btnSubmitEditar = get("btn-submit-editar");
 
     let agendamentoEmEdicao = null;
@@ -138,7 +135,6 @@
     const mensagemBloqueio = get("bloqueio-mensagem");
     const inputBloqHoraInicio = get("bloq-hora-inicio");
     const inputBloqDuracao = get("bloq-duracao");
-
     const btnSubmitBloqueio = get("btn-submit-bloqueio");
 
     // =====================
@@ -153,7 +149,7 @@
     // =====================
     // Estado seleção paciente
     // =====================
-    let pacienteSelecionado = null; // {ID_Paciente,nome,documento,telefone,data_nascimento?}
+    let pacienteSelecionado = null;
     let pacienteSelecionadoEditar = null;
     let contextoSelecaoPaciente = "novo";
     let buscaPacienteTimeout = null;
@@ -292,6 +288,114 @@
       const [y, m, d] = dataStr.split("-").map(Number);
       const dt = new Date(y, m - 1, d);
       return dias[dt.getDay()];
+    }
+
+    function startOfDayIso_(dataStr) {
+      const d = parseInputDate(dataStr);
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString();
+    }
+
+    function endOfDayIso_(dataStr) {
+      const d = parseInputDate(dataStr);
+      d.setHours(23, 59, 59, 999);
+      return d.toISOString();
+    }
+
+    function ymdFromIso_(iso) {
+      try {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return "";
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${dd}`;
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function hhmmFromIso_(iso) {
+      try {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return "";
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        return `${hh}:${mm}`;
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function diffMinutes_(isoStart, isoEnd) {
+      try {
+        const a = new Date(isoStart);
+        const b = new Date(isoEnd);
+        const ms = b.getTime() - a.getTime();
+        if (!isFinite(ms)) return 0;
+        return Math.max(1, Math.round(ms / 60000));
+      } catch (_) {
+        return 0;
+      }
+    }
+
+    function dtoToUiAg_(dto) {
+      // Adapter do DTO novo (Agenda.gs) -> formato usado pelo UI antigo
+      const inicioIso = dto && dto.inicio ? String(dto.inicio) : "";
+      const fimIso = dto && dto.fim ? String(dto.fim) : "";
+
+      const tipo = String(dto && dto.tipo ? dto.tipo : "");
+      const isBloqueio = tipo.toUpperCase() === "BLOQUEIO";
+
+      const out = {
+        // IDs
+        ID_Agenda: (dto && (dto.idAgenda || dto.ID_Agenda)) ? String(dto.idAgenda || dto.ID_Agenda) : "",
+        ID_Paciente: (dto && (dto.idPaciente || dto.ID_Paciente)) ? String(dto.idPaciente || dto.ID_Paciente) : "",
+        // Data/hora (UI)
+        data: ymdFromIso_(inicioIso),
+        hora_inicio: hhmmFromIso_(inicioIso),
+        hora_fim: hhmmFromIso_(fimIso),
+        duracao_minutos: diffMinutes_(inicioIso, fimIso),
+        // Campos exibidos
+        nome_paciente: (dto && dto.titulo) ? String(dto.titulo) : (isBloqueio ? "Bloqueio" : ""),
+        telefone_paciente: "",
+        documento_paciente: "",
+        motivo: (dto && dto.notas) ? String(dto.notas) : "",
+        canal: "",
+        origem: (dto && dto.origem) ? String(dto.origem) : "",
+        status: (dto && dto.status) ? String(dto.status) : "",
+        tipo: tipo,
+        bloqueio: isBloqueio,
+        permite_encaixe: false
+      };
+
+      return out;
+    }
+
+    function computeResumoDia_(ags) {
+      const resumo = {
+        total: 0,
+        confirmados: 0,
+        faltas: 0,
+        cancelados: 0,
+        concluidos: 0,
+        em_atendimento: 0
+      };
+
+      (ags || []).forEach((ag) => {
+        if (!ag) return;
+        if (ag.bloqueio) return; // não conta em total do dia
+        resumo.total++;
+
+        const s = stripAccents(String(ag.status || "")).toLowerCase();
+        if (s.includes("falt")) resumo.faltas++;
+        else if (s.includes("cancel")) resumo.cancelados++;
+        else if (s.includes("concl")) resumo.concluidos++;
+        else if (s.includes("atend")) resumo.em_atendimento++;
+        else if (s.includes("confirm")) resumo.confirmados++;
+      });
+
+      return resumo;
     }
 
     async function carregarAgendaConfigSeNecessario() {
@@ -640,20 +744,17 @@
       mostrarEstadoCarregando();
 
       try {
+        // ✅ NOVO: Agenda.ListarPorPeriodo (dia inteiro)
         const data = await callApiData({
-          action: "Agenda_ListarDia",
-          payload: { data: dataStr }
+          action: "Agenda.ListarPorPeriodo",
+          payload: { inicio: startOfDayIso_(dataStr), fim: endOfDayIso_(dataStr), incluirCancelados: true }
         });
 
-        atualizarResumoDia(data.resumo);
+        const items = (data && data.items) ? data.items : [];
+        const agsUi = items.map(dtoToUiAg_).filter((ag) => ag && ag.data === dataStr);
 
-        agendamentosOriginaisDia = [];
-        (data.horarios || []).forEach((slot) => {
-          (slot.agendamentos || []).forEach((ag) => {
-            agendamentosOriginaisDia.push(ag);
-          });
-        });
-
+        agendamentosOriginaisDia = agsUi;
+        atualizarResumoDia(computeResumoDia_(agsUi));
         aplicarFiltrosDia();
       } catch (error) {
         console.error(error);
@@ -707,8 +808,7 @@
       if (!listaHorariosEl) return;
 
       if (!horarios || !horarios.length) {
-        listaHorariosEl.innerHTML =
-          '<div class="agenda-vazia">Nenhum horário para exibir.</div>';
+        listaHorariosEl.innerHTML = '<div class="agenda-vazia">Nenhum horário para exibir.</div>';
         return;
       }
 
@@ -769,15 +869,22 @@
         }
       });
 
-      if (slotParaFoco) {
-        slotParaFoco.scrollIntoView({ block: "start", behavior: "smooth" });
-      }
+      if (slotParaFoco) slotParaFoco.scrollIntoView({ block: "start", behavior: "smooth" });
       horaFocoDia = null;
     }
 
     // ===========================
-    // Semana
+    // Semana (usando ListarPorPeriodo)
     // ===========================
+    function getStartOfWeekMonday_(d) {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      const day = x.getDay(); // 0 dom ... 6 sab
+      const diff = (day + 6) % 7; // segunda=0
+      x.setDate(x.getDate() - diff);
+      return x;
+    }
+
     async function carregarAgendaSemana() {
       const dataStr = inputData.value;
       if (!dataStr) return;
@@ -787,12 +894,49 @@
       try {
         await carregarAgendaConfigSeNecessario();
 
+        const ref = parseInputDate(dataStr);
+        const ini = getStartOfWeekMonday_(ref);
+        const fim = new Date(ini.getTime() + 6 * 24 * 60 * 60 * 1000);
+        fim.setHours(23, 59, 59, 999);
+
         const data = await callApiData({
-          action: "Agenda_ListarSemana",
-          payload: { data_referencia: dataStr }
+          action: "Agenda.ListarPorPeriodo",
+          payload: { inicio: ini.toISOString(), fim: fim.toISOString(), incluirCancelados: true }
         });
 
-        desenharSemanaGrid(data.dias || []);
+        const items = (data && data.items) ? data.items : [];
+        const agsUi = items.map(dtoToUiAg_);
+
+        // transforma no formato que o grid antigo espera: [{data, horarios:[{hora, agendamentos:[]}]}, ...]
+        const diasMap = {};
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(ini.getTime() + i * 24 * 60 * 60 * 1000);
+          const ds = formatDateToInput(d);
+          diasMap[ds] = { data: ds, horarios: [] };
+        }
+
+        const byDayHour = {}; // { "YYYY-MM-DD": { "HH:MM": [ag...] } }
+        agsUi.forEach((ag) => {
+          const ds = ag.data;
+          const hh = normalizeHora(ag.hora_inicio);
+          if (!ds || !hh) return;
+          if (!byDayHour[ds]) byDayHour[ds] = {};
+          if (!byDayHour[ds][hh]) byDayHour[ds][hh] = [];
+          byDayHour[ds][hh].push({ ...ag, __hora_norm: hh });
+        });
+
+        Object.keys(diasMap).forEach((ds) => {
+          const hoursObj = byDayHour[ds] || {};
+          const horas = Object.keys(hoursObj).sort((a, b) => {
+            const [ha, ma] = a.split(":").map(Number);
+            const [hb, mb] = b.split(":").map(Number);
+            return ha * 60 + ma - (hb * 60 + mb);
+          });
+
+          diasMap[ds].horarios = horas.map((hh) => ({ hora: hh, agendamentos: hoursObj[hh] || [] }));
+        });
+
+        desenharSemanaGrid(Object.values(diasMap));
       } catch (error) {
         console.error(error);
         if (semanaGridEl) {
@@ -915,14 +1059,7 @@
     // ===========================
     // Status em select box
     // ===========================
-    const STATUS_OPTIONS = [
-      "Agendado",
-      "Confirmado",
-      "Em atendimento",
-      "Concluído",
-      "Faltou",
-      "Cancelado"
-    ];
+    const STATUS_OPTIONS = ["Agendado", "Confirmado", "Em atendimento", "Concluído", "Faltou", "Cancelado"];
 
     function normalizeStatusLabel_(s) {
       const v = stripAccents(String(s || "")).trim().toLowerCase();
@@ -934,6 +1071,15 @@
       if (v.includes("cancel")) return "Cancelado";
       if (v.includes("agend")) return "Agendado";
       return "Agendado";
+    }
+
+    function mapStatusToBackend_(label) {
+      const v = stripAccents(String(label || "")).toLowerCase();
+      if (v.includes("concl")) return "CONCLUIDO";
+      if (v.includes("falt")) return "FALTOU";
+      if (v.includes("cancel")) return "CANCELADO";
+      // Confirmado / Em atendimento não existem no backend novo ainda -> mantém AGENDADO
+      return "AGENDADO";
     }
 
     function getStatusClass(status) {
@@ -1119,10 +1265,20 @@
       if (cardEl) cardEl.classList.add("agendamento-atualizando");
 
       try {
-        await callApiData({
-          action: "Agenda_MudarStatus",
-          payload: { ID_Agenda, novo_status: novoStatus }
-        });
+        const backendStatus = mapStatusToBackend_(novoStatus);
+
+        // Cancelado -> Agenda.Cancelar (backend impede cancelar via update)
+        if (backendStatus === "CANCELADO") {
+          await callApiData({
+            action: "Agenda.Cancelar",
+            payload: { idAgenda: ID_Agenda, motivo: "Cancelado pela agenda" }
+          });
+        } else {
+          await callApiData({
+            action: "Agenda.Atualizar",
+            payload: { idAgenda: ID_Agenda, patch: { status: backendStatus } }
+          });
+        }
 
         if (modoVisao === "dia") await carregarAgendaDia();
         else await carregarAgendaSemana();
@@ -1149,7 +1305,12 @@
       if (cardEl) cardEl.classList.add("agendamento-atualizando");
 
       try {
-        await callApiData({ action: "Agenda_RemoverBloqueio", payload: { ID_Agenda } });
+        // ✅ Remover bloqueio = cancelar o evento bloqueio (cancelado não conta para conflito)
+        await callApiData({
+          action: "Agenda.Cancelar",
+          payload: { idAgenda: ID_Agenda, motivo: "Bloqueio removido" }
+        });
+
         if (modoVisao === "dia") await carregarAgendaDia();
         else await carregarAgendaSemana();
       } catch (error) {
@@ -1285,8 +1446,7 @@
         console.error(error);
         if (msgPacientesEl) {
           msgPacientesEl.textContent =
-            "Erro ao buscar pacientes: " +
-            (error && error.message ? error.message : String(error));
+            "Erro ao buscar pacientes: " + (error && error.message ? error.message : String(error));
           msgPacientesEl.className = "form-message erro";
         }
         if (listaPacientesEl) listaPacientesEl.innerHTML = "";
@@ -1373,27 +1533,24 @@
         );
       }
 
+      // ✅ Backend Agenda.gs aceita formato legado (data/hora_inicio/duracao_minutos) e ID_Paciente
+      // e também aceita permitirEncaixe (permite_encaixe).
       const payload = {
         data: dataStr,
         hora_inicio: horaStr,
         duracao_minutos: duracao,
         ID_Paciente: vinculado ? pacienteSelecionado.ID_Paciente : "",
-        nome_paciente: vinculado ? pacienteSelecionado.nome : nomeLivre,
-        documento_paciente: vinculado ? pacienteSelecionado.documento : "",
-        telefone_paciente: vinculado ? pacienteSelecionado.telefone : (inputTelefone?.value || ""),
-        tipo: inputTipo?.value || "",
         motivo: inputMotivo?.value || "",
+        tipo: inputTipo?.value || "",
         origem: inputOrigem?.value || "",
-        canal: inputCanal?.value || "",
-        ID_Sala: "",
-        profissional: "",
+        permitirEncaixe: permiteEncaixeUI,
         permite_encaixe: permiteEncaixeUI
       };
 
       setTimeout(() => setFormMsg(mensagemNovoAgendamento, "Salvando...", "info"), 120);
 
       try {
-        await callApiData({ action: "Agenda_Criar", payload });
+        await callApiData({ action: "Agenda.Criar", payload });
         setFormMsg(mensagemNovoAgendamento, "Agendamento criado com sucesso!", "sucesso");
         await carregarAgendaDia();
         setTimeout(() => fecharModalNovoAgendamento(), 650);
@@ -1507,46 +1664,31 @@
         }
       }
 
-      const nomeLivre = (inputEditNomePaciente?.value || "").trim();
-      const vinculado = pacienteSelecionadoEditar && pacienteSelecionadoEditar.ID_Paciente;
-
-      if (!vinculado && nomeLivre) {
-        setFormMsg(
-          msgEditarAgendamento,
-          "Aviso: paciente editado sem seleção. O vínculo ao cadastro será removido.",
-          "info"
-        );
-      }
-
+      // ✅ Backend Agenda.gs: update precisa de payload.idAgenda
       const payload = {
-        ID_Agenda: idAgenda,
+        idAgenda: idAgenda,
+        permitirEncaixe: permiteEncaixeUI,
+        permite_encaixe: permiteEncaixeUI,
+        // formato legado suportado pelo backend
         data: dataStr,
         hora_inicio: horaStr,
         duracao_minutos: duracao,
         tipo: inputEditTipo?.value || "",
         motivo: inputEditMotivo?.value || "",
-        origem: inputEditOrigem?.value || "",
-        canal: inputEditCanal?.value || "",
-        permite_encaixe: permiteEncaixeUI
+        origem: inputEditOrigem?.value || ""
       };
 
-      if (vinculado) {
-        payload.ID_Paciente = pacienteSelecionadoEditar.ID_Paciente || "";
-        payload.nome_paciente = pacienteSelecionadoEditar.nome || "";
-        payload.documento_paciente = pacienteSelecionadoEditar.documento || "";
-        payload.telefone_paciente = pacienteSelecionadoEditar.telefone || "";
+      // Se houver vínculo com paciente
+      if (pacienteSelecionadoEditar && pacienteSelecionadoEditar.ID_Paciente) {
+        payload.ID_Paciente = pacienteSelecionadoEditar.ID_Paciente;
       } else {
         payload.ID_Paciente = "";
-        payload.nome_paciente = nomeLivre || (agendamentoEmEdicao?.nome_paciente || "");
-        payload.documento_paciente = "";
-        payload.telefone_paciente = "";
       }
 
       setTimeout(() => setFormMsg(msgEditarAgendamento, "Salvando alterações...", "info"), 120);
 
       try {
-        await callApiData({ action: "Agenda_Atualizar", payload });
-
+        await callApiData({ action: "Agenda.Atualizar", payload });
         setFormMsg(msgEditarAgendamento, "Agendamento atualizado com sucesso!", "sucesso");
 
         if (modoVisao === "dia") await carregarAgendaDia();
@@ -1614,13 +1756,21 @@
         return;
       }
 
-      const payload = { data: dataStr, hora_inicio: horaStr, duracao_minutos: duracao };
+      // ✅ Bloqueio = Agenda.Criar com tipo BLOQUEIO (backend aceita payload.Bloqueio=true)
+      const payload = {
+        data: dataStr,
+        hora_inicio: horaStr,
+        duracao_minutos: duracao,
+        Bloqueio: true,
+        tipo: "BLOQUEIO",
+        motivo: "Bloqueio de horário",
+        permitirEncaixe: false
+      };
 
       setFormMsg(mensagemBloqueio, "Salvando bloqueio...", "info");
 
       try {
-        await callApiData({ action: "Agenda_BloquearHorario", payload });
-
+        await callApiData({ action: "Agenda.Criar", payload });
         setFormMsg(mensagemBloqueio, "Horário bloqueado com sucesso!", "sucesso");
 
         if (modoVisao === "dia") await carregarAgendaDia();
@@ -1664,9 +1814,7 @@
     // ===========================
     // Listeners gerais
     // ===========================
-    inputData.addEventListener("change", () =>
-      modoVisao === "dia" ? carregarAgendaDia() : carregarAgendaSemana()
-    );
+    inputData.addEventListener("change", () => (modoVisao === "dia" ? carregarAgendaDia() : carregarAgendaSemana()));
 
     btnHoje &&
       btnHoje.addEventListener("click", () => {

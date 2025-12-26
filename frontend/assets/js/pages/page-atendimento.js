@@ -1,10 +1,11 @@
 // frontend/assets/js/pages/page-atendimento.js
 // Módulo: Atendimento (Fila)
+//
 // ✅ Preferencial: SyncAPartirDeHoje + ListarFilaAPartirDeHoje (range, ex.: 30 dias)
-// ✅ Fallback: SyncHoje + ListarFilaHoje
+// ✅ Fallback 1: SyncHoje + ListarFilaHoje
+// ✅ Fallback 2 (novo): Agenda.ListarPorPeriodo (range), SEM routeAction_
 // ✅ Ações por linha: Chegou / Chamar / Iniciar / Concluir / Cancelar (mantidas)
 // ✅ Botão "Chamar próximo" (mantido)
-// ✅ Mantém fallback para Agenda.ListarAFuturo (compatibilidade) (mantido)
 
 (function (global, document) {
   "use strict";
@@ -99,6 +100,32 @@
     tbody.appendChild(tr);
   }
 
+  function _pad2_(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function _formatHHMM_(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      return `${_pad2_(d.getHours())}:${_pad2_(d.getMinutes())}`;
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function _formatYMD_(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      return `${d.getFullYear()}-${_pad2_(d.getMonth() + 1)}-${_pad2_(d.getDate())}`;
+    } catch (_) {
+      return "";
+    }
+  }
+
   function normalizeRow_(raw, fonte) {
     if (fonte === "atendimento") {
       const idAgenda = raw.idAgenda || raw.ID_Agenda || "";
@@ -113,11 +140,14 @@
       return { fonte, idAtendimento, idAgenda, idPaciente, data, hora, pacienteNome, tipo, status, _raw: raw };
     }
 
+    // fonte agenda (novo: Agenda.ListarPorPeriodo)
+    // dto do Agenda.gs: { idAgenda, idPaciente, inicio, fim, titulo, tipo, status, ... }
     const idAgenda2 = raw.idAgenda || raw.ID_Agenda || "";
     const idPaciente2 = raw.idPaciente || raw.ID_Paciente || "";
-    const data2 = raw.dataConsulta || raw.data || "";
-    const hora2 = raw.horaConsulta || raw.hora || "";
-    const pacienteNome2 = raw.nomePaciente || raw.paciente || "";
+    const ini = raw.inicio || "";
+    const data2 = raw.dataConsulta || raw.data || _formatYMD_(ini);
+    const hora2 = raw.horaConsulta || raw.hora || _formatHHMM_(ini);
+    const pacienteNome2 = raw.nomePaciente || raw.paciente || raw.titulo || idPaciente2 || "";
     const tipo2 = raw.tipo || "";
     const status2 = raw.status || "";
     return { fonte: "agenda", idAtendimento: "", idAgenda: idAgenda2, idPaciente: idPaciente2, data: data2, hora: hora2, pacienteNome: pacienteNome2, tipo: tipo2, status: status2, _raw: raw };
@@ -147,10 +177,12 @@
       return span;
     }
 
+    // agenda
     if (s === "AGENDADO") span.classList.add("badge-agendado");
     else if (s === "CONFIRMADO") span.classList.add("badge-confirmado");
     else if (s === "CANCELADO") span.classList.add("badge-cancelado");
     else if (s === "FALTOU") span.classList.add("badge-faltou");
+    else if (s === "CONCLUIDO") span.classList.add("badge-confirmado");
     else span.classList.add("badge-outro");
 
     return span;
@@ -168,6 +200,26 @@
     if (action === "cancelar") return !(s === "CONCLUIDO" || s === "CANCELADO");
 
     return false;
+  }
+
+  function _makeBtn_(label, cls, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.className = cls;
+    b.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      try {
+        b.disabled = true;
+        await onClick();
+      } catch (e) {
+        alert((e && e.message) || "Falha na ação.");
+      } finally {
+        b.disabled = false;
+      }
+    });
+    return b;
   }
 
   function criarAcoesLinha_(row) {
@@ -215,26 +267,6 @@
     wrap.appendChild(btnCancelar);
 
     return wrap;
-  }
-
-  function _makeBtn_(label, cls, onClick) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = label;
-    b.className = cls;
-    b.addEventListener("click", async (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      try {
-        b.disabled = true;
-        await onClick();
-      } catch (e) {
-        alert((e && e.message) || "Falha na ação.");
-      } finally {
-        b.disabled = false;
-      }
-    });
-    return b;
   }
 
   function renderizarLinhas(rows) {
@@ -308,6 +340,37 @@
     infoUltimaAtualizacao.textContent = `Atualizado em ${dd}/${mm}/${yyyy} às ${hh}:${min}`;
   }
 
+  function _startOfDay_(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+
+  function _endOfDay_(d) {
+    const x = new Date(d);
+    x.setHours(23, 59, 59, 999);
+    return x;
+  }
+
+  // ✅ Fallback final novo: Agenda.ListarPorPeriodo (sem routeAction_)
+  async function carregarAgendaPorPeriodoFallback_() {
+    const hoje = new Date();
+    const inicio = _startOfDay_(hoje);
+    const fim = _endOfDay_(new Date(Date.now() + (DEFAULT_RANGE_DIAS - 1) * 24 * 60 * 60 * 1000));
+
+    const dataAgenda = await callApiData({
+      action: "Agenda.ListarPorPeriodo",
+      payload: {
+        inicio: inicio.toISOString(),
+        fim: fim.toISOString(),
+        incluirCancelados: false
+      }
+    });
+
+    const items = (dataAgenda && dataAgenda.items) ? dataAgenda.items : [];
+    return items.map((it) => normalizeRow_(it, "agenda"));
+  }
+
   // ✅ NOVO: tenta carregar "a partir de hoje" (range). Se não existir, cai pro fluxo antigo.
   async function carregarListaAtendimento() {
     msgs.info("Carregando atendimentos...");
@@ -337,7 +400,7 @@
         return;
       }
 
-      // 2) Fallback: HOJE (comportamento antigo)
+      // 2) Fallback: HOJE
       try {
         await callApiData({ action: "Atendimento.SyncHoje", payload: {} });
       } catch (_) {}
@@ -358,22 +421,14 @@
         return;
       }
 
-      // 3) Fallback final: legado (se existir)
-      let dataAgenda;
-      try {
-        dataAgenda = await callApiData({ action: "Agenda.ListarAFuturo", payload: {} });
-      } catch (_) {
-        dataAgenda = await callApiData({ action: "Agenda_ListarAFuturo", payload: {} });
-      }
-
-      const agendamentos = (dataAgenda && dataAgenda.agendamentos) || [];
-      const rowsLegacy = agendamentos.map((it) => normalizeRow_(it, "agenda"));
-      renderizarLinhas(rowsLegacy);
+      // 3) Fallback final: agenda (novo) — sem actions legadas
+      const rowsAgenda = await carregarAgendaPorPeriodoFallback_();
+      renderizarLinhas(rowsAgenda);
 
       msgs.sucesso(
-        rowsLegacy.length === 0
+        rowsAgenda.length === 0
           ? "Nenhum atendimento a partir de hoje."
-          : `Encontrado(s) ${rowsLegacy.length} atendimento(s) a partir de hoje.`
+          : `Encontrado(s) ${rowsAgenda.length} atendimento(s) a partir de hoje.`
       );
       setUltimaAtualizacao_();
 
