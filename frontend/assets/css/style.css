@@ -28,6 +28,7 @@
 @import url("components/modals.css");
 @import url("components/sidebar.css");
 @import url("components/topbar.css");
+@import url("./components/chat-widget.css");
 
 /* ============ PÁGINAS (CSS específico por tela) ============ */
 /* Home / Dashboard inicial */

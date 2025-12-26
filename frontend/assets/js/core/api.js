@@ -259,3 +259,33 @@
   global.callApiData = callApiData;
 
 })(window);
+
+// frontend/assets/js/core/app.js
+// (mantém seu conteúdo existente; abaixo está a adição de init do widget)
+
+(function (global) {
+  "use strict";
+
+  const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
+  PRONTIO.core = PRONTIO.core || {};
+
+  // ... seu código existente ...
+
+  function initWidgets_() {
+    try {
+      if (PRONTIO.widgets && PRONTIO.widgets.chat && typeof PRONTIO.widgets.chat.init === "function") {
+        PRONTIO.widgets.chat.init();
+      }
+    } catch (e) {
+      console.warn("[PRONTIO] Falha ao inicializar widget de chat:", e);
+    }
+  }
+
+  // ✅ garante inicialização quando DOM estiver pronto
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initWidgets_);
+  } else {
+    initWidgets_();
+  }
+
+})(window);

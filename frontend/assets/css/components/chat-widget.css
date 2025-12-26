@@ -1,0 +1,388 @@
+/* frontend/assets/css/components/chat-widget.css */
+
+.prontio-chat-topbtn {
+  position: relative;
+}
+
+.prontio-chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+
+.prontio-chat-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+  z-index: 9998;
+}
+
+.prontio-chat-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Painel flutuante */
+.prontio-chat-panel {
+  position: fixed;
+  top: 66px; /* ajusta conforme sua topbar */
+  right: 18px;
+  width: 920px;
+  max-width: calc(100vw - 24px);
+  height: 620px;
+  max-height: calc(100vh - 88px);
+  background: #101214;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  overflow: hidden;
+
+  opacity: 0;
+  transform: translateY(-6px) scale(0.99);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 9999;
+}
+
+.prontio-chat-panel.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.prontio-chat-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.prontio-chat-panel__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.prontio-chat-panel__title-main {
+  font-weight: 800;
+  font-size: 14px;
+  color: #e9edf2;
+}
+
+.prontio-chat-panel__title-sub {
+  font-size: 12px;
+  color: rgba(233,237,242,0.72);
+}
+
+.prontio-chat-panel__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.prontio-chat-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #e9edf2;
+  cursor: pointer;
+}
+
+.prontio-chat-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+/* Corpo em 2 colunas */
+.prontio-chat-panel__body {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: calc(100% - 63px);
+}
+
+/* Sidebar */
+.prontio-chat-sidebar {
+  border-right: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.prontio-chat-search {
+  padding: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.prontio-chat-search__icon {
+  opacity: 0.8;
+}
+
+.prontio-chat-search__input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #e9edf2;
+  padding: 10px 10px;
+  outline: none;
+}
+
+.prontio-chat-roomlist {
+  padding: 6px;
+  overflow: auto;
+  flex: 1;
+}
+
+.prontio-chat-room {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #e9edf2;
+  padding: 10px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.prontio-chat-room:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.prontio-chat-room.is-active {
+  background: rgba(64,156,255,0.16);
+  border-color: rgba(64,156,255,0.25);
+}
+
+.prontio-chat-room__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prontio-chat-room__name {
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prontio-chat-room__desc {
+  font-size: 12px;
+  opacity: 0.72;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prontio-chat-room__badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(255,59,48,0.95);
+  color: #fff;
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 20px;
+  text-align: center;
+}
+
+.prontio-chat-footer {
+  padding: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.prontio-chat-footer__btn {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #e9edf2;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.prontio-chat-footer__btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+/* Conversa */
+.prontio-chat-conv {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.prontio-chat-conv__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+
+.prontio-chat-back {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #e9edf2;
+  cursor: pointer;
+}
+
+.prontio-chat-conv__header-txt {
+  min-width: 0;
+}
+
+.prontio-chat-conv__title {
+  font-weight: 800;
+  font-size: 14px;
+  color: #e9edf2;
+}
+
+.prontio-chat-conv__desc {
+  font-size: 12px;
+  color: rgba(233,237,242,0.70);
+}
+
+.prontio-chat-messages {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+}
+
+.prontio-chat-empty {
+  opacity: 0.75;
+  font-size: 13px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255,255,255,0.16);
+}
+
+.prontio-chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.prontio-chat-msg__meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(233,237,242,0.68);
+}
+
+.prontio-chat-msg__sender {
+  font-weight: 800;
+  color: rgba(233,237,242,0.86);
+}
+
+.prontio-chat-msg__time {
+  opacity: 0.7;
+}
+
+.prontio-chat-msg__bubble {
+  max-width: 82%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e9edf2;
+  white-space: pre-wrap;
+}
+
+.prontio-chat-msg.is-me {
+  align-items: flex-end;
+}
+
+.prontio-chat-msg.is-me .prontio-chat-msg__bubble {
+  background: rgba(64,156,255,0.18);
+  border-color: rgba(64,156,255,0.25);
+}
+
+.prontio-chat-form {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+
+.prontio-chat-input {
+  flex: 1;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #e9edf2;
+  padding: 10px 10px;
+  resize: none;
+  outline: none;
+}
+
+.prontio-chat-send {
+  width: 90px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(64,156,255,0.20);
+  color: #e9edf2;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.prontio-chat-send:hover {
+  background: rgba(64,156,255,0.28);
+}
+
+/* Responsivo: em telas pequenas, vira drawer */
+@media (max-width: 980px) {
+  .prontio-chat-panel {
+    top: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .prontio-chat-panel__body {
+    grid-template-columns: 1fr;
+  }
+
+  .prontio-chat-sidebar {
+    display: none; /* no mobile abrimos direto a conversa; dá pra evoluir depois */
+  }
+
+  .prontio-chat-back {
+    display: none;
+  }
+}
