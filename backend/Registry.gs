@@ -20,6 +20,10 @@
  * ✅ UPDATE (sem quebrar):
  * - Adiciona "Agenda_ListarEventosDiaParaValidacao" (pedido do modal/front)
  *   apontando para o adapter do Agenda.gs (Agenda_ListarEventosDiaParaValidacao_).
+ *
+ * ✅ UPDATE (AUDITORIA - sem quebrar):
+ * - _pacientesHandler_ agora repassa ctx para handlePacientesAction(actionName, payload, ctx)
+ *   (habilita auditoria completa no Pacientes.gs quando a chamada vem pelo Registry).
  */
 
 var REGISTRY_ACTIONS = null;
@@ -754,7 +758,8 @@ function _Registry_build_() {
         e.details = { action: actionName };
         throw e;
       }
-      return handlePacientesAction(actionName, payload || {});
+      // ✅ AUDITORIA: repassa ctx
+      return handlePacientesAction(actionName, payload || {}, ctx);
     };
   }
 
@@ -766,6 +771,16 @@ function _Registry_build_() {
     validations: [],
     requiresLock: false,
     lockKey: null
+  };
+
+  map["Pacientes_Criar"] = {
+    action: "Pacientes_Criar",
+    handler: _pacientesHandler_("Pacientes_Criar"),
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "PACIENTES"
   };
 
   map["Pacientes_Listar"] = {
@@ -821,6 +836,16 @@ function _Registry_build_() {
   map["Pacientes.AlterarStatusAtivo"] = {
     action: "Pacientes.AlterarStatusAtivo",
     handler: map["Pacientes_AlterarStatusAtivo"].handler,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "PACIENTES"
+  };
+
+  map["Pacientes.Criar"] = {
+    action: "Pacientes.Criar",
+    handler: map["Pacientes_Criar"].handler,
     requiresAuth: true,
     roles: [],
     validations: [],
@@ -1045,6 +1070,7 @@ function Registry_ListActions(ctx, payload) {
     hasPacientesDebug: keys.indexOf("Pacientes_DebugInfo") >= 0,
     hasReceita: keys.indexOf("Receita.GerarPdf") >= 0,
     hasMedicamentos: keys.indexOf("Medicamentos.ListarAtivos") >= 0,
-    hasAgendaListarEventosDiaParaValidacao: keys.indexOf("Agenda_ListarEventosDiaParaValidacao") >= 0
+    hasAgendaListarEventosDiaParaValidacao: keys.indexOf("Agenda_ListarEventosDiaParaValidacao") >= 0,
+    hasPacientesCriar: keys.indexOf("Pacientes_Criar") >= 0
   };
 }

@@ -11,10 +11,7 @@
   display: none !important;
 }
 
-/* MENSAGEM DE STATUS
-   Escopada só pra página de Pacientes.
-   No HTML: <div id="mensagem" class="mensagem"></div>
-*/
+/* MENSAGEM DE STATUS */
 body[data-page-id="pacientes"] #mensagem {
   margin-bottom: 12px;
   font-size: 13px;
@@ -118,6 +115,46 @@ body[data-page-id="pacientes"] #mensagem {
   display: flex;
 }
 
+/* ✅ Item 5: Paginação */
+.linha-paginacao {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid #d0d7e2;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.check-paginar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  user-select: none;
+}
+
+.paginacao-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.paginacao-controles select {
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.paginacao-info {
+  font-size: 13px;
+  color: #333;
+  padding: 0 6px;
+}
+
 /* PAINEL DE COLUNAS */
 .painel-colunas {
   margin-top: 8px;
@@ -185,9 +222,7 @@ body[data-page-id="pacientes"] #mensagem {
   gap: 8px;
 }
 
-/* TABELA DE PACIENTES
-   Escopamos .tabela para não afetar outras páginas
-*/
+/* TABELA DE PACIENTES */
 .tabela-wrapper {
   margin-top: 15px;
   overflow-x: auto;

@@ -1,8 +1,6 @@
 (function (global, document) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
 
-  // ✅ Padrão PRONTIO (assets/js/api.js):
-  // - callApiData() retorna SOMENTE data e lança erro se success=false
   const callApiData =
     (PRONTIO.api && PRONTIO.api.callApiData) ||
     global.callApiData ||
@@ -98,6 +96,83 @@
     else msgs.info(texto);
   }
 
+  function formatarWarnings_(warnings) {
+    if (!warnings || !Array.isArray(warnings) || warnings.length === 0) return "";
+
+    const partes = [];
+
+    warnings.forEach(function (w) {
+      if (!w) return;
+      const msg = String(w.message || "Aviso.").trim();
+      const code = w.code ? String(w.code).trim() : "";
+      let linha = "Atenção: " + msg + (code ? " (" + code + ")" : "");
+
+      const matches = w.details && Array.isArray(w.details.matches) ? w.details.matches : null;
+      if (matches && matches.length) {
+        const itens = matches.slice(0, 3).map(function (m) {
+          const nome = (m && m.nomeCompleto) ? String(m.nomeCompleto) : "Sem nome";
+          const id = (m && m.idPaciente) ? String(m.idPaciente) : "";
+          return id ? (nome + " [ID: " + id + "]") : nome;
+        });
+        linha += " Possíveis registros: " + itens.join("; ") + ".";
+      }
+
+      partes.push(linha);
+    });
+
+    return partes.join(" ");
+  }
+
+  function mostrarWarnings_(warnings) {
+    const txt = formatarWarnings_(warnings);
+    if (!txt) return false;
+    mostrarMensagem(txt, "info");
+    return true;
+  }
+
+  async function copiarTextoParaClipboard_(texto) {
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(texto);
+        return true;
+      }
+    } catch (_) {}
+
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = texto;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function montarResumoPacienteParaCopiar_(p) {
+    if (!p) return "";
+    const id = String(p.idPaciente || p.ID_Paciente || p.id || "");
+    const nome = String(p.nomeCompleto || p.nomeExibicao || p.nome || "");
+    const cpf = String(p.cpf || "");
+    const tel = String(p.telefonePrincipal || p.telefone1 || p.telefone || "");
+    const email = String(p.email || "");
+    const plano = String(p.planoSaude || "");
+    return [
+      "PRONTIO — Dados do paciente",
+      "ID: " + id,
+      "Nome: " + nome,
+      cpf ? ("CPF: " + cpf) : "",
+      tel ? ("Telefone: " + tel) : "",
+      email ? ("E-mail: " + email) : "",
+      plano ? ("Plano: " + plano) : ""
+    ].filter(Boolean).join("\n");
+  }
+
   let pacienteSelecionadoId = null;
   let pacienteSelecionadoNome = null;
   let pacienteSelecionadoAtivo = null;
@@ -111,9 +186,16 @@
   let debounceTimer = null;
   let carregando = false;
 
+  let usarPaginacao = false;
+  let pageAtual = 1;
+  let pageSizeAtual = 50;
+  let lastPaging = null;
+
   function initPacientesPage() {
     initEventos();
     carregarConfigColunas();
+    carregarPreferenciasPaginacao_();
+    registrarAtalhosTeclado_(); // ✅ novo
     carregarPacientes();
   }
 
@@ -133,6 +215,14 @@
     const painelColunas = document.getElementById("painelColunas");
     const btnFecharPainelColunas = document.getElementById("btnFecharPainelColunas");
     const checkboxesColunas = document.querySelectorAll(".chk-coluna");
+
+    const btnCopiar = document.getElementById("btnCopiarDadosPaciente");
+
+    const chkUsarPaginacao = document.getElementById("chkUsarPaginacao");
+    const paginacaoControles = document.getElementById("paginacaoControles");
+    const selectPageSize = document.getElementById("selectPageSize");
+    const btnPaginaAnterior = document.getElementById("btnPaginaAnterior");
+    const btnPaginaProxima = document.getElementById("btnPaginaProxima");
 
     if (form) {
       form.addEventListener("submit", function (event) {
@@ -158,9 +248,33 @@
       });
     }
 
+    if (btnCopiar) {
+      btnCopiar.addEventListener("click", async function () {
+        if (!pacienteSelecionadoId) {
+          mostrarMensagem("Selecione um paciente primeiro.", "info");
+          return;
+        }
+        const p = pacientesCache.find(function (px) {
+          return String(px.idPaciente || px.ID_Paciente || px.id || "") === String(pacienteSelecionadoId);
+        });
+        if (!p) {
+          mostrarMensagem("Paciente não encontrado na lista carregada.", "erro");
+          return;
+        }
+
+        const texto = montarResumoPacienteParaCopiar_(p);
+        const ok = await copiarTextoParaClipboard_(texto);
+        if (ok) mostrarMensagem("Dados do paciente copiados para a área de transferência.", "sucesso");
+        else mostrarMensagem("Não foi possível copiar automaticamente. Selecione e copie manualmente.", "info");
+      });
+    }
+
     function scheduleReload(ms) {
       clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(function () { carregarPacientes(); }, ms);
+      debounceTimer = setTimeout(function () {
+        if (usarPaginacao) pageAtual = 1;
+        carregarPacientes();
+      }, ms);
     }
 
     if (filtroTexto) {
@@ -201,6 +315,102 @@
         aplicarVisibilidadeColunas();
       });
     });
+
+    if (chkUsarPaginacao) {
+      chkUsarPaginacao.addEventListener("change", function () {
+        usarPaginacao = !!chkUsarPaginacao.checked;
+        pageAtual = 1;
+        salvarPreferenciasPaginacao_();
+        if (paginacaoControles) paginacaoControles.style.display = usarPaginacao ? "flex" : "none";
+        carregarPacientes();
+      });
+    }
+
+    if (selectPageSize) {
+      selectPageSize.addEventListener("change", function () {
+        const n = parseInt(selectPageSize.value, 10);
+        if (n && n > 0) pageSizeAtual = n;
+        pageAtual = 1;
+        salvarPreferenciasPaginacao_();
+        if (usarPaginacao) carregarPacientes();
+      });
+    }
+
+    if (btnPaginaAnterior) {
+      btnPaginaAnterior.addEventListener("click", function () {
+        if (!usarPaginacao) return;
+        if (pageAtual > 1) {
+          pageAtual -= 1;
+          carregarPacientes();
+        }
+      });
+    }
+
+    if (btnPaginaProxima) {
+      btnPaginaProxima.addEventListener("click", function () {
+        if (!usarPaginacao) return;
+        if (lastPaging && lastPaging.hasNext) {
+          pageAtual += 1;
+          carregarPacientes();
+        }
+      });
+    }
+  }
+
+  // ✅ Atalhos de teclado (novo)
+  function registrarAtalhosTeclado_() {
+    document.addEventListener("keydown", function (ev) {
+      try {
+        const key = String(ev.key || "").toLowerCase();
+
+        // Ignora se usuário está digitando em input/textarea/select (exceto ESC)
+        const tag = (ev.target && ev.target.tagName) ? String(ev.target.tagName).toLowerCase() : "";
+        const isTypingField = (tag === "input" || tag === "textarea" || tag === "select");
+
+        // ESC: fecha painel e/ou cancela edição
+        if (key === "escape") {
+          const painel = document.getElementById("painelColunas");
+          if (painel && !painel.classList.contains("oculto")) {
+            painel.classList.add("oculto");
+            ev.preventDefault();
+            return;
+          }
+          // cancela edição se estiver em modo edição
+          if (modoEdicao) {
+            sairModoEdicao(true);
+            ev.preventDefault();
+            return;
+          }
+          return;
+        }
+
+        // Se estiver digitando, não intercepta atalhos para não atrapalhar
+        if (isTypingField) return;
+
+        // Ctrl+N: novo paciente
+        if ((ev.ctrlKey || ev.metaKey) && key === "n") {
+          const btnNovo = document.getElementById("btnNovoPaciente");
+          if (btnNovo && !btnNovo.disabled) {
+            btnNovo.click();
+            ev.preventDefault();
+          }
+          return;
+        }
+
+        // Ctrl+F: foca busca (não impede totalmente o Find do browser em todos)
+        if ((ev.ctrlKey || ev.metaKey) && key === "f") {
+          const filtro = document.getElementById("filtroTexto");
+          if (filtro && typeof filtro.focus === "function") {
+            filtro.focus();
+            // seleciona texto existente
+            try { filtro.select(); } catch (_) {}
+            // evita duplicar ações quando possível
+            ev.preventDefault();
+          }
+          return;
+        }
+      } catch (_) {}
+    });
   }
 
   function mostrarSecaoCadastro(visivel) {
@@ -216,21 +426,35 @@
       return (el && el.value ? el.value : "").trim();
     };
 
+    const obsImportantes = getValue("obsImportantes");
+    const obsClinicas = getValue("observacoesClinicas");
+    const obsAdministrativas = getValue("observacoesAdministrativas");
+    const obsAdmFinal = obsAdministrativas || obsImportantes;
+
     return {
       nomeCompleto: getValue("nomeCompleto"),
+      nomeSocial: getValue("nomeSocial"),
       dataNascimento: (document.getElementById("dataNascimento") || {}).value || "",
       sexo: (document.getElementById("sexo") || {}).value || "",
+      estadoCivil: getValue("estadoCivil"),
       cpf: getValue("cpf"),
       rg: getValue("rg"),
+      rgOrgaoEmissor: getValue("rgOrgaoEmissor"),
       telefone1: getValue("telefone1"),
       telefone2: getValue("telefone2"),
       email: getValue("email"),
+      cep: getValue("cep"),
+      logradouro: getValue("logradouro"),
+      numero: getValue("numero"),
+      complemento: getValue("complemento"),
       enderecoBairro: getValue("enderecoBairro"),
       enderecoCidade: getValue("enderecoCidade"),
       enderecoUf: getValue("enderecoUf"),
       planoSaude: getValue("planoSaude"),
       numeroCarteirinha: getValue("numeroCarteirinha"),
-      obsImportantes: getValue("obsImportantes")
+      observacoesClinicas: obsClinicas,
+      observacoesAdministrativas: obsAdmFinal,
+      obsImportantes: obsImportantes
     };
   }
 
@@ -241,19 +465,28 @@
     };
 
     setValue("nomeCompleto", p.nomeCompleto || p.nome || "");
+    setValue("nomeSocial", p.nomeSocial || "");
     setValue("dataNascimento", normalizeToISODateString_(p.dataNascimento || ""));
     setValue("sexo", p.sexo || "");
+    setValue("estadoCivil", p.estadoCivil || "");
     setValue("cpf", p.cpf || "");
     setValue("rg", p.rg || "");
+    setValue("rgOrgaoEmissor", p.rgOrgaoEmissor || "");
     setValue("telefone1", p.telefone1 || p.telefone || "");
     setValue("telefone2", p.telefone2 || "");
     setValue("email", p.email || "");
+    setValue("cep", p.cep || "");
+    setValue("logradouro", p.logradouro || "");
+    setValue("numero", p.numero || "");
+    setValue("complemento", p.complemento || "");
     setValue("enderecoBairro", p.enderecoBairro || p.bairro || "");
     setValue("enderecoCidade", p.enderecoCidade || p.cidade || "");
     setValue("enderecoUf", p.enderecoUf || "");
     setValue("planoSaude", p.planoSaude || "");
     setValue("numeroCarteirinha", p.numeroCarteirinha || "");
-    setValue("obsImportantes", p.obsImportantes || "");
+    setValue("observacoesClinicas", p.observacoesClinicas || "");
+    setValue("observacoesAdministrativas", p.observacoesAdministrativas || "");
+    setValue("obsImportantes", p.obsImportantes || p.observacoesAdministrativas || "");
   }
 
   function normalizeToISODateString_(valor) {
@@ -314,6 +547,64 @@
     return dia + "/" + mes + "/" + ano;
   }
 
+  function salvarPreferenciasPaginacao_() {
+    try {
+      global.localStorage.setItem("prontio_pacientes_paginacao", JSON.stringify({
+        enabled: !!usarPaginacao,
+        pageSize: pageSizeAtual
+      }));
+    } catch (_) {}
+  }
+
+  function carregarPreferenciasPaginacao_() {
+    const chk = document.getElementById("chkUsarPaginacao");
+    const select = document.getElementById("selectPageSize");
+    const controles = document.getElementById("paginacaoControles");
+
+    try {
+      const json = global.localStorage.getItem("prontio_pacientes_paginacao");
+      if (json) {
+        const cfg = JSON.parse(json);
+        usarPaginacao = !!cfg.enabled;
+        if (cfg.pageSize) pageSizeAtual = parseInt(cfg.pageSize, 10) || pageSizeAtual;
+      }
+    } catch (_) {}
+
+    if (chk) chk.checked = !!usarPaginacao;
+    if (select) select.value = String(pageSizeAtual);
+    if (controles) controles.style.display = usarPaginacao ? "flex" : "none";
+  }
+
+  function atualizarUiPaginacao_(paging) {
+    const btnPrev = document.getElementById("btnPaginaAnterior");
+    const btnNext = document.getElementById("btnPaginaProxima");
+    const info = document.getElementById("paginacaoInfo");
+    const controles = document.getElementById("paginacaoControles");
+
+    if (!usarPaginacao) {
+      lastPaging = null;
+      if (controles) controles.style.display = "none";
+      return;
+    }
+
+    if (controles) controles.style.display = "flex";
+    lastPaging = paging || null;
+
+    const total = paging && typeof paging.total === "number" ? paging.total : null;
+    const totalPages = paging && typeof paging.totalPages === "number" ? paging.totalPages : null;
+
+    if (info) {
+      if (total != null && totalPages != null) {
+        info.textContent = "Página " + pageAtual + " de " + totalPages + " — " + total + " registro(s)";
+      } else {
+        info.textContent = "Página " + pageAtual;
+      }
+    }
+
+    if (btnPrev) btnPrev.disabled = !(paging && paging.hasPrev);
+    if (btnNext) btnNext.disabled = !(paging && paging.hasNext);
+  }
+
   async function salvarPaciente() {
     if (carregando) return;
 
@@ -340,9 +631,10 @@
 
     const payload = estaEditando ? Object.assign({ idPaciente: idEmEdicao }, dados) : dados;
 
+    let resp;
     try {
       carregando = true;
-      await callApiData({ action, payload });
+      resp = await callApiData({ action, payload });
     } catch (err) {
       carregando = false;
       const msg = (err && err.message) || "Erro ao salvar/atualizar paciente.";
@@ -354,8 +646,13 @@
     carregando = false;
 
     await carregarPacientes();
-
     mostrarMensagem(mensagemSucesso, "sucesso");
+
+    const warnings = resp && resp.warnings ? resp.warnings : null;
+    if (warnings && Array.isArray(warnings) && warnings.length) {
+      mostrarWarnings_(warnings);
+    }
+
     const form = document.getElementById("formPaciente");
     if (form) form.reset();
     if (estaEditando) sairModoEdicao(false);
@@ -364,6 +661,9 @@
 
   async function carregarPacientes() {
     if (carregando) return;
+
+    const prevSelectedId = pacienteSelecionadoId ? String(pacienteSelecionadoId) : null;
+    const prevEditId = (modoEdicao && idEmEdicao) ? String(idEmEdicao) : null;
 
     const filtroTextoEl = document.getElementById("filtroTexto");
     const chkSomenteAtivos = document.getElementById("chkSomenteAtivos");
@@ -377,6 +677,11 @@
       somenteAtivos: somenteAtivos,
       ordenacao: criterioOrdenacao
     };
+
+    if (usarPaginacao) {
+      payload.page = pageAtual;
+      payload.pageSize = pageSizeAtual;
+    }
 
     let data;
     try {
@@ -397,9 +702,62 @@
 
     pacientesCache = (data && (data.pacientes || data.lista || data.items)) || [];
     aplicarFiltrosETabela();
+
+    if (usarPaginacao) atualizarUiPaginacao_(data && data.paging ? data.paging : null);
+    else atualizarUiPaginacao_(null);
+
     mostrarMensagem("Pacientes carregados: " + pacientesCache.length, "sucesso");
 
-    if (pacientesCache.length === 0) atualizarSelecaoPaciente(null, null, null);
+    if (pacientesCache.length === 0) {
+      atualizarSelecaoPaciente(null, null, null);
+      if (modoEdicao) sairModoEdicao(false);
+      return;
+    }
+
+    if (prevSelectedId) {
+      const pSel = pacientesCache.find(function (p) {
+        return String(p.idPaciente || p.ID_Paciente || p.id || "") === prevSelectedId;
+      });
+
+      if (pSel) {
+        const id = String(pSel.idPaciente || pSel.ID_Paciente || pSel.id || "");
+        const nome = String(pSel.nomeCompleto || pSel.nome || "");
+        const ativo =
+          typeof pSel.ativo === "boolean"
+            ? pSel.ativo
+            : String(pSel.ativo || "").toUpperCase() === "SIM" ||
+              String(pSel.ativo || "").toLowerCase() === "true";
+
+        atualizarSelecaoPaciente(id, nome, ativo);
+
+        const tr = document.querySelector("#tabelaPacientesBody tr[data-idPaciente='" + id + "']");
+        if (tr) {
+          const linhas = document.querySelectorAll("#tabelaPacientesBody tr");
+          linhas.forEach(function (linha) { linha.classList.remove("linha-selecionada"); });
+          tr.classList.add("linha-selecionada");
+        }
+      } else {
+        atualizarSelecaoPaciente(null, null, null);
+      }
+    }
+
+    if (prevEditId) {
+      const pEdit = pacientesCache.find(function (p) {
+        return String(p.idPaciente || p.ID_Paciente || p.id || "") === prevEditId;
+      });
+
+      if (pEdit) {
+        modoEdicao = true;
+        idEmEdicao = prevEditId;
+        preencherFormularioComPaciente(pEdit);
+        atualizarUIEdicao();
+        mostrarSecaoCadastro(true);
+      } else {
+        modoEdicao = false;
+        idEmEdicao = null;
+        atualizarUIEdicao();
+      }
+    }
   }
 
   function aplicarFiltrosETabela() {
@@ -407,7 +765,6 @@
     if (!tbody) return;
 
     tbody.innerHTML = "";
-
     const lista = pacientesCache.slice();
 
     lista.forEach(function (p) {
@@ -446,7 +803,17 @@
         ["obsImportantes", p.obsImportantes || ""],
         ["planoSaude", p.planoSaude || ""],
         ["numeroCarteirinha", p.numeroCarteirinha || ""],
-        ["ativo", ativoBool ? "SIM" : "NAO"]
+        ["ativo", ativoBool ? "SIM" : "NAO"],
+
+        ["nomeSocial", p.nomeSocial || ""],
+        ["estadoCivil", p.estadoCivil || ""],
+        ["rgOrgaoEmissor", p.rgOrgaoEmissor || ""],
+        ["cep", p.cep || ""],
+        ["logradouro", p.logradouro || ""],
+        ["numero", p.numero || ""],
+        ["complemento", p.complemento || ""],
+        ["observacoesClinicas", p.observacoesClinicas || ""],
+        ["observacoesAdministrativas", p.observacoesAdministrativas || ""]
       ];
 
       colDefs.forEach(function (entry) {
@@ -464,16 +831,6 @@
 
       tbody.appendChild(tr);
     });
-
-    if (lista.every(function (p) {
-      const id = String(p.idPaciente || p.ID_Paciente || p.id || "");
-      return id !== pacienteSelecionadoId;
-    })) {
-      const linhas = document.querySelectorAll("#tabelaPacientesBody tr");
-      linhas.forEach(function (linha) {
-        linha.classList.remove("linha-selecionada");
-      });
-    }
 
     aplicarVisibilidadeColunas();
   }
@@ -513,6 +870,7 @@
     const btnInativar = document.getElementById("btnInativar");
     const btnReativar = document.getElementById("btnReativar");
     const btnEditar = document.getElementById("btnEditar");
+    const btnCopiar = document.getElementById("btnCopiarDadosPaciente");
 
     if (!id) {
       if (infoDiv) infoDiv.textContent = "Nenhum paciente selecionado.";
@@ -520,6 +878,7 @@
       if (btnInativar) btnInativar.disabled = true;
       if (btnReativar) btnReativar.disabled = true;
       if (btnEditar) btnEditar.disabled = true;
+      if (btnCopiar) btnCopiar.disabled = true;
       clearPacienteAtualGlobal();
       return;
     }
@@ -527,6 +886,7 @@
     if (infoDiv) infoDiv.textContent = "Paciente selecionado: " + nome + " (ID: " + id + ")";
     if (btnIrProntuario) btnIrProntuario.disabled = false;
     if (btnEditar) btnEditar.disabled = false;
+    if (btnCopiar) btnCopiar.disabled = false;
 
     if (btnInativar && btnReativar) {
       if (ativo) {
@@ -631,20 +991,6 @@
 
     mostrarMensagem("Status do paciente atualizado com sucesso.", "sucesso");
     await carregarPacientes();
-
-    const pacienteAtual = pacientesCache.find(function (p) {
-      return String(p.idPaciente || p.ID_Paciente || p.id || "") === String(pacienteSelecionadoId);
-    });
-
-    if (!pacienteAtual) {
-      atualizarSelecaoPaciente(null, null, null);
-    } else {
-      const id = String(pacienteAtual.idPaciente || pacienteAtual.ID_Paciente || pacienteAtual.id || "");
-      const nome = String(pacienteAtual.nomeCompleto || pacienteAtual.nome || "");
-      const ativo = typeof pacienteAtual.ativo === "boolean" ? pacienteAtual.ativo : String(pacienteAtual.ativo || "").toUpperCase() === "SIM";
-      atualizarSelecaoPaciente(id, nome, ativo);
-      aplicarFiltrosETabela();
-    }
   }
 
   function carregarConfigColunas() {

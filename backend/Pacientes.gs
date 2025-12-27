@@ -2,28 +2,26 @@
 // ---------------------------------------------------------------------------
 // Módulo backend de Pacientes do PRONTIO
 //
-// ✅ ATUALIZAÇÃO (v2 - aba profissional):
-// - Suporta nova estrutura da aba "Pacientes":
+// ✅ Estrutura da aba "Pacientes" (v2):
 //   idPaciente	status	nomeCompleto	nomeSocial	sexo	dataNascimento	estadoCivil	cpf	rg	rgOrgaoEmissor
-//   telefonePrincipal	telefoneSecundario	email	cep	logradouro	numero	complemento	bairro	cidade	estado
+//   telefonePrincipal	telefoneSecundario	email	planoSaude	numeroCarteirinha
+//   cep	logradouro	numero	complemento	bairro	cidade	estado
 //   tipoSanguineo	alergias	observacoesClinicas	observacoesAdministrativas	criadoEm	atualizadoEm
 //
 // ✅ COMPATIBILIDADE (não quebra front antigo):
-// - Continua retornando aliases: ID_Paciente, ativo(boolean), telefone1/telefone2,
+// - Retorna aliases: ID_Paciente, ativo(boolean), telefone1/telefone2,
 //   dataCadastro (alias de criadoEm), enderecoCidade/enderecoBairro/enderecoUf, etc.
 //
-// FIX (WebApp):
-// - Não usar SpreadsheetApp.getActive() diretamente (pode apontar para planilha errada no WebApp).
-// - Preferir PRONTIO_getDb_() quando disponível.
+// ✅ Features já aplicadas nos itens anteriores:
+// - Create oficial: Pacientes_Criar
+// - Plano/carteirinha suportados (v2+)
+// - Paginação opcional em Pacientes_Listar
+// - Auditoria best-effort (Audit_securityEvent_ / Audit_log_)
 //
-// DIAGNÓSTICO:
-// - Action Pacientes_DebugInfo para confirmar spreadsheetId/aba/linhas/amostra.
-//
-// ✅ UPDATE (seguro, retrocompatível):
-// - _toText_ agora sanitiza "#ERROR!/#N/A/#REF!/#VALUE!" para não vazar para o front.
-// - _ativoToStatus_ não defaulta INATIVO quando ativo não veio (undefined); default = ATIVO.
-// - pacienteRowToObject_ inclui nomeExibicao (não quebra: campo extra).
-// - handlePacientesAction aceita ctx como 3º argumento (ignora), compat com Registry/Api.
+// ✅ UPDATE (Item atual - Normalização + Duplicidade CPF):
+// - Normaliza CPF (formata quando 11 dígitos)
+// - Normaliza telefones (best-effort)
+// - Detecta possível duplicidade por CPF (não bloqueia): retorna warnings[]
 // ---------------------------------------------------------------------------
 
 /** Nome da aba de pacientes na planilha */
@@ -76,8 +74,6 @@ function _formatDateTime_(date) {
 function _toText_(v) {
   if (v === null || v === undefined) return '';
   var s = String(v).trim();
-
-  // Sanitiza erros comuns de planilha
   if (s === '#ERROR!' || s === '#N/A' || s === '#REF!' || s === '#VALUE!' || s === '#DIV/0!') return '';
   return s;
 }
@@ -86,9 +82,124 @@ function _onlyDigits_(s) {
   return String(s || '').replace(/\D+/g, '');
 }
 
+/** =========================
+ *  NORMALIZAÇÃO (Item atual)
+ *  ========================= */
+
+/** CPF: retorna só dígitos (se tiver), sem forçar tamanho */
+function _cpfDigits_(cpf) {
+  return _onlyDigits_(_toText_(cpf));
+}
+
+/** CPF: formata ###.###.###-## se tiver 11 dígitos, senão retorna texto limpo */
+function _cpfFormat_(cpf) {
+  var d = _cpfDigits_(cpf);
+  if (d.length !== 11) return _toText_(cpf);
+  return d.substring(0, 3) + '.' + d.substring(3, 6) + '.' + d.substring(6, 9) + '-' + d.substring(9, 11);
+}
+
+/**
+ * Telefone BR (best-effort):
+ * - Se 10 dígitos -> (DD) NNNN-NNNN
+ * - Se 11 dígitos -> (DD) NNNNN-NNNN
+ * - Caso contrário, retorna texto limpo como veio
+ */
+function _phoneFormat_(tel) {
+  var raw = _toText_(tel);
+  var d = _onlyDigits_(raw);
+  if (d.length === 10) {
+    return '(' + d.substring(0, 2) + ') ' + d.substring(2, 6) + '-' + d.substring(6, 10);
+  }
+  if (d.length === 11) {
+    return '(' + d.substring(0, 2) + ') ' + d.substring(2, 7) + '-' + d.substring(7, 11);
+  }
+  return raw;
+}
+
+/**
+ * Detecta possíveis duplicidades por CPF (não bloqueia)
+ * - Retorna array warnings, vazio se nada encontrado
+ * - excludeId: idPaciente atual (para update)
+ */
+function _warningsDuplicidadeCpf_(cpfInput, excludeId) {
+  var cpfDigits = _cpfDigits_(cpfInput);
+  if (cpfDigits.length !== 11) return [];
+
+  excludeId = excludeId ? String(excludeId) : '';
+
+  // Best-effort: usa leitura existente (pode ser custoso, mas ok por enquanto)
+  var todos = readAllPacientes_();
+  var matches = [];
+  for (var i = 0; i < todos.length; i++) {
+    var p = todos[i];
+    var pid = String(p.idPaciente || p.ID_Paciente || '');
+    if (!pid) continue;
+    if (excludeId && pid === excludeId) continue;
+
+    var pd = _cpfDigits_(p.cpf || '');
+    if (pd.length === 11 && pd === cpfDigits) {
+      matches.push({ idPaciente: pid, nomeCompleto: p.nomeCompleto || p.nomeExibicao || '' });
+      if (matches.length >= 3) break; // limita
+    }
+  }
+
+  if (!matches.length) return [];
+
+  return [{
+    code: "POSSIVEL_DUPLICIDADE_CPF",
+    message: "CPF já existe cadastrado para outro paciente (verifique possível duplicidade).",
+    details: {
+      cpf: _cpfFormat_(cpfDigits),
+      matches: matches
+    }
+  }];
+}
+
+/** =========================
+ *  AUDITORIA (Item 6 anterior)
+ *  ========================= */
+function _pacientesAudit_(ctx, action, eventType, outcome, details, target) {
+  try {
+    ctx = ctx || {};
+    action = String(action || ctx.action || "").trim();
+    eventType = String(eventType || "").trim() || "PACIENTES_EVENT";
+    outcome = String(outcome || "").trim() || "INFO";
+
+    var safeDetails = details || {};
+    if (safeDetails && typeof safeDetails === "object") {
+      delete safeDetails.token;
+      delete safeDetails.authToken;
+      delete safeDetails.Authorization;
+      delete safeDetails.authorization;
+      delete safeDetails.password;
+      delete safeDetails.senha;
+      delete safeDetails.senhaAtual;
+      delete safeDetails.novaSenha;
+    }
+
+    if (typeof Audit_securityEvent_ === "function") {
+      Audit_securityEvent_(ctx, action, eventType, outcome, safeDetails, target || {});
+      return true;
+    }
+
+    if (typeof Audit_log_ === "function") {
+      Audit_log_(ctx, {
+        outcome: outcome,
+        entity: "PACIENTE",
+        entityId: (target && (target.id || target.entityId)) ? String(target.id || target.entityId) : null,
+        extra: { eventType: eventType, details: safeDetails }
+      });
+      return true;
+    }
+
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
+
 /**
  * Obtém (ou cria) a aba Pacientes.
- * Observação: hoje você já está migrando no modo direto, então normalmente ela já existe.
  */
 function getPacientesSheet_() {
   var ss = _pacientesGetDb_();
@@ -98,11 +209,13 @@ function getPacientesSheet_() {
 
   var sh = ss.getSheetByName(PACIENTES_SHEET_NAME);
   if (!sh) {
-    // Se precisar criar do zero, já cria no modelo novo (v2)
     var header = [
       'idPaciente','status','nomeCompleto','nomeSocial','sexo','dataNascimento','estadoCivil','cpf','rg','rgOrgaoEmissor',
-      'telefonePrincipal','telefoneSecundario','email','cep','logradouro','numero','complemento','bairro','cidade','estado',
-      'tipoSanguineo','alergias','observacoesClinicas','observacoesAdministrativas','criadoEm','atualizadoEm'
+      'telefonePrincipal','telefoneSecundario','email',
+      'planoSaude','numeroCarteirinha',
+      'cep','logradouro','numero','complemento','bairro','cidade','estado',
+      'tipoSanguineo','alergias','observacoesClinicas','observacoesAdministrativas',
+      'criadoEm','atualizadoEm'
     ];
     sh = ss.insertSheet(PACIENTES_SHEET_NAME);
     sh.getRange(1, 1, 1, header.length).setValues([header]);
@@ -125,7 +238,7 @@ function getPacientesHeaderMap_() {
   var map = {};
   headerRow.forEach(function (colName, index) {
     var nome = String(colName || '').trim();
-    if (nome) map[nome] = index; // índice 0-based
+    if (nome) map[nome] = index; // 0-based
   });
   return map;
 }
@@ -153,7 +266,6 @@ function setCellByColName_(row, headerMap, colName, value) {
 
 /**
  * Gera um ID_Paciente único e estável.
- * Mantive seu formato para não quebrar referências:
  * "PAC-<timestamp>-<random>"
  */
 function gerarIdPaciente_() {
@@ -164,19 +276,17 @@ function gerarIdPaciente_() {
   return prefix + now + '-' + randStr;
 }
 
-/** Converte qualquer célula data -> string yyyy-MM-dd, se possível */
+/** Converte célula data -> yyyy-MM-dd se possível */
 function _readDateYMD_(cell) {
   if (cell instanceof Date) return _formatDateYMD_(cell);
   var s = _toText_(cell);
-  // aceita yyyy-mm-dd
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  // aceita dd/mm/yyyy
   var m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (m) return m[3] + '-' + m[2] + '-' + m[1];
   return s;
 }
 
-/** Converte qualquer célula data/hora -> string yyyy-MM-dd HH:mm:ss, se possível */
+/** Converte célula data/hora -> yyyy-MM-dd HH:mm:ss se possível */
 function _readDateTime_(cell) {
   if (cell instanceof Date) return _formatDateTime_(cell);
   return _toText_(cell);
@@ -185,39 +295,23 @@ function _readDateTime_(cell) {
 /** status -> ativo(boolean) */
 function _statusToAtivo_(status) {
   var st = String(status || '').trim().toUpperCase();
-  if (!st) return true; // default: ativo
+  if (!st) return true;
   return !(st === 'INATIVO' || st === 'OBITO');
 }
 
-/**
- * ativo(boolean ou 'SIM/NAO') -> status
- * ✅ UPDATE: se ativo não veio (undefined/null) e status vazio, default ATIVO.
- */
+/** ativo/status -> status final */
 function _ativoToStatus_(ativo, currentStatus) {
-  // Se o payload trouxe status, respeita status.
   if (currentStatus) return String(currentStatus).trim().toUpperCase();
-
-  // Se NÃO veio ativo, default ATIVO (evita criar paciente já INATIVO por engano)
   if (ativo === undefined || ativo === null) return 'ATIVO';
-
-  // Senão converte ativo
-  var b = !!ativo;
-  return b ? 'ATIVO' : 'INATIVO';
+  return (!!ativo) ? 'ATIVO' : 'INATIVO';
 }
 
-/**
- * Converte uma linha da planilha em objeto "paciente completo" para o front.
- * ✅ Lê tanto colunas novas quanto antigas (se existirem).
- * ✅ Retorna campos novos + aliases antigos.
- * ✅ UPDATE: adiciona nomeExibicao (campo extra, não quebra compat).
- */
+/** Linha -> objeto (para front) */
 function pacienteRowToObject_(row, headerMap) {
-  // IDs (novo e antigo)
   var colIdNew = _colAny_(headerMap, ['idPaciente']);
   var colIdOld = _colAny_(headerMap, ['ID_Paciente']);
   var idRaw = _toText_(colIdNew ? getCellByColName_(row, headerMap, colIdNew) : (colIdOld ? getCellByColName_(row, headerMap, colIdOld) : ''));
 
-  // status/ativo
   var colStatus = _colAny_(headerMap, ['status']);
   var colAtivoOld = _colAny_(headerMap, ['Ativo', 'ativo']);
   var status = _toText_(colStatus ? getCellByColName_(row, headerMap, colStatus) : '');
@@ -231,29 +325,29 @@ function pacienteRowToObject_(row, headerMap) {
   var statusFinal = status || 'ATIVO';
   var ativoBool = _statusToAtivo_(statusFinal);
 
-  // Nome
   var nomeCompleto = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['nomeCompleto','NomeCompleto']) || ''));
+  var nomeSocial = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['nomeSocial']) || ''));
+  var nomeExibicao = nomeCompleto || nomeSocial || '';
 
-  // Dados pessoais
   var sexo = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['sexo','Sexo']) || ''));
-
   var dataNascCell = getCellByColName_(row, headerMap, _colAny_(headerMap, ['dataNascimento','DataNascimento']) || '');
   var dataNascimentoStr = _readDateYMD_(dataNascCell);
 
-  // Contatos
   var tel1 = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['telefonePrincipal','Telefone']) || ''));
   var tel2 = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['telefoneSecundario','Telefone2']) || ''));
 
   var emailCol = _colAny_(headerMap, ['email','E-mail','Email']);
   var email = _toText_(emailCol ? getCellByColName_(row, headerMap, emailCol) : '');
 
-  // Doc
   var cpfCol = _colAny_(headerMap, ['cpf','CPF']);
   var cpf = _toText_(cpfCol ? getCellByColName_(row, headerMap, cpfCol) : '');
+
   var rg = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['rg','RG']) || ''));
   var rgOrgaoEmissor = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['rgOrgaoEmissor']) || ''));
 
-  // Endereço (novo) + compat antigo (Cidade/Bairro/EnderecoUf)
+  var planoSaude = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['planoSaude','PlanoSaude']) || ''));
+  var numeroCarteirinha = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['numeroCarteirinha','NumeroCarteirinha']) || ''));
+
   var cep = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['cep']) || ''));
   var logradouro = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['logradouro']) || ''));
   var numero = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['numero']) || ''));
@@ -262,11 +356,9 @@ function pacienteRowToObject_(row, headerMap) {
   var cidade = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['cidade','Cidade']) || ''));
   var estado = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['estado','EnderecoUf']) || ''));
 
-  // Observações
   var obsClin = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['observacoesClinicas']) || ''));
   var obsAdm = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['observacoesAdministrativas','ObsImportantes','observacoes']) || ''));
 
-  // Datas (novo: criadoEm/atualizadoEm) + compat antigo (DataCadastro)
   var criadoEmCol = _colAny_(headerMap, ['criadoEm']);
   var atualizadoEmCol = _colAny_(headerMap, ['atualizadoEm']);
   var dataCadastroCol = _colAny_(headerMap, ['DataCadastro']);
@@ -274,20 +366,13 @@ function pacienteRowToObject_(row, headerMap) {
   var criadoEm = _readDateTime_(criadoEmCol ? getCellByColName_(row, headerMap, criadoEmCol) : (dataCadastroCol ? getCellByColName_(row, headerMap, dataCadastroCol) : ''));
   var atualizadoEm = _readDateTime_(atualizadoEmCol ? getCellByColName_(row, headerMap, atualizadoEmCol) : '');
 
-  // Nome social (se existir)
-  var nomeSocial = _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['nomeSocial']) || ''));
-
-  // ✅ Campo extra útil (não quebra ninguém): nome de exibição
-  var nomeExibicao = nomeCompleto || nomeSocial || '';
-
-  // Monta objeto com campos novos + compat antigos
   return {
-    // novos (v2)
+    // v2
     idPaciente: idRaw,
     status: statusFinal,
     nomeCompleto: nomeCompleto,
     nomeSocial: nomeSocial,
-    nomeExibicao: nomeExibicao, // ✅ EXTRA (seguro)
+    nomeExibicao: nomeExibicao,
     sexo: sexo,
     dataNascimento: dataNascimentoStr,
     estadoCivil: _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['estadoCivil']) || '')),
@@ -297,6 +382,8 @@ function pacienteRowToObject_(row, headerMap) {
     telefonePrincipal: tel1,
     telefoneSecundario: tel2,
     email: email,
+    planoSaude: planoSaude,
+    numeroCarteirinha: numeroCarteirinha,
     cep: cep,
     logradouro: logradouro,
     numero: numero,
@@ -311,7 +398,7 @@ function pacienteRowToObject_(row, headerMap) {
     criadoEm: criadoEm,
     atualizadoEm: atualizadoEm,
 
-    // aliases antigos (compat)
+    // aliases (compat)
     ID_Paciente: idRaw,
     telefone1: tel1,
     telefone2: tel2,
@@ -319,20 +406,16 @@ function pacienteRowToObject_(row, headerMap) {
     enderecoCidade: cidade,
     enderecoBairro: bairro,
     enderecoUf: estado,
-    dataCadastro: criadoEm, // alias
+    dataCadastro: criadoEm,
     ativo: ativoBool,
 
-    // campos antigos que podem existir (mantidos se o front usar)
+    // antigos ocasionais
     profissao: _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['Profissão']) || '')),
-    planoSaude: _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['PlanoSaude']) || '')),
-    numeroCarteirinha: _toText_(getCellByColName_(row, headerMap, _colAny_(headerMap, ['NumeroCarteirinha']) || '')),
     obsImportantes: obsAdm
   };
 }
 
-/**
- * Lê todos os pacientes em forma de objetos.
- */
+/** Lê todos os pacientes */
 function readAllPacientes_() {
   var sh = getPacientesSheet_();
   var headerMap = getPacientesHeaderMap_();
@@ -357,9 +440,7 @@ function readAllPacientes_() {
   return list;
 }
 
-/**
- * ✅ Action de diagnóstico (para confirmar DB/aba/linhas)
- */
+/** Debug */
 function Pacientes_DebugInfo(payload) {
   var ss = _pacientesGetDb_();
   var sh = null;
@@ -386,7 +467,14 @@ function Pacientes_DebugInfo(payload) {
     var rows = sh.getRange(2, 1, Math.min(10, lastRow - 1), lastCol).getValues();
     for (var i = 0; i < rows.length; i++) {
       var p = pacienteRowToObject_(rows[i], map);
-      sample.push({ idPaciente: p.idPaciente, nomeCompleto: p.nomeCompleto, nomeSocial: p.nomeSocial, nomeExibicao: p.nomeExibicao, status: p.status, ativo: p.ativo });
+      sample.push({
+        idPaciente: p.idPaciente,
+        nomeCompleto: p.nomeCompleto,
+        status: p.status,
+        cpf: p.cpf,
+        telefonePrincipal: p.telefonePrincipal,
+        planoSaude: p.planoSaude
+      });
     }
   }
 
@@ -403,15 +491,11 @@ function Pacientes_DebugInfo(payload) {
 }
 
 /**
- * Roteador de ações específicas de Pacientes.
- * ✅ Mantém seus aliases antigos (não quebra front)
- * ✅ UPDATE: aceita ctx como terceiro argumento (ignora) para compat com Registry/Api
+ * Roteador de ações
  */
 function handlePacientesAction(action, payload, ctx) {
-  // compat: algumas chamadas podem vir como "Pacientes.ListarSelecao" etc.
   if (action === 'Pacientes.ListarSelecao') action = 'Pacientes_ListarSelecao';
-  if (action === 'Pacientes.CriarBasico') action = 'Pacientes_CriarBasico';
-  if (action === 'Pacientes.Criar') action = 'Pacientes_CriarBasico';
+  if (action === 'Pacientes.Criar') action = 'Pacientes_Criar';
   if (action === 'Pacientes.BuscarSimples') action = 'Pacientes_BuscarSimples';
   if (action === 'Pacientes.Listar' || action === 'Pacientes.ListarTodos') action = 'Pacientes_Listar';
   if (action === 'Pacientes.ObterPorId') action = 'Pacientes_ObterPorId';
@@ -425,8 +509,8 @@ function handlePacientesAction(action, payload, ctx) {
     case 'Pacientes_ListarSelecao':
       return Pacientes_ListarSelecao(payload);
 
-    case 'Pacientes_CriarBasico':
-      return Pacientes_CriarBasico(payload);
+    case 'Pacientes_Criar':
+      return Pacientes_Criar(payload, ctx);
 
     case 'Pacientes_BuscarSimples':
       return Pacientes_BuscarSimples(payload);
@@ -438,10 +522,10 @@ function handlePacientesAction(action, payload, ctx) {
       return Pacientes_ObterPorId(payload);
 
     case 'Pacientes_Atualizar':
-      return Pacientes_Atualizar(payload);
+      return Pacientes_Atualizar(payload, ctx);
 
     case 'Pacientes_AlterarStatus':
-      return Pacientes_AlterarStatus(payload);
+      return Pacientes_AlterarStatus(payload, ctx);
 
     default:
       _pacientesThrow_('PACIENTES_UNKNOWN_ACTION', 'Ação de Pacientes desconhecida: ' + action, null);
@@ -450,7 +534,6 @@ function handlePacientesAction(action, payload, ctx) {
 
 /**
  * Pacientes_ListarSelecao
- * ✅ Retorna seleção de pacientes ativos (compatível)
  */
 function Pacientes_ListarSelecao(payload) {
   var todos = readAllPacientes_();
@@ -464,7 +547,9 @@ function Pacientes_ListarSelecao(payload) {
       nomeSocial: p.nomeSocial,
       nomeExibicao: p.nomeExibicao,
       documento: p.cpf,
-      telefone: p.telefonePrincipal || p.telefone1 || p.telefone || ''
+      telefone: p.telefonePrincipal || p.telefone1 || p.telefone || '',
+      planoSaude: p.planoSaude || '',
+      numeroCarteirinha: p.numeroCarteirinha || ''
     };
   });
 
@@ -472,57 +557,60 @@ function Pacientes_ListarSelecao(payload) {
 }
 
 /**
- * Pacientes_CriarBasico
- * ✅ Agora grava no modelo novo (se as colunas existirem), mantendo compat.
+ * Pacientes_Criar (OFICIAL)
  */
-function Pacientes_CriarBasico(payload) {
+function Pacientes_Criar(payload, ctx) {
   payload = payload || {};
-  var nomeCompleto = _toText_(payload.nomeCompleto);
+  ctx = ctx || { action: "Pacientes_Criar" };
 
+  var nomeCompleto = _toText_(payload.nomeCompleto);
   if (!nomeCompleto) {
+    _pacientesAudit_(ctx, "Pacientes_Criar", "PACIENTE_CREATE", "ERROR", { reason: "MISSING_NOME" }, { id: "" });
     _pacientesThrow_('PACIENTES_MISSING_NOME', 'nomeCompleto é obrigatório para criar paciente.', null);
   }
+
+  // ✅ normalização leve (CPF e telefones)
+  var cpfFmt = _cpfFormat_(payload.cpf || payload.documento || '');
+  var tel1Fmt = _phoneFormat_(payload.telefonePrincipal || payload.telefone1 || payload.telefone || '');
+  var tel2Fmt = _phoneFormat_(payload.telefoneSecundario || payload.telefone2 || '');
+
+  // ✅ warnings de duplicidade (não bloqueia)
+  var warnings = _warningsDuplicidadeCpf_(cpfFmt, '');
 
   var sh = getPacientesSheet_();
   var headerMap = getPacientesHeaderMap_();
   var lastCol = sh.getLastColumn();
 
   var idPaciente = gerarIdPaciente_();
-  var agora = new Date();
-  var agoraStr = _formatDateTime_(agora);
-
+  var agoraStr = _formatDateTime_(new Date());
   var linha = new Array(lastCol).fill('');
 
-  // pega campos (aceita nomes novos e antigos do payload)
-  var cpf = _toText_(payload.cpf || payload.documento || '');
-  var telefone1 = _toText_(payload.telefonePrincipal || payload.telefone1 || payload.telefone || '');
-  var telefone2 = _toText_(payload.telefoneSecundario || payload.telefone2 || '');
   var email = _toText_(payload.email || '');
   var sexo = _toText_(payload.sexo || '');
   var dataNascimento = _toText_(payload.dataNascimento || payload.nascimento || '');
   var status = _toText_(payload.status || '');
   var ativoPayload = (typeof payload.ativo !== 'undefined') ? !!payload.ativo : undefined;
 
-  // endereço (novos + compat)
+  var planoSaude = _toText_(payload.planoSaude || '');
+  var numeroCarteirinha = _toText_(payload.numeroCarteirinha || '');
+
   var cidade = _toText_(payload.cidade || payload.enderecoCidade || '');
   var bairro = _toText_(payload.bairro || payload.enderecoBairro || '');
   var uf = _toText_(payload.estado || payload.enderecoUf || '');
 
-  // observações
   var obsClin = _toText_(payload.observacoesClinicas || '');
   var obsAdm = _toText_(payload.observacoesAdministrativas || payload.obsImportantes || payload.observacoes || '');
 
-  // grava ID (novo ou antigo)
+  // ID
   var colIdNew = _colAny_(headerMap, ['idPaciente']);
   var colIdOld = _colAny_(headerMap, ['ID_Paciente']);
   if (colIdNew) setCellByColName_(linha, headerMap, colIdNew, idPaciente);
   if (colIdOld) setCellByColName_(linha, headerMap, colIdOld, idPaciente);
 
-  // status/ativo
+  // status
   var colStatus = _colAny_(headerMap, ['status']);
   var colAtivoOld = _colAny_(headerMap, ['Ativo','ativo']);
   var statusFinal = _ativoToStatus_(ativoPayload, status);
-
   if (colStatus) setCellByColName_(linha, headerMap, colStatus, statusFinal);
   if (colAtivoOld) setCellByColName_(linha, headerMap, colAtivoOld, (statusFinal === 'ATIVO') ? 'SIM' : 'NAO');
 
@@ -532,23 +620,24 @@ function Pacientes_CriarBasico(payload) {
   if (colNomeNew) setCellByColName_(linha, headerMap, colNomeNew, nomeCompleto);
   if (colNomeOld) setCellByColName_(linha, headerMap, colNomeOld, nomeCompleto);
 
-  // cpf
+  // cpf (normalizado)
   var colCpfNew = _colAny_(headerMap, ['cpf']);
   var colCpfOld = _colAny_(headerMap, ['CPF']);
-  if (colCpfNew) setCellByColName_(linha, headerMap, colCpfNew, cpf);
-  if (colCpfOld) setCellByColName_(linha, headerMap, colCpfOld, cpf);
+  if (colCpfNew) setCellByColName_(linha, headerMap, colCpfNew, cpfFmt);
+  if (colCpfOld) setCellByColName_(linha, headerMap, colCpfOld, cpfFmt);
 
-  // telefones / email / sexo / data nasc
+  // telefones (normalizados)
   var colTelNew = _colAny_(headerMap, ['telefonePrincipal']);
   var colTelOld = _colAny_(headerMap, ['Telefone']);
-  if (colTelNew) setCellByColName_(linha, headerMap, colTelNew, telefone1);
-  if (colTelOld) setCellByColName_(linha, headerMap, colTelOld, telefone1);
+  if (colTelNew) setCellByColName_(linha, headerMap, colTelNew, tel1Fmt);
+  if (colTelOld) setCellByColName_(linha, headerMap, colTelOld, tel1Fmt);
 
   var colTel2New = _colAny_(headerMap, ['telefoneSecundario']);
   var colTel2Old = _colAny_(headerMap, ['Telefone2']);
-  if (colTel2New) setCellByColName_(linha, headerMap, colTel2New, telefone2);
-  if (colTel2Old) setCellByColName_(linha, headerMap, colTel2Old, telefone2);
+  if (colTel2New) setCellByColName_(linha, headerMap, colTel2New, tel2Fmt);
+  if (colTel2Old) setCellByColName_(linha, headerMap, colTel2Old, tel2Fmt);
 
+  // email/sexo/nasc
   var colEmailNew = _colAny_(headerMap, ['email']);
   var colEmailOld = _colAny_(headerMap, ['E-mail','Email']);
   if (colEmailNew) setCellByColName_(linha, headerMap, colEmailNew, email);
@@ -564,33 +653,40 @@ function Pacientes_CriarBasico(payload) {
   if (colNascNew) setCellByColName_(linha, headerMap, colNascNew, dataNascimento);
   if (colNascOld) setCellByColName_(linha, headerMap, colNascOld, dataNascimento);
 
-  // cidade/bairro/uf (novos + compat)
+  // plano/carteirinha
+  var colPlanoNew = _colAny_(headerMap, ['planoSaude']);
+  var colPlanoOld = _colAny_(headerMap, ['PlanoSaude']);
+  if (colPlanoNew) setCellByColName_(linha, headerMap, colPlanoNew, planoSaude);
+  if (colPlanoOld) setCellByColName_(linha, headerMap, colPlanoOld, planoSaude);
+
+  var colCartNew = _colAny_(headerMap, ['numeroCarteirinha']);
+  var colCartOld = _colAny_(headerMap, ['NumeroCarteirinha']);
+  if (colCartNew) setCellByColName_(linha, headerMap, colCartNew, numeroCarteirinha);
+  if (colCartOld) setCellByColName_(linha, headerMap, colCartOld, numeroCarteirinha);
+
+  // endereço básico compat
   if (_colAny_(headerMap, ['cidade'])) setCellByColName_(linha, headerMap, 'cidade', cidade);
   if (_colAny_(headerMap, ['bairro'])) setCellByColName_(linha, headerMap, 'bairro', bairro);
   if (_colAny_(headerMap, ['estado'])) setCellByColName_(linha, headerMap, 'estado', uf);
-
   if (_colAny_(headerMap, ['Cidade'])) setCellByColName_(linha, headerMap, 'Cidade', cidade);
   if (_colAny_(headerMap, ['Bairro'])) setCellByColName_(linha, headerMap, 'Bairro', bairro);
   if (_colAny_(headerMap, ['EnderecoUf'])) setCellByColName_(linha, headerMap, 'EnderecoUf', uf);
 
-  // obs (novos + compat)
+  // observações
   if (_colAny_(headerMap, ['observacoesClinicas'])) setCellByColName_(linha, headerMap, 'observacoesClinicas', obsClin);
   if (_colAny_(headerMap, ['observacoesAdministrativas'])) setCellByColName_(linha, headerMap, 'observacoesAdministrativas', obsAdm);
   if (_colAny_(headerMap, ['ObsImportantes'])) setCellByColName_(linha, headerMap, 'ObsImportantes', obsAdm);
 
-  // datas
+  // timestamps
   if (_colAny_(headerMap, ['criadoEm'])) setCellByColName_(linha, headerMap, 'criadoEm', agoraStr);
   if (_colAny_(headerMap, ['atualizadoEm'])) setCellByColName_(linha, headerMap, 'atualizadoEm', agoraStr);
   if (_colAny_(headerMap, ['DataCadastro'])) setCellByColName_(linha, headerMap, 'DataCadastro', agoraStr);
 
-  // campos adicionais se existirem
+  // extras se existirem
   if (_colAny_(headerMap, ['rg'])) setCellByColName_(linha, headerMap, 'rg', _toText_(payload.rg || ''));
   if (_colAny_(headerMap, ['RG'])) setCellByColName_(linha, headerMap, 'RG', _toText_(payload.rg || ''));
-
   if (_colAny_(headerMap, ['rgOrgaoEmissor'])) setCellByColName_(linha, headerMap, 'rgOrgaoEmissor', _toText_(payload.rgOrgaoEmissor || ''));
-
   if (_colAny_(headerMap, ['estadoCivil'])) setCellByColName_(linha, headerMap, 'estadoCivil', _toText_(payload.estadoCivil || ''));
-
   if (_colAny_(headerMap, ['nomeSocial'])) setCellByColName_(linha, headerMap, 'nomeSocial', _toText_(payload.nomeSocial || ''));
 
   if (_colAny_(headerMap, ['cep'])) setCellByColName_(linha, headerMap, 'cep', _toText_(payload.cep || ''));
@@ -603,7 +699,16 @@ function Pacientes_CriarBasico(payload) {
   var nextRow = sh.getLastRow() + 1;
   sh.getRange(nextRow, 1, 1, lastCol).setValues([linha]);
 
-  return { ID_Paciente: idPaciente, idPaciente: idPaciente };
+  _pacientesAudit_(
+    ctx,
+    "Pacientes_Criar",
+    "PACIENTE_CREATE",
+    warnings.length ? "WARN" : "SUCCESS",
+    { idPaciente: idPaciente, warningsCount: warnings.length },
+    { id: idPaciente, login: "" }
+  );
+
+  return { ID_Paciente: idPaciente, idPaciente: idPaciente, warnings: warnings };
 }
 
 /**
@@ -647,13 +752,29 @@ function Pacientes_BuscarSimples(payload) {
 }
 
 /**
- * Pacientes_Listar
+ * Pacientes_Listar (com paginação opcional)
  */
 function Pacientes_Listar(payload) {
   payload = payload || {};
   var termo = String(payload.termo || '').toLowerCase().trim();
   var somenteAtivos = !!payload.somenteAtivos;
   var ordenacao = String(payload.ordenacao || 'dataCadastroDesc');
+
+  var wantsPaging =
+    Object.prototype.hasOwnProperty.call(payload, 'page') ||
+    Object.prototype.hasOwnProperty.call(payload, 'pageSize');
+
+  var page = wantsPaging ? parseInt(payload.page, 10) : null;
+  var pageSize = wantsPaging ? parseInt(payload.pageSize, 10) : null;
+
+  if (!wantsPaging) {
+    page = null;
+    pageSize = null;
+  } else {
+    if (!page || page < 1) page = 1;
+    if (!pageSize || pageSize < 1) pageSize = 50;
+    if (pageSize > 500) pageSize = 500;
+  }
 
   var todos = readAllPacientes_();
 
@@ -678,7 +799,6 @@ function Pacientes_Listar(payload) {
       return 0;
     }
 
-    // dataCadastro/dataCadastroDesc -> usa criadoEm/dataCadastro (compat)
     var da = Date.parse(a.criadoEm || a.dataCadastro || '') || 0;
     var db = Date.parse(b.criadoEm || b.dataCadastro || '') || 0;
 
@@ -687,7 +807,35 @@ function Pacientes_Listar(payload) {
     return 0;
   });
 
-  return { pacientes: filtrados };
+  if (!wantsPaging) return { pacientes: filtrados };
+
+  var total = filtrados.length;
+  var start = (page - 1) * pageSize;
+  var end = start + pageSize;
+
+  var items = [];
+  if (start < total) items = filtrados.slice(start, Math.min(end, total));
+
+  var totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (page > totalPages) {
+    page = totalPages;
+    start = (page - 1) * pageSize;
+    end = start + pageSize;
+    items = filtrados.slice(start, Math.min(end, total));
+  }
+
+  return {
+    pacientes: items,
+    paging: {
+      enabled: true,
+      page: page,
+      pageSize: pageSize,
+      total: total,
+      totalPages: totalPages,
+      hasPrev: page > 1,
+      hasNext: page < totalPages
+    }
+  };
 }
 
 /**
@@ -709,12 +857,10 @@ function Pacientes_ObterPorId(payload) {
 
   if (lastRow < 2) _pacientesThrow_('PACIENTES_NOT_FOUND', 'Paciente não encontrado para ID: ' + id, null);
 
-  // busca pela coluna idPaciente (novo) ou ID_Paciente (antigo)
   var colId = _colAny_(headerMap, ['idPaciente','ID_Paciente']);
   if (!colId) _pacientesThrow_('PACIENTES_ID_COL_NOT_FOUND', 'Coluna idPaciente/ID_Paciente não encontrada na aba Pacientes.', null);
 
   var idxId = headerMap[colId];
-
   var range = sh.getRange(2, 1, lastRow - 1, lastCol);
   var values = range.getValues();
 
@@ -732,16 +878,25 @@ function Pacientes_ObterPorId(payload) {
 
 /**
  * Pacientes_Atualizar
- * ✅ Atualiza tanto colunas novas quanto antigas (se existirem).
- * ✅ Não exige enviar tudo: atualiza apenas campos presentes no payload.
  */
-function Pacientes_Atualizar(payload) {
+function Pacientes_Atualizar(payload, ctx) {
   payload = payload || {};
+  ctx = ctx || { action: "Pacientes_Atualizar" };
 
   var id = '';
   if (payload.ID_Paciente) id = String(payload.ID_Paciente).trim();
   else if (payload.idPaciente) id = String(payload.idPaciente).trim();
-  if (!id) _pacientesThrow_('PACIENTES_MISSING_ID', 'ID_Paciente é obrigatório em Pacientes_Atualizar.', null);
+  if (!id) {
+    _pacientesAudit_(ctx, "Pacientes_Atualizar", "PACIENTE_UPDATE", "ERROR", { reason: "MISSING_ID" }, { id: "" });
+    _pacientesThrow_('PACIENTES_MISSING_ID', 'ID_Paciente é obrigatório em Pacientes_Atualizar.', null);
+  }
+
+  // warnings: duplicidade CPF (se vier CPF no payload)
+  var warnings = [];
+  if (Object.prototype.hasOwnProperty.call(payload, "cpf") || Object.prototype.hasOwnProperty.call(payload, "documento")) {
+    var cpfCandidate = payload.cpf || payload.documento || '';
+    warnings = warnings.concat(_warningsDuplicidadeCpf_(cpfCandidate, id));
+  }
 
   var sh = getPacientesSheet_();
   var headerMap = getPacientesHeaderMap_();
@@ -765,17 +920,15 @@ function Pacientes_Atualizar(payload) {
   if (foundRowIndex === -1) _pacientesThrow_('PACIENTES_NOT_FOUND', 'Paciente não encontrado para ID: ' + id, null);
 
   var row = values[foundRowIndex];
+  var changed = [];
 
-  // helper para atualizar se veio no payload
-  function setIfProvided(colNames, propNames, transformFn) {
-    // detecta se algum prop foi enviado
+  function setIfProvided(colNames, propNames, transformFn, auditFieldName) {
     var has = false;
     for (var k = 0; k < propNames.length; k++) {
       if (Object.prototype.hasOwnProperty.call(payload, propNames[k])) { has = true; break; }
     }
     if (!has) return;
 
-    // obtém valor
     var v = '';
     for (var j = 0; j < propNames.length; j++) {
       var pn = propNames[j];
@@ -783,60 +936,63 @@ function Pacientes_Atualizar(payload) {
     }
     if (transformFn) v = transformFn(v);
 
-    // escreve nas colunas existentes (pode ter nova e antiga)
     for (var c = 0; c < colNames.length; c++) {
       var col = colNames[c];
       if (headerMap[col] != null) row[headerMap[col]] = (v === undefined || v === null) ? '' : v;
     }
+
+    changed.push(auditFieldName || propNames[0] || colNames[0] || "field");
   }
 
-  // campos principais
-  setIfProvided(['nomeCompleto','NomeCompleto'], ['nomeCompleto'], function (v) { return _toText_(v); });
-  setIfProvided(['nomeSocial'], ['nomeSocial'], function (v) { return _toText_(v); });
-  setIfProvided(['cpf','CPF'], ['cpf','documento'], function (v) { return _toText_(v); });
-  setIfProvided(['rg','RG'], ['rg'], function (v) { return _toText_(v); });
-  setIfProvided(['rgOrgaoEmissor'], ['rgOrgaoEmissor'], function (v) { return _toText_(v); });
+  setIfProvided(['nomeCompleto','NomeCompleto'], ['nomeCompleto'], function (v) { return _toText_(v); }, "nomeCompleto");
+  setIfProvided(['nomeSocial'], ['nomeSocial'], function (v) { return _toText_(v); }, "nomeSocial");
 
-  setIfProvided(['sexo','Sexo'], ['sexo'], function (v) { return _toText_(v); });
-  setIfProvided(['dataNascimento','DataNascimento'], ['dataNascimento'], function (v) { return _toText_(v); });
-  setIfProvided(['estadoCivil'], ['estadoCivil'], function (v) { return _toText_(v); });
+  // ✅ CPF normalizado
+  setIfProvided(['cpf','CPF'], ['cpf','documento'], function (v) { return _cpfFormat_(v); }, "cpf");
 
-  setIfProvided(['telefonePrincipal','Telefone'], ['telefonePrincipal','telefone1','telefone'], function (v) { return _toText_(v); });
-  setIfProvided(['telefoneSecundario','Telefone2'], ['telefoneSecundario','telefone2'], function (v) { return _toText_(v); });
+  setIfProvided(['rg','RG'], ['rg'], function (v) { return _toText_(v); }, "rg");
+  setIfProvided(['rgOrgaoEmissor'], ['rgOrgaoEmissor'], function (v) { return _toText_(v); }, "rgOrgaoEmissor");
 
-  // email
-  setIfProvided(['email','E-mail','Email'], ['email'], function (v) { return _toText_(v); });
+  setIfProvided(['sexo','Sexo'], ['sexo'], function (v) { return _toText_(v); }, "sexo");
+  setIfProvided(['dataNascimento','DataNascimento'], ['dataNascimento'], function (v) { return _toText_(v); }, "dataNascimento");
+  setIfProvided(['estadoCivil'], ['estadoCivil'], function (v) { return _toText_(v); }, "estadoCivil");
 
-  // endereço
-  setIfProvided(['cep'], ['cep'], function (v) { return _toText_(v); });
-  setIfProvided(['logradouro'], ['logradouro','endereco'], function (v) { return _toText_(v); });
-  setIfProvided(['numero'], ['numero'], function (v) { return _toText_(v); });
-  setIfProvided(['complemento'], ['complemento'], function (v) { return _toText_(v); });
-  setIfProvided(['bairro','Bairro'], ['bairro','enderecoBairro'], function (v) { return _toText_(v); });
-  setIfProvided(['cidade','Cidade'], ['cidade','enderecoCidade'], function (v) { return _toText_(v); });
-  setIfProvided(['estado','EnderecoUf'], ['estado','enderecoUf'], function (v) { return _toText_(v); });
+  // ✅ telefones normalizados
+  setIfProvided(['telefonePrincipal','Telefone'], ['telefonePrincipal','telefone1','telefone'], function (v) { return _phoneFormat_(v); }, "telefonePrincipal");
+  setIfProvided(['telefoneSecundario','Telefone2'], ['telefoneSecundario','telefone2'], function (v) { return _phoneFormat_(v); }, "telefoneSecundario");
 
-  // clínico/admin
-  setIfProvided(['tipoSanguineo'], ['tipoSanguineo'], function (v) { return _toText_(v); });
-  setIfProvided(['alergias'], ['alergias'], function (v) { return _toText_(v); });
-  setIfProvided(['observacoesClinicas'], ['observacoesClinicas'], function (v) { return _toText_(v); });
-  setIfProvided(['observacoesAdministrativas','ObsImportantes'], ['observacoesAdministrativas','obsImportantes','observacoes'], function (v) { return _toText_(v); });
+  setIfProvided(['email','E-mail','Email'], ['email'], function (v) { return _toText_(v); }, "email");
 
-  // status/ativo (aceita ambos)
+  setIfProvided(['planoSaude','PlanoSaude'], ['planoSaude'], function (v) { return _toText_(v); }, "planoSaude");
+  setIfProvided(['numeroCarteirinha','NumeroCarteirinha'], ['numeroCarteirinha'], function (v) { return _toText_(v); }, "numeroCarteirinha");
+
+  setIfProvided(['cep'], ['cep'], function (v) { return _toText_(v); }, "cep");
+  setIfProvided(['logradouro'], ['logradouro','endereco'], function (v) { return _toText_(v); }, "logradouro");
+  setIfProvided(['numero'], ['numero'], function (v) { return _toText_(v); }, "numero");
+  setIfProvided(['complemento'], ['complemento'], function (v) { return _toText_(v); }, "complemento");
+  setIfProvided(['bairro','Bairro'], ['bairro','enderecoBairro'], function (v) { return _toText_(v); }, "bairro");
+  setIfProvided(['cidade','Cidade'], ['cidade','enderecoCidade'], function (v) { return _toText_(v); }, "cidade");
+  setIfProvided(['estado','EnderecoUf'], ['estado','enderecoUf'], function (v) { return _toText_(v); }, "estado");
+
+  setIfProvided(['tipoSanguineo'], ['tipoSanguineo'], function (v) { return _toText_(v); }, "tipoSanguineo");
+  setIfProvided(['alergias'], ['alergias'], function (v) { return _toText_(v); }, "alergias");
+  setIfProvided(['observacoesClinicas'], ['observacoesClinicas'], function (v) { return _toText_(v); }, "observacoesClinicas");
+  setIfProvided(['observacoesAdministrativas','ObsImportantes'], ['observacoesAdministrativas','obsImportantes','observacoes'], function (v) { return _toText_(v); }, "observacoesAdministrativas");
+
   var statusProvided = Object.prototype.hasOwnProperty.call(payload, 'status');
   var ativoProvided = Object.prototype.hasOwnProperty.call(payload, 'ativo');
-
   if (statusProvided || ativoProvided) {
-    var status = statusProvided ? _toText_(payload.status).toUpperCase() : '';
+    var st = statusProvided ? _toText_(payload.status).toUpperCase() : '';
     var ativoBool = ativoProvided ? !!payload.ativo : undefined;
-    var statusFinal = _ativoToStatus_(ativoBool, status);
+    var statusFinal = _ativoToStatus_(ativoBool, st);
 
     if (headerMap['status'] != null) row[headerMap['status']] = statusFinal;
     if (headerMap['Ativo'] != null) row[headerMap['Ativo']] = (statusFinal === 'ATIVO') ? 'SIM' : 'NAO';
     if (headerMap['ativo'] != null) row[headerMap['ativo']] = (statusFinal === 'ATIVO') ? 'SIM' : 'NAO';
+
+    changed.push("status/ativo");
   }
 
-  // atualizadoEm
   var agoraStr = _formatDateTime_(new Date());
   if (headerMap['atualizadoEm'] != null) row[headerMap['atualizadoEm']] = agoraStr;
 
@@ -844,22 +1000,34 @@ function Pacientes_Atualizar(payload) {
   sh.getRange(writeRowIndex, 1, 1, lastCol).setValues([row]);
 
   var pacienteAtualizado = pacienteRowToObject_(row, headerMap);
-  return { paciente: pacienteAtualizado };
+
+  _pacientesAudit_(
+    ctx,
+    "Pacientes_Atualizar",
+    "PACIENTE_UPDATE",
+    warnings.length ? "WARN" : "SUCCESS",
+    { idPaciente: id, changedFields: changed, warningsCount: warnings.length },
+    { id: id, login: "" }
+  );
+
+  return { paciente: pacienteAtualizado, warnings: warnings };
 }
 
 /**
  * Pacientes_AlterarStatus
- * ✅ Continua aceitando payload.ativo (true/false) como antes.
- * ✅ Também aceita payload.status ("ATIVO" | "INATIVO" | "OBITO").
  */
-function Pacientes_AlterarStatus(payload) {
+function Pacientes_AlterarStatus(payload, ctx) {
   payload = payload || {};
+  ctx = ctx || { action: "Pacientes_AlterarStatus" };
 
   var id = '';
   if (payload.ID_Paciente) id = String(payload.ID_Paciente).trim();
   else if (payload.idPaciente) id = String(payload.idPaciente).trim();
 
-  if (!id) _pacientesThrow_('PACIENTES_MISSING_ID', 'ID_Paciente é obrigatório em Pacientes_AlterarStatus.', null);
+  if (!id) {
+    _pacientesAudit_(ctx, "Pacientes_AlterarStatus", "PACIENTE_STATUS", "ERROR", { reason: "MISSING_ID" }, { id: "" });
+    _pacientesThrow_('PACIENTES_MISSING_ID', 'ID_Paciente é obrigatório em Pacientes_AlterarStatus.', null);
+  }
 
   var status = null;
   if (Object.prototype.hasOwnProperty.call(payload, 'status')) {
@@ -876,6 +1044,7 @@ function Pacientes_AlterarStatus(payload) {
   }
 
   if (status === null && ativoBool === null) {
+    _pacientesAudit_(ctx, "Pacientes_AlterarStatus", "PACIENTE_STATUS", "ERROR", { reason: "MISSING_ATIVO_STATUS" }, { id: id });
     _pacientesThrow_('PACIENTES_MISSING_ATIVO_STATUS', 'Informe "ativo" (true/false) ou "status".', null);
   }
 
@@ -891,7 +1060,6 @@ function Pacientes_AlterarStatus(payload) {
   if (!colId) _pacientesThrow_('PACIENTES_COL_NOT_FOUND', 'Coluna idPaciente/ID_Paciente não encontrada.', null);
 
   var idxId = headerMap[colId];
-
   var range = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn());
   var values = range.getValues();
 
@@ -900,7 +1068,6 @@ function Pacientes_AlterarStatus(payload) {
     var rowId = String(values[i][idxId] || '').trim();
     if (rowId === id) { foundRowIndex = i; break; }
   }
-
   if (foundRowIndex === -1) _pacientesThrow_('PACIENTES_NOT_FOUND', 'Paciente não encontrado para ID: ' + id, null);
 
   var statusFinal = status ? status : (ativoBool ? 'ATIVO' : 'INATIVO');
@@ -908,64 +1075,19 @@ function Pacientes_AlterarStatus(payload) {
   if (colStatus) values[foundRowIndex][headerMap[colStatus]] = statusFinal;
   if (colAtivoOld) values[foundRowIndex][headerMap[colAtivoOld]] = (statusFinal === 'ATIVO') ? 'SIM' : 'NAO';
 
-  // atualizadoEm
   if (headerMap['atualizadoEm'] != null) values[foundRowIndex][headerMap['atualizadoEm']] = _formatDateTime_(new Date());
 
   var writeRowIndex = foundRowIndex + 2;
   sh.getRange(writeRowIndex, 1, 1, sh.getLastColumn()).setValues([values[foundRowIndex]]);
 
+  _pacientesAudit_(
+    ctx,
+    "Pacientes_AlterarStatus",
+    "PACIENTE_STATUS",
+    "SUCCESS",
+    { idPaciente: id, status: statusFinal },
+    { id: id, login: "" }
+  );
+
   return { ID_Paciente: id, idPaciente: id, status: statusFinal, ativo: (statusFinal === 'ATIVO') };
-}
-
-/* =======================================================================
-   MIGRAÇÃO (opcional): ajuda a diagnosticar cabeçalho e/ou adicionar colunas
-   ======================================================================= */
-function Pacientes_MigrarAdicionarColunasExtras() {
-  var sh = getPacientesSheet_();
-  var lastCol = sh.getLastColumn();
-  var headerRow = sh.getRange(1, 1, 1, lastCol).getValues()[0];
-
-  var existentes = {};
-  for (var i = 0; i < headerRow.length; i++) {
-    var nome = String(headerRow[i] || '').trim();
-    if (nome) existentes[nome] = true;
-  }
-
-  // Agora as "extras" são as do modelo novo (v2) — só adiciona se estiverem faltando.
-  var extras = [
-    'status','nomeSocial','estadoCivil','rg','rgOrgaoEmissor',
-    'telefoneSecundario','cep','logradouro','numero','complemento','bairro','cidade','estado',
-    'tipoSanguineo','alergias','observacoesClinicas','observacoesAdministrativas','criadoEm','atualizadoEm'
-  ];
-
-  var colunasParaAdicionar = [];
-  extras.forEach(function (nome) {
-    if (!existentes[nome] && !existentes[_aliasToOld_(nome)]) {
-      colunasParaAdicionar.push(nome);
-    }
-  });
-
-  if (!colunasParaAdicionar.length) {
-    Logger.log('Nenhuma coluna nova foi necessária. Todas já existem.');
-    return;
-  }
-
-  sh.getRange(1, headerRow.length + 1, 1, colunasParaAdicionar.length).setValues([colunasParaAdicionar]);
-  Logger.log('Colunas adicionadas na aba Pacientes: ' + colunasParaAdicionar.join(', '));
-}
-
-function _aliasToOld_(name) {
-  // pequeno helper para evitar duplicar se existir somente no formato antigo
-  var map = {
-    'telefoneSecundario': 'Telefone2',
-    'cidade': 'Cidade',
-    'bairro': 'Bairro',
-    'estado': 'EnderecoUf',
-    'email': 'E-mail',
-    'cpf': 'CPF',
-    'sexo': 'Sexo',
-    'nomeCompleto': 'NomeCompleto',
-    'criadoEm': 'DataCadastro'
-  };
-  return map[name] || '';
 }
