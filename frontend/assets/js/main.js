@@ -11,7 +11,7 @@
 
   // ✅ Bump quando fizer mudanças em JS e quiser quebrar cache do GitHub Pages
   // ✅ Atualizado para propagar ajustes recentes (sidebar delegation + topbar user)
-  const APP_VERSION = "1.0.7.4";
+  const APP_VERSION = "1.0.7.5";
 
   // ✅ Expor versão para widgets (ex.: sidebar mostrar versão atual)
   PRONTIO.APP_VERSION = APP_VERSION;

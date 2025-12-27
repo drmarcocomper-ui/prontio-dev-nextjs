@@ -11,6 +11,23 @@
   display: none !important;
 }
 
+/* ✅ NOVO: Modo carregando (usado pelo page-pacientes.js via body.is-loading) */
+body[data-page-id="pacientes"].is-loading {
+  cursor: progress;
+}
+
+body[data-page-id="pacientes"].is-loading .tabela-wrapper,
+body[data-page-id="pacientes"].is-loading #secCadastroPaciente,
+body[data-page-id="pacientes"].is-loading .linha-controles,
+body[data-page-id="pacientes"].is-loading .linha-paginacao,
+body[data-page-id="pacientes"].is-loading .acoes-lista {
+  opacity: 0.75;
+}
+
+body[data-page-id="pacientes"].is-loading .btn {
+  pointer-events: none;
+}
+
 /* MENSAGEM DE STATUS */
 body[data-page-id="pacientes"] #mensagem {
   margin-bottom: 12px;

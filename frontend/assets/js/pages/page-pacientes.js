@@ -191,11 +191,122 @@
   let pageSizeAtual = 50;
   let lastPaging = null;
 
+  // ✅ Modo carregando: trava UI durante chamadas e aplica aria-busy
+  function setLoading_(isLoading) {
+    carregando = !!isLoading;
+
+    try {
+      document.body.classList.toggle("is-loading", carregando);
+    } catch (_) {}
+
+    try {
+      const wrap = document.querySelector(".tabela-wrapper");
+      if (wrap) wrap.setAttribute("aria-busy", carregando ? "true" : "false");
+    } catch (_) {}
+
+    const disableIds = [
+      "btnCarregarPacientes",
+      "btnNovoPaciente",
+      "btnSalvarPaciente",
+      "btnCancelarEdicao",
+      "btnEditar",
+      "btnInativar",
+      "btnReativar",
+      "btnIrProntuario",
+      "btnCopiarDadosPaciente",
+      "btnPaginaAnterior",
+      "btnPaginaProxima",
+      "chkUsarPaginacao",
+      "selectPageSize",
+      "btnConfigColunas"
+    ];
+
+    if (carregando) {
+      disableIds.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = true;
+      });
+
+      try {
+        const filtro = document.getElementById("filtroTexto");
+        if (filtro) filtro.disabled = true;
+        const ativos = document.getElementById("chkSomenteAtivos");
+        if (ativos) ativos.disabled = true;
+        const orden = document.getElementById("selectOrdenacao");
+        if (orden) orden.disabled = true;
+      } catch (_) {}
+    } else {
+      // Ao sair do loading, não forçamos habilitar aqui.
+      // A lógica de seleção/estado atualiza os botões corretamente depois.
+      try {
+        const filtro = document.getElementById("filtroTexto");
+        if (filtro) filtro.disabled = false;
+        const ativos = document.getElementById("chkSomenteAtivos");
+        if (ativos) ativos.disabled = false;
+        const orden = document.getElementById("selectOrdenacao");
+        if (orden) orden.disabled = false;
+        const btnCols = document.getElementById("btnConfigColunas");
+        if (btnCols) btnCols.disabled = false;
+
+        const chkPag = document.getElementById("chkUsarPaginacao");
+        if (chkPag) chkPag.disabled = false;
+
+        const selPage = document.getElementById("selectPageSize");
+        if (selPage) selPage.disabled = !usarPaginacao;
+
+        const btnPrev = document.getElementById("btnPaginaAnterior");
+        const btnNext = document.getElementById("btnPaginaProxima");
+        if (btnPrev) btnPrev.disabled = !(usarPaginacao && lastPaging && lastPaging.hasPrev);
+        if (btnNext) btnNext.disabled = !(usarPaginacao && lastPaging && lastPaging.hasNext);
+
+        // Botões da lista dependem de seleção ativa
+        const hasSel = !!pacienteSelecionadoId;
+        const btnIr = document.getElementById("btnIrProntuario");
+        const btnEd = document.getElementById("btnEditar");
+        const btnIn = document.getElementById("btnInativar");
+        const btnRe = document.getElementById("btnReativar");
+        const btnCp = document.getElementById("btnCopiarDadosPaciente");
+
+        if (btnIr) btnIr.disabled = !hasSel;
+        if (btnEd) btnEd.disabled = !hasSel;
+        if (btnCp) btnCp.disabled = !hasSel;
+
+        // Inativar/reativar depende de ativo
+        if (btnIn && btnRe) {
+          if (!hasSel) {
+            btnIn.disabled = true;
+            btnRe.disabled = true;
+          } else {
+            if (pacienteSelecionadoAtivo) {
+              btnIn.disabled = false;
+              btnRe.disabled = true;
+            } else {
+              btnIn.disabled = true;
+              btnRe.disabled = false;
+            }
+          }
+        }
+
+        // Form / edição
+        const btnSalvar = document.getElementById("btnSalvarPaciente");
+        const btnCancelar = document.getElementById("btnCancelarEdicao");
+        if (btnSalvar) btnSalvar.disabled = false;
+        if (btnCancelar) btnCancelar.disabled = !modoEdicao;
+
+        const btnNovo = document.getElementById("btnNovoPaciente");
+        if (btnNovo) btnNovo.disabled = false;
+
+        const btnCar = document.getElementById("btnCarregarPacientes");
+        if (btnCar) btnCar.disabled = false;
+      } catch (_) {}
+    }
+  }
+
   function initPacientesPage() {
     initEventos();
     carregarConfigColunas();
     carregarPreferenciasPaginacao_();
-    registrarAtalhosTeclado_(); // ✅ novo
+    registrarAtalhosTeclado_();
     carregarPacientes();
   }
 
@@ -272,6 +383,7 @@
     function scheduleReload(ms) {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(function () {
+        if (carregando) return;
         if (usarPaginacao) pageAtual = 1;
         carregarPacientes();
       }, ms);
@@ -293,6 +405,7 @@
 
     if (btnConfigColunas && painelColunas) {
       btnConfigColunas.addEventListener("click", function () {
+        if (carregando) return;
         painelColunas.classList.toggle("oculto");
       });
     }
@@ -318,6 +431,7 @@
 
     if (chkUsarPaginacao) {
       chkUsarPaginacao.addEventListener("change", function () {
+        if (carregando) return;
         usarPaginacao = !!chkUsarPaginacao.checked;
         pageAtual = 1;
         salvarPreferenciasPaginacao_();
@@ -328,6 +442,7 @@
 
     if (selectPageSize) {
       selectPageSize.addEventListener("change", function () {
+        if (carregando) return;
         const n = parseInt(selectPageSize.value, 10);
         if (n && n > 0) pageSizeAtual = n;
         pageAtual = 1;
@@ -338,7 +453,7 @@
 
     if (btnPaginaAnterior) {
       btnPaginaAnterior.addEventListener("click", function () {
-        if (!usarPaginacao) return;
+        if (carregando || !usarPaginacao) return;
         if (pageAtual > 1) {
           pageAtual -= 1;
           carregarPacientes();
@@ -348,7 +463,7 @@
 
     if (btnPaginaProxima) {
       btnPaginaProxima.addEventListener("click", function () {
-        if (!usarPaginacao) return;
+        if (carregando || !usarPaginacao) return;
         if (lastPaging && lastPaging.hasNext) {
           pageAtual += 1;
           carregarPacientes();
@@ -357,17 +472,14 @@
     }
   }
 
-  // ✅ Atalhos de teclado (novo)
   function registrarAtalhosTeclado_() {
     document.addEventListener("keydown", function (ev) {
       try {
         const key = String(ev.key || "").toLowerCase();
 
-        // Ignora se usuário está digitando em input/textarea/select (exceto ESC)
         const tag = (ev.target && ev.target.tagName) ? String(ev.target.tagName).toLowerCase() : "";
         const isTypingField = (tag === "input" || tag === "textarea" || tag === "select");
 
-        // ESC: fecha painel e/ou cancela edição
         if (key === "escape") {
           const painel = document.getElementById("painelColunas");
           if (painel && !painel.classList.contains("oculto")) {
@@ -375,7 +487,6 @@
             ev.preventDefault();
             return;
           }
-          // cancela edição se estiver em modo edição
           if (modoEdicao) {
             sairModoEdicao(true);
             ev.preventDefault();
@@ -384,10 +495,8 @@
           return;
         }
 
-        // Se estiver digitando, não intercepta atalhos para não atrapalhar
         if (isTypingField) return;
 
-        // Ctrl+N: novo paciente
         if ((ev.ctrlKey || ev.metaKey) && key === "n") {
           const btnNovo = document.getElementById("btnNovoPaciente");
           if (btnNovo && !btnNovo.disabled) {
@@ -397,14 +506,11 @@
           return;
         }
 
-        // Ctrl+F: foca busca (não impede totalmente o Find do browser em todos)
         if ((ev.ctrlKey || ev.metaKey) && key === "f") {
           const filtro = document.getElementById("filtroTexto");
           if (filtro && typeof filtro.focus === "function") {
             filtro.focus();
-            // seleciona texto existente
             try { filtro.select(); } catch (_) {}
-            // evita duplicar ações quando possível
             ev.preventDefault();
           }
           return;
@@ -628,24 +734,23 @@
     }
 
     mostrarMensagem(mensagemProcesso, "info");
+    setLoading_(true);
 
     const payload = estaEditando ? Object.assign({ idPaciente: idEmEdicao }, dados) : dados;
 
     let resp;
     try {
-      carregando = true;
       resp = await callApiData({ action, payload });
     } catch (err) {
-      carregando = false;
       const msg = (err && err.message) || "Erro ao salvar/atualizar paciente.";
       console.error("PRONTIO: erro em salvarPaciente:", err);
       mostrarMensagem(msg, "erro");
+      setLoading_(false);
       return;
     }
 
-    carregando = false;
-
     await carregarPacientes();
+
     mostrarMensagem(mensagemSucesso, "sucesso");
 
     const warnings = resp && resp.warnings ? resp.warnings : null;
@@ -657,6 +762,8 @@
     if (form) form.reset();
     if (estaEditando) sairModoEdicao(false);
     mostrarSecaoCadastro(false);
+
+    setLoading_(false);
   }
 
   async function carregarPacientes() {
@@ -683,22 +790,21 @@
       payload.pageSize = pageSizeAtual;
     }
 
+    setLoading_(true);
+
     let data;
     try {
-      carregando = true;
       data = await callApiData({
         action: "Pacientes_Listar",
         payload: payload
       });
     } catch (err) {
-      carregando = false;
       const msg = (err && err.message) || "Erro ao carregar pacientes.";
       console.error("PRONTIO: erro em carregarPacientes:", err);
       mostrarMensagem(msg, "erro");
+      setLoading_(false);
       return;
     }
-
-    carregando = false;
 
     pacientesCache = (data && (data.pacientes || data.lista || data.items)) || [];
     aplicarFiltrosETabela();
@@ -711,6 +817,7 @@
     if (pacientesCache.length === 0) {
       atualizarSelecaoPaciente(null, null, null);
       if (modoEdicao) sairModoEdicao(false);
+      setLoading_(false);
       return;
     }
 
@@ -758,6 +865,8 @@
         atualizarUIEdicao();
       }
     }
+
+    setLoading_(false);
   }
 
   function aplicarFiltrosETabela() {
@@ -963,6 +1072,8 @@
   }
 
   async function alterarStatusPaciente(ativoDesejado) {
+    if (carregando) return;
+
     if (!pacienteSelecionadoId) {
       mostrarMensagem("Selecione um paciente na lista primeiro.", "info");
       return;
@@ -972,25 +1083,24 @@
     if (!global.confirm("Tem certeza que deseja " + acaoTexto + " este paciente?")) return;
 
     mostrarMensagem("Alterando status do paciente (" + acaoTexto + ")...", "info");
+    setLoading_(true);
 
     try {
-      carregando = true;
       await callApiData({
         action: "Pacientes_AlterarStatusAtivo",
         payload: { idPaciente: pacienteSelecionadoId, ativo: ativoDesejado }
       });
     } catch (err) {
-      carregando = false;
       const msg = (err && err.message) || "Erro ao alterar status do paciente.";
       console.error("PRONTIO: erro em alterarStatusPaciente:", err);
       mostrarMensagem(msg, "erro");
+      setLoading_(false);
       return;
     }
 
-    carregando = false;
-
     mostrarMensagem("Status do paciente atualizado com sucesso.", "sucesso");
     await carregarPacientes();
+    setLoading_(false);
   }
 
   function carregarConfigColunas() {
