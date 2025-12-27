@@ -23,6 +23,9 @@
 //  - Event delegation para toggle do drawer via:
 //      [data-sidebar-toggle] OU .js-toggle-sidebar
 //    (independe da ordem de montagem da topbar).
+//
+// ✅ Extra (sem quebrar):
+//  - Preenche #appVersion com PRONTIO.APP_VERSION (exposto pelo main.js)
 // =====================================
 
 (function (global, document) {
@@ -44,10 +47,6 @@
 
   /* -------- helpers de estado compacto (desktop) -------- */
 
-  /**
-   * Aplica estado compacto / expandido usando APENAS body.sidebar-compact.
-   * @param {boolean} isCompactFlag
-   */
   function setCompact(isCompactFlag) {
     const body = document.body;
     if (!body) return;
@@ -65,11 +64,6 @@
     return body.classList.contains("sidebar-compact");
   }
 
-  /**
-   * Ajusta aria-pressed no botão de toggle compacto.
-   * @param {HTMLElement} btn
-   * @param {boolean} isCompactFlag
-   */
   function syncToggleButtonAria(btn, isCompactFlag) {
     if (!btn) return;
     btn.setAttribute("aria-pressed", isCompactFlag ? "true" : "false");
@@ -118,14 +112,6 @@
 
   /* -------- destacar link ativo -------- */
 
-  /**
-   * Destaca o link ativo conforme data-page-id do <body>.
-   * Usa classe .active e aria-current="page".
-   *
-   * ✅ Mantém compatibilidade também com CSS que aceita:
-   *  - .is-active
-   *  - [data-active="true"]
-   */
   function highlightActiveNavLink(sidebar) {
     if (!sidebar || !document.body) return;
 
@@ -157,11 +143,6 @@
 
   /* -------- visibilidade do PRONTUÁRIO -------- */
 
-  /**
-   * Mostra/oculta o item PRONTUÁRIO conforme body.dataset.hasProntuario.
-   * Esperado:
-   *   <body data-has-prontuario="true"> quando um paciente estiver aberto.
-   */
   function updateProntuarioVisibility(sidebar) {
     if (!sidebar || !document.body) return;
 
@@ -179,44 +160,19 @@
   function setupSystemActions(sidebar) {
     if (!sidebar) return;
 
-    // Ações do grupo SISTEMA que tenham data-nav-target
-    const systemButtons = sidebar.querySelectorAll(".sidebar-group [data-nav-target]");
-
-    systemButtons.forEach(function (btn) {
-      btn.addEventListener("click", function (event) {
-        const target = btn.getAttribute("data-nav-target");
-        if (!target) return;
-
-        // Se existir um handler global, usamos
-        if (PRONTIO.ui && typeof PRONTIO.ui.handleSystemNav === "function") {
-          PRONTIO.ui.handleSystemNav(target);
-        } else {
-          // Fallback padrão:
-          // - "tema" aciona o botão de tema da TOPBAR
-          if (target === "tema") {
-            event.preventDefault();
-            const themeBtn = document.getElementById("btn-theme-toggle");
-            if (themeBtn && typeof themeBtn.click === "function") {
-              themeBtn.click();
-            }
-          }
-          // "sobre" é via data-modal-open + bindTriggers (fora daqui)
-        }
-
-        if (isMobile_()) closeDrawer();
-      });
-    });
-
     // Ação "Sair"
     const logoutBtn = sidebar.querySelector("[data-nav-action='logout']");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function () {
-        if (PRONTIO.ui && typeof PRONTIO.ui.handleLogout === "function") {
+        // ✅ Preferir auth.logout (já existe e é resiliente)
+        if (PRONTIO.auth && typeof PRONTIO.auth.logout === "function") {
+          PRONTIO.auth.logout({ redirect: true, clearChat: true });
+        } else if (PRONTIO.ui && typeof PRONTIO.ui.handleLogout === "function") {
           PRONTIO.ui.handleLogout();
         } else {
           const ok = global.confirm("Deseja realmente sair do PRONTIO?");
           if (ok) {
-            global.location.href = "index.html";
+            global.location.href = "login.html";
           }
         }
 
@@ -235,11 +191,8 @@
     document.documentElement.dataset[DOC_FLAG_DELEGATION_BOUND] = "1";
 
     document.addEventListener("click", function (ev) {
-      // Captura clique em botões/elementos que declarem intenção de abrir menu
       const target = ev.target;
 
-      // Compat: botão com data-sidebar-toggle (recomendado)
-      // Compat: classe .js-toggle-sidebar (legado)
       const trigger =
         target && target.closest
           ? target.closest("[data-sidebar-toggle], .js-toggle-sidebar")
@@ -272,6 +225,20 @@
     });
   }
 
+  /* -------- versão do app -------- */
+
+  function applyAppVersion_(sidebar) {
+    if (!sidebar) return;
+
+    const el = sidebar.querySelector("#appVersion");
+    if (!el) return;
+
+    try {
+      const v = (global.PRONTIO && global.PRONTIO.APP_VERSION) ? String(global.PRONTIO.APP_VERSION) : "";
+      if (v) el.textContent = "v" + v;
+    } catch (_) {}
+  }
+
   // -----------------------------------------------------
   // Inicializador público (idempotente)
   // -----------------------------------------------------
@@ -294,34 +261,31 @@
 
     // Idempotência: não duplicar listeners se init for chamado novamente
     if (sidebar.dataset && sidebar.dataset.sidebarInited === "true") {
-      // Atualiza estado dinâmico (pode mudar por página/estado)
       highlightActiveNavLink(sidebar);
       updateProntuarioVisibility(sidebar);
+      applyAppVersion_(sidebar);
       return;
     }
     sidebar.dataset.sidebarInited = "true";
 
-    // Estado inicial global:
-    // - drawer fechado
+    // Estado inicial global: drawer fechado
     body.classList.remove("sidebar-open");
 
     // Estado compacto padrão: restaurado do storage
     const initialCompact = loadCompactFromStorage();
     setCompact(initialCompact);
 
-    // 1) Botão de modo compacto (desktop) / toggle drawer (mobile)
+    // Botão de modo compacto (desktop) / toggle drawer (mobile)
     const btnCompact = sidebar.querySelector(".js-toggle-compact");
     if (btnCompact) {
       syncToggleButtonAria(btnCompact, initialCompact);
 
       btnCompact.addEventListener("click", function () {
-        // Em mobile, esse botão atua como toggle do drawer
         if (isMobile_()) {
           toggleDrawer();
           return;
         }
 
-        // Desktop: alterna modo compacto + salva estado
         const next = !isCompact();
         setCompact(next);
         syncToggleButtonAria(btnCompact, next);
@@ -329,7 +293,7 @@
       });
     }
 
-    // 2) Backdrop do drawer (fecha ao clicar)
+    // Backdrop do drawer (fecha ao clicar)
     const backdrop = document.querySelector("[data-sidebar-backdrop]");
     if (backdrop) {
       if (!(backdrop.dataset && backdrop.dataset.sidebarBackdropBound === "true")) {
@@ -340,13 +304,12 @@
       }
     }
 
-    // 3) Ao clicar em qualquer item de menu, fecha o drawer em mobile
+    // Ao clicar em qualquer item de menu, fecha o drawer em mobile
     const navLinks = sidebar.querySelectorAll(".nav-link");
     navLinks.forEach(function (link) {
       link.addEventListener("click", function () {
         if (!isMobile_()) return;
 
-        // não fecha se o item é "Em breve" / desativado
         const isDisabled =
           link.getAttribute("aria-disabled") === "true" ||
           link.getAttribute("data-soon") === "true";
@@ -355,42 +318,23 @@
       });
     });
 
-    // 4) Destacar link ativo
     highlightActiveNavLink(sidebar);
-
-    // 5) Visibilidade do PRONTUÁRIO (dinâmico)
     updateProntuarioVisibility(sidebar);
-
-    // 6) Ações especiais do grupo SISTEMA
     setupSystemActions(sidebar);
-
-    // 7) Proteção extra para "Em breve"
     setupSoonLinks(sidebar);
 
-    console.log(
-      "PRONTIO.sidebar: initSidebar concluído. Compacto? =",
-      isCompact(),
-      "| Drawer aberto? =",
-      body.classList.contains("sidebar-open")
-    );
+    // ✅ versão dinâmica
+    applyAppVersion_(sidebar);
   }
-
-  // -----------------------------------------------------
-  // Registro no namespace PRONTIO (padrão widgets)
-  // -----------------------------------------------------
 
   PRONTIO.widgets.sidebar = {
     init: initSidebar
   };
 
-  // Retrocompat: window.initSidebar e PRONTIO.ui.sidebar.init
+  // Retrocompat
   try {
     PRONTIO.ui.sidebar = PRONTIO.ui.sidebar || {};
     PRONTIO.ui.sidebar.init = initSidebar;
-
-    // função global antiga, se alguma página ainda chamar direto
     global.initSidebar = global.initSidebar || initSidebar;
-  } catch (e) {
-    // ambiente sem window (ex.: testes), ignorar
-  }
+  } catch (e) {}
 })(window, document);

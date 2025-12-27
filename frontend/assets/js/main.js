@@ -10,9 +10,11 @@
   PRONTIO._mainBootstrapped = true;
 
   // ✅ Bump quando fizer mudanças em JS e quiser quebrar cache do GitHub Pages
-  // Observação: no print estava v=1.0.7.1 — alinhei aqui para evitar confusão.
-  // ✅ Atualizado para propagar ajustes recentes (sidebar delegation + topbar partial)
-  const APP_VERSION = "1.0.9";
+  // ✅ Atualizado para propagar ajustes recentes (sidebar delegation + topbar user)
+  const APP_VERSION = "1.0.7.4";
+
+  // ✅ Expor versão para widgets (ex.: sidebar mostrar versão atual)
+  PRONTIO.APP_VERSION = APP_VERSION;
 
   // ============================================================
   // Skeleton (mantido) + breakpoint alinhado com JS (900px)
@@ -84,8 +86,7 @@
   function getDataPage_() {
     try {
       const body = document.body;
-      const pid =
-        (body && body.dataset && (body.dataset.pageId || body.dataset.page)) || "";
+      const pid = (body && body.dataset && (body.dataset.pageId || body.dataset.page)) || "";
       return String(pid || "").toLowerCase();
     } catch (e) {
       return "";
@@ -124,12 +125,8 @@
       const s = document.createElement("script");
       s.src = withVersion_(src);
       s.defer = true;
-      s.onload = function () {
-        resolve(true);
-      };
-      s.onerror = function () {
-        resolve(false);
-      };
+      s.onload = function () { resolve(true); };
+      s.onerror = function () { resolve(false); };
       document.head.appendChild(s);
     });
   }
@@ -144,7 +141,7 @@
   }
 
   // ============================================================
-  // ✅ Core: garante API e AUTH antes de rodar pages
+  // ✅ Core: garante API + SESSION + AUTH antes de rodar pages
   // ============================================================
   async function ensureCoreLoaded_() {
     const hasApi =
@@ -152,7 +149,9 @@
       typeof PRONTIO.api.callApiEnvelope === "function" &&
       typeof PRONTIO.api.callApiData === "function";
 
-    const hasAuth = PRONTIO.auth && typeof PRONTIO.auth.getToken === "function";
+    const hasAuth =
+      PRONTIO.auth &&
+      typeof PRONTIO.auth.getToken === "function";
 
     if (hasApi && hasAuth) return true;
 
@@ -164,7 +163,15 @@
 
     const okApi = await loadOnce_("assets/js/core/api.js");
 
-    // ✅ FIX: auth.js precisa existir antes do login/page scripts
+    // ✅ Session (UI state) — seu arquivo existente
+    await loadOnce_("assets/js/core/session.js");
+    try {
+      if (PRONTIO.core && PRONTIO.core.session && typeof PRONTIO.core.session.init === "function") {
+        PRONTIO.core.session.init();
+      }
+    } catch (_) {}
+
+    // ✅ Auth (vai gravar user na sessão e cachear nome/perfil)
     await loadOnce_("assets/js/core/auth.js");
 
     // app.js (compat)
@@ -177,13 +184,14 @@
       typeof PRONTIO.api.callApiData === "function";
 
     const hasAuthAfter =
-      PRONTIO.auth && typeof PRONTIO.auth.getToken === "function";
+      PRONTIO.auth &&
+      typeof PRONTIO.auth.getToken === "function";
 
     return !!(hasApiAfter && hasAuthAfter);
   }
 
   // ============================================================
-  // Modais (rebind usado pelo sidebar-loader) — agora idempotente
+  // Modais (rebind usado pelo sidebar-loader) — idempotente
   // ============================================================
   function bindModalTriggers_(doc) {
     const root = doc || document;
@@ -230,9 +238,7 @@
 
     function apply(theme) {
       document.body.setAttribute("data-theme", theme);
-      try {
-        localStorage.setItem("prontio_theme", theme);
-      } catch (e) {}
+      try { localStorage.setItem("prontio_theme", theme); } catch (e) {}
 
       const sun = document.querySelector(".js-theme-icon-sun");
       const moon = document.querySelector(".js-theme-icon-moon");
@@ -250,9 +256,7 @@
 
     let theme = "light";
     try {
-      theme =
-        localStorage.getItem("prontio_theme") ||
-        (document.body.getAttribute("data-theme") || "light");
+      theme = localStorage.getItem("prontio_theme") || (document.body.getAttribute("data-theme") || "light");
     } catch (e) {
       theme = document.body.getAttribute("data-theme") || "light";
     }
@@ -304,14 +308,12 @@
     const safety = global.setTimeout(hideSkeleton_, 1800);
 
     try {
-      // ✅ garante core/api/auth antes de qualquer page script
+      // ✅ garante core/api/session/auth antes de qualquer page script
       await ensureCoreLoaded_();
 
       if (!isLoginPage_()) {
-        // ✅ Sidebar: garante widget antes do loader (loader chama PRONTIO.widgets.sidebar.init)
+        // Sidebar
         await loadOnce_("assets/js/widgets/widget-sidebar.js");
-
-        // ✅ Loader do sidebar (injeta partial + chama init do widget)
         await loadOnce_("assets/js/ui/sidebar-loader.js");
 
         if (
@@ -323,6 +325,7 @@
         }
 
         if (!isChatStandalone_()) {
+          // Topbar
           await loadOnce_("assets/js/widgets/widget-topbar.js");
           if (
             PRONTIO.widgets &&
@@ -333,14 +336,12 @@
           }
 
           initThemeToggle_();
-
-          // Bind de modais (idempotente) — importante para conteúdo já existente no HTML
           bindModalTriggers_(document);
-
           await ensureChatWidgetLoaded_();
         }
       }
 
+      // Page script
       const pageId = getPageId_();
       if (pageId && !PRONTIO.pages[pageId]) {
         let ok = await loadOnce_("assets/js/pages/page-" + pageId + ".js");
@@ -349,9 +350,7 @@
 
       const page = PRONTIO.pages[pageId];
       if (page && typeof page.init === "function") {
-        try {
-          page.init();
-        } catch (e) {}
+        try { page.init(); } catch (e) {}
       }
     } finally {
       global.clearTimeout(safety);
