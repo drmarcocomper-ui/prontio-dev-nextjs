@@ -11,7 +11,8 @@
 
   // ✅ Bump quando fizer mudanças em JS e quiser quebrar cache do GitHub Pages
   // Observação: no print estava v=1.0.7.1 — alinhei aqui para evitar confusão.
-  const APP_VERSION = "1.0.7.1";
+  // ✅ Atualizado para propagar ajustes recentes (sidebar delegation + topbar partial)
+  const APP_VERSION = "1.0.7.2";
 
   // ============================================================
   // Skeleton (mantido) + breakpoint alinhado com JS (900px)

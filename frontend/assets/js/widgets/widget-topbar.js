@@ -22,7 +22,8 @@
   const CHAT_CSS_HREF = "assets/css/components/chat-topbar.css";
 
   // Bump quando mudar o HTML do partial da topbar
-  const PARTIAL_VERSION = "1.0.5";
+  // ✅ Atualizado para propagar mudanças recentes em partials/topbar.html
+  const PARTIAL_VERSION = "1.0.6";
 
   // ✅ RELATIVO (não depende de origin) + versionamento SOMENTE do partial HTML
   const PARTIAL_TOPBAR_PATH = "partials/topbar.html?v=" + encodeURIComponent(PARTIAL_VERSION);
