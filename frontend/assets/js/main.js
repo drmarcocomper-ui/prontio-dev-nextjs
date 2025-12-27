@@ -10,24 +10,24 @@
   PRONTIO._mainBootstrapped = true;
 
   // ✅ Bump quando fizer mudanças em JS e quiser quebrar cache do GitHub Pages
-  const APP_VERSION = "1.0.7.6";
+  const APP_VERSION = "1.0.7.7";
   PRONTIO.APP_VERSION = APP_VERSION;
 
   // ============================================================
   // ✅ Manifest explícito (evita tentar carregar páginas que não existem)
-  // - Se uma página não estiver aqui, o main.js NÃO carrega JS/CSS dela.
-  // - Ajuste conforme seus arquivos reais em /assets/js/pages e /assets/css/pages
   // ============================================================
   const PAGE_MANIFEST = {
-    // login
+    // login (index.html)
     login: {
       js: ["assets/js/pages/page-login.js"],
       css: ["assets/css/pages/page-login.css"]
     },
 
+    // home real
+    atendimento: { js: ["assets/js/pages/page-atendimento.js"], css: ["assets/css/pages/page-atendimento.css"] },
+
     // módulos principais
     agenda: { js: ["assets/js/pages/page-agenda.js"], css: ["assets/css/pages/page-agenda.css"] },
-    atendimento: { js: ["assets/js/pages/page-atendimento.js"], css: ["assets/css/pages/page-atendimento.css"] },
     chat: { js: ["assets/js/pages/page-chat.js"], css: ["assets/css/pages/page-chat.css"] },
     configuracoes: { js: ["assets/js/pages/page-configuracoes.js"], css: ["assets/css/pages/page-configuracoes.css"] },
     exames: { js: ["assets/js/pages/page-exames.js"], css: ["assets/css/pages/page-exames.css"] },
@@ -45,7 +45,7 @@
   };
 
   // ============================================================
-  // Skeleton (mantido) + breakpoint alinhado com JS (900px)
+  // Skeleton (mantido)
   // ============================================================
   function ensureSkeletonStyle_() {
     if (document.getElementById("prontio-skeleton-style")) return;
@@ -127,9 +127,7 @@
 
   function isChatStandalone_() {
     try {
-      return (
-        document.body && document.body.getAttribute("data-chat-standalone") === "true"
-      );
+      return document.body && document.body.getAttribute("data-chat-standalone") === "true";
     } catch (e) {
       return false;
     }
@@ -148,6 +146,26 @@
     return src + "?v=" + encodeURIComponent(APP_VERSION);
   }
 
+  function _stripQuery_(url) {
+    try {
+      return String(url || "").split("?")[0];
+    } catch (_) {
+      return String(url || "");
+    }
+  }
+
+  function _hasScriptAlready_(src) {
+    try {
+      const target = _stripQuery_(src);
+      const scripts = document.querySelectorAll("script[src]");
+      for (let i = 0; i < scripts.length; i++) {
+        const s = scripts[i].getAttribute("src") || "";
+        if (_stripQuery_(s) === target) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   function loadScript_(src) {
     return new Promise((resolve) => {
       const s = document.createElement("script");
@@ -161,16 +179,22 @@
 
   PRONTIO._loadedScripts = PRONTIO._loadedScripts || {};
   async function loadOnce_(src) {
-    const key = withVersion_(src);
+    const raw = String(src || "");
+    if (!raw) return false;
+
+    // ✅ Se já existe no DOM (mesmo sem ?v=), não recarrega
+    if (_hasScriptAlready_(raw)) return true;
+
+    const key = withVersion_(raw);
     if (PRONTIO._loadedScripts[key]) return true;
-    const ok = await loadScript_(src);
+
+    const ok = await loadScript_(raw);
     if (ok) PRONTIO._loadedScripts[key] = true;
     return ok;
   }
 
   // ============================================================
-  // ✅ CSS loader seguro: só injeta se estiver no manifest
-  // (não “chuta” page-dashboard/page-sadt etc.)
+  // CSS loader seguro
   // ============================================================
   PRONTIO._loadedCss = PRONTIO._loadedCss || {};
   function loadCssOnce_(href, tag) {
@@ -179,7 +203,6 @@
       if (!key) return;
       if (PRONTIO._loadedCss[key]) return;
 
-      // evita duplicado por querySelector
       const exists = document.querySelector('link[rel="stylesheet"][href="' + key + '"]');
       if (exists) {
         PRONTIO._loadedCss[key] = true;
@@ -191,10 +214,7 @@
       link.href = key;
       if (tag) link.setAttribute("data-page-css", tag);
       link.onload = function () { PRONTIO._loadedCss[key] = true; };
-      link.onerror = function () {
-        // Não fica tentando de novo e não polui com retries
-        PRONTIO._loadedCss[key] = true;
-      };
+      link.onerror = function () { PRONTIO._loadedCss[key] = true; };
       document.head.appendChild(link);
     } catch (_) {}
   }
@@ -204,23 +224,17 @@
     if (!pid) return;
 
     const entry = PAGE_MANIFEST[pid];
-    if (!entry) {
-      // Página não registrada: não tenta carregar nada (evita 404)
-      return;
-    }
+    if (!entry) return;
 
-    // CSS: só se não tiver sido linkado manualmente
     try {
       (entry.css || []).forEach(function (href) {
         loadCssOnce_(href, pid);
       });
     } catch (_) {}
-
-    // JS: será carregado mais abaixo (loadOnce_)
   }
 
   // ============================================================
-  // ✅ Core: garante API + SESSION + AUTH antes de rodar pages
+  // Core
   // ============================================================
   async function ensureCoreLoaded_() {
     const hasApi =
@@ -234,7 +248,6 @@
 
     if (hasApi && hasAuth) return true;
 
-    // Base do core (ordem segura)
     await loadOnce_("assets/js/core/config.js");
     await loadOnce_("assets/js/core/dom.js");
     await loadOnce_("assets/js/core/utils.js");
@@ -242,7 +255,6 @@
 
     const okApi = await loadOnce_("assets/js/core/api.js");
 
-    // ✅ Session (UI state)
     await loadOnce_("assets/js/core/session.js");
     try {
       if (PRONTIO.core && PRONTIO.core.session && typeof PRONTIO.core.session.init === "function") {
@@ -250,10 +262,7 @@
       }
     } catch (_) {}
 
-    // ✅ Auth
     await loadOnce_("assets/js/core/auth.js");
-
-    // app.js (compat)
     await loadOnce_("assets/js/core/app.js");
 
     const hasApiAfter =
@@ -270,7 +279,7 @@
   }
 
   // ============================================================
-  // Modais — idempotente
+  // Modais
   // ============================================================
   function bindModalTriggers_(doc) {
     const root = doc || document;
@@ -309,7 +318,7 @@
   PRONTIO.ui.modals.bindTriggers = bindModalTriggers_;
 
   // ============================================================
-  // ✅ Tema: inicializa botão sol/lua (mantido)
+  // Tema
   // ============================================================
   function initThemeToggle_() {
     const btn = document.querySelector(".js-toggle-theme");
@@ -354,13 +363,12 @@
   PRONTIO.ui.initTheme = initThemeToggle_;
 
   // ============================================================
-  // ✅ Chat Widget global
+  // Chat widget
   // ============================================================
   async function ensureChatWidgetLoaded_() {
     if (isChatStandalone_()) return true;
 
-    const hasTopbar =
-      !!document.getElementById("topbarMount") || !!document.querySelector(".topbar");
+    const hasTopbar = !!document.getElementById("topbarMount") || !!document.querySelector(".topbar");
     if (!hasTopbar) return true;
 
     const ok = await loadOnce_("assets/js/widgets/widget-chat.js");
@@ -387,30 +395,19 @@
     const safety = global.setTimeout(hideSkeleton_, 1800);
 
     try {
-      // ✅ garante core/api/session/auth antes de qualquer page script
       await ensureCoreLoaded_();
 
       if (!isLoginPage_()) {
-        // Sidebar
         await loadOnce_("assets/js/widgets/widget-sidebar.js");
         await loadOnce_("assets/js/ui/sidebar-loader.js");
 
-        if (
-          PRONTIO.ui &&
-          PRONTIO.ui.sidebarLoader &&
-          typeof PRONTIO.ui.sidebarLoader.load === "function"
-        ) {
+        if (PRONTIO.ui && PRONTIO.ui.sidebarLoader && typeof PRONTIO.ui.sidebarLoader.load === "function") {
           await PRONTIO.ui.sidebarLoader.load();
         }
 
         if (!isChatStandalone_()) {
-          // Topbar
           await loadOnce_("assets/js/widgets/widget-topbar.js");
-          if (
-            PRONTIO.widgets &&
-            PRONTIO.widgets.topbar &&
-            typeof PRONTIO.widgets.topbar.init === "function"
-          ) {
+          if (PRONTIO.widgets && PRONTIO.widgets.topbar && typeof PRONTIO.widgets.topbar.init === "function") {
             await PRONTIO.widgets.topbar.init();
           }
 
@@ -420,19 +417,20 @@
         }
       }
 
-      // ✅ Assets da página (CSS/JS) apenas se estiver no manifest
       const pageId = String(getPageId_() || "").toLowerCase().trim();
+
+      // CSS/Assets da página (só se existir no manifest)
       ensurePageAssets_(pageId);
 
-      // Page script: apenas se estiver no manifest (evita 404 em pages inexistentes)
-      const entry = PAGE_MANIFEST[pageId];
-      if (entry && entry.js && entry.js.length) {
-        for (let i = 0; i < entry.js.length; i++) {
-          await loadOnce_(entry.js[i]);
+      // ✅ Se a página já foi registrada (porque o HTML já incluiu o script),
+      // NÃO tenta carregar de novo via manifest.
+      if (!PRONTIO.pages[pageId]) {
+        const entry = PAGE_MANIFEST[pageId];
+        if (entry && entry.js && entry.js.length) {
+          for (let i = 0; i < entry.js.length; i++) {
+            await loadOnce_(entry.js[i]);
+          }
         }
-      } else {
-        // Compat: ainda tenta o padrão antigo somente se a página já tiver sido registrada por outro bundle
-        // (não tenta baixar nada fora do manifest)
       }
 
       const page = PRONTIO.pages[pageId];
