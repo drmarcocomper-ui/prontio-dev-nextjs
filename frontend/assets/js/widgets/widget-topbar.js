@@ -1,15 +1,7 @@
 /**
  * PRONTIO - widget-topbar.js
  *
- * ✅ Correções consolidadas:
- * - NÃO usa location.origin (quebra em file:// e alguns ambientes). Usa caminho RELATIVO.
- * - Cache com versionamento do partial HTML, com fallback se falhar.
- * - ✅ Idempotente: não reinjeta se já montou (evita flicker / rebind repetido)
- *
- * ✅ Padronização de versionamento:
- * - NÃO adicionar ?v= em scripts JS aqui.
- * - O cache-busting de JS é centralizado no main.js (APP_VERSION).
- * - Aqui versionamos SOMENTE o HTML do partial (fetch).
+ * - versiona SOMENTE o HTML do partial (fetch)
  */
 
 (function (global, document) {
@@ -22,11 +14,12 @@
   const CHAT_CSS_HREF = "assets/css/components/chat-topbar.css";
 
   // Bump quando mudar o HTML do partial da topbar
-  // ✅ Atualizado para propagar mudanças recentes em partials/topbar.html
-  const PARTIAL_VERSION = "1.0.6";
-
-  // ✅ RELATIVO (não depende de origin) + versionamento SOMENTE do partial HTML
+  const PARTIAL_VERSION = "1.0.9";
   const PARTIAL_TOPBAR_PATH = "partials/topbar.html?v=" + encodeURIComponent(PARTIAL_VERSION);
+
+  // ✅ Melhor: reaproveita action já registrada no Registry.gs
+  // (se Auth_Me já retorna NomeCompleto/Perfil, não precisa criar Usuarios_GetMe)
+  const ACTION_GET_ME = "Auth_Me";
 
   function hasChatEnabled_() {
     try {
@@ -57,11 +50,8 @@
   }
 
   async function fetchPartial_(path) {
-    // ✅ cache bom em navegação (com v=...), mas com fallback se falhar
     let res = await fetch(path, { cache: "default" });
-    if (!res.ok) {
-      res = await fetch(path, { cache: "no-store" });
-    }
+    if (!res.ok) res = await fetch(path, { cache: "no-store" });
     if (!res.ok) throw new Error("Falha ao carregar partial: " + path + " (HTTP " + res.status + ")");
     return await res.text();
   }
@@ -95,17 +85,9 @@
 
   function rebindThemeToggle_() {
     try {
-      if (PRONTIO.theme && typeof PRONTIO.theme.init === "function") {
-        PRONTIO.theme.init();
-        return;
-      }
-      if (PRONTIO.ui && typeof PRONTIO.ui.initTheme === "function") {
-        PRONTIO.ui.initTheme();
-        return;
-      }
-      if (typeof global.initTheme === "function") {
-        global.initTheme();
-      }
+      if (PRONTIO.theme && typeof PRONTIO.theme.init === "function") return PRONTIO.theme.init();
+      if (PRONTIO.ui && typeof PRONTIO.ui.initTheme === "function") return PRONTIO.ui.initTheme();
+      if (typeof global.initTheme === "function") return global.initTheme();
     } catch (e) {
       console.error("[PRONTIO.topbar] Erro ao rebind do tema:", e);
     }
@@ -129,7 +111,6 @@
   function injectChatMarkup_() {
     const slot = getChatSlot_();
     if (!slot) return false;
-
     if (slot.getAttribute("data-chat-injected") === "1") return true;
 
     slot.innerHTML = `
@@ -168,9 +149,7 @@
     if (!hasChatEnabled_()) return;
 
     ensureChatCss_();
-
-    const ok = injectChatMarkup_();
-    if (!ok) return;
+    if (!injectChatMarkup_()) return;
 
     if (!global.ChatUI || typeof global.ChatUI.init !== "function") {
       console.warn("[PRONTIO.topbar] ChatUI não encontrado. Verifique se ui/chat-ui.js está no main.js.");
@@ -184,20 +163,65 @@
         try { return localStorage.getItem("PRONTIO_CURRENT_USER_ID") || null; } catch (e) { return null; }
       })()
     });
+  }
 
-    if (String((document.body && document.body.getAttribute("data-page-id")) || "").toLowerCase() === "prontuario") {
-      let tries = 0;
-      const maxTries = 60;
-      const timer = setInterval(() => {
-        tries += 1;
-        const pid = getPatientIdIfAny_();
-        if (pid && global.ChatUI && typeof global.ChatUI.setContext === "function") {
-          global.ChatUI.setContext({ patientId: pid, context: getContext_() });
-          clearInterval(timer);
-        }
-        if (tries >= maxTries) clearInterval(timer);
-      }, 250);
-    }
+  async function loadLoggedUser_() {
+    const nameEl = document.getElementById("topbar-user-name");
+    const roleEl = document.getElementById("topbar-user-role");
+    if (!nameEl || !roleEl) return;
+
+    // 1) PRONTIO.auth.getCurrentUser() (se existir)
+    try {
+      if (PRONTIO.auth && typeof PRONTIO.auth.getCurrentUser === "function") {
+        const u = PRONTIO.auth.getCurrentUser();
+        const nome = u && (u.NomeCompleto || u.nomeCompleto || u.nome);
+        const perfil = u && (u.Perfil || u.perfil || u.role);
+
+        if (nome) nameEl.textContent = String(nome);
+        if (perfil) roleEl.textContent = String(perfil);
+
+        if (nome || perfil) return;
+      }
+    } catch (e) {}
+
+    // 2) localStorage (se o login já salva)
+    try {
+      const cachedName =
+        localStorage.getItem("PRONTIO_CURRENT_USER_NAME") ||
+        localStorage.getItem("PRONTIO_USER_NAME") ||
+        "";
+      const cachedRole =
+        localStorage.getItem("PRONTIO_CURRENT_USER_ROLE") ||
+        localStorage.getItem("PRONTIO_CURRENT_USER_PROFILE") ||
+        localStorage.getItem("PRONTIO_USER_ROLE") ||
+        "";
+
+      if (cachedName) nameEl.textContent = cachedName;
+      if (cachedRole) roleEl.textContent = cachedRole;
+
+      if (cachedName || cachedRole) return;
+    } catch (e) {}
+
+    // 3) API (Auth_Me já existe no registry)
+    try {
+      if (!PRONTIO.api || typeof PRONTIO.api.callApiData !== "function") return;
+
+      const data = await PRONTIO.api.callApiData({ action: ACTION_GET_ME, payload: {} });
+      if (!data) return;
+
+      // tolerante a formatos: {NomeCompleto, Perfil} ou {user:{...}}
+      const u = data.user || data.usuario || data || {};
+      const nome = u.NomeCompleto || u.nomeCompleto || u.nome || "";
+      const perfil = u.Perfil || u.perfil || u.role || "";
+
+      if (nome) nameEl.textContent = String(nome);
+      if (perfil) roleEl.textContent = String(perfil);
+
+      try {
+        if (nome) localStorage.setItem("PRONTIO_CURRENT_USER_NAME", String(nome));
+        if (perfil) localStorage.setItem("PRONTIO_CURRENT_USER_ROLE", String(perfil));
+      } catch (e) {}
+    } catch (e) {}
   }
 
   PRONTIO.widgets.topbar.init = async function initTopbar() {
@@ -205,10 +229,10 @@
       const mount = document.getElementById("topbarMount");
       if (!mount) return;
 
-      // ✅ idempotência: já montado
       if (mount.getAttribute("data-mounted") === "1") {
         fillTopbarTexts_();
         rebindThemeToggle_();
+        await loadLoggedUser_();
         await initChatIfEnabled_();
         return;
       }
@@ -220,10 +244,10 @@
 
       fillTopbarTexts_();
       rebindThemeToggle_();
+      await loadLoggedUser_();
       await initChatIfEnabled_();
     } catch (err) {
       console.error("[PRONTIO.topbar] Erro ao inicializar topbar:", err);
     }
   };
-
 })(window, document);
