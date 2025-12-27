@@ -57,11 +57,12 @@ body.sidebar-compact .app-main {
   padding: var(--sp-4);
 }
 
-/* MOBILE / TELAS MUITO PEQUENAS
-   - A sidebar vira overlay, portanto a main-area
+/* MOBILE / TELAS PEQUENAS
+   - A sidebar vira overlay (drawer), portanto a main-area
      não precisa mais de margin-left.
+   ✅ alinhado com sidebar.css + widget-sidebar.js: max-width 900px
 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .main-area {
     margin-left: 0;
   }

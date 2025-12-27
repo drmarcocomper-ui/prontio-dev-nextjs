@@ -1,9 +1,16 @@
 <!-- frontend/partials/topbar.html -->
 <div class="topbar">
   <div class="topbar__left">
-    <button class="topbar__menu-btn" type="button" data-sidebar-toggle aria-label="Abrir menu">
+    <!-- ✅ Alinhado com widget-sidebar.js: ele escuta .js-toggle-sidebar -->
+    <button
+      class="topbar__menu-btn js-toggle-sidebar"
+      type="button"
+      data-sidebar-toggle
+      aria-label="Abrir menu"
+    >
       ☰
     </button>
+
     <div class="topbar__title">
       <span class="topbar__brand">PRONTIO</span>
     </div>
@@ -19,7 +26,12 @@
       title="Chat"
     >
       <span class="prontio-chat-topbtn__icon" aria-hidden="true">💬</span>
-      <span id="prontio-chat-badge" class="prontio-chat-badge" aria-hidden="true" style="display:none;">0</span>
+      <span
+        id="prontio-chat-badge"
+        class="prontio-chat-badge"
+        aria-hidden="true"
+        style="display:none;"
+      >0</span>
     </button>
 
     <!-- Outros botões/ações da topbar podem permanecer aqui -->

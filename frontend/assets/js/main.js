@@ -38,7 +38,10 @@
   }
 
   function shouldUseShell_() {
-    return !!document.querySelector("[data-include-sidebar]") || !!document.getElementById("topbarMount");
+    return (
+      !!document.querySelector("[data-include-sidebar]") ||
+      !!document.getElementById("topbarMount")
+    );
   }
 
   function showSkeleton_() {
@@ -80,7 +83,8 @@
   function getDataPage_() {
     try {
       const body = document.body;
-      const pid = (body && body.dataset && (body.dataset.pageId || body.dataset.page)) || "";
+      const pid =
+        (body && body.dataset && (body.dataset.pageId || body.dataset.page)) || "";
       return String(pid || "").toLowerCase();
     } catch (e) {
       return "";
@@ -93,7 +97,9 @@
 
   function isChatStandalone_() {
     try {
-      return document.body && document.body.getAttribute("data-chat-standalone") === "true";
+      return (
+        document.body && document.body.getAttribute("data-chat-standalone") === "true"
+      );
     } catch (e) {
       return false;
     }
@@ -117,8 +123,12 @@
       const s = document.createElement("script");
       s.src = withVersion_(src);
       s.defer = true;
-      s.onload = function () { resolve(true); };
-      s.onerror = function () { resolve(false); };
+      s.onload = function () {
+        resolve(true);
+      };
+      s.onerror = function () {
+        resolve(false);
+      };
       document.head.appendChild(s);
     });
   }
@@ -141,9 +151,7 @@
       typeof PRONTIO.api.callApiEnvelope === "function" &&
       typeof PRONTIO.api.callApiData === "function";
 
-    const hasAuth =
-      PRONTIO.auth &&
-      typeof PRONTIO.auth.getToken === "function";
+    const hasAuth = PRONTIO.auth && typeof PRONTIO.auth.getToken === "function";
 
     if (hasApi && hasAuth) return true;
 
@@ -168,19 +176,21 @@
       typeof PRONTIO.api.callApiData === "function";
 
     const hasAuthAfter =
-      PRONTIO.auth &&
-      typeof PRONTIO.auth.getToken === "function";
+      PRONTIO.auth && typeof PRONTIO.auth.getToken === "function";
 
     return !!(hasApiAfter && hasAuthAfter);
   }
 
   // ============================================================
-  // Modais (rebind usado pelo sidebar-loader)
+  // Modais (rebind usado pelo sidebar-loader) — agora idempotente
   // ============================================================
   function bindModalTriggers_(doc) {
     const root = doc || document;
 
     root.querySelectorAll("[data-modal-open]").forEach(function (opener) {
+      if (opener.getAttribute("data-modal-bound") === "1") return;
+      opener.setAttribute("data-modal-bound", "1");
+
       opener.addEventListener("click", function (ev) {
         ev.preventDefault();
         const id = opener.getAttribute("data-modal-open");
@@ -193,6 +203,9 @@
     });
 
     root.querySelectorAll("[data-modal-close]").forEach(function (closer) {
+      if (closer.getAttribute("data-modal-bound") === "1") return;
+      closer.setAttribute("data-modal-bound", "1");
+
       closer.addEventListener("click", function (ev) {
         ev.preventDefault();
         const id = closer.getAttribute("data-modal-close");
@@ -216,7 +229,9 @@
 
     function apply(theme) {
       document.body.setAttribute("data-theme", theme);
-      try { localStorage.setItem("prontio_theme", theme); } catch (e) {}
+      try {
+        localStorage.setItem("prontio_theme", theme);
+      } catch (e) {}
 
       const sun = document.querySelector(".js-theme-icon-sun");
       const moon = document.querySelector(".js-theme-icon-moon");
@@ -234,7 +249,9 @@
 
     let theme = "light";
     try {
-      theme = localStorage.getItem("prontio_theme") || (document.body.getAttribute("data-theme") || "light");
+      theme =
+        localStorage.getItem("prontio_theme") ||
+        (document.body.getAttribute("data-theme") || "light");
     } catch (e) {
       theme = document.body.getAttribute("data-theme") || "light";
     }
@@ -258,7 +275,8 @@
   async function ensureChatWidgetLoaded_() {
     if (isChatStandalone_()) return true;
 
-    const hasTopbar = !!document.getElementById("topbarMount") || !!document.querySelector(".topbar");
+    const hasTopbar =
+      !!document.getElementById("topbarMount") || !!document.querySelector(".topbar");
     if (!hasTopbar) return true;
 
     const ok = await loadOnce_("assets/js/widgets/widget-chat.js");
@@ -289,23 +307,33 @@
       await ensureCoreLoaded_();
 
       if (!isLoginPage_()) {
-        // ✅ FIX: removido carregamento de arquivo inexistente:
-        // await loadOnce_("assets/js/ui/sidebar.js");
+        // ✅ Sidebar: garante widget antes do loader (loader chama PRONTIO.widgets.sidebar.init)
+        await loadOnce_("assets/js/widgets/widget-sidebar.js");
 
-        // ✅ Mantém loader real do sidebar (deve carregar/usar widget-sidebar internamente)
+        // ✅ Loader do sidebar (injeta partial + chama init do widget)
         await loadOnce_("assets/js/ui/sidebar-loader.js");
 
-        if (PRONTIO.ui && PRONTIO.ui.sidebarLoader && typeof PRONTIO.ui.sidebarLoader.load === "function") {
+        if (
+          PRONTIO.ui &&
+          PRONTIO.ui.sidebarLoader &&
+          typeof PRONTIO.ui.sidebarLoader.load === "function"
+        ) {
           await PRONTIO.ui.sidebarLoader.load();
         }
 
         if (!isChatStandalone_()) {
           await loadOnce_("assets/js/widgets/widget-topbar.js");
-          if (PRONTIO.widgets && PRONTIO.widgets.topbar && typeof PRONTIO.widgets.topbar.init === "function") {
+          if (
+            PRONTIO.widgets &&
+            PRONTIO.widgets.topbar &&
+            typeof PRONTIO.widgets.topbar.init === "function"
+          ) {
             await PRONTIO.widgets.topbar.init();
           }
 
           initThemeToggle_();
+
+          // Bind de modais (idempotente) — importante para conteúdo já existente no HTML
           bindModalTriggers_(document);
 
           await ensureChatWidgetLoaded_();
@@ -320,9 +348,10 @@
 
       const page = PRONTIO.pages[pageId];
       if (page && typeof page.init === "function") {
-        try { page.init(); } catch (e) {}
+        try {
+          page.init();
+        } catch (e) {}
       }
-
     } finally {
       global.clearTimeout(safety);
       hideSkeleton_();

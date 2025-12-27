@@ -8,7 +8,7 @@
 //
 // Mobile (max-width: 900px):
 //  - Sidebar funciona como drawer (off-canvas), controlado por body.sidebar-open.
-//  - Botão .js-toggle-sidebar (na topbar) abre/fecha o drawer.
+//  - Botão de menu (topbar) abre/fecha o drawer.
 //  - Botão .js-toggle-compact também atua como toggle do drawer em mobile.
 //  - Clicar no backdrop ou em um link do menu fecha o drawer.
 //
@@ -18,6 +18,11 @@
 //
 // Observação:
 //  - Tema claro/escuro é responsabilidade da TOPBAR (não desta sidebar).
+//
+// ✅ Atualização (profissional):
+//  - Event delegation para toggle do drawer via:
+//      [data-sidebar-toggle] OU .js-toggle-sidebar
+//    (independe da ordem de montagem da topbar).
 // =====================================
 
 (function (global, document) {
@@ -26,9 +31,15 @@
   PRONTIO.ui = PRONTIO.ui || {};
 
   const STORAGE_KEY_COMPACT = "prontio.sidebar.compact";
+  const MOBILE_MEDIA = "(max-width: 900px)";
+  const DOC_FLAG_DELEGATION_BOUND = "prontioSidebarDelegationBound";
 
   function getSidebarElement() {
     return document.getElementById("sidebar");
+  }
+
+  function isMobile_() {
+    return !!(global.matchMedia && global.matchMedia(MOBILE_MEDIA).matches);
   }
 
   /* -------- helpers de estado compacto (desktop) -------- */
@@ -79,7 +90,7 @@
       if (!global.localStorage) return;
       global.localStorage.setItem(STORAGE_KEY_COMPACT, isCompactFlag ? "1" : "0");
     } catch (e) {
-      // ambiente sem localStorage (ex.: modo privado extremamente restrito) -> ignorar
+      // ambiente sem localStorage -> ignorar
     }
   }
 
@@ -101,11 +112,8 @@
     const body = document.body;
     if (!body) return;
     const open = body.classList.contains("sidebar-open");
-    if (open) {
-      closeDrawer();
-    } else {
-      openDrawer();
-    }
+    if (open) closeDrawer();
+    else openDrawer();
   }
 
   /* -------- destacar link ativo -------- */
@@ -113,6 +121,10 @@
   /**
    * Destaca o link ativo conforme data-page-id do <body>.
    * Usa classe .active e aria-current="page".
+   *
+   * ✅ Mantém compatibilidade também com CSS que aceita:
+   *  - .is-active
+   *  - [data-active="true"]
    */
   function highlightActiveNavLink(sidebar) {
     if (!sidebar || !document.body) return;
@@ -127,11 +139,15 @@
 
       if (isActiveLink) {
         link.classList.add("active");
+        link.classList.add("is-active");
+        link.setAttribute("data-active", "true");
         if (!link.hasAttribute("aria-current")) {
           link.setAttribute("aria-current", "page");
         }
       } else {
         link.classList.remove("active");
+        link.classList.remove("is-active");
+        link.removeAttribute("data-active");
         if (link.getAttribute("aria-current") === "page") {
           link.removeAttribute("aria-current");
         }
@@ -164,10 +180,7 @@
     if (!sidebar) return;
 
     // Ações do grupo SISTEMA que tenham data-nav-target
-    // (vamos usar isso só para "tema"; "sobre" fica com data-modal-open)
-    const systemButtons = sidebar.querySelectorAll(
-      ".sidebar-group [data-nav-target]"
-    );
+    const systemButtons = sidebar.querySelectorAll(".sidebar-group [data-nav-target]");
 
     systemButtons.forEach(function (btn) {
       btn.addEventListener("click", function (event) {
@@ -179,7 +192,7 @@
           PRONTIO.ui.handleSystemNav(target);
         } else {
           // Fallback padrão:
-          // - "tema" agora apenas aciona o botão de tema da TOPBAR
+          // - "tema" aciona o botão de tema da TOPBAR
           if (target === "tema") {
             event.preventDefault();
             const themeBtn = document.getElementById("btn-theme-toggle");
@@ -187,16 +200,10 @@
               themeBtn.click();
             }
           }
-
-          // "sobre" NÃO é mais tratado aqui.
-          // Ele deve usar data-modal-open="modalSobreSistema"
-          // + sistema de modais (ui/modals.js / widget-modais.js).
+          // "sobre" é via data-modal-open + bindTriggers (fora daqui)
         }
 
-        const isMobile = global.matchMedia("(max-width: 900px)").matches;
-        if (isMobile) {
-          closeDrawer();
-        }
+        if (isMobile_()) closeDrawer();
       });
     });
 
@@ -207,24 +214,66 @@
         if (PRONTIO.ui && typeof PRONTIO.ui.handleLogout === "function") {
           PRONTIO.ui.handleLogout();
         } else {
-          // fallback: confirm + redirecionamento simples (página de login futura)
           const ok = global.confirm("Deseja realmente sair do PRONTIO?");
           if (ok) {
-            // ajuste a URL quando houver tela de login
             global.location.href = "index.html";
           }
         }
 
-        const isMobile = global.matchMedia("(max-width: 900px)").matches;
-        if (isMobile) {
-          closeDrawer();
-        }
+        if (isMobile_()) closeDrawer();
       });
     }
   }
 
+  /* -------- event delegation: toggle sidebar (topbar) -------- */
+
+  function bindGlobalSidebarToggleDelegation_() {
+    if (!document || !document.documentElement) return;
+
+    // Idempotência global: 1 listener por página
+    if (document.documentElement.dataset[DOC_FLAG_DELEGATION_BOUND] === "1") return;
+    document.documentElement.dataset[DOC_FLAG_DELEGATION_BOUND] = "1";
+
+    document.addEventListener("click", function (ev) {
+      // Captura clique em botões/elementos que declarem intenção de abrir menu
+      const target = ev.target;
+
+      // Compat: botão com data-sidebar-toggle (recomendado)
+      // Compat: classe .js-toggle-sidebar (legado)
+      const trigger =
+        target && target.closest
+          ? target.closest("[data-sidebar-toggle], .js-toggle-sidebar")
+          : null;
+
+      if (!trigger) return;
+
+      // Só faz sentido no comportamento de drawer em mobile.
+      if (!isMobile_()) return;
+
+      ev.preventDefault();
+      toggleDrawer();
+    });
+  }
+
+  /* -------- bloquear itens "Em breve" (defensivo) -------- */
+
+  function setupSoonLinks(sidebar) {
+    if (!sidebar) return;
+
+    const soonLinks = sidebar.querySelectorAll(
+      ".nav-link[data-soon='true'], .nav-link[aria-disabled='true']"
+    );
+
+    soonLinks.forEach(function (el) {
+      el.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      });
+    });
+  }
+
   // -----------------------------------------------------
-  // Inicializador público
+  // Inicializador público (idempotente)
   // -----------------------------------------------------
 
   function initSidebar() {
@@ -240,26 +289,34 @@
       return;
     }
 
+    // ✅ Delegation do toggle do menu é global e não depende do DOM pronto
+    bindGlobalSidebarToggleDelegation_();
+
+    // Idempotência: não duplicar listeners se init for chamado novamente
+    if (sidebar.dataset && sidebar.dataset.sidebarInited === "true") {
+      // Atualiza estado dinâmico (pode mudar por página/estado)
+      highlightActiveNavLink(sidebar);
+      updateProntuarioVisibility(sidebar);
+      return;
+    }
+    sidebar.dataset.sidebarInited = "true";
+
     // Estado inicial global:
     // - drawer fechado
     body.classList.remove("sidebar-open");
 
-    // Estado compacto padrão: expandido (false),
-    // mas se houver valor em localStorage, usamos ele.
+    // Estado compacto padrão: restaurado do storage
     const initialCompact = loadCompactFromStorage();
     setCompact(initialCompact);
 
     // 1) Botão de modo compacto (desktop) / toggle drawer (mobile)
     const btnCompact = sidebar.querySelector(".js-toggle-compact");
     if (btnCompact) {
-      // Sincroniza ARIA com estado inicial
       syncToggleButtonAria(btnCompact, initialCompact);
 
       btnCompact.addEventListener("click", function () {
-        const isMobile = global.matchMedia("(max-width: 900px)").matches;
-
         // Em mobile, esse botão atua como toggle do drawer
-        if (isMobile) {
+        if (isMobile_()) {
           toggleDrawer();
           return;
         }
@@ -272,42 +329,43 @@
       });
     }
 
-    // 2) Botões .js-toggle-sidebar (normalmente na topbar)
-    const toggleSidebarButtons = document.querySelectorAll(".js-toggle-sidebar");
-    toggleSidebarButtons.forEach(function (btn) {
-      btn.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        toggleDrawer();
-      });
-    });
-
-    // 3) Backdrop do drawer (fecha ao clicar)
+    // 2) Backdrop do drawer (fecha ao clicar)
     const backdrop = document.querySelector("[data-sidebar-backdrop]");
     if (backdrop) {
-      backdrop.addEventListener("click", function () {
-        closeDrawer();
-      });
+      if (!(backdrop.dataset && backdrop.dataset.sidebarBackdropBound === "true")) {
+        backdrop.dataset.sidebarBackdropBound = "true";
+        backdrop.addEventListener("click", function () {
+          closeDrawer();
+        });
+      }
     }
 
-    // 4) Ao clicar em qualquer item de menu, fecha o drawer em mobile
+    // 3) Ao clicar em qualquer item de menu, fecha o drawer em mobile
     const navLinks = sidebar.querySelectorAll(".nav-link");
     navLinks.forEach(function (link) {
       link.addEventListener("click", function () {
-        const isMobile = global.matchMedia("(max-width: 900px)").matches;
-        if (isMobile) {
-          closeDrawer();
-        }
+        if (!isMobile_()) return;
+
+        // não fecha se o item é "Em breve" / desativado
+        const isDisabled =
+          link.getAttribute("aria-disabled") === "true" ||
+          link.getAttribute("data-soon") === "true";
+
+        if (!isDisabled) closeDrawer();
       });
     });
 
-    // 5) Destacar link ativo
+    // 4) Destacar link ativo
     highlightActiveNavLink(sidebar);
 
-    // 6) Visibilidade do PRONTUÁRIO (dinâmico)
+    // 5) Visibilidade do PRONTUÁRIO (dinâmico)
     updateProntuarioVisibility(sidebar);
 
-    // 7) Ações especiais do grupo SISTEMA
+    // 6) Ações especiais do grupo SISTEMA
     setupSystemActions(sidebar);
+
+    // 7) Proteção extra para "Em breve"
+    setupSoonLinks(sidebar);
 
     console.log(
       "PRONTIO.sidebar: initSidebar concluído. Compacto? =",
