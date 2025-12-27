@@ -31,6 +31,59 @@
  *  canceladoEm?, canceladoMotivo?
  */
 
+/**
+ * ============================================================
+ * Router do módulo (LEGADO do Api.gs)
+ * ============================================================
+ * O Api.gs (fallback PRONTIO_routeAction_) chama:
+ *   handleAgendaAction(action, payload)
+ *
+ * Este roteador garante compatibilidade:
+ * - Actions NOVAS (com ponto): "Agenda.ListarPorPeriodo", "Agenda.Criar", ...
+ * - Actions LEGACY (com underscore): "Agenda_ListarDia", "Agenda_Criar", ...
+ *
+ * Observação:
+ * - O Registry (se existir) pode chamar diretamente as handlers Agenda_Action_*.
+ * - Aqui mantemos o "switch" para cobrir o modo legado.
+ */
+function handleAgendaAction(action, payload) {
+  payload = payload || {};
+
+  // ctx mínimo para compatibilidade (algumas handlers usam env/apiVersion)
+  var ctx = {
+    action: String(action || ""),
+    user: null,
+    env: (typeof PRONTIO_ENV !== "undefined" ? PRONTIO_ENV : "DEV"),
+    apiVersion: (typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV")
+  };
+
+  var a = String(action || "").trim();
+
+  // ===== Actions NOVAS (API-first) =====
+  if (a === "Agenda.ListarPorPeriodo") return Agenda_Action_ListarPorPeriodo_(ctx, payload);
+  if (a === "Agenda.Criar") return Agenda_Action_Criar_(ctx, payload);
+  if (a === "Agenda.Atualizar") return Agenda_Action_Atualizar_(ctx, payload);
+  if (a === "Agenda.Cancelar") return Agenda_Action_Cancelar_(ctx, payload);
+
+  // ===== Actions LEGACY (front atual) =====
+  if (a === "Agenda_ListarDia") return Agenda_Legacy_ListarDia_(ctx, payload);
+  if (a === "Agenda_ListarSemana") return Agenda_Legacy_ListarSemana_(ctx, payload);
+  if (a === "Agenda_Criar") return Agenda_Legacy_Criar_(ctx, payload);
+  if (a === "Agenda_Atualizar") return Agenda_Legacy_Atualizar_(ctx, payload);
+  if (a === "Agenda_BloquearHorario") return Agenda_Legacy_BloquearHorario_(ctx, payload);
+  if (a === "Agenda_MudarStatus") return Agenda_Legacy_MudarStatus_(ctx, payload);
+  if (a === "Agenda_RemoverBloqueio") return Agenda_Legacy_RemoverBloqueio_(ctx, payload);
+  if (a === "Agenda_ValidarConflito") return Agenda_Legacy_ValidarConflito_(ctx, payload);
+
+  // Adapter direto (alguns front/debug podem chamar isso como action)
+  if (a === "Agenda_ListarEventosDiaParaValidacao") {
+    var ds = payload && payload.data ? String(payload.data) : "";
+    return { items: Agenda_ListarEventosDiaParaValidacao_(ds) };
+  }
+
+  _agendaThrow_("NOT_FOUND", "Action de Agenda não reconhecida.", { action: a });
+}
+
 // Nome interno da entidade/aba (backend-only)
 var AGENDA_ENTITY = "Agenda";
 var AGENDA_ID_FIELD = "idAgenda";
@@ -632,7 +685,7 @@ function Agenda_ListarEventosDiaParaValidacao_(dataStr) {
 
   // Usamos a action nova para manter mesma lógica de leitura/normalização
   var res = Agenda_Action_ListarPorPeriodo_(
-    { action: "Agenda_ListarEventosDiaParaValidacao_", user: null, env: PRONTIO_ENV, apiVersion: PRONTIO_API_VERSION },
+    { action: "Agenda_ListarEventosDiaParaValidacao_", user: null, env: (typeof PRONTIO_ENV !== "undefined" ? PRONTIO_ENV : "DEV"), apiVersion: (typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV") },
     { inicio: ini, fim: fim, incluirCancelados: true }
   );
 
@@ -920,7 +973,7 @@ function Agenda_Legacy_ValidarConflito_(ctx, payload) {
           hora_fim: cf ? _agendaFormatHHMM_(cf) : ""
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     return {
       ok: false,
@@ -963,7 +1016,7 @@ function _agendaLegacyDtoToFront_(dto) {
         telPaciente = String(p.telefone || "");
         nasc = String(p.nascimento || "");
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // Status label (UI)
@@ -1068,7 +1121,7 @@ function _agendaLegacyTryParseNotas_(notas) {
   try {
     var obj = JSON.parse(s);
     if (obj && typeof obj === "object") return obj;
-  } catch (_) {}
+  } catch (_) { }
   return {};
 }
 

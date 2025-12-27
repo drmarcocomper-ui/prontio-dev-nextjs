@@ -16,6 +16,10 @@
  * - Prontuário (fachada)
  * - Chat (chat.*) ✅
  * - Compat do Chat (usuarios.listAll / agenda.*Patient) ✅
+ *
+ * ✅ UPDATE (sem quebrar):
+ * - Adiciona "Agenda_ListarEventosDiaParaValidacao" (pedido do modal/front)
+ *   apontando para o adapter do Agenda.gs (Agenda_ListarEventosDiaParaValidacao_).
  */
 
 var REGISTRY_ACTIONS = null;
@@ -470,6 +474,25 @@ function _Registry_build_() {
     validations: [],
     requiresLock: true,
     lockKey: "AGENDA"
+  };
+
+  // ✅ UPDATE: action pedida pelo modal/front (pré-validação de conflito)
+  // - Chamará o adapter existente no Agenda.gs: Agenda_ListarEventosDiaParaValidacao_(dataStr)
+  // - Retorna { items: [...] } (para ficar padronizado)
+  map["Agenda_ListarEventosDiaParaValidacao"] = {
+    action: "Agenda_ListarEventosDiaParaValidacao",
+    handler: (typeof Agenda_ListarEventosDiaParaValidacao_ === "function")
+      ? function (ctx, payload) {
+          payload = payload || {};
+          var dataStr = payload.data ? String(payload.data) : "";
+          return { items: Agenda_ListarEventosDiaParaValidacao_(dataStr) };
+        }
+      : _Registry_missingHandler_("Agenda_ListarEventosDiaParaValidacao_"),
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
   };
 
   map["AgendaConfig_Obter"] = {
@@ -1021,6 +1044,7 @@ function Registry_ListActions(ctx, payload) {
     hasPacientes: keys.indexOf("Pacientes_Listar") >= 0 && keys.indexOf("Pacientes_BuscarSimples") >= 0,
     hasPacientesDebug: keys.indexOf("Pacientes_DebugInfo") >= 0,
     hasReceita: keys.indexOf("Receita.GerarPdf") >= 0,
-    hasMedicamentos: keys.indexOf("Medicamentos.ListarAtivos") >= 0
+    hasMedicamentos: keys.indexOf("Medicamentos.ListarAtivos") >= 0,
+    hasAgendaListarEventosDiaParaValidacao: keys.indexOf("Agenda_ListarEventosDiaParaValidacao") >= 0
   };
 }

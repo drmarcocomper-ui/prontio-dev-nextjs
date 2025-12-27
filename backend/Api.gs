@@ -17,6 +17,10 @@
  * - Fallback LEGADO também no doGet (igual doPost):
  *   Se action não estiver registrada no Registry, tenta routeAction_ (se existir)
  *   ou PRONTIO_routeAction_ (router legado padrão incluído aqui).
+ *
+ * ✅ UPDATE (retrocompatível - AGENDA):
+ * - PRONTIO_routeAction_ agora também roteia actions de Agenda_* para handleAgendaAction,
+ *   igual já fazia para Pacientes_*.
  */
 
 var PRONTIO_API_VERSION = typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV";
@@ -263,35 +267,47 @@ function _tryLegacyRoute_(action, payload, ctx) {
       // Alguns legados aceitam (action,payload) apenas; outros aceitam (action,payload,ctx)
       try { return routeAction_(action, payload, ctx); } catch (_) { return routeAction_(action, payload); }
     }
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     if (typeof PRONTIO_routeAction_ === "function") {
       try { return PRONTIO_routeAction_(action, payload, ctx); } catch (_) { return PRONTIO_routeAction_(action, payload); }
     }
-  } catch (_) {}
+  } catch (_) { }
 
   return null;
 }
 
 /**
  * Router legado padrão (não conflita com routeAction_ se você já tiver outro).
- * ✅ Aqui incluímos suporte direto para Pacientes via handlePacientesAction (Pacientes.gs),
- * mantendo o máximo de retrocompatibilidade.
+ * ✅ Aqui incluímos suporte direto para:
+ * - Pacientes_* via handlePacientesAction (Pacientes.gs)
+ * - Agenda_* via handleAgendaAction (Agenda.gs)
  *
- * Se você tiver outros módulos legados, você pode expandir aqui depois.
+ * Mantém o máximo de retrocompatibilidade.
  */
 function PRONTIO_routeAction_(action, payload, ctx) {
+  var a = String(action || "");
+
   // Pacientes (novo/antigo)
-  if (String(action || "").indexOf("Pacientes") === 0) {
+  if (a.indexOf("Pacientes") === 0) {
     if (typeof handlePacientesAction !== "function") {
       _apiThrow_("INTERNAL_ERROR", "handlePacientesAction não está disponível (Pacientes.gs não carregado?).", { action: action });
     }
     return handlePacientesAction(action, payload);
   }
 
+  // ✅ Agenda (novo/antigo)
+  // Aceita "Agenda_" e também "Agenda" (caso algum legado use sem underscore)
+  if (a.indexOf("Agenda_") === 0 || a.indexOf("Agenda") === 0) {
+    if (typeof handleAgendaAction !== "function") {
+      _apiThrow_("INTERNAL_ERROR", "handleAgendaAction não está disponível (Agenda.gs não carregado?).", { action: action });
+    }
+    return handleAgendaAction(action, payload);
+  }
+
   // Se quiser, adicione outros módulos legados aqui:
-  // if (String(action||"").indexOf("Agenda")===0) return handleAgendaAction(action,payload);
+  // if (a.indexOf("Evolucao_") === 0) return handleEvolucaoAction(action, payload);
 
   _apiThrow_("NOT_FOUND", "Action não registrada (Registry) e não suportada no legado.", { action: action });
 }
@@ -305,7 +321,7 @@ function _respondMaybeJsonp_(e, obj) {
     var cb = e && e.parameter ? String(e.parameter.callback || "") : "";
     cb = cb.trim();
     if (cb) return _jsonpOutput_(cb, obj);
-  } catch (_) {}
+  } catch (_) { }
   return _withCors_(_jsonOutput_(obj));
 }
 
@@ -424,7 +440,7 @@ function _withCors_(textOutput) {
     textOutput.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
     textOutput.setHeader("Pragma", "no-cache");
     textOutput.setHeader("Expires", "0");
-  } catch (e) {}
+  } catch (e) { }
   return textOutput;
 }
 
@@ -435,7 +451,7 @@ function _withMetaDuration_(envelope, startedAt) {
     if (startedAt && startedAt.getTime) {
       envelope.meta.duration_ms = new Date().getTime() - startedAt.getTime();
     }
-  } catch (_) {}
+  } catch (_) { }
   return envelope;
 }
 
