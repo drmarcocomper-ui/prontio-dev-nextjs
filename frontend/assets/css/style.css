@@ -6,7 +6,7 @@
    - fundamentos (reset, tokens, tipografia, layout)
    - componentes reutilizáveis (botões, formulários, cards, tabelas, etc.)
    - sistema (sidebar, topbar)
-   - CSS específico por página (pages/page-*.css)
+   - CSS específico por página (pages/page-*.css) — SOMENTE os que existem
    - temas (theme-default, theme-dark)
 
    OBS:
@@ -31,8 +31,21 @@
 @import url("./components/chat-widget.css");
 
 /* ============ PÁGINAS (CSS específico por tela) ============ */
-/* Home / Dashboard inicial */
-@import url("pages/page-index.css");
+/*
+  ✅ Importar SOMENTE páginas que existem no projeto.
+
+  Mudanças feitas:
+  - Removido: pages/page-index.css (não existe; seu login é index.html e usa page-login.css)
+  - Removido: pages/page-dashboard.css (você não usa dashboard e o arquivo não existe)
+  - Removido: pages/page-sadt.css (arquivo não existe no seu projeto)
+  - Adicionado: pages/page-atendimento.css (sua página inicial é atendimento.html e esse CSS existe)
+*/
+
+/* Login (index.html virou login, mas o CSS continua sendo page-login.css) */
+@import url("pages/page-login.css");
+
+/* Home real (página inicial do sistema) */
+@import url("pages/page-atendimento.css");
 
 /* Núcleo clínico */
 @import url("pages/page-pacientes.css");
@@ -43,7 +56,6 @@
 /* Configurações e sistema */
 @import url("pages/page-configuracoes.css");
 @import url("pages/page-usuarios.css");
-@import url("pages/page-dashboard.css");
 @import url("pages/page-relatorios.css");
 
 /* Documentos clínicos */
@@ -53,24 +65,12 @@
 @import url("pages/page-atestado.css");
 @import url("pages/page-comparecimento.css");
 @import url("pages/page-encaminhamento.css");
-@import url("pages/page-sadt.css");
 
-/* Expansão futura */
+/* Expansão futura (mantenha apenas se os arquivos existirem no seu projeto) */
 @import url("pages/page-faturamento.css");
 @import url("pages/page-estoque.css");
 
 /* ============ TEMA ============ */
-/* Os dois temas são carregados aqui.
-   Quem decide qual “vale” é o atributo data-theme no <body>:
-
-   - body[data-theme="light"] → theme-default.css
-   - body[data-theme="dark"]  → theme-dark.css
-
-   O core/theme.js:
-   - lê/salva a preferência em localStorage
-   - alterna data-theme no body
-   - atualiza ícone sol/lua nos botões .js-toggle-theme
-*/
 @import url("theme/theme-default.css");
 @import url("theme/theme-dark.css");
 @import url("theme/theme-toggle.css");
@@ -79,12 +79,10 @@
 IMPORTANTE:
 - style.css continua sendo o PONTO ÚNICO DE ENTRADA.
 - As páginas HTML devem usar APENAS:
-
   <link rel="stylesheet" href="assets/css/style.css">
 
 - Estilos de impressão NÃO são importados aqui:
   - usar, por exemplo, em receita.html:
-
     <link rel="stylesheet" href="assets/css/print/print-base.css" media="print">
     <link rel="stylesheet" href="assets/css/print/print-receita.css" media="print">
 */
