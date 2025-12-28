@@ -1,15 +1,73 @@
 /* frontend/assets/css/components/responsive-shell.css
 ============================================================
-PRONTIO - Shell Responsivo (Profissional)
-- Sidebar off-canvas em largura estreita (split screen)
-- Overlay + botão ☰ (topbar ou fixo)
-- Conteúdo não corta (min-width: 0 nos containers críticos)
-- Tabelas em cards com scroll horizontal interno
-- Evita "2 hambúrgueres": em telas estreitas esconde toggles internos da sidebar
+PRONTIO - Shell Responsivo (Profissional) [AJUSTADO]
+Objetivo agora:
+- 1 único toggle de menu (SÓ no TOPBAR, à esquerda)
+- Sidebar vira off-canvas em largura estreita
+- Overlay + ESC + clique fora
+- Conteúdo não corta (min-width: 0)
+- Tabelas com scroll interno (sem cortar)
 ============================================================ */
 
 /* ============================================================
-   Botão ☰ (topbar / fixo)
+   Overlay
+   ============================================================ */
+.prontio-sidebar-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+
+/* ============================================================
+   Regras globais para evitar “corte” por min-width implícito
+   ============================================================ */
+.app-shell,
+.main-area,
+.content,
+.page-content,
+#content,
+#main,
+.app-content{
+  min-width: 0;
+}
+
+.card,
+.panel,
+.table-card,
+.content-card,
+.widget-card{
+  min-width: 0;
+}
+
+/* ============================================================
+   Atendimento (seu wrapper real da tabela)
+   ============================================================ */
+.tabela-atendimento-wrapper{
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tabela-atendimento{
+  border-collapse: collapse;
+  min-width: 760px;
+}
+.tabela-atendimento-wrapper::-webkit-scrollbar{ height: 10px; }
+.tabela-atendimento-wrapper::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.18);
+  border-radius: 999px;
+}
+.tabela-atendimento-wrapper::-webkit-scrollbar-track{
+  background: rgba(255,255,255,.06);
+  border-radius: 999px;
+}
+
+/* ============================================================
+   Toggle ☰ (SÓ no TOPBAR)
    ============================================================ */
 .prontio-sidebar-toggle{
   display: none; /* aparece só em telas estreitas */
@@ -32,78 +90,12 @@ PRONTIO - Shell Responsivo (Profissional)
   line-height: 1;
 }
 
-/* Botão fixo (fallback quando não existe topbar ainda) */
-.prontio-sidebar-toggle--fixed{
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 10001; /* acima do topbar e overlay */
-  margin-right: 0;
-}
-
-/* ============================================================
-   Overlay
-   ============================================================ */
-.prontio-sidebar-overlay{
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .18s ease;
-}
-
-/* ============================================================
-   Regras globais de layout: impedir corte por min-width implícito
-   ============================================================ */
-.app-shell,
-.main-area,
-.content,
-.page-content,
-#content,
-#main,
-.app-content{
-  min-width: 0;
-}
-
-.card,
-.panel,
-.table-card,
-.content-card,
-.widget-card{
-  min-width: 0;
-}
-
-/* ============================================================
-   Atendimento: wrapper real da tabela
-   ============================================================ */
-.tabela-atendimento-wrapper{
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.tabela-atendimento{
-  border-collapse: collapse;
-  min-width: 760px;
-}
-.tabela-atendimento-wrapper::-webkit-scrollbar{ height: 10px; }
-.tabela-atendimento-wrapper::-webkit-scrollbar-thumb{
-  background: rgba(255,255,255,.18);
-  border-radius: 999px;
-}
-.tabela-atendimento-wrapper::-webkit-scrollbar-track{
-  background: rgba(255,255,255,.06);
-  border-radius: 999px;
-}
-
 /* ============================================================
    Responsivo: split screen / janela estreita
    ============================================================ */
 @media (max-width: 1180px) {
 
-  /* Mostra o botão ☰ (topbar ou fixo) */
+  /* Mostra o toggle no TOPBAR */
   .prontio-sidebar-toggle{
     display: inline-flex;
   }
@@ -135,7 +127,7 @@ PRONTIO - Shell Responsivo (Profissional)
     pointer-events: auto;
   }
 
-  /* Reforço para conteúdo não “estourar” */
+  /* Conteúdo: reforço para não “estourar” */
   .app-shell,
   .main-area,
   .content,
@@ -148,9 +140,7 @@ PRONTIO - Shell Responsivo (Profissional)
     max-width: 100% !important;
   }
 
-  /* ✅ Evita “2 hambúrgueres”: esconde toggles internos da sidebar em telas estreitas
-     (seletores amplos para pegar diferentes implementações) */
-  .sidebar .prontio-sidebar-toggle,
+  /* ✅ Esconde qualquer “hambúrguer” que exista DENTRO da sidebar (para não duplicar) */
   .sidebar .hamburger,
   .sidebar .menu-toggle,
   .sidebar .sidebar-toggle,
@@ -159,6 +149,14 @@ PRONTIO - Shell Responsivo (Profissional)
   .sidebar [data-nav-action="toggle-sidebar"],
   .sidebar button[aria-label*="menu" i],
   .sidebar button[aria-label*="menu" i] *{
+    display: none !important;
+  }
+
+  /* ✅ Se houver botões antigos de menu no topbar (além do nosso), escondemos (o JS também remove) */
+  .topbar .js-sidebar-toggle:not(.prontio-sidebar-toggle),
+  .topbar .sidebar-toggle:not(.prontio-sidebar-toggle),
+  .topbar [data-action="toggle-sidebar"]:not(.prontio-sidebar-toggle),
+  .topbar [data-nav-action="toggle-sidebar"]:not(.prontio-sidebar-toggle){
     display: none !important;
   }
 }
