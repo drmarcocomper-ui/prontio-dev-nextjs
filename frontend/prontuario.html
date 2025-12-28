@@ -5,7 +5,8 @@
   <title>PRONTIO - Prontuário</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<link rel="stylesheet" href="assets/css/style.css">
+  <!-- ✅ Ponto único de entrada de CSS -->
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 
 <body
@@ -25,52 +26,70 @@
 
       <section class="content content-prontuario">
 
+        <!-- ✅ CARD: RESUMO DO PACIENTE (SEM CHAT / SEM TIMELINE UNIFICADA / SEM DADOS DE AGENDA) -->
         <section class="card card-prontuario card-paciente">
-  <div class="card-body card-body-compact">
+          <div class="card-body card-body-compact">
 
-    <!-- NOME DO PACIENTE (DESTAQUE PRINCIPAL) -->
-    <div class="prontuario-paciente-header">
-      <div class="prontuario-paciente-info">
-        <div class="paciente-nome-linha">
-          <!-- ❌ removido rótulo "Paciente" -->
-          <span
-            id="prontuario-paciente-nome"
-            class="paciente-nome"
-            style="font-size:1.45rem; font-weight:700;"
-          >
-            —
-          </span>
-        </div>
-      </div>
-    </div>
+            <!-- Nome do paciente (destaque) -->
+            <div class="prontuario-paciente-header">
+              <div class="prontuario-paciente-info">
+                <div class="paciente-nome-linha">
+                  <span
+                    id="prontuario-paciente-nome"
+                    class="paciente-nome"
+                    style="font-size:1.45rem; font-weight:700;"
+                  >—</span>
+                </div>
+              </div>
+            </div>
 
-    <!-- DADOS CADASTRAIS DO PACIENTE -->
-    <div class="grid-2 mt-md" style="gap:.5rem 1.5rem;">
-      <div class="campo-inline">
-        <span class="campo-label">Idade</span>
-        <span id="prontuario-paciente-idade" class="campo-valor">—</span>
-      </div>
+            <!-- Linha horizontal fina -->
+            <hr style="border:none; border-top:1px solid var(--cor-borda-suave, #e5e7eb); margin:.85rem 0 1rem;">
 
-      <div class="campo-inline">
-        <span class="campo-label">Profissão</span>
-        <span id="prontuario-paciente-profissao" class="campo-valor">—</span>
-      </div>
+            <!-- 4 blocos lado a lado: label em cima, valor embaixo -->
+            <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:1rem;">
+              <div>
+                <div class="texto-menor texto-suave">Idade</div>
+                <div id="prontuario-paciente-idade" class="campo-valor" style="margin-top:.2rem;">—</div>
+              </div>
 
-      <div class="campo-inline">
-        <span class="campo-label">Plano de saúde</span>
-        <span id="prontuario-paciente-plano" class="campo-valor">—</span>
-      </div>
+              <div>
+                <div class="texto-menor texto-suave">Profissão</div>
+                <div id="prontuario-paciente-profissao" class="campo-valor" style="margin-top:.2rem;">—</div>
+              </div>
 
-      <div class="campo-inline">
-        <span class="campo-label">Carteirinha</span>
-        <span id="prontuario-paciente-carteirinha" class="campo-valor">—</span>
-      </div>
-    </div>
+              <div>
+                <div class="texto-menor texto-suave">Plano de saúde</div>
+                <div id="prontuario-paciente-plano" class="campo-valor" style="margin-top:.2rem;">—</div>
+              </div>
 
-  </div>
-</section>
+              <div>
+                <div class="texto-menor texto-suave">Carteirinha</div>
+                <div id="prontuario-paciente-carteirinha" class="campo-valor" style="margin-top:.2rem;">—</div>
+              </div>
+            </div>
 
+            <!-- Responsivo simples (sem CSS extra): em telas pequenas, quebra bem -->
+            <style>
+              @media (max-width: 768px) {
+                body[data-page-id="prontuario"] .card-paciente > .card-body {
+                  padding-top: 0.9rem;
+                }
+                body[data-page-id="prontuario"] .card-paciente div[style*="grid-template-columns:repeat(4"] {
+                  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                }
+              }
+              @media (max-width: 420px) {
+                body[data-page-id="prontuario"] .card-paciente div[style*="grid-template-columns:repeat(4"] {
+                  grid-template-columns: 1fr !important;
+                }
+              }
+            </style>
 
+          </div>
+        </section>
+
+        <!-- BARRA DE AÇÕES CLÍNICAS -->
         <section class="prontuario-acoes-clinicas" aria-label="Ações clínicas do prontuário">
           <button type="button" id="btnAcaoNovaEvolucao" class="btn btn-acao-clinica btn-acao-principal">
             <span class="btn-acao-icone" aria-hidden="true">📝</span>
@@ -105,72 +124,6 @@
           </button>
         </section>
 
-        <!-- TIMELINE UNIFICADA (com paginação) -->
-        <section class="card card-prontuario" id="secTimelineUnificada">
-          <div class="card-header card-header-tight">
-            <div>
-              <h2>Timeline unificada</h2>
-              <span class="card-subtitle">Evoluções, receitas e chat em uma linha do tempo (mais recente no topo).</span>
-            </div>
-            <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-              <button id="btnTimelineRecarregar" class="btn btn-secondary btn-sm" type="button">Recarregar</button>
-              <button id="btnTimelineCarregarMais" class="btn btn-secondary btn-sm" type="button" style="display:none;">Carregar mais</button>
-            </div>
-          </div>
-
-          <div class="card-body card-body-compact">
-            <div class="mt-sm" style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
-              <span class="texto-menor texto-suave">Filtros:</span>
-
-              <label class="texto-menor" style="display:flex; align-items:center; gap:.35rem;">
-                <input type="checkbox" id="tlFiltroEvolucao" checked>
-                Evolução
-              </label>
-
-              <label class="texto-menor" style="display:flex; align-items:center; gap:.35rem;">
-                <input type="checkbox" id="tlFiltroReceita" checked>
-                Receita
-              </label>
-
-              <label class="texto-menor" style="display:flex; align-items:center; gap:.35rem;">
-                <input type="checkbox" id="tlFiltroChat" checked>
-                Chat
-              </label>
-
-              <span id="tlMeta" class="texto-menor texto-suave" style="margin-left:auto;">—</span>
-            </div>
-
-            <p class="msg-menor" id="tlVazio">Carregando timeline...</p>
-            <ul id="tlLista" class="prontuario-timeline mt-md"></ul>
-          </div>
-        </section>
-
-        <!-- CHAT RÁPIDO -->
-        <section class="card card-prontuario" id="secChatRapidoPaciente">
-          <div class="card-header card-header-tight">
-            <div>
-              <h2>Chat rápido</h2>
-              <span class="card-subtitle">Anotações rápidas vinculadas ao paciente</span>
-            </div>
-            <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
-              <span id="prontuario-current-user-label" class="texto-menor texto-suave">Você: Usuário</span>
-              <a id="prontuario-open-full-chat" class="btn btn-secondary btn-sm" href="chat.html">Abrir chat</a>
-              <a id="prontuario-open-agenda" class="btn btn-secondary btn-sm" href="agenda.html" style="display:none;">Ver na agenda</a>
-            </div>
-          </div>
-          <div class="card-body card-body-compact">
-            <div id="prontuario-chat-messages" style="display:flex; flex-direction:column; gap:.5rem; max-height:220px; overflow:auto;"></div>
-            <div class="mt-md" style="display:flex; gap:.5rem; align-items:flex-end; flex-wrap:wrap;">
-              <div style="flex:1; min-width:220px;">
-                <label class="texto-menor texto-suave" for="prontuario-chat-input">Mensagem</label>
-                <textarea id="prontuario-chat-input" rows="2" placeholder="Escreva uma anotação rápida (Enter para enviar)"></textarea>
-                <div id="prontuario-chat-status" class="msg-menor texto-suave mt-sm">—</div>
-              </div>
-              <button type="button" id="prontuario-chat-send" class="btn btn-primary" style="min-width:160px;">Enviar</button>
-            </div>
-          </div>
-        </section>
-
         <!-- NOVA EVOLUÇÃO -->
         <section class="card card-prontuario card-nova-evolucao" id="cardNovaEvolucao" style="display:none;">
           <div class="card-header card-header-tight">
@@ -199,7 +152,7 @@
           </div>
         </section>
 
-        <!-- HISTÓRICO (com paginação) -->
+        <!-- HISTÓRICO (Evoluções) -->
         <section class="card card-prontuario" id="secHistoricoPaciente">
           <div class="card-header card-header-tight">
             <div>
@@ -217,7 +170,7 @@
           </div>
         </section>
 
-        <!-- RECEITAS (com paginação) -->
+        <!-- RECEITAS -->
         <section class="card card-prontuario" id="secReceitasPaciente">
           <div class="card-header card-header-tight">
             <div>
@@ -239,6 +192,7 @@
     </main>
   </div>
 
+  <!-- Mantido: chat global do topo/janela (controlado por widget existente) -->
   <div id="chatWindow" class="chat-window" hidden aria-hidden="true"></div>
 
   <!-- PAINEL DESLIZANTE: RECEITA -->
