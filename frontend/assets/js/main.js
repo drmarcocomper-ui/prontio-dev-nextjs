@@ -9,8 +9,12 @@
   // ✅ marca cedo para impedir auto-init duplicado em loaders
   PRONTIO._mainBootstrapped = true;
 
+  // ✅ trava adicional: se main.js for incluído 2x por qualquer motivo, não roda bootstrap de novo
+  if (PRONTIO._mainBootstrapRan === true) return;
+  PRONTIO._mainBootstrapRan = true;
+
   // ✅ Bump quando fizer mudanças em JS e quiser quebrar cache do GitHub Pages
-  const APP_VERSION = "1.0.7.7";
+  const APP_VERSION = "1.0.7.8";
   PRONTIO.APP_VERSION = APP_VERSION;
 
   // ============================================================
@@ -19,7 +23,8 @@
   const PAGE_MANIFEST = {
     // login (index.html)
     login: {
-      js: ["assets/js/pages/page-login.js"],
+      // ✅ inclui toast aqui (antes era manual no HTML)
+      js: ["assets/js/widgets/widget-toast.js", "assets/js/pages/page-login.js"],
       css: ["assets/css/pages/page-login.css"]
     },
 
@@ -265,6 +270,13 @@
     await loadOnce_("assets/js/core/auth.js");
     await loadOnce_("assets/js/core/app.js");
 
+    // ✅ chama app.init (agora app.js não auto-inicializa mais)
+    try {
+      if (PRONTIO.app && typeof PRONTIO.app.init === "function") {
+        await PRONTIO.app.init();
+      }
+    } catch (_) {}
+
     const hasApiAfter =
       okApi &&
       PRONTIO.api &&
@@ -422,14 +434,11 @@
       // CSS/Assets da página (só se existir no manifest)
       ensurePageAssets_(pageId);
 
-      // ✅ Se a página já foi registrada (porque o HTML já incluiu o script),
-      // NÃO tenta carregar de novo via manifest.
-      if (!PRONTIO.pages[pageId]) {
-        const entry = PAGE_MANIFEST[pageId];
-        if (entry && entry.js && entry.js.length) {
-          for (let i = 0; i < entry.js.length; i++) {
-            await loadOnce_(entry.js[i]);
-          }
+      // Carrega scripts da página via manifest (login incluído)
+      const entry = PAGE_MANIFEST[pageId];
+      if (entry && entry.js && entry.js.length) {
+        for (let i = 0; i < entry.js.length; i++) {
+          await loadOnce_(entry.js[i]);
         }
       }
 

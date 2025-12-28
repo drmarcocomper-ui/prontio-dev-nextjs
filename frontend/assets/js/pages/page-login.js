@@ -7,6 +7,8 @@
 
 (function (global, document) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
+  PRONTIO.pages = PRONTIO.pages || {};
+  PRONTIO.pages.login = PRONTIO.pages.login || {};
 
   const DEFAULT_HOME = "atendimento.html";
 
@@ -224,6 +226,10 @@
   }
 
   function init() {
+    // ✅ trava idempotente (page.init pode ser chamado mais de uma vez)
+    if (PRONTIO.pages && PRONTIO.pages.login && PRONTIO.pages.login._inited === true) return;
+    PRONTIO.pages.login._inited = true;
+
     setYear();
     applyUxHints_();
     bindCapsLockDetector_();
@@ -248,5 +254,12 @@
     form.addEventListener("submit", handleSubmit);
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  // ✅ padrão profissional: main.js chama page.init()
+  PRONTIO.pages.login.init = init;
+
+  // ✅ fallback retrocompat: se por algum motivo main.js não rodar, inicializa sozinho
+  if (!PRONTIO._mainBootstrapped) {
+    document.addEventListener("DOMContentLoaded", init);
+  }
+
 })(window, document);
