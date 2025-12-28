@@ -18,9 +18,9 @@
  * - Atendimento.SyncHoje
  * - Atendimento.ListarFilaHoje
  * - Atendimento.MarcarChegada
- * - Atendimento.ChamarProximo   ✅ (Opção A: NÃO muda status)
+ * - Atendimento.ChamarProximo   (Opção A: NÃO muda status)
  * - Atendimento.Iniciar
- * - Atendimento.Concluir        ✅ agora vira ATENDIDO
+ * - Atendimento.Concluir        (vira ATENDIDO)
  * - Atendimento.Cancelar
  *
  * ✅ NOVO:
@@ -36,11 +36,6 @@ var AGENDA_SHEET_NAME = "Agenda";
 var PACIENTES_ENTITY = "Pacientes";
 var PACIENTES_ID_FIELD = "idPaciente";
 
-/**
- * ✅ STATUS DEFINITIVOS (alinhado com sua lista)
- * Observação:
- * - "CHAMANDO" não existe (Opção A): "chamar" é ação/registro (chamadoEm), não estado.
- */
 var ATENDIMENTO_STATUS = {
   MARCADO: "MARCADO",
   CONFIRMADO: "CONFIRMADO",
@@ -136,8 +131,6 @@ function Atendimento_Action_SyncHoje_(ctx, payload) {
           idAgenda: ag.idAgenda,
           idPaciente: ag.idPaciente,
           dataRef: dataRef,
-
-          // ✅ novo: fila começa em AGUARDANDO
           status: ATENDIMENTO_STATUS.AGUARDANDO
         }
       );
@@ -160,8 +153,6 @@ function Atendimento_Action_SyncHoje_(ctx, payload) {
 
     if (resetOrdem) {
       var st = _atdNormalizeStatus_(exists.status);
-
-      // ✅ Não mexe na ordem de estados finais
       if (
         st !== ATENDIMENTO_STATUS.EM_ATENDIMENTO &&
         st !== ATENDIMENTO_STATUS.ATENDIDO &&
@@ -202,7 +193,6 @@ function Atendimento_Action_ListarFilaHoje_(ctx, payload) {
 
 /**
  * Atendimento.MarcarChegada
- * ✅ Seu vocabulário: "chegou" = AGUARDANDO (com chegadaEm preenchido)
  */
 function Atendimento_Action_MarcarChegada_(ctx, payload) {
   payload = payload || {};
@@ -225,12 +215,9 @@ function Atendimento_Action_MarcarChegada_(ctx, payload) {
   }
 
   var st = _atdNormalizeStatus_(existing.status);
-
-  // ✅ mantém status canônico; chegada apenas marca tempo
   var patch = { status: st, atualizadoEm: nowIso };
 
   if (!existing.chegadaEm) patch.chegadaEm = nowIso;
-
   if (payload.sala !== undefined) patch.sala = String(payload.sala || "");
   if (payload.observacoes !== undefined) patch.observacoes = String(payload.observacoes || "");
   if (payload.ordem !== undefined) patch.ordem = _atdNormalizeNumberOrBlank_(payload.ordem);
@@ -241,9 +228,7 @@ function Atendimento_Action_MarcarChegada_(ctx, payload) {
 }
 
 /**
- * Atendimento.ChamarProximo
- * ✅ Opção A: NÃO muda status (não existe "CHAMANDO")
- * - Apenas registra chamadoEm e retorna o próximo (prioriza quem já chegou/aguardando com chegadaEm)
+ * Atendimento.ChamarProximo (Opção A: não muda status)
  */
 function Atendimento_Action_ChamarProximo_(ctx, payload) {
   payload = payload || {};
@@ -266,27 +251,20 @@ function Atendimento_Action_ChamarProximo_(ctx, payload) {
     if (a.status === ATENDIMENTO_STATUS.REMARCADO) continue;
     if (a.status === ATENDIMENTO_STATUS.EM_ATENDIMENTO) continue;
 
-    // ✅ elegíveis: MARCADO/CONFIRMADO/AGUARDANDO
     candidates.push(a);
   }
 
   if (!candidates.length) return { item: null, dataRef: dataRef, message: "Fila vazia." };
 
-  // Prioridade:
-  // 1) quem tem chegadaEm (chegou) primeiro
-  // 2) menor ordem
-  // 3) mais antigo por chegadaEm/criadoEm
   candidates.sort(function (x, y) {
     var xArrived = x.chegadaEm ? 0 : 1;
     var yArrived = y.chegadaEm ? 0 : 1;
     if (xArrived !== yArrived) return xArrived - yArrived;
-
     return _atdCompareFila_(x, y);
   });
 
   var next = candidates[0];
 
-  // ✅ Opção A: não muda status; apenas registra chamadoEm
   var patch = {
     chamadoEm: next.chamadoEm || nowIso,
     atualizadoEm: nowIso
@@ -314,11 +292,7 @@ function Atendimento_Action_Iniciar_(ctx, payload) {
   if (st === ATENDIMENTO_STATUS.FALTOU) _atdThrow_("VALIDATION_ERROR", "Atendimento marcado como falta não pode iniciar.", { idAtendimento: a.idAtendimento });
   if (st === ATENDIMENTO_STATUS.REMARCADO) _atdThrow_("VALIDATION_ERROR", "Atendimento remarcado não pode iniciar.", { idAtendimento: a.idAtendimento });
 
-  var patch = {
-    status: ATENDIMENTO_STATUS.EM_ATENDIMENTO,
-    inicioAtendimentoEm: a.inicioAtendimentoEm || nowIso,
-    atualizadoEm: nowIso
-  };
+  var patch = { status: ATENDIMENTO_STATUS.EM_ATENDIMENTO, inicioAtendimentoEm: a.inicioAtendimentoEm || nowIso, atualizadoEm: nowIso };
 
   Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento, patch);
   var after = Repo_getById_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento);
@@ -326,9 +300,7 @@ function Atendimento_Action_Iniciar_(ctx, payload) {
 }
 
 /**
- * Atendimento.Concluir
- * ✅ Agora vira ATENDIDO (canônico).
- * Compat: também preenche concluidoEm (legado) para não quebrar telas antigas.
+ * Atendimento.Concluir (vira ATENDIDO)
  */
 function Atendimento_Action_Concluir_(ctx, payload) {
   payload = payload || {};
@@ -343,10 +315,7 @@ function Atendimento_Action_Concluir_(ctx, payload) {
   var patch = {
     status: ATENDIMENTO_STATUS.ATENDIDO,
     atendidoEm: a.atendidoEm || a.concluidoEm || nowIso,
-
-    // compat
-    concluidoEm: a.concluidoEm || a.atendidoEm || nowIso,
-
+    concluidoEm: a.concluidoEm || a.atendidoEm || nowIso, // compat
     atualizadoEm: nowIso
   };
 
@@ -367,12 +336,7 @@ function Atendimento_Action_Cancelar_(ctx, payload) {
   var a = _atdResolveTarget_(payload);
   if (!a) _atdThrow_("NOT_FOUND", "Atendimento não encontrado.", { payload: payload });
 
-  var patch = {
-    status: ATENDIMENTO_STATUS.CANCELADO,
-    canceladoEm: a.canceladoEm || nowIso,
-    atualizadoEm: nowIso
-  };
-
+  var patch = { status: ATENDIMENTO_STATUS.CANCELADO, canceladoEm: a.canceladoEm || nowIso, atualizadoEm: nowIso };
   if (payload.motivo !== undefined) patch.observacoes = String(payload.motivo || "");
 
   Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento, patch);
@@ -380,10 +344,9 @@ function Atendimento_Action_Cancelar_(ctx, payload) {
   return { item: _atdNormalizeRowToDto_(after) };
 }
 
-/* ============================================================
- * ✅ NOVO: A partir de hoje (range)
- * ============================================================ */
-
+/**
+ * Atendimento.SyncAPartirDeHoje
+ */
 function Atendimento_Action_SyncAPartirDeHoje_(ctx, payload) {
   payload = payload || {};
   var dias = Number(payload.dias || 30);
@@ -512,6 +475,10 @@ function Atendimento_Action_SyncAPartirDeHoje_(ctx, payload) {
   return { dataRefInicio: dataRefInicio, dias: dias, created: created, updated: updated, skipped: skipped, totalAgenda: totalAgenda };
 }
 
+/**
+ * Atendimento.ListarFilaAPartirDeHoje
+ * ✅ Correção principal aqui: nomePaciente agora vem de nomeCompleto/nomeSocial/nome
+ */
 function Atendimento_Action_ListarFilaAPartirDeHoje_(ctx, payload) {
   payload = payload || {};
   var dias = Number(payload.dias || 30);
@@ -543,10 +510,9 @@ function Atendimento_Action_ListarFilaAPartirDeHoje_(ctx, payload) {
     a.status = st;
 
     if (!incluirCancelados && st === ATENDIMENTO_STATUS.CANCELADO) continue;
-
-    // compat: incluirConcluidos => inclui ATENDIDO
     if (!incluirConcluidos && st === ATENDIMENTO_STATUS.ATENDIDO) continue;
 
+    // Enriquecimento via Agenda (hora/tipo)
     if (a.idAgenda) {
       var ag = agendaCache[a.idAgenda];
       if (ag === undefined) {
@@ -560,13 +526,21 @@ function Atendimento_Action_ListarFilaAPartirDeHoje_(ctx, payload) {
       }
     }
 
+    // ✅ Enriquecimento via Pacientes (NOME CORRETO)
     if (a.idPaciente) {
       var p = pacienteCache[a.idPaciente];
       if (p === undefined) {
         try { p = Repo_getById_(PACIENTES_ENTITY, PACIENTES_ID_FIELD, a.idPaciente); } catch (_) { p = null; }
         pacienteCache[a.idPaciente] = p || null;
       }
-      if (p) a.nomePaciente = p.nome || p.nomePaciente || a.nomePaciente || "";
+
+      if (p) {
+        // ✅ cobre variações do seu projeto
+        var nome =
+          String(p.nomeCompleto || p.nomeSocial || p.nome || p.NomeCompleto || p.Nome || "").trim();
+
+        if (nome) a.nomePaciente = nome;
+      }
     }
 
     out.push(a);
@@ -590,7 +564,7 @@ function Atendimento_Action_ListarFilaAPartirDeHoje_(ctx, payload) {
 }
 
 /* ============================================================
- * Helpers (mantidos)
+ * Helpers
  * ============================================================ */
 
 function _atdResolveTarget_(payload) {
@@ -633,17 +607,13 @@ function _atdBuildNew_(payload, overrides) {
     idAgenda: overrides.idAgenda || (payload.idAgenda ? String(payload.idAgenda) : ""),
     idPaciente: overrides.idPaciente || (payload.idPaciente ? String(payload.idPaciente) : ""),
     dataRef: overrides.dataRef || _atdNormalizeDateRef_(payload.dataRef),
-
     status: overrides.status || ATENDIMENTO_STATUS.AGUARDANDO,
-
     ordem: (overrides.ordem !== undefined) ? _atdNormalizeNumberOrBlank_(overrides.ordem) : _atdNormalizeNumberOrBlank_(payload.ordem),
 
     confirmadoEm: overrides.confirmadoEm || "",
     chegadaEm: overrides.chegadaEm || "",
     chamadoEm: overrides.chamadoEm || "",
     inicioAtendimentoEm: overrides.inicioAtendimentoEm || "",
-
-    // ✅ novo canônico
     atendidoEm: overrides.atendidoEm || "",
     faltouEm: overrides.faltouEm || "",
     canceladoEm: overrides.canceladoEm || "",
@@ -671,6 +641,10 @@ function _atdBuildNew_(payload, overrides) {
 function _atdNormalizeRowToDto_(rowObj) {
   rowObj = rowObj || {};
 
+  // ✅ defensivo: tenta carregar nome de diferentes campos (caso já esteja gravado de formas diferentes)
+  var nome =
+    String(rowObj.nomePaciente || rowObj.nomeCompleto || rowObj.nomeSocial || rowObj.nome || rowObj.NomeCompleto || rowObj.Nome || "").trim();
+
   return {
     idAtendimento: rowObj.idAtendimento || rowObj.ID_Atendimento || "",
     idAgenda: rowObj.idAgenda || rowObj.ID_Agenda || "",
@@ -680,19 +654,14 @@ function _atdNormalizeRowToDto_(rowObj) {
     ordem: _atdParseNumber_(rowObj.ordem),
 
     confirmadoEm: rowObj.confirmadoEm || "",
-    chegadaEm: rowObj.chegadaEm || rowObj.chegadaEm || "",
-
-    // compat: se já existia "chegadaEm" ok; se existia "chegadaEm" continua
+    chegadaEm: rowObj.chegadaEm || "",
     chamadoEm: rowObj.chamadoEm || "",
     inicioAtendimentoEm: rowObj.inicioAtendimentoEm || "",
 
-    // canônico
     atendidoEm: rowObj.atendidoEm || rowObj.concluidoEm || "",
     faltouEm: rowObj.faltouEm || "",
     canceladoEm: rowObj.canceladoEm || "",
     remarcadoEm: rowObj.remarcadoEm || "",
-
-    // compat
     concluidoEm: rowObj.concluidoEm || rowObj.atendidoEm || "",
 
     sala: rowObj.sala || "",
@@ -700,7 +669,7 @@ function _atdNormalizeRowToDto_(rowObj) {
 
     hora: rowObj.hora || "",
     tipo: rowObj.tipo || "",
-    nomePaciente: rowObj.nomePaciente || "",
+    nomePaciente: nome,
 
     criadoEm: rowObj.criadoEm || "",
     atualizadoEm: rowObj.atualizadoEm || "",
@@ -708,20 +677,15 @@ function _atdNormalizeRowToDto_(rowObj) {
   };
 }
 
-/**
- * ✅ Normaliza status antigo -> novo canônico
- */
 function _atdNormalizeStatus_(status) {
   var s = String(status || "").trim().toUpperCase();
   if (!s) return ATENDIMENTO_STATUS.AGUARDANDO;
 
-  // compat antigos
   if (s === "AGENDADO") return ATENDIMENTO_STATUS.MARCADO;
   if (s === "CHEGOU") return ATENDIMENTO_STATUS.AGUARDANDO;
-  if (s === "CHAMADO") return ATENDIMENTO_STATUS.AGUARDANDO; // Opção A
+  if (s === "CHAMADO") return ATENDIMENTO_STATUS.AGUARDANDO;
   if (s === "CONCLUIDO") return ATENDIMENTO_STATUS.ATENDIDO;
 
-  // tolerâncias
   if (s === "EM ATENDIMENTO" || s === "EM-ATENDIMENTO") s = "EM_ATENDIMENTO";
 
   if (s.indexOf("REMARC") >= 0) return ATENDIMENTO_STATUS.REMARCADO;
