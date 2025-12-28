@@ -840,3 +840,94 @@
     else initProntuario();
   }
 })(window, document);
+// ============================================================
+// RECEITA — MINI-CARDS DE MEDICAMENTOS
+// ============================================================
+
+let receitaMedCounter = 0;
+
+function criarMedicamentoCard_(dados) {
+  receitaMedCounter++;
+
+  const container = document.getElementById("receitaItensContainer");
+  if (!container) return;
+
+  const card = document.createElement("div");
+  card.className = "receita-med-card";
+
+  card.innerHTML = `
+    <div class="receita-med-header">
+      <span class="receita-med-titulo">Medicamento ${receitaMedCounter}</span>
+      <button type="button" class="receita-med-remover">Remover</button>
+    </div>
+
+    <div class="receita-med-grid">
+      <div class="full">
+        <label class="texto-menor texto-suave">Medicamento *</label>
+        <input type="text" class="med-nome" placeholder="Ex: Dipirona 500mg" required>
+      </div>
+
+      <div class="full">
+        <label class="texto-menor texto-suave">Posologia *</label>
+        <input type="text" class="med-posologia" placeholder="Ex: 1 cp 6/6h" required>
+      </div>
+
+      <div>
+        <label class="texto-menor texto-suave">Duração</label>
+        <input type="text" class="med-duracao" placeholder="Ex: 7 dias">
+      </div>
+
+      <div>
+        <label class="texto-menor texto-suave">Via</label>
+        <select class="med-via">
+          <option value="">—</option>
+          <option value="VO">VO</option>
+          <option value="IM">IM</option>
+          <option value="EV">EV</option>
+          <option value="SL">SL</option>
+          <option value="Tópico">Tópico</option>
+        </select>
+      </div>
+    </div>
+  `;
+
+  // Preenche se vier como modelo
+  if (dados) {
+    card.querySelector(".med-nome").value = dados.nome || "";
+    card.querySelector(".med-posologia").value = dados.posologia || "";
+    card.querySelector(".med-duracao").value = dados.duracao || "";
+    card.querySelector(".med-via").value = dados.via || "";
+  }
+
+  // Remover card
+  card.querySelector(".receita-med-remover").addEventListener("click", () => {
+    card.remove();
+    atualizarTituloMedicamentos_();
+  });
+
+  container.appendChild(card);
+  atualizarTituloMedicamentos_();
+}
+
+function atualizarTituloMedicamentos_() {
+  const cards = document.querySelectorAll(".receita-med-card");
+  cards.forEach((card, index) => {
+    const titulo = card.querySelector(".receita-med-titulo");
+    if (titulo) titulo.textContent = `Medicamento ${index + 1}`;
+  });
+}
+
+// Botão "+ Adicionar medicamento"
+document.addEventListener("click", (ev) => {
+  if (ev.target && ev.target.id === "btnAdicionarMedicamento") {
+    criarMedicamentoCard_();
+  }
+});
+
+// Inicial: sempre começar com 1 medicamento vazio
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.getElementById("receitaItensContainer");
+  if (container && container.children.length === 0) {
+    criarMedicamentoCard_();
+  }
+});

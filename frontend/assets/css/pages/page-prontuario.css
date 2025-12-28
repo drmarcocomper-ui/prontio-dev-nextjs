@@ -315,3 +315,57 @@ body[data-page-id="prontuario"] #receitaPanel .slide-panel-header {
    O chat do topo/janela passa a ser 100% controlado por:
    assets/css/components/chat-topbar.css
 */
+/* =========================================
+   RECEITA — MINI-CARDS DE MEDICAMENTOS
+========================================= */
+
+body[data-page-id="prontuario"] .receita-itens-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+body[data-page-id="prontuario"] .receita-med-card {
+  border: 1px solid var(--cor-borda-suave, #e5e7eb);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: var(--cor-fundo-card, #ffffff);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+body[data-page-id="prontuario"] .receita-med-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+body[data-page-id="prontuario"] .receita-med-titulo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cor-texto-secundario, #4b5563);
+}
+
+body[data-page-id="prontuario"] .receita-med-remover {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+body[data-page-id="prontuario"] .receita-med-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+body[data-page-id="prontuario"] .receita-med-grid .full {
+  grid-column: 1 / -1;
+}
+
+body[data-page-id="prontuario"] .receita-med-grid input,
+body[data-page-id="prontuario"] .receita-med-grid select {
+  width: 100%;
+}
