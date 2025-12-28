@@ -259,6 +259,57 @@ body[data-page-id="prontuario"] .prontuario-timeline::before {
   }
 }
 
+/* =========================================
+   ✅ FIX: PAINEL LATERAL (RECEITA) — SOBRE A TELA, DA DIREITA
+   Motivo: sem essas regras, o painel pode renderizar "embaixo" do conteúdo.
+========================================= */
+
+body[data-page-id="prontuario"] #receitaPanel.slide-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: flex-end; /* painel na direita */
+  align-items: stretch;      /* altura total */
+}
+
+body[data-page-id="prontuario"] #receitaPanel[aria-hidden="true"] {
+  display: none;
+}
+
+body[data-page-id="prontuario"] #receitaPanel .slide-panel {
+  width: min(520px, 100vw);
+  height: 100%;
+  background: var(--cor-fundo-card, #ffffff);
+  border-left: 1px solid var(--cor-borda-suave, #e5e7eb);
+  box-shadow: -18px 0 40px rgba(15, 23, 42, 0.22);
+  overflow: auto;
+
+  transform: translateX(0);
+  animation: prontioPanelIn 180ms ease-out;
+}
+
+@keyframes prontioPanelIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page-id="prontuario"] #receitaPanel .slide-panel {
+    animation: none;
+  }
+}
+
+body[data-page-id="prontuario"] #receitaPanel .slide-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--cor-fundo-card, #ffffff);
+  border-bottom: 1px solid var(--cor-borda-suave, #e5e7eb);
+}
+
 /* OBS:
    Removido o bloco do chat do page-prontuario.css para evitar conflito.
    O chat do topo/janela passa a ser 100% controlado por:
