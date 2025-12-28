@@ -19,10 +19,12 @@
     return Array.from(document.querySelectorAll(sel));
   }
 
-  // Estado
+  // ============================================================
+  // Estado geral
+  // ============================================================
+
   let idEvolucaoEmEdicao = null;
   let historicoCompletoCarregado = false;
-  let receitasCompletoCarregado = false;
 
   // Evoluções paginadas
   let evoPaging = {
@@ -42,10 +44,16 @@
     lista: [],
   };
 
-  // Receita panel (UI-only)
+  // Painel Receita
   let receitaPanel = null;
   let receitaPanelAside = null;
   let receitaPanelLastFocus = null;
+
+  // Mini-cards de medicamento
+  let receitaMedCounter = 0;
+
+  // Autocomplete (debounce)
+  let medSuggestTimer = null;
 
   // ============================================================
   // Helpers de API
@@ -158,7 +166,7 @@
   }
 
   // ============================================================
-  // Topo do paciente (Nome / Idade / Profissão / Plano / Carteirinha)
+  // Topo do paciente
   // ============================================================
 
   function setTextOrDash_(selector, value) {
@@ -207,7 +215,7 @@
   }
 
   // ============================================================
-  // ✅ Painel lateral de Receita (abre no prontuário, não navega)
+  // Painel lateral (Receita)
   // ============================================================
 
   function _trapFocusInPanel_(panelAside, e) {
@@ -238,7 +246,6 @@
     receitaPanel.setAttribute("aria-hidden", "true");
     receitaPanel.style.display = "none";
 
-    // restaura foco
     try {
       if (receitaPanelLastFocus && typeof receitaPanelLastFocus.focus === "function") {
         receitaPanelLastFocus.focus();
@@ -258,10 +265,9 @@
     receitaPanelAside = receitaPanelAside || receitaPanel.querySelector(".slide-panel");
     receitaPanelLastFocus = document.activeElement;
 
-    receitaPanel.style.display = "";
+    receitaPanel.style.display = "flex";
     receitaPanel.setAttribute("aria-hidden", "false");
 
-    // foca no primeiro campo útil (data) ou no primeiro input
     const focusTarget =
       qs("#receitaData") ||
       (receitaPanelAside ? receitaPanelAside.querySelector("input, textarea, button") : null);
@@ -277,18 +283,15 @@
 
     receitaPanelAside = receitaPanel.querySelector(".slide-panel");
 
-    // fechar por botões data-close-receita
-    qsa('[data-close-receita]').forEach((btn) => {
+    qsa("[data-close-receita]").forEach((btn) => {
       btn.addEventListener("click", () => fecharReceitaPanel_());
     });
 
-    // fechar clicando no backdrop (fora do aside)
     receitaPanel.addEventListener("click", (ev) => {
       if (!receitaPanelAside) return;
       if (ev.target === receitaPanel) fecharReceitaPanel_();
     });
 
-    // ESC + focus trap
     document.addEventListener("keydown", (ev) => {
       if (!receitaPanel || receitaPanel.style.display === "none") return;
 
@@ -300,6 +303,241 @@
 
       _trapFocusInPanel_(receitaPanelAside, ev);
     });
+  }
+
+  // ============================================================
+  // Receita — mini-cards + autocomplete (CSS oficial receita-autocomplete.css)
+  // ============================================================
+
+  function _splitPosologias_(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return [];
+    let parts = [];
+    if (s.includes("\n")) parts = s.split("\n");
+    else if (s.includes(";")) parts = s.split(";");
+    else parts = [s];
+    return parts.map((p) => String(p || "").trim()).filter(Boolean).slice(0, 8);
+  }
+
+  function _escapeHtml_(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function _highlightHtml_(text, term) {
+    const t = String(term || "").trim();
+    const s = String(text || "");
+    if (!t) return _escapeHtml_(s);
+
+    const idx = s.toLowerCase().indexOf(t.toLowerCase());
+    if (idx < 0) return _escapeHtml_(s);
+
+    const before = s.slice(0, idx);
+    const hit = s.slice(idx, idx + t.length);
+    const after = s.slice(idx + t.length);
+    return `${_escapeHtml_(before)}<span class="rx-hl">${_escapeHtml_(hit)}</span>${_escapeHtml_(after)}`;
+  }
+
+  function atualizarTituloMedicamentos_() {
+    const cards = document.querySelectorAll(".receita-med-card");
+    cards.forEach((card, index) => {
+      const titulo = card.querySelector(".receita-med-titulo");
+      if (titulo) titulo.textContent = `Medicamento ${index + 1}`;
+    });
+  }
+
+  function _clearSugestoes_(bloco) {
+    if (!bloco) return;
+    const slot = bloco.querySelector(".receita-item-sugestoes");
+    if (slot) slot.innerHTML = "";
+  }
+
+  function _renderSugestoes_(bloco, query, items, onPick) {
+    _clearSugestoes_(bloco);
+    if (!items || !items.length) return;
+
+    const slot = bloco.querySelector(".receita-item-sugestoes");
+    if (!slot) return;
+
+    const ul = document.createElement("ul");
+    ul.className = "receita-sugestoes-lista";
+
+    items.slice(0, 10).forEach((it) => {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+
+      const nome = it.nome || "";
+      const sub = (it.posologias && it.posologias.length) ? it.posologias[0] : "";
+
+      btn.innerHTML = `
+        <div class="rx-sug-title">${_highlightHtml_(nome, query)}</div>
+        ${sub ? `<div class="rx-sug-sub">${_escapeHtml_(sub)}</div>` : ""}
+      `;
+
+      btn.addEventListener("click", () => onPick(it));
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+
+    slot.appendChild(ul);
+  }
+
+  function _renderPosologiaChips_(cardEl, posologias, posologiaInput) {
+    const old = cardEl.querySelector(".med-posologias");
+    if (old) old.remove();
+    if (!posologias || !posologias.length) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "med-posologias";
+
+    posologias.slice(0, 6).forEach((p) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "med-chip";
+      chip.textContent = String(p);
+      chip.addEventListener("click", () => {
+        posologiaInput.value = String(p);
+        posologiaInput.focus();
+      });
+      wrap.appendChild(chip);
+    });
+
+    const fullBlock = posologiaInput.closest(".full");
+    if (fullBlock) fullBlock.appendChild(wrap);
+  }
+
+  async function _buscarSugestoesMedicamento_(q) {
+    const data = await callApiDataTry_(
+      ["Medicamentos.ListarAtivos", "Medicamentos_ListarAtivos"],
+      { q: q, limit: 12 }
+    );
+
+    const meds = (data && data.medicamentos) ? data.medicamentos : [];
+    return (meds || [])
+      .map((m) => {
+        const nome = String(m.Nome_Medicacao || m.nome || "").trim();
+        const posologias = _splitPosologias_(m.Posologia || "");
+        return { nome, posologias };
+      })
+      .filter((x) => x.nome);
+  }
+
+  function _wireAutocompleteOnCard_(cardEl) {
+    const bloco = cardEl.querySelector(".receita-item-bloco");
+    const nomeInput = cardEl.querySelector(".med-nome");
+    const posologiaInput = cardEl.querySelector(".med-posologia");
+    if (!bloco || !nomeInput || !posologiaInput) return;
+
+    // Fechar ao clicar fora
+    document.addEventListener("click", (ev) => {
+      if (!bloco.contains(ev.target)) _clearSugestoes_(bloco);
+    });
+
+    nomeInput.addEventListener("input", () => {
+      const q = (nomeInput.value || "").trim();
+      _clearSugestoes_(bloco);
+
+      if (medSuggestTimer) clearTimeout(medSuggestTimer);
+      if (q.length < 2) return;
+
+      medSuggestTimer = setTimeout(async () => {
+        try {
+          const items = await _buscarSugestoesMedicamento_(q);
+          _renderSugestoes_(bloco, q, items, (picked) => {
+            _clearSugestoes_(bloco);
+            nomeInput.value = picked.nome || nomeInput.value;
+            _renderPosologiaChips_(cardEl, picked.posologias || [], posologiaInput);
+            posologiaInput.focus();
+          });
+        } catch (_) {
+          _clearSugestoes_(bloco);
+        }
+      }, 180);
+    });
+
+    nomeInput.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        posologiaInput.focus();
+      }
+    });
+  }
+
+  function criarMedicamentoCard_(dados) {
+    receitaMedCounter++;
+
+    const container = qs("#receitaItensContainer");
+    if (!container) return;
+
+    const card = document.createElement("div");
+    card.className = "receita-med-card";
+
+    // ✅ IMPORTANTE: usa as classes do receita-autocomplete.css:
+    // - .receita-item-bloco como âncora
+    // - .receita-item-sugestoes como slot do dropdown
+    card.innerHTML = `
+      <div class="receita-med-header">
+        <span class="receita-med-titulo">Medicamento ${receitaMedCounter}</span>
+        <button type="button" class="receita-med-remover">Remover</button>
+      </div>
+
+      <div class="receita-med-grid">
+        <div class="full receita-item-bloco">
+          <label class="texto-menor texto-suave">Medicamento *</label>
+          <input type="text" class="med-nome" placeholder="Ex: Dipirona 500mg" required>
+          <div class="receita-item-sugestoes" aria-live="polite"></div>
+        </div>
+
+        <div class="full">
+          <label class="texto-menor texto-suave">Posologia *</label>
+          <input type="text" class="med-posologia" placeholder="Ex: 1 cp 6/6h" required>
+        </div>
+
+        <div>
+          <label class="texto-menor texto-suave">Duração</label>
+          <input type="text" class="med-duracao" placeholder="Ex: 7 dias">
+        </div>
+
+        <div>
+          <label class="texto-menor texto-suave">Via</label>
+          <select class="med-via">
+            <option value="">—</option>
+            <option value="VO">VO</option>
+            <option value="IM">IM</option>
+            <option value="EV">EV</option>
+            <option value="SL">SL</option>
+            <option value="Tópico">Tópico</option>
+          </select>
+        </div>
+      </div>
+    `;
+
+    if (dados) {
+      card.querySelector(".med-nome").value = dados.nome || "";
+      card.querySelector(".med-posologia").value = dados.posologia || "";
+      card.querySelector(".med-duracao").value = dados.duracao || "";
+      card.querySelector(".med-via").value = dados.via || "";
+    }
+
+    card.querySelector(".receita-med-remover").addEventListener("click", () => {
+      card.remove();
+      atualizarTituloMedicamentos_();
+    });
+
+    container.appendChild(card);
+    atualizarTituloMedicamentos_();
+    _wireAutocompleteOnCard_(card);
+  }
+
+  function ensurePrimeiroMedicamento_() {
+    const container = qs("#receitaItensContainer");
+    if (!container) return;
+    if (container.children.length === 0) criarMedicamentoCard_();
   }
 
   // ============================================================
@@ -315,17 +553,13 @@
   }
 
   function abrirReceitaNoPainel_(ctx) {
-    // Se existir um controlador oficial (page-receita.js), usa ele:
     if (typeof PRONTIO.abrirReceitaPanel === "function") {
       PRONTIO.abrirReceitaPanel();
       return;
     }
 
-    // Caso contrário, abre o painel do próprio HTML do prontuário
-    // (UI apenas; regras de negócio continuam no backend)
     abrirReceitaPanel_();
 
-    // Opcional: pré-preencher data com hoje se estiver vazio
     const inputData = qs("#receitaData");
     if (inputData && !inputData.value) {
       const d = new Date();
@@ -334,6 +568,8 @@
       const dd = String(d.getDate()).padStart(2, "0");
       inputData.value = `${yyyy}-${mm}-${dd}`;
     }
+
+    ensurePrimeiroMedicamento_();
   }
 
   function abrirExames_(ctx) {
@@ -531,50 +767,6 @@
   }
 
   // ============================================================
-  // Salvar evolução
-  // ============================================================
-
-  function setMensagemEvolucao(obj) {
-    const el = qs("#mensagemEvolucao");
-    if (!el) return;
-    el.classList.remove("is-hidden", "msg-erro", "msg-sucesso");
-    el.textContent = (obj && obj.texto) || "";
-    if (obj && obj.tipo === "erro") el.classList.add("msg-erro");
-    if (obj && obj.tipo === "sucesso") el.classList.add("msg-sucesso");
-  }
-
-  async function salvarEvolucao(ctx, ev) {
-    ev.preventDefault();
-
-    const txt = qs("#textoEvolucao");
-    const texto = txt && txt.value ? txt.value.trim() : "";
-    if (!texto) {
-      setMensagemEvolucao({ tipo: "erro", texto: "Digite a evolução." });
-      return;
-    }
-
-    const payload = { idPaciente: ctx.idPaciente, idAgenda: ctx.idAgenda, texto, origem: "PRONTUARIO" };
-    if (idEvolucaoEmEdicao) payload.idEvolucao = idEvolucaoEmEdicao;
-
-    try {
-      await callApiDataTry_(["Prontuario.Evolucao.Salvar", "Evolucao.Salvar"], payload);
-
-      setMensagemEvolucao({
-        tipo: "sucesso",
-        texto: idEvolucaoEmEdicao ? "Evolução atualizada." : "Evolução registrada.",
-      });
-
-      if (txt) txt.value = "";
-      idEvolucaoEmEdicao = null;
-
-      carregarResumoPaciente_(ctx);
-      if (historicoCompletoCarregado) carregarEvolucoesPaginadas_(ctx, { append: false });
-    } catch (e) {
-      setMensagemEvolucao({ tipo: "erro", texto: "Erro ao salvar evolução." });
-    }
-  }
-
-  // ============================================================
   // Receitas (lista + paginação + PDF)
   // ============================================================
 
@@ -685,11 +877,11 @@
       if (btnModelo) {
         btnModelo.addEventListener("click", (ev) => {
           ev.stopPropagation();
-          // Se houver controlador de receita, ele deve preencher o form.
           if (typeof PRONTIO.carregarItensReceitaNoForm === "function") {
             PRONTIO.carregarItensReceitaNoForm(itens, observacoes);
           }
           abrirReceitaPanel_();
+          ensurePrimeiroMedicamento_();
         });
       }
 
@@ -758,8 +950,6 @@
 
       recPaging.cursor = nextCursor || null;
       recPaging.hasMore = !!(hasMore && recPaging.cursor);
-
-      receitasCompletoCarregado = true;
     } catch (e) {
       vazio.classList.remove("is-hidden");
       vazio.textContent = "Erro ao carregar receitas.";
@@ -779,13 +969,10 @@
     const ctx = carregarContextoProntuario();
     PRONTIO.prontuarioContexto = ctx;
 
-    // Topo do paciente
     carregarResumoPaciente_(ctx);
-
-    // Setup painel receita
     setupReceitaPanelEvents_();
 
-    // Botões de ações clínicas
+    // Ações clínicas
     const btnNovaEvo = qs("#btnAcaoNovaEvolucao");
     if (btnNovaEvo) btnNovaEvo.addEventListener("click", abrirNovaEvolucao_);
 
@@ -798,11 +985,11 @@
     const btnDocs = qs("#btnAcaoDocumentos");
     if (btnDocs) btnDocs.addEventListener("click", () => abrirDocumentos_(ctx));
 
-    // Evolução salvar
-    const formEvo = qs("#formEvolucao");
-    if (formEvo) formEvo.addEventListener("submit", (ev) => salvarEvolucao(ctx, ev));
+    // Botão adicionar medicamento
+    const btnAddMed = qs("#btnAdicionarMedicamento");
+    if (btnAddMed) btnAddMed.addEventListener("click", () => criarMedicamentoCard_());
 
-    // Evoluções: carregar completo + carregar mais
+    // Evoluções
     evoPaging.btnMais = qs("#btnCarregarMaisEvolucoes");
     _setBtnMais_(evoPaging.btnMais, false, false);
 
@@ -817,16 +1004,13 @@
       evoPaging.btnMais.addEventListener("click", () => carregarEvolucoesPaginadas_(ctx, { append: true }));
     }
 
-    // Receitas: carregar todas + carregar mais
+    // Receitas
     recPaging.btnMais = qs("#btnCarregarMaisReceitas");
     _setBtnMais_(recPaging.btnMais, false, false);
 
     const btnReceitas = qs("#btnCarregarReceitasPaciente");
     if (btnReceitas) {
-      btnReceitas.addEventListener("click", () => {
-        receitasCompletoCarregado = true;
-        carregarReceitasPaginadas_(ctx, { append: false });
-      });
+      btnReceitas.addEventListener("click", () => carregarReceitasPaginadas_(ctx, { append: false }));
     }
     if (recPaging.btnMais) {
       recPaging.btnMais.addEventListener("click", () => carregarReceitasPaginadas_(ctx, { append: true }));
@@ -840,94 +1024,3 @@
     else initProntuario();
   }
 })(window, document);
-// ============================================================
-// RECEITA — MINI-CARDS DE MEDICAMENTOS
-// ============================================================
-
-let receitaMedCounter = 0;
-
-function criarMedicamentoCard_(dados) {
-  receitaMedCounter++;
-
-  const container = document.getElementById("receitaItensContainer");
-  if (!container) return;
-
-  const card = document.createElement("div");
-  card.className = "receita-med-card";
-
-  card.innerHTML = `
-    <div class="receita-med-header">
-      <span class="receita-med-titulo">Medicamento ${receitaMedCounter}</span>
-      <button type="button" class="receita-med-remover">Remover</button>
-    </div>
-
-    <div class="receita-med-grid">
-      <div class="full">
-        <label class="texto-menor texto-suave">Medicamento *</label>
-        <input type="text" class="med-nome" placeholder="Ex: Dipirona 500mg" required>
-      </div>
-
-      <div class="full">
-        <label class="texto-menor texto-suave">Posologia *</label>
-        <input type="text" class="med-posologia" placeholder="Ex: 1 cp 6/6h" required>
-      </div>
-
-      <div>
-        <label class="texto-menor texto-suave">Duração</label>
-        <input type="text" class="med-duracao" placeholder="Ex: 7 dias">
-      </div>
-
-      <div>
-        <label class="texto-menor texto-suave">Via</label>
-        <select class="med-via">
-          <option value="">—</option>
-          <option value="VO">VO</option>
-          <option value="IM">IM</option>
-          <option value="EV">EV</option>
-          <option value="SL">SL</option>
-          <option value="Tópico">Tópico</option>
-        </select>
-      </div>
-    </div>
-  `;
-
-  // Preenche se vier como modelo
-  if (dados) {
-    card.querySelector(".med-nome").value = dados.nome || "";
-    card.querySelector(".med-posologia").value = dados.posologia || "";
-    card.querySelector(".med-duracao").value = dados.duracao || "";
-    card.querySelector(".med-via").value = dados.via || "";
-  }
-
-  // Remover card
-  card.querySelector(".receita-med-remover").addEventListener("click", () => {
-    card.remove();
-    atualizarTituloMedicamentos_();
-  });
-
-  container.appendChild(card);
-  atualizarTituloMedicamentos_();
-}
-
-function atualizarTituloMedicamentos_() {
-  const cards = document.querySelectorAll(".receita-med-card");
-  cards.forEach((card, index) => {
-    const titulo = card.querySelector(".receita-med-titulo");
-    if (titulo) titulo.textContent = `Medicamento ${index + 1}`;
-  });
-}
-
-// Botão "+ Adicionar medicamento"
-document.addEventListener("click", (ev) => {
-  if (ev.target && ev.target.id === "btnAdicionarMedicamento") {
-    criarMedicamentoCard_();
-  }
-});
-
-// Inicial: sempre começar com 1 medicamento vazio
-document.addEventListener("DOMContentLoaded", () => {
-  const container = document.getElementById("receitaItensContainer");
-  if (container && container.children.length === 0) {
-    criarMedicamentoCard_();
-  }
-});
