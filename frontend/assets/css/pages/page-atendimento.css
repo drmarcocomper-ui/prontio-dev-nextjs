@@ -1,127 +1,409 @@
-/* ===========================================
-   PRONTIO - CSS específico do Atendimento
-   ✅ Harmonizado com Design System (tokens)
-=========================================== */
+/* =====================================
+   PRONTIO - ATENDIMENTO
+   Hierarquia Visual Clínica
+===================================== */
 
-.content-atendimento {
-  padding: var(--sp-4);
+/* ==============================
+   CARD PRINCIPAL
+   ============================== */
+.content-atendimento .card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
 }
 
+/* Cabeçalho do card */
 .atendimento-header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: flex-start;
   gap: var(--sp-3);
-  flex-wrap: wrap;
 }
 
+/* ==============================
+   TÍTULO / CONTEXTO
+   ============================== */
+.atendimento-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cor-texto-principal);
+  margin: 0;
+}
+
+.atendimento-header .card-subtitle {
+  font-size: 13px;
+  color: var(--cor-texto-secundario);
+  margin-top: 2px;
+}
+
+/* ==============================
+   AÇÕES (lado direito)
+   ============================== */
 .atendimento-actions {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
   gap: var(--sp-2);
   flex-wrap: wrap;
+  align-items: center;
 }
 
-.lista-atendimento-info {
-  font-size: 12px;
-  color: var(--cor-texto-suave);
-  margin-top: 6px;
+/* Ação principal (Abrir prontuário) */
+#btnAbrirProntuario {
+  font-weight: 600;
 }
 
-/* Wrapper da tabela */
-.tabela-atendimento-wrapper {
-  overflow-x: auto;
-}
+/* ==============================
+   TABELA – HIERARQUIA CLÍNICA
+   ============================== */
 
-/* Tabela: mantém classe .tabela e complementa */
-.tabela-atendimento {
-  width: 100%;
-  min-width: 720px;
-}
-
-.tabela-atendimento th,
-.tabela-atendimento td {
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.col-data { width: 90px; }
-.col-hora { width: 70px; }
-.col-paciente { min-width: 240px; white-space: normal; }
-.col-tipo { width: 140px; }
-.col-status { width: 120px; }
-.col-acoes { width: 340px; min-width: 320px; }
-
-/* Estado selecionado (clique na linha) */
-.tabela-atendimento tbody tr.is-selected {
-  outline: 2px solid var(--cor-primaria);
-  outline-offset: -2px;
-  background: var(--cor-fundo-card-alt);
-}
-
-/* Células vazias */
-.linha-vazia {
-  text-align: center;
-  color: var(--cor-texto-suave);
-  font-style: italic;
-}
-
-/* Badges de status */
-.badge-status {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border: 1px solid var(--cor-borda-suave);
-  background: var(--cor-fundo-card-alt);
+/* Paciente é o foco visual */
+.tabela-atendimento .col-paciente {
+  font-weight: 700;
   color: var(--cor-texto-principal);
 }
 
-/* Mantive suas cores específicas (se seus temas já contemplam isso, ok) */
-.badge-agendado { background: rgba(59,130,246,0.12); color: #93c5fd; border-color: rgba(59,130,246,0.25); }
-.badge-confirmado { background: rgba(34,197,94,0.12); color: #86efac; border-color: rgba(34,197,94,0.25); }
-.badge-cancelado, .badge-faltou { background: rgba(239,68,68,0.12); color: #fca5a5; border-color: rgba(239,68,68,0.25); }
-.badge-outro { background: var(--cor-fundo-card-alt); color: var(--cor-texto-suave); }
+/* Hora e data: informação operacional */
+.tabela-atendimento .col-data,
+.tabela-atendimento .col-hora {
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-secundario);
+}
 
+/* Tipo: secundário */
+.tabela-atendimento .col-tipo {
+  color: var(--cor-texto-secundario);
+  font-size: 12px;
+}
+
+/* ==============================
+   STATUS – LEITURA IMEDIATA
+   ============================== */
+.tabela-atendimento .col-status {
+  font-weight: 600;
+}
+
+/* Status por texto (fallback) */
+.status-chegou {
+  color: var(--cor-sucesso);
+}
+
+.status-chamando {
+  color: var(--cor-primaria);
+}
+
+.status-em-atendimento {
+  color: #935f00;
+}
+
+.status-concluido {
+  color: var(--cor-texto-suave);
+}
+
+.status-cancelado {
+  color: var(--cor-perigo);
+}
+
+/* ==============================
+   AÇÕES POR LINHA
+   ============================== */
+.tabela-atendimento .col-acoes {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ==============================
+   LINHA ATIVA / SELECIONADA
+   ============================== */
+.tabela-atendimento tbody tr.table-row-selected {
+  background-color: rgba(0, 102, 204, 0.08);
+}
+
+.tabela-atendimento tbody tr.table-row-selected .col-paciente {
+  color: var(--cor-primaria);
+}
+
+/* ==============================
+   HOVER CLÍNICO (DISCRETO)
+   ============================== */
+.tabela-atendimento tbody tr:hover {
+  background-color: var(--cor-fundo-card-alt);
+}
+
+/* ==============================
+   DICA FINAL
+   ============================== */
 .atendimento-hint {
-  margin-top: var(--sp-3);
   font-size: 12px;
   color: var(--cor-texto-suave);
 }
 
-/* =========================================================
-   PRONTIO - Ajuste para suportar a coluna "Ações" e botões por linha
-   ========================================================= */
-
-.tabela-atendimento .col-acoes,
-.tabela-atendimento th.col-acoes {
-  width: 340px;
-  min-width: 320px;
-}
-
-.atendimento-row-actions {
-  display: flex;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.atendimento-row-actions .btn {
-  padding: 6px 10px;
-  font-size: 12px;
-  line-height: 1;
-}
-
-/* Em telas menores, evita quebrar a tabela de forma feia */
-@media (max-width: 900px) {
-  .tabela-atendimento .col-acoes,
-  .tabela-atendimento th.col-acoes {
-    width: 260px;
-    min-width: 240px;
+/* ==============================
+   SPLIT / NOTEBOOK
+   ============================== */
+@media (max-width: 1200px) {
+  .atendimento-header h2 {
+    font-size: 16px;
   }
-  .atendimento-row-actions {
+}
+
+/* ==============================
+   MOBILE
+   ============================== */
+@media (max-width: 900px) {
+  .atendimento-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .atendimento-actions {
+    width: 100%;
     justify-content: flex-start;
   }
+
+  /* Reduz ruído */
+  .tabela-atendimento .col-tipo {
+    font-size: 11px;
+  }
+
+  .atendimento-hint {
+    font-size: 11px;
+  }
+}
+/* =====================================
+   PRONTIO - ATENDIMENTO
+   Estados Visuais Clínicos
+===================================== */
+
+/* ==============================
+   BASE DO STATUS
+   ============================== */
+.tabela-atendimento .col-status {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ==============================
+   CHEGOU
+   - paciente presente, aguardando
+   ============================== */
+.table-row-chegou {
+  background-color: rgba(42, 157, 143, 0.06);
+}
+
+.table-row-chegou .col-status {
+  color: var(--cor-sucesso);
+}
+
+/* ==============================
+   CHAMANDO
+   - prioridade visual máxima
+   ============================== */
+.table-row-chamando {
+  background-color: rgba(0, 102, 204, 0.12);
+}
+
+.table-row-chamando .col-paciente {
+  color: var(--cor-primaria);
+  font-weight: 800;
+}
+
+.table-row-chamando .col-status {
+  color: var(--cor-primaria);
+}
+
+/* ==============================
+   EM ATENDIMENTO
+   - foco, não distração
+   ============================== */
+.table-row-em-atendimento {
+  background-color: rgba(255, 187, 0, 0.10);
+}
+
+.table-row-em-atendimento .col-status {
+  color: #935f00;
+}
+
+/* ==============================
+   CONCLUÍDO
+   - despriorizado visualmente
+   ============================== */
+.table-row-concluido {
+  opacity: 0.65;
+}
+
+.table-row-concluido .col-status {
+  color: var(--cor-texto-suave);
+}
+
+/* ==============================
+   CANCELADO
+   - feedback claro de exceção
+   ============================== */
+.table-row-cancelado {
+  background-color: rgba(230, 57, 70, 0.10);
+}
+
+.table-row-cancelado .col-status {
+  color: var(--cor-perigo);
+}
+
+/* ==============================
+   HOVER NÃO SOBRESCREVE ESTADO
+   ============================== */
+.tabela-atendimento tbody tr.table-row-chegou:hover,
+.tabela-atendimento tbody tr.table-row-chamando:hover,
+.tabela-atendimento tbody tr.table-row-em-atendimento:hover,
+.tabela-atendimento tbody tr.table-row-concluido:hover,
+.tabela-atendimento tbody tr.table-row-cancelado:hover {
+  background-color: inherit;
+}
+
+/* ==============================
+   MOBILE
+   ============================== */
+@media (max-width: 900px) {
+  .table-row-concluido {
+    opacity: 0.55;
+  }
+}
+/* =====================================
+   PRONTIO - ATENDIMENTO
+   Microinterações Clínicas (CSS-only)
+===================================== */
+
+/* ==============================
+   Transições base (curtas e seguras)
+   ============================== */
+.tabela-atendimento tbody tr,
+.tabela-atendimento tbody td,
+.atendimento-actions .btn {
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+/* ==============================
+   Feedback de hover por linha
+   (não sobrescreve estados clínicos)
+   ============================== */
+.tabela-atendimento tbody tr:not(.table-row-chamando):hover {
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.04);
+}
+
+/* ==============================
+   Foco de teclado (acessibilidade)
+   ============================== */
+.tabela-atendimento tbody tr:focus-within {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: -2px;
+}
+
+/* ==============================
+   Microfeedback por estado
+   ============================== */
+
+/* CHAMANDO: pulso visual MUITO sutil (sem animação contínua) */
+.table-row-chamando {
+  box-shadow: inset 3px 0 0 0 var(--cor-primaria);
+}
+
+/* CHEGOU: indica prontidão */
+.table-row-chegou {
+  box-shadow: inset 3px 0 0 0 var(--cor-sucesso);
+}
+
+/* EM ATENDIMENTO: foco, sem urgência */
+.table-row-em-atendimento {
+  box-shadow: inset 3px 0 0 0 #935f00;
+}
+
+/* CANCELADO: exceção clara, sem chamar ação */
+.table-row-cancelado {
+  box-shadow: inset 3px 0 0 0 var(--cor-perigo);
+}
+
+/* CONCLUÍDO: despriorizado */
+.table-row-concluido {
+  box-shadow: none;
+}
+
+/* ==============================
+   Ação primária: “Abrir prontuário”
+   ============================== */
+#btnAbrirProntuario:not([disabled]) {
+  box-shadow: 0 0 0 0 rgba(0,0,0,0);
+}
+
+#btnAbrirProntuario:not([disabled]):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,.12);
+}
+
+#btnAbrirProntuario[disabled] {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+/* ==============================
+   Clique (active) – resposta tátil
+   ============================== */
+.atendimento-actions .btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ==============================
+   Respeito a usuários sensíveis a movimento
+   ============================== */
+@media (prefers-reduced-motion: reduce) {
+  .tabela-atendimento tbody tr,
+  .tabela-atendimento tbody td,
+  .atendimento-actions .btn {
+    transition: none;
+  }
+
+  #btnAbrirProntuario:not([disabled]):hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* ==============================
+   Mobile: ainda mais discreto
+   ============================== */
+@media (max-width: 900px) {
+  .tabela-atendimento tbody tr {
+    box-shadow: none; /* remove barras laterais */
+  }
+
+  .tabela-atendimento tbody tr:focus-within {
+    outline-offset: -1px;
+  }
+}
+/* =====================================
+   ACESSIBILIDADE – ESTADOS CLÍNICOS
+===================================== */
+
+/* Status com contraste seguro */
+.status-chegou {
+  color: var(--status-sucesso);
+}
+
+.status-em-atendimento {
+  color: var(--status-atencao);
+}
+
+.status-cancelado {
+  color: var(--status-perigo);
+}
+
+/* Linha selecionada sempre legível */
+.table-row-selected {
+  background-color: rgba(0, 102, 204, 0.12);
+}
+
+/* Texto nunca perde contraste */
+.table-row-concluido {
+  opacity: 0.7;
 }

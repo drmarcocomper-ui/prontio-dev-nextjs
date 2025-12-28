@@ -1,6 +1,10 @@
 <!-- frontend/partials/sidebar.html -->
 <aside id="sidebar" class="sidebar" data-component="sidebar">
   <div class="sidebar-header">
+    <!-- ✅ BOTÃO EXCLUSIVO DE MODO COMPACTO (DESKTOP)
+         - NÃO abre/fecha menu
+         - NÃO aparece no mobile (CSS cuida disso)
+    -->
     <button
       type="button"
       class="icon-button js-toggle-compact"
@@ -13,11 +17,13 @@
 
     <div class="app-brand">
       <div class="app-logo">PRONTIO</div>
-      <!-- ✅ Deixa somente a versão (sem "- Dr. ...") -->
       <div class="app-version" id="appVersion">v—</div>
     </div>
   </div>
 
+  <!-- ============================
+       NAVEGAÇÃO PRINCIPAL
+       ============================ -->
   <nav class="sidebar-nav" id="sidebarNav" aria-label="Navegação principal">
     <a href="atendimento.html" class="nav-link" data-page-id="atendimento">
       <span class="icon">
@@ -103,6 +109,9 @@
     </a>
   </nav>
 
+  <!-- ============================
+       SISTEMA
+       ============================ -->
   <div class="sidebar-group" data-nav-group="sistema">
     <div class="nav-label">Sistema</div>
 
@@ -137,4 +146,5 @@
   </div>
 </aside>
 
+<!-- Backdrop usado SOMENTE no mobile (controlado pelo widget-sidebar.js) -->
 <div class="sidebar-backdrop" data-sidebar-backdrop></div>

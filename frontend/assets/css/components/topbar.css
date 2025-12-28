@@ -1,4 +1,10 @@
-/* frontend/assets/css/components/topbar.css */
+/* frontend/assets/css/components/topbar.css
+====================================================
+PRONTIO - TOPBAR (FINAL PROFISSIONAL)
+- ☰ controla menu APENAS no mobile / split
+- Desktop limpo (sem hambúrguer)
+- Estrutura left / right estável
+==================================================== */
 
 .topbar {
   background: var(--cor-fundo-card);
@@ -10,10 +16,13 @@
   gap: var(--sp-3);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 30; /* acima da sidebar (20) */
   box-shadow: 0 2px 10px rgba(0,0,0,0.06);
 }
 
+/* ============================
+   COLUNAS
+   ============================ */
 .topbar-col-left,
 .topbar-col-right {
   display: flex;
@@ -27,7 +36,14 @@
   gap: var(--sp-2);
 }
 
-.topbar-title { display: flex; flex-direction: column; gap: 2px; }
+/* ============================
+   TÍTULOS / CONTEXTO
+   ============================ */
+.topbar-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
 .topbar-breadcrumb {
   font-size: 11px;
@@ -71,6 +87,9 @@
   min-height: 16px;
 }
 
+/* ============================
+   AÇÕES
+   ============================ */
 .topbar-actions {
   display: flex;
   flex-direction: column;
@@ -98,9 +117,11 @@
   gap: var(--sp-1);
 }
 
-/* Menu mobile */
+/* ============================
+   ☰ BOTÃO DE MENU (MOBILE)
+   ============================ */
 .topbar-menu-button {
-  display: none;
+  display: none; /* desktop NÃO mostra */
   align-items: center;
   justify-content: center;
   width: 40px;
@@ -110,14 +131,24 @@
   background: var(--cor-fundo-card-alt);
   color: var(--cor-texto-principal);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
+.topbar-menu-button:hover {
+  background: var(--cor-fundo-card);
+}
+
+/* ☰ aparece SOMENTE no mobile/split */
 @media (max-width: 900px) {
-  .topbar-menu-button { display: inline-flex; }
+  .topbar-menu-button {
+    display: inline-flex;
+  }
 }
 
-/* ===== Usuário logado ===== */
-.topbar-user{
+/* ============================
+   USUÁRIO LOGADO
+   ============================ */
+.topbar-user {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -128,7 +159,7 @@
   max-width: 360px;
 }
 
-.topbar-user__avatar{
+.topbar-user__avatar {
   width: 32px;
   height: 32px;
   border-radius: 999px;
@@ -138,13 +169,13 @@
   border: 1px solid var(--cor-borda-suave);
 }
 
-.topbar-user__info{
+.topbar-user__info {
   display: grid;
   gap: 1px;
   min-width: 0;
 }
 
-.topbar-user__name{
+.topbar-user__name {
   font-size: 13px;
   font-weight: 700;
   color: var(--cor-texto-principal);
@@ -153,7 +184,7 @@
   text-overflow: ellipsis;
 }
 
-.topbar-user__role{
+.topbar-user__role {
   font-size: 11px;
   color: var(--cor-texto-suave);
   white-space: nowrap;
@@ -161,7 +192,9 @@
   text-overflow: ellipsis;
 }
 
-/* Responsividade */
+/* ============================
+   RESPONSIVO (MOBILE)
+   ============================ */
 @media (max-width: 900px) {
   .topbar {
     flex-direction: column;
@@ -170,16 +203,26 @@
   }
 
   .topbar-col-left,
-  .topbar-col-right { width: 100%; }
+  .topbar-col-right {
+    width: 100%;
+  }
 
   .topbar-actions {
     align-items: flex-start;
     min-width: 0;
   }
 
-  .topbar-title-main h1 { font-size: 18px; }
+  .topbar-title-main h1 {
+    font-size: 18px;
+  }
 
-  .topbar-meta { flex-wrap: wrap; font-size: 11px; }
+  .topbar-meta {
+    flex-wrap: wrap;
+    font-size: 11px;
+  }
 
-  .topbar-user { width: 100%; max-width: none; }
+  .topbar-user {
+    width: 100%;
+    max-width: none;
+  }
 }

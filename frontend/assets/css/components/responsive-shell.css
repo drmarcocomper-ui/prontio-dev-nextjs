@@ -1,30 +1,17 @@
 /* frontend/assets/css/components/responsive-shell.css
 ============================================================
-PRONTIO - Shell Responsivo (Profissional) [AJUSTADO]
-Objetivo agora:
-- 1 único toggle de menu (SÓ no TOPBAR, à esquerda)
-- Sidebar vira off-canvas em largura estreita
-- Overlay + ESC + clique fora
-- Conteúdo não corta (min-width: 0)
-- Tabelas com scroll interno (sem cortar)
+PRONTIO - Shell Responsivo (Profissional) [FINAL]
+============================================================
+Responsabilidade EXCLUSIVA deste arquivo:
+- Comportamento de layout responsivo
+- Um único sistema de drawer mobile (body.sidebar-open)
+- Nenhum controle visual do botão ☰ (isso é do topbar.css)
+- Evitar duplicidade de controles
+- Evitar “corte” de conteúdo em split screen
 ============================================================ */
 
 /* ============================================================
-   Overlay
-   ============================================================ */
-.prontio-sidebar-overlay{
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .18s ease;
-}
-
-/* ============================================================
-   Regras globais para evitar “corte” por min-width implícito
+   Anti-corte por min-width implícito (flex / grid)
    ============================================================ */
 .app-shell,
 .main-area,
@@ -32,7 +19,7 @@ Objetivo agora:
 .page-content,
 #content,
 #main,
-.app-content{
+.app-content {
   min-width: 0;
 }
 
@@ -40,94 +27,58 @@ Objetivo agora:
 .panel,
 .table-card,
 .content-card,
-.widget-card{
+.widget-card {
   min-width: 0;
 }
 
 /* ============================================================
-   Atendimento (seu wrapper real da tabela)
+   Atendimento – wrapper real da tabela
+   (aplicável também a outras telas com tabelas largas)
    ============================================================ */
-.tabela-atendimento-wrapper{
+.tabela-atendimento-wrapper {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
-.tabela-atendimento{
+
+.tabela-atendimento {
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 760px; /* largura segura para colunas principais */
 }
-.tabela-atendimento-wrapper::-webkit-scrollbar{ height: 10px; }
-.tabela-atendimento-wrapper::-webkit-scrollbar-thumb{
+
+/* Scroll horizontal discreto */
+.tabela-atendimento-wrapper::-webkit-scrollbar {
+  height: 10px;
+}
+.tabela-atendimento-wrapper::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,.18);
   border-radius: 999px;
 }
-.tabela-atendimento-wrapper::-webkit-scrollbar-track{
+.tabela-atendimento-wrapper::-webkit-scrollbar-track {
   background: rgba(255,255,255,.06);
   border-radius: 999px;
 }
 
 /* ============================================================
-   Toggle ☰ (SÓ no TOPBAR)
+   Mobile / Split screen
+   - Breakpoint alinhado com:
+     sidebar.css
+     widget-sidebar.js
    ============================================================ */
-.prontio-sidebar-toggle{
-  display: none; /* aparece só em telas estreitas */
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.22);
-  color: rgba(255,255,255,.92);
-  cursor: pointer;
-  margin-right: 10px;
-}
-.prontio-sidebar-toggle:hover{
-  background: rgba(255,255,255,.06);
-}
-.prontio-sidebar-toggle__icon{
-  font-size: 18px;
-  line-height: 1;
-}
+@media (max-width: 900px) {
 
-/* ============================================================
-   Responsivo: split screen / janela estreita
-   ============================================================ */
-@media (max-width: 1180px) {
-
-  /* Mostra o toggle no TOPBAR */
-  .prontio-sidebar-toggle{
-    display: inline-flex;
+  /* ========================================================
+     Evita DUPLICIDADE DE CONTROLES
+     - Botão de compactar da sidebar NÃO aparece no mobile
+     - Sidebar não se controla
+     ======================================================== */
+  #sidebar .js-toggle-compact {
+    display: none !important;
   }
 
-  /* Sidebar vira off-canvas */
-  .sidebar,
-  aside.sidebar,
-  [data-sidebar]{
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    height: 100vh !important;
-    z-index: 9999;
-    width: 290px !important;
-    max-width: 86vw;
-    transform: translateX(-102%);
-    transition: transform .18s ease;
-    box-shadow: 0 18px 60px rgba(0,0,0,.55);
-  }
-
-  body.prontio-sidebar-open .sidebar,
-  body.prontio-sidebar-open aside.sidebar,
-  body.prontio-sidebar-open [data-sidebar]{
-    transform: translateX(0);
-  }
-
-  body.prontio-sidebar-open .prontio-sidebar-overlay{
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* Conteúdo: reforço para não “estourar” */
+  /* ========================================================
+     Garantia extra contra “estouro” de layout
+     ======================================================== */
   .app-shell,
   .main-area,
   .content,
@@ -135,28 +86,8 @@ Objetivo agora:
   .page-content,
   #content,
   #main,
-  .app-content{
+  .app-content {
     min-width: 0 !important;
     max-width: 100% !important;
-  }
-
-  /* ✅ Esconde qualquer “hambúrguer” que exista DENTRO da sidebar (para não duplicar) */
-  .sidebar .hamburger,
-  .sidebar .menu-toggle,
-  .sidebar .sidebar-toggle,
-  .sidebar .js-sidebar-toggle,
-  .sidebar [data-action="toggle-sidebar"],
-  .sidebar [data-nav-action="toggle-sidebar"],
-  .sidebar button[aria-label*="menu" i],
-  .sidebar button[aria-label*="menu" i] *{
-    display: none !important;
-  }
-
-  /* ✅ Se houver botões antigos de menu no topbar (além do nosso), escondemos (o JS também remove) */
-  .topbar .js-sidebar-toggle:not(.prontio-sidebar-toggle),
-  .topbar .sidebar-toggle:not(.prontio-sidebar-toggle),
-  .topbar [data-action="toggle-sidebar"]:not(.prontio-sidebar-toggle),
-  .topbar [data-nav-action="toggle-sidebar"]:not(.prontio-sidebar-toggle){
-    display: none !important;
   }
 }

@@ -6,6 +6,7 @@
    - espaçamentos
    - bordas
    - sombras
+   - acessibilidade
    Todos os componentes devem usar SOMENTE estes tokens.
 ========================================= */
 
@@ -15,19 +16,31 @@
   =============================== */
 
   /* Azul padrão PRONTIO */
-  --brand-hue: 221;        /* 221 = azul / 142 = verde / 276 = roxo, etc. */
+  --brand-hue: 221;        /* 221 = azul / 142 = verde / 276 = roxo */
   --brand-sat: 83%;
   --brand-light: 56%;
 
   /* Cor primária derivada do HSL da marca */
   --cor-primaria: hsl(var(--brand-hue), var(--brand-sat), var(--brand-light));
-  --cor-primaria-escura: hsl(var(--brand-hue), var(--brand-sat), calc(var(--brand-light) - 14%));
-  --cor-primaria-clara: hsl(var(--brand-hue), calc(var(--brand-sat) - 10%), calc(var(--brand-light) + 16%));
+  --cor-primaria-escura: hsl(
+    var(--brand-hue),
+    var(--brand-sat),
+    calc(var(--brand-light) - 14%)
+  );
+  --cor-primaria-clara: hsl(
+    var(--brand-hue),
+    calc(var(--brand-sat) - 10%),
+    calc(var(--brand-light) + 16%)
+  );
 
-  /* Cores semânticas auxiliares */
-  --cor-sucesso: #16a34a;
-  --cor-aviso: #f59e0b;
-  --cor-perigo: #dc2626;
+  /* ==============================
+     CORES SEMÂNTICAS (CLÍNICAS)
+     (com contraste seguro AA)
+  =============================== */
+
+  --cor-sucesso: #1f7a5f;
+  --cor-aviso: #8a5a00;
+  --cor-perigo: #b3261e;
 
   /* ==============================
      TIPOGRAFIA
@@ -69,15 +82,17 @@
   --icon-size-lg: 22px;
 
   /* ==============================
-     TOKENS "APP" (defaults)
-     OBS: temas (light/dark) sobrescrevem.
+     TOKENS "APP" (BASE)
+     Temas (light/dark) sobrescrevem.
   =============================== */
 
   --app-brand: var(--cor-primaria);
   --app-brand-soft: rgba(37, 99, 235, 0.12);
 
   --app-text-primary: #0f172a;
-  --app-text-muted: #6b7280;
+
+  /* ⬇️ Texto secundário JÁ em nível AA */
+  --app-text-muted: #5f6b7a;
   --app-text-softer: #9ca3af;
 
   --app-bg-body: #f3f4f6;
@@ -89,8 +104,8 @@
   --app-border-strong: #cbd5f5;
 
   /* ==============================
-     TOKENS "COR" (camada principal usada pelos componentes)
-     Componentes e páginas devem preferir --cor-*.
+     TOKENS "COR"
+     Camada principal usada pelos componentes
   =============================== */
 
   --cor-fundo-app: var(--app-bg-body);
@@ -112,19 +127,33 @@
   --shadow-card-profundo: 0 18px 40px rgba(15, 23, 42, 0.12);
 
   /* ==============================
-     MISC / UI
+     ACESSIBILIDADE
   =============================== */
 
-  --focus-ring-color: hsl(var(--brand-hue), 90%, 60%);
+  /* Foco visível (teclado) */
+  --focus-ring: 0 0 0 3px rgba(0, 102, 204, 0.35);
 
-  /* Ícones da topbar e hover: temas sobrescrevem */
+  /* Ícones da topbar (temas sobrescrevem) */
   --topbar-icon-color: #4b5563;
   --topbar-hover-bg: rgba(0, 0, 0, 0.06);
 }
 
-/* Tipografia base */
+/* ==============================
+   TIPOGRAFIA BASE
+============================== */
 body {
   font-family: var(--font-base);
   font-size: var(--font-size-base);
   line-height: var(--font-line-height);
+}
+
+/* ==============================
+   ACESSIBILIDADE – MOVIMENTO
+   Respeita usuários sensíveis
+============================== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
