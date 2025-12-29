@@ -307,6 +307,7 @@
 
   // ============================================================
   // Receita — mini-cards + autocomplete
+  // (Agora preenche Quantidade e Via vindo da aba Medicamentos)
   // ============================================================
 
   function _splitPosologias_(raw) {
@@ -423,7 +424,9 @@
         .map((m) => {
           const nome = String(m.Nome_Medicacao || m.nome || "").trim();
           const posologias = _splitPosologias_(m.Posologia || "");
-          return { nome, posologias };
+          const quantidade = String(m.Quantidade || m.quantidade || "").trim();
+          const via = String(m.Via_Administracao || m.via || m.viaAdministracao || "").trim();
+          return { nome, posologias, quantidade, via };
         })
         .filter((x) => x.nome);
     } catch (err) {
@@ -436,6 +439,9 @@
     const bloco = cardEl.querySelector(".receita-item-bloco");
     const nomeInput = cardEl.querySelector(".med-nome");
     const posologiaInput = cardEl.querySelector(".med-posologia");
+    const qtdInput = cardEl.querySelector(".med-quantidade");
+    const viaSelect = cardEl.querySelector(".med-via");
+
     if (!bloco || !nomeInput || !posologiaInput) return;
 
     document.addEventListener("click", (ev) => {
@@ -454,8 +460,29 @@
 
         _renderSugestoes_(bloco, q, items, (picked) => {
           _clearSugestoes_(bloco);
+
           nomeInput.value = picked.nome || nomeInput.value;
+
+          // ✅ chips de posologia
           _renderPosologiaChips_(cardEl, picked.posologias || [], posologiaInput);
+
+          // ✅ autopreenche Quantidade e Via vindos da planilha
+          if (qtdInput && picked.quantidade) qtdInput.value = picked.quantidade;
+          if (viaSelect && picked.via) {
+            // tenta casar com opções do select
+            const val = String(picked.via).trim();
+            const opt = Array.from(viaSelect.options || []).find(o => String(o.value).trim().toLowerCase() === val.toLowerCase());
+            if (opt) viaSelect.value = opt.value;
+            else {
+              // se não existir, coloca como primeira opção dinâmica
+              const dyn = document.createElement("option");
+              dyn.value = val;
+              dyn.textContent = val;
+              viaSelect.insertBefore(dyn, viaSelect.firstChild);
+              viaSelect.value = val;
+            }
+          }
+
           posologiaInput.focus();
         });
       }, 180);
@@ -478,6 +505,7 @@
     const card = document.createElement("div");
     card.className = "receita-med-card";
 
+    // ✅ Agora: Quantidade (em vez de Duração) + Via
     card.innerHTML = `
       <div class="receita-med-header">
         <span class="receita-med-titulo">Medicamento ${receitaMedCounter}</span>
@@ -497,8 +525,8 @@
         </div>
 
         <div>
-          <label class="texto-menor texto-suave">Duração</label>
-          <input type="text" class="med-duracao" placeholder="Ex: 7 dias">
+          <label class="texto-menor texto-suave">Quantidade</label>
+          <input type="text" class="med-quantidade" placeholder="Ex: 30 comprimidos">
         </div>
 
         <div>
@@ -516,10 +544,10 @@
     `;
 
     if (dados) {
-      card.querySelector(".med-nome").value = dados.nome || "";
-      card.querySelector(".med-posologia").value = dados.posologia || "";
-      card.querySelector(".med-duracao").value = dados.duracao || "";
-      card.querySelector(".med-via").value = dados.via || "";
+      if (dados.nome) card.querySelector(".med-nome").value = dados.nome;
+      if (dados.posologia) card.querySelector(".med-posologia").value = dados.posologia;
+      if (dados.quantidade) card.querySelector(".med-quantidade").value = dados.quantidade;
+      if (dados.via) card.querySelector(".med-via").value = dados.via;
     }
 
     card.querySelector(".receita-med-remover").addEventListener("click", () => {
@@ -549,7 +577,7 @@
     cards.forEach((card) => {
       const nome = String(card.querySelector(".med-nome")?.value || "").trim();
       const posologia = String(card.querySelector(".med-posologia")?.value || "").trim();
-      const duracao = String(card.querySelector(".med-duracao")?.value || "").trim();
+      const quantidade = String(card.querySelector(".med-quantidade")?.value || "").trim();
       const via = String(card.querySelector(".med-via")?.value || "").trim();
 
       if (!nome && !posologia) return;
@@ -558,7 +586,7 @@
         remedio: nome,
         posologia: posologia,
         via: via,
-        quantidade: duracao, // compat simples
+        quantidade: quantidade,
         observacao: ""
       });
     });
@@ -633,7 +661,6 @@
   }
 
   function abrirReceitaNoPainel_(ctx) {
-    // ✅ No Prontuário, SEMPRE abre o painel local (não delega para page-receita.js)
     abrirReceitaPanel_();
 
     const inputData = qs("#receitaData");
