@@ -28,7 +28,7 @@
       <section class="content content-prontuario">
 
         <!-- CARD: RESUMO DO PACIENTE -->
-        <section class="card card-prontuario card-paciente">
+        <section class="card card-prontuario card-paciente" aria-label="Resumo do paciente">
           <div class="card-body card-body-compact">
 
             <!-- Nome do paciente (destaque) -->
@@ -48,7 +48,7 @@
             <hr style="border:none; border-top:1px solid var(--cor-borda-suave, #e5e7eb); margin:.85rem 0 1rem;">
 
             <!-- 4 blocos lado a lado (CSS controla responsivo) -->
-            <div class="prontuario-paciente-metrics">
+            <div class="prontuario-paciente-metrics" aria-label="Dados do paciente">
               <div class="metric">
                 <div class="texto-menor texto-suave">Idade</div>
                 <div id="prontuario-paciente-idade" class="campo-valor">—</div>
@@ -109,7 +109,7 @@
         </section>
 
         <!-- NOVA EVOLUÇÃO -->
-        <section class="card card-prontuario card-nova-evolucao" id="cardNovaEvolucao" style="display:none;">
+        <section class="card card-prontuario card-nova-evolucao" id="cardNovaEvolucao" style="display:none;" aria-label="Nova evolução clínica">
           <div class="card-header card-header-tight">
             <div>
               <h2>Nova evolução clínica</h2>
@@ -119,7 +119,7 @@
             </div>
           </div>
           <div class="card-body">
-            <form id="formEvolucao" class="form-vertical">
+            <form id="formEvolucao" class="form-vertical" aria-label="Formulário de evolução">
               <div class="form-row">
                 <label for="textoEvolucao">Registro clínico</label>
                 <textarea
@@ -132,44 +132,64 @@
                 <button type="submit" class="btn btn-primary">Salvar evolução</button>
               </div>
             </form>
-            <div id="mensagemEvolucao" class="mensagem is-hidden"></div>
+            <div id="mensagemEvolucao" class="mensagem is-hidden" role="status" aria-live="polite"></div>
           </div>
         </section>
 
         <!-- HISTÓRICO (Evoluções) -->
-        <section class="card card-prontuario" id="secHistoricoPaciente">
+        <section class="card card-prontuario" id="secHistoricoPaciente" aria-label="Linha do tempo do prontuário">
           <div class="card-header card-header-tight">
             <div>
               <h2>Linha do tempo do prontuário</h2>
               <span class="card-subtitle">Evoluções clínicas (mais recente no topo).</span>
             </div>
             <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-              <button id="btnCarregarHistoricoPaciente" class="btn btn-secondary btn-sm" type="button">Carregar histórico completo</button>
-              <button id="btnCarregarMaisEvolucoes" class="btn btn-secondary btn-sm" type="button" style="display:none;">Carregar mais</button>
+              <!-- ✅ Coerente com o JS: carrega 10 últimas -->
+              <button id="btnCarregarHistoricoPaciente" class="btn btn-secondary btn-sm" type="button">
+                Carregar 10 últimas
+              </button>
+              <button id="btnCarregarMaisEvolucoes" class="btn btn-secondary btn-sm" type="button" style="display:none;">
+                Carregar mais
+              </button>
             </div>
           </div>
           <div class="card-body card-body-compact">
-            <p class="msg-menor" id="listaEvolucoesPacienteVazia">Carregando última evolução clínica...</p>
-            <ul id="listaEvolucoesPaciente" class="lista-evolucoes prontuario-timeline mt-md"></ul>
+            <p class="msg-menor" id="listaEvolucoesPacienteVazia" role="status" aria-live="polite">
+              Carregando última evolução clínica...
+            </p>
+            <ul
+              id="listaEvolucoesPaciente"
+              class="lista-evolucoes prontuario-timeline mt-md"
+              aria-label="Lista de evoluções"
+            ></ul>
           </div>
         </section>
 
         <!-- RECEITAS -->
-        <section class="card card-prontuario" id="secReceitasPaciente">
+        <section class="card card-prontuario" id="secReceitasPaciente" aria-label="Receitas do paciente">
           <div class="card-header card-header-tight">
             <div>
               <h2>Receitas do paciente</h2>
               <span class="card-subtitle">Receitas médicas (mais recente no topo).</span>
             </div>
             <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-              <!-- ✅ Texto ajustado para bater com o comportamento (10 últimas) -->
-              <button id="btnCarregarReceitasPaciente" class="btn btn-secondary btn-sm" type="button">Carregar 10 últimas</button>
-              <button id="btnCarregarMaisReceitas" class="btn btn-secondary btn-sm" type="button" style="display:none;">Carregar mais</button>
+              <button id="btnCarregarReceitasPaciente" class="btn btn-secondary btn-sm" type="button">
+                Carregar 10 últimas
+              </button>
+              <button id="btnCarregarMaisReceitas" class="btn btn-secondary btn-sm" type="button" style="display:none;">
+                Carregar mais
+              </button>
             </div>
           </div>
           <div class="card-body card-body-compact">
-            <p class="msg-menor" id="listaReceitasPacienteVazia">Carregando última receita...</p>
-            <ul id="listaReceitasPaciente" class="lista-receitas prontuario-timeline mt-md"></ul>
+            <p class="msg-menor" id="listaReceitasPacienteVazia" role="status" aria-live="polite">
+              Carregando última receita...
+            </p>
+            <ul
+              id="listaReceitasPaciente"
+              class="lista-receitas prontuario-timeline mt-md"
+              aria-label="Lista de receitas"
+            ></ul>
           </div>
         </section>
 
@@ -189,7 +209,7 @@
       </header>
 
       <div class="slide-panel-body">
-        <form id="formReceitaProntuario" class="form-vertical form-receita-panel">
+        <form id="formReceitaProntuario" class="form-vertical form-receita-panel" aria-label="Formulário de receita">
           <div class="form-row">
             <label for="receitaData">Data da receita</label>
             <input type="date" id="receitaData">
@@ -241,3 +261,4 @@
   <script src="assets/js/main.js"></script>
 </body>
 </html>
+

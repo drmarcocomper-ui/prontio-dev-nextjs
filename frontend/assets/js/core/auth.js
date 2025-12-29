@@ -215,7 +215,6 @@
 
     // ✅ Atualiza sessão UI quando o backend retornar user
     try {
-      const u = res && (res.user || res.usuario || (res.user === undefined && res.usuario === undefined ? null : null));
       // seu backend retorna { user: {...} }
       const userObj = (res && res.user) ? res.user : null;
 
@@ -247,7 +246,8 @@
     if (clearChat) safeRemove_(LS_KEYS.CHAT_USER);
 
     if (redirect) {
-      try { global.location.href = "login.html"; } catch (_) {}
+      // ✅ Sempre cair no /login.html (raiz), não relativo à pasta atual
+      try { global.location.href = "/login.html"; } catch (_) {}
     }
   }
 
@@ -301,8 +301,11 @@
   }
 
   // ------------------------------------------------------------
-  // Bind botão "Sair"
+  // Bind botão "Sair" + confirmação
   // ------------------------------------------------------------
+
+  // ✅ trava simples para evitar dupla execução (ex.: listener duplicado em sidebar/auth)
+  let _logoutClickInFlight = false;
 
   function bindLogoutButtons(root) {
     const doc = root || document;
@@ -317,9 +320,22 @@
       if (el.getAttribute("data-logout-bound") === "1") return;
       el.setAttribute("data-logout-bound", "1");
 
-      el.addEventListener("click", (ev) => {
+      el.addEventListener("click", async (ev) => {
         try { ev.preventDefault(); } catch (_) {}
-        logout({ redirect: true, clearChat: true });
+
+        // ✅ evita clique duplo / handlers duplicados
+        if (_logoutClickInFlight) return;
+        _logoutClickInFlight = true;
+
+        try {
+          const ok = global.confirm("Tem certeza que deseja sair?");
+          if (!ok) return;
+
+          await logout({ redirect: true, clearChat: true });
+        } finally {
+          // libera no próximo tick para evitar reentrância
+          global.setTimeout(() => { _logoutClickInFlight = false; }, 0);
+        }
       });
     });
   }

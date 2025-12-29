@@ -210,6 +210,8 @@ body[data-page-id="prontuario"] .prontuario-timeline {
   padding-left: 0;
 }
 
+/* Linha genérica (mantida), mas a seção de Evoluções abaixo sobrescreve
+   para ficar igual à Receita (bolinha + padding + card). */
 body[data-page-id="prontuario"] .prontuario-timeline::before {
   content: "";
   position: absolute;
@@ -222,6 +224,108 @@ body[data-page-id="prontuario"] .prontuario-timeline::before {
     rgba(148, 163, 184, 0.7),
     rgba(148, 163, 184, 0.15)
   );
+}
+
+/* =========================================
+   ✅ EVOLUÇÕES — Timeline no estilo Receita (escopo seguro)
+   (não interfere em #secReceitasPaciente)
+========================================= */
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .lista-evolucoes {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 1.75rem; /* espaço para linha/bolinha */
+  list-style: none;
+}
+
+/* desativa a linha genérica duplicada só dentro do histórico */
+body[data-page-id="prontuario"] #secHistoricoPaciente .lista-evolucoes.prontuario-timeline::before {
+  content: none;
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .lista-evolucoes::before {
+  content: "";
+  position: absolute;
+  left: 0.65rem;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--border-subtle, #e0e0e0);
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .evolucao-item {
+  position: relative;
+  padding: 0.5rem 0.75rem 0.75rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0.75rem;
+  background: var(--surface-soft, #f9fafb);
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease, border-color 0.15s ease;
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .evolucao-item::before {
+  content: "";
+  position: absolute;
+  left: -1.1rem;
+  top: 0.9rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary, #2563eb);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .evolucao-item:hover {
+  background: var(--surface-soft-hover, #f3f4f6);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+  border-color: var(--primary-soft, #bfdbfe);
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .evo-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .evo-data {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .evo-autor {
+  font-size: 0.78rem;
+  color: var(--text-default, #111827);
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .evo-texto {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--text-default, #111827);
+  line-height: 1.5;
+}
+
+body[data-page-id="prontuario"] #secHistoricoPaciente .evo-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+  flex-wrap: wrap;
+}
+
+/* Pequeno ajuste em telas muito pequenas */
+@media (max-width: 640px) {
+  body[data-page-id="prontuario"] #secHistoricoPaciente .lista-evolucoes {
+    padding-left: 1.5rem;
+  }
+  body[data-page-id="prontuario"] #secHistoricoPaciente .evolucao-item::before {
+    left: -0.95rem;
+  }
 }
 
 /* =========================================

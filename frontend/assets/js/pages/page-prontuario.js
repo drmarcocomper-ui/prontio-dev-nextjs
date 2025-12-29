@@ -36,6 +36,7 @@
     hasMore: false,
     loading: false,
     lista: [],
+    lastLimit: 10, // ✅ guarda o último limit usado (10 por padrão)
   };
 
   // Receitas paginadas
@@ -787,8 +788,8 @@
       if (index === 0) {
         botoesHTML = `
           <div class="evo-actions">
-            <button type="button" class="btn-evo-usar-modelo" data-id="${idEvo}">Usar como modelo</button>
-            <button type="button" class="btn-evo-editar" data-id="${idEvo}">Editar evolução</button>
+            <button type="button" class="btn btn-secondary btn-sm btn-evo-usar-modelo" data-id="${idEvo}">Usar como modelo</button>
+            <button type="button" class="btn btn-secondary btn-sm btn-evo-editar" data-id="${idEvo}">Editar evolução</button>
           </div>
         `;
       }
@@ -837,13 +838,21 @@
   }
 
   async function carregarEvolucoesPaginadas_(ctx, opts) {
-    const append = !!(opts && opts.append);
+    opts = opts || {};
+    const append = !!opts.append;
     const ul = qs("#listaEvolucoesPaciente");
     const vazio = qs("#listaEvolucoesPacienteVazia");
     if (!ul || !vazio) return;
 
     if (evoPaging.loading) return;
     evoPaging.loading = true;
+
+    // ✅ limit configurável (padrão 10); mantém retrocompat
+    let limit = Number(opts.limit);
+    if (!limit || isNaN(limit) || limit < 1) limit = 10;
+    if (limit > 200) limit = 200;
+    evoPaging.lastLimit = limit;
+
     _setBtnMais_(evoPaging.btnMais, evoPaging.hasMore, true);
 
     if (!ctx.idPaciente) {
@@ -859,7 +868,8 @@
 
     if (!append) {
       vazio.classList.remove("is-hidden");
-      vazio.textContent = "Carregando evoluções...";
+      // ✅ mensagem compatível com o fluxo: se limit==1, carrega a última
+      vazio.textContent = limit === 1 ? "Carregando última evolução clínica..." : "Carregando evoluções...";
       ul.innerHTML = "";
       evoPaging.lista = [];
       evoPaging.cursor = null;
@@ -867,7 +877,7 @@
     }
 
     try {
-      const payload = { idPaciente: ctx.idPaciente, limit: 40 };
+      const payload = { idPaciente: ctx.idPaciente, limit: limit };
       if (append && evoPaging.cursor) payload.cursor = evoPaging.cursor;
 
       const data = await callApiDataTry_(
@@ -943,7 +953,14 @@
       idEvolucaoEmEdicao = null;
 
       carregarResumoPaciente_(ctx);
-      if (historicoCompletoCarregado) carregarEvolucoesPaginadas_(ctx, { append: false });
+
+      // ✅ Recarrega a lista conforme o estado atual:
+      // - se já carregou algo, recarrega 1 (última) por padrão
+      // - se estava em modo paginado (10), recarrega 10
+      if (historicoCompletoCarregado) {
+        const currentLimit = evoPaging.lastLimit && evoPaging.lastLimit > 0 ? evoPaging.lastLimit : 1;
+        carregarEvolucoesPaginadas_(ctx, { append: false, limit: currentLimit });
+      }
     } catch (e) {
       setMensagemEvolucao({ tipo: "erro", texto: "Erro ao salvar evolução." });
     }
@@ -1181,18 +1198,34 @@
     qs("#btnAdicionarMedicamento")?.addEventListener("click", () => criarMedicamentoCard_());
     qs("#formReceitaProntuario")?.addEventListener("submit", onSubmitReceita_);
 
-    // Evoluções (paginadas)
+    // ==========================================================
+    // ✅ EVOLUÇÕES — novo comportamento:
+    // - carrega 1 (última) ao abrir
+    // - botão principal: carrega 10 últimas
+    // - botão "carregar mais": pagina 10 em 10
+    // ==========================================================
+
     evoPaging.btnMais = qs("#btnCarregarMaisEvolucoes");
     _setBtnMais_(evoPaging.btnMais, false, false);
 
-    qs("#btnCarregarHistoricoPaciente")?.addEventListener("click", () => {
+    const btnHistorico = qs("#btnCarregarHistoricoPaciente");
+    if (btnHistorico) btnHistorico.textContent = "Carregar 10 últimas";
+
+    btnHistorico?.addEventListener("click", () => {
       historicoCompletoCarregado = true;
-      carregarEvolucoesPaginadas_(ctx, { append: false });
+      carregarEvolucoesPaginadas_(ctx, { append: false, limit: 10 });
     });
 
-    evoPaging.btnMais?.addEventListener("click", () => carregarEvolucoesPaginadas_(ctx, { append: true }));
+    evoPaging.btnMais?.addEventListener("click", () =>
+      carregarEvolucoesPaginadas_(ctx, { append: true, limit: 10 })
+    );
 
-    // Receitas (lista)
+    // ✅ Por padrão: apenas a última evolução
+    carregarEvolucoesPaginadas_(ctx, { append: false, limit: 1 });
+
+    // ==========================================================
+    // RECEITAS (lista)
+    // ==========================================================
     recPaging.btnMais = qs("#btnCarregarMaisReceitas");
     _setBtnMais_(recPaging.btnMais, false, false);
 

@@ -1,6 +1,17 @@
 /**
  * PRONTIO - Camada oficial de API (Front-end)
- * (mantido)
+ * - Usa JSONP (Apps Script) com envelope padrão { success, data, errors }
+ * - Injeta token automaticamente no payload quando ausente
+ *
+ * ✅ Padrão profissional mantido:
+ * - NÃO existe logoff automático por inatividade aqui.
+ * - Existe auto-redirecionamento SOMENTE quando o backend sinaliza
+ *   erro de autenticação/permissão (token inválido/expirado/ausente).
+ *
+ * ✅ Ajuste de escalabilidade:
+ * - Auto-logout em erro AUTH_* pode ser configurado via:
+ *     PRONTIO.config.autoLogoutOnAuthError = true|false
+ *   (default: true)
  */
 
 (function (global) {
@@ -24,21 +35,27 @@
   }
 
   function getTimeoutMs_() {
-    const t = PRONTIO.config && typeof PRONTIO.config.apiTimeoutMs === "number"
-      ? PRONTIO.config.apiTimeoutMs
-      : null;
-    return (t && t > 0) ? t : 20000;
+    const t =
+      PRONTIO.config && typeof PRONTIO.config.apiTimeoutMs === "number"
+        ? PRONTIO.config.apiTimeoutMs
+        : null;
+    return t && t > 0 ? t : 20000;
   }
 
   function normalizeError_(err) {
     if (!err) return "Erro desconhecido";
     if (typeof err === "string") return err;
     if (err.message) return err.message;
-    try { return JSON.stringify(err); } catch (_) { return String(err); }
+    try {
+      return JSON.stringify(err);
+    } catch (_) {
+      return String(err);
+    }
   }
 
   function ensureEnvelope_(json) {
-    if (!json || typeof json !== "object") throw new Error("Resposta inválida da API (não é JSON objeto).");
+    if (!json || typeof json !== "object")
+      throw new Error("Resposta inválida da API (não é JSON objeto).");
     if (!("success" in json) || !("data" in json) || !("errors" in json)) {
       throw new Error("Resposta inválida da API (envelope fora do padrão PRONTIO).");
     }
@@ -48,12 +65,18 @@
 
   function getPrimaryError_(envelope) {
     const errs = (envelope && envelope.errors) || [];
-    if (!errs.length) return { code: "UNKNOWN", message: "Falha na operação (success=false).", details: null };
+    if (!errs.length) {
+      return {
+        code: "UNKNOWN",
+        message: "Falha na operação (success=false).",
+        details: null
+      };
+    }
     const e0 = errs[0] || {};
     return {
       code: e0.code || "UNKNOWN",
       message: e0.message ? String(e0.message) : String(e0),
-      details: typeof e0.details === "undefined" ? null : e0.details,
+      details: typeof e0.details === "undefined" ? null : e0.details
     };
   }
 
@@ -107,6 +130,16 @@
     );
   }
 
+  function isAutoLogoutEnabled_() {
+    // default TRUE (mantém padrão profissional existente)
+    try {
+      if (PRONTIO.config && typeof PRONTIO.config.autoLogoutOnAuthError === "boolean") {
+        return PRONTIO.config.autoLogoutOnAuthError;
+      }
+    } catch (_) {}
+    return true;
+  }
+
   function saveAuthReason_(code) {
     try {
       if (!global.localStorage) return;
@@ -115,10 +148,24 @@
   }
 
   function tryAutoLogout_(reasonCode) {
+    // ✅ mantém padrão: ao detectar erro de AUTH/PERMISSION, encerra sessão e redireciona
+    // ✅ respeita flag de config
+    if (!isAutoLogoutEnabled_()) return;
+
     try {
       saveAuthReason_(reasonCode);
+
+      // ✅ Preferencial: centraliza na auth (garante limpeza completa + redirect /login.html)
+      if (PRONTIO.auth && typeof PRONTIO.auth.forceLogoutLocal === "function") {
+        PRONTIO.auth.forceLogoutLocal(reasonCode || "AUTH_REQUIRED", { redirect: true, clearChat: true });
+        return;
+      }
+
+      // Fallback compat:
       if (PRONTIO.auth && typeof PRONTIO.auth.clearSession === "function") PRONTIO.auth.clearSession();
-      if (PRONTIO.auth && typeof PRONTIO.auth.requireAuth === "function") PRONTIO.auth.requireAuth({ redirect: true });
+      if (PRONTIO.auth && typeof PRONTIO.auth.requireAuth === "function") {
+        PRONTIO.auth.requireAuth({ redirect: true });
+      }
     } catch (_) {}
   }
 
@@ -133,7 +180,11 @@
       let timer = null;
 
       const cleanup = () => {
-        try { delete global[cbName]; } catch (_) { global[cbName] = undefined; }
+        try {
+          delete global[cbName];
+        } catch (_) {
+          global[cbName] = undefined;
+        }
         if (script && script.parentNode) script.parentNode.removeChild(script);
         if (timer) clearTimeout(timer);
       };
@@ -168,8 +219,9 @@
   }
 
   function safeStringify_(obj) {
-    try { return JSON.stringify(obj || {}); }
-    catch (e) {
+    try {
+      return JSON.stringify(obj || {});
+    } catch (e) {
       const err = new Error("Falha ao serializar payload (JSON.stringify).");
       err.code = "CLIENT_PAYLOAD_SERIALIZE_ERROR";
       err.details = { message: normalizeError_(e) };
@@ -218,13 +270,15 @@
 
     const primary = getPrimaryError_(envelope);
 
+    // ✅ Auto-logout somente em erros de AUTH/PERMISSION (padrão profissional)
     if (shouldAutoLogout_(primary.code)) {
       tryAutoLogout_(primary.code);
     }
 
-    const msg = primary.code && primary.code !== "UNKNOWN"
-      ? `[${primary.code}] ${primary.message}`
-      : primary.message;
+    const msg =
+      primary.code && primary.code !== "UNKNOWN"
+        ? `[${primary.code}] ${primary.message}`
+        : primary.message;
 
     const err = new Error(msg);
     err.code = primary.code;

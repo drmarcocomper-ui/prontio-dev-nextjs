@@ -26,6 +26,10 @@
 //
 // ✅ Extra (sem quebrar):
 //  - Preenche #appVersion com PRONTIO.APP_VERSION (exposto pelo main.js)
+//
+// ✅ Ajuste (logout):
+//  - NÃO executa mais logout aqui (evita duplicação com core/auth.js).
+//  - Apenas fecha o drawer no mobile ao clicar em "Sair".
 // =====================================
 
 (function (global, document) {
@@ -161,21 +165,14 @@
     if (!sidebar) return;
 
     // Ação "Sair"
+    // ✅ O logout/confirm/redirect fica centralizado em core/auth.js (bindLogoutButtons).
+    // ✅ Aqui só fechamos o drawer em mobile para UX (sem competir com o auth.js).
     const logoutBtn = sidebar.querySelector("[data-nav-action='logout']");
     if (logoutBtn) {
-      logoutBtn.addEventListener("click", function () {
-        // ✅ Preferir auth.logout (já existe e é resiliente)
-        if (PRONTIO.auth && typeof PRONTIO.auth.logout === "function") {
-          PRONTIO.auth.logout({ redirect: true, clearChat: true });
-        } else if (PRONTIO.ui && typeof PRONTIO.ui.handleLogout === "function") {
-          PRONTIO.ui.handleLogout();
-        } else {
-          const ok = global.confirm("Deseja realmente sair do PRONTIO?");
-          if (ok) {
-            global.location.href = "login.html";
-          }
-        }
+      if (logoutBtn.getAttribute("data-sidebar-logout-bound") === "1") return;
+      logoutBtn.setAttribute("data-sidebar-logout-bound", "1");
 
+      logoutBtn.addEventListener("click", function () {
         if (isMobile_()) closeDrawer();
       });
     }
