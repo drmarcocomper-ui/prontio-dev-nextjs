@@ -386,6 +386,7 @@
     if (first && typeof first.focus === "function") setTimeout(() => first.focus(), 0);
   }
 
+  // ✅ Atualizado: campos completos por documento
   function _renderDocForm_(tipo) {
     const t = String(tipo || "").toLowerCase();
     const title = qs("#documentosPanelTitulo");
@@ -427,8 +428,13 @@
         </div>
 
         <div class="form-row">
-          <label for="docTexto">Observações</label>
-          <textarea id="docTexto" rows="5" placeholder="Ex: Atesto para os devidos fins..."></textarea>
+          <label for="docCid">CID (opcional)</label>
+          <input type="text" id="docCid" placeholder="Ex: M54.5">
+        </div>
+
+        <div class="form-row">
+          <label for="docTexto">Texto / Observações</label>
+          <textarea id="docTexto" rows="6" placeholder="Ex: Atesto para os devidos fins..."></textarea>
         </div>
       `;
     } else if (t === "comparecimento") {
@@ -439,13 +445,18 @@
         </div>
 
         <div class="form-row">
-          <label for="docHorario">Horário (opcional)</label>
-          <input type="text" id="docHorario" placeholder="Ex: 14:00 às 15:30">
+          <label for="docEntrada">Horário de entrada (opcional)</label>
+          <input type="time" id="docEntrada">
+        </div>
+
+        <div class="form-row">
+          <label for="docSaida">Horário de saída (opcional)</label>
+          <input type="time" id="docSaida">
         </div>
 
         <div class="form-row">
           <label for="docTexto">Declaração</label>
-          <textarea id="docTexto" rows="5" placeholder="Ex: Declaro que o paciente compareceu..."></textarea>
+          <textarea id="docTexto" rows="6" placeholder="Ex: Declaro que o paciente compareceu..."></textarea>
         </div>
       `;
     } else if (t === "laudo") {
@@ -462,7 +473,7 @@
 
         <div class="form-row">
           <label for="docTexto">Conteúdo</label>
-          <textarea id="docTexto" rows="7" placeholder="Digite o laudo..."></textarea>
+          <textarea id="docTexto" rows="8" placeholder="Digite o laudo..."></textarea>
         </div>
       `;
     } else if (t === "encaminhamento") {
@@ -478,18 +489,29 @@
         </div>
 
         <div class="form-row">
+          <label for="docPrioridade">Prioridade (opcional)</label>
+          <select id="docPrioridade">
+            <option value="">—</option>
+            <option value="Eletivo">Eletivo</option>
+            <option value="Prioritário">Prioritário</option>
+            <option value="Urgente">Urgente</option>
+          </select>
+        </div>
+
+        <div class="form-row">
           <label for="docTexto">Motivo / Observações</label>
-          <textarea id="docTexto" rows="5" placeholder="Ex: Encaminho para avaliação de..."></textarea>
+          <textarea id="docTexto" rows="6" placeholder="Ex: Encaminho para avaliação de..."></textarea>
         </div>
       `;
     }
 
     container.innerHTML = html;
 
-    const focusEl = container.querySelector("input, textarea, button");
+    const focusEl = container.querySelector("input, textarea, select, button");
     if (focusEl && typeof focusEl.focus === "function") setTimeout(() => focusEl.focus(), 0);
   }
 
+  // ✅ Atualizado: captura campos novos (CID / entrada/saída / prioridade)
   function _collectDocPayload_(ctx) {
     const t = String(docTipoAtual || "").toLowerCase();
     const payload = {
@@ -500,14 +522,31 @@
       texto: qs("#docTexto")?.value || "",
     };
 
-    if (t === "atestado") payload.dias = Number(qs("#docDias")?.value || 0);
-    if (t === "comparecimento") payload.horario = qs("#docHorario")?.value || "";
-    if (t === "laudo") payload.titulo = qs("#docTitulo")?.value || "";
-    if (t === "encaminhamento") payload.destino = qs("#docDestino")?.value || "";
+    if (t === "atestado") {
+      payload.dias = Number(qs("#docDias")?.value || 0);
+      payload.cid = String(qs("#docCid")?.value || "").trim();
+    }
+
+    if (t === "comparecimento") {
+      // compat: se existir docHorario antigo, também envia
+      payload.entrada = String(qs("#docEntrada")?.value || "").trim();
+      payload.saida = String(qs("#docSaida")?.value || "").trim();
+      payload.horario = String(qs("#docHorario")?.value || "").trim();
+    }
+
+    if (t === "laudo") {
+      payload.titulo = String(qs("#docTitulo")?.value || "").trim();
+    }
+
+    if (t === "encaminhamento") {
+      payload.destino = String(qs("#docDestino")?.value || "").trim();
+      payload.prioridade = String(qs("#docPrioridade")?.value || "").trim();
+    }
 
     return payload;
   }
 
+  // ✅ Atualizado: tenta primeiro Prontuario.*.GerarPdf, mas mantém fallbacks
   async function _gerarDocumento_(ctx) {
     const t = String(docTipoAtual || "").toLowerCase();
     if (!t) return;
@@ -518,12 +557,35 @@
       return;
     }
 
-    // ✅ fallbacks (não quebra o que já existe)
     const ACTIONS_BY_TYPE = {
-      atestado: ["Atestado.GerarPdf", "Atestado.GerarPDF", "Documentos.Atestado.GerarPdf", "Prontuario.Atestado.GerarPdf"],
-      comparecimento: ["Comparecimento.GerarPdf", "Comparecimento.GerarPDF", "Documentos.Comparecimento.GerarPdf", "Prontuario.Comparecimento.GerarPdf"],
-      laudo: ["Laudo.GerarPdf", "Laudo.GerarPDF", "Laudos.GerarPdf", "Prontuario.Laudo.GerarPdf"],
-      encaminhamento: ["Encaminhamento.GerarPdf", "Encaminhamento.GerarPDF", "Documentos.Encaminhamento.GerarPdf", "Prontuario.Encaminhamento.GerarPdf"],
+      atestado: [
+        "Prontuario.Atestado.GerarPdf",
+        "Atestado.GerarPdf",
+        "Atestado.GerarPDF",
+        "Documentos.Atestado.GerarPdf",
+        "Documentos.GerarPdfAtestado"
+      ],
+      comparecimento: [
+        "Prontuario.Comparecimento.GerarPdf",
+        "Comparecimento.GerarPdf",
+        "Comparecimento.GerarPDF",
+        "Documentos.Comparecimento.GerarPdf",
+        "Documentos.GerarPdfComparecimento"
+      ],
+      laudo: [
+        "Prontuario.Laudo.GerarPdf",
+        "Laudo.GerarPdf",
+        "Laudo.GerarPDF",
+        "Laudos.GerarPdf",
+        "Documentos.Laudo.GerarPdf"
+      ],
+      encaminhamento: [
+        "Prontuario.Encaminhamento.GerarPdf",
+        "Encaminhamento.GerarPdf",
+        "Encaminhamento.GerarPDF",
+        "Documentos.Encaminhamento.GerarPdf",
+        "Documentos.GerarPdfEncaminhamento"
+      ],
     };
 
     setMensagemDocumentos_({ tipo: "sucesso", texto: "Gerando documento..." });

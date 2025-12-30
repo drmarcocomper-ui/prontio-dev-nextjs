@@ -29,6 +29,12 @@
  *
  * Timeline unificada (Evolução + Receita + Chat):
  * - Prontuario.Timeline.ListarPorPaciente         ✅ paginação por cursor (ts)
+ *
+ * ✅ Documentos (novo — retorna {html} pronto para imprimir):
+ * - Prontuario.Atestado.GerarPdf
+ * - Prontuario.Comparecimento.GerarPdf
+ * - Prontuario.Laudo.GerarPdf
+ * - Prontuario.Encaminhamento.GerarPdf
  */
 
 function _prontuarioThrow_(code, message, details) {
@@ -135,6 +141,23 @@ function handleProntuarioAction(action, payload) {
       _prontuarioAssertRequired_(payload, ["idPaciente"]);
       return _prontuarioTimelineListarPorPaciente_(payload);
 
+    // ===================== DOCUMENTOS =========================
+    case "Prontuario.Atestado.GerarPdf":
+      _prontuarioAssertRequired_(payload, ["idPaciente"]);
+      return _prontuarioDocAtestadoGerarPdf_(payload);
+
+    case "Prontuario.Comparecimento.GerarPdf":
+      _prontuarioAssertRequired_(payload, ["idPaciente"]);
+      return _prontuarioDocComparecimentoGerarPdf_(payload);
+
+    case "Prontuario.Laudo.GerarPdf":
+      _prontuarioAssertRequired_(payload, ["idPaciente"]);
+      return _prontuarioDocLaudoGerarPdf_(payload);
+
+    case "Prontuario.Encaminhamento.GerarPdf":
+      _prontuarioAssertRequired_(payload, ["idPaciente"]);
+      return _prontuarioDocEncaminhamentoGerarPdf_(payload);
+
     default:
       _prontuarioThrow_(
         "PRONTUARIO_UNKNOWN_ACTION",
@@ -184,13 +207,8 @@ function _prontuarioDelegarChat_(chatAction, payload) {
   );
 }
 
-/**
- * Delegador para Pacientes.
- * Seu projeto usa handlePacientesAction(action,payload,ctx) e remapeia "Pacientes.ObterPorId" -> "Pacientes_ObterPorId".
- */
 function _prontuarioDelegarPacientes_(pacientesAction, payload) {
   if (typeof handlePacientesAction === "function") {
-    // handlePacientesAction aceita (action,payload,ctx) mas ctx é opcional.
     try { return handlePacientesAction(pacientesAction, payload || {}, { action: pacientesAction }); } catch (_) {}
     return handlePacientesAction(pacientesAction, payload || {});
   }
@@ -205,18 +223,16 @@ function _prontuarioDelegarPacientes_(pacientesAction, payload) {
 }
 
 // ============================================================
-// ✅ Paciente: Obter Resumo (para topo do prontuário)
+// Paciente: Obter Resumo
 // ============================================================
 
 function _prontuarioPacienteObterResumo_(payload) {
   var idPaciente = String(payload.idPaciente || "").trim();
 
-  // Seu Pacientes.gs garante: "Pacientes.ObterPorId" -> "Pacientes_ObterPorId"
   var raw = null;
   try {
     raw = _prontuarioDelegarPacientes_("Pacientes.ObterPorId", { idPaciente: idPaciente });
   } catch (e) {
-    // fallback para o nome interno (se alguém chamar direto)
     try {
       raw = _prontuarioDelegarPacientes_("Pacientes_ObterPorId", { idPaciente: idPaciente });
     } catch (e2) {
@@ -230,18 +246,15 @@ function _prontuarioPacienteObterResumo_(payload) {
 
   var p = (raw && raw.paciente) ? raw.paciente : raw;
 
-  // Campos alinhados ao seu schema v2:
-  // nomeCompleto, dataNascimento, planoSaude, numeroCarteirinha
   var nome = _prontuarioPickFirst_(p, ["nomeCompleto", "nomeExibicao", "nomeSocial", "nome"]);
   var dn = _prontuarioPickFirst_(p, ["dataNascimento", "DataNascimento", "data_nascimento", "nascimento"]);
-  var profissao = _prontuarioPickFirst_(p, ["profissao", "Profissao"]); // se existir na sua aba/legado
+  var profissao = _prontuarioPickFirst_(p, ["profissao", "Profissao"]);
   var planoSaude = _prontuarioPickFirst_(p, ["planoSaude", "PlanoSaude", "convenio", "Convenio", "plano"]);
   var carteirinha = _prontuarioPickFirst_(p, [
     "numeroCarteirinha", "NumeroCarteirinha",
     "carteirinha", "Carteirinha"
   ]);
 
-  // idade: calcula do dataNascimento se idade não vier pronta
   var idade = _prontuarioPickFirst_(p, ["idade", "Idade"]);
   if (!idade) {
     var idadeCalc = _prontuarioCalcIdadeFromAny_(dn);
@@ -306,7 +319,192 @@ function _prontuarioCalcIdadeFromAny_(raw) {
 }
 
 // ============================================================
+// Documentos — helpers HTML + geradores
+// ============================================================
+
+function _prontuarioHtmlEscape_(s) {
+  s = String(s === null || s === undefined ? "" : s);
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function _prontuarioFmtDataBr_(iso) {
+  var s = String(iso || "").trim();
+  if (!s) return "";
+  var parts = s.split("-");
+  if (parts.length !== 3) return s;
+  return parts[2] + "/" + parts[1] + "/" + parts[0];
+}
+
+function _prontuarioDocGetPacienteNome_(idPaciente) {
+  try {
+    var resp = _prontuarioPacienteObterResumo_({ idPaciente: idPaciente });
+    var p = resp && resp.paciente ? resp.paciente : {};
+    var nome = p.nomeCompleto || p.nomeExibicao || p.nome || "";
+    return String(nome || "").trim() || "—";
+  } catch (_) {
+    return "—";
+  }
+}
+
+/**
+ * ✅ Atualização: se DocsCabecalho.gs estiver presente, usa buildCabecalhoHtml_() no topo.
+ * (fallback silencioso se não existir)
+ */
+function _prontuarioDocBaseHtml_(titulo, pacienteNome, corpoHtml, dataIso) {
+  var dataBr = _prontuarioFmtDataBr_(dataIso) || _prontuarioFmtDataBr_(new Date().toISOString().slice(0, 10));
+  var nome = _prontuarioHtmlEscape_(pacienteNome || "—");
+  var tit = _prontuarioHtmlEscape_(titulo || "Documento");
+
+  var cabecalho = "";
+  try {
+    if (typeof buildCabecalhoHtml_ === "function") cabecalho = String(buildCabecalhoHtml_() || "");
+  } catch (_) {
+    cabecalho = "";
+  }
+
+  return (
+    "<!doctype html><html><head><meta charset='utf-8'>" +
+    "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+    "<title>" + tit + "</title>" +
+    "<style>" +
+    "body{font-family:Arial,Helvetica,sans-serif;color:#111827;margin:24px;}" +
+    ".wrap{max-width:820px;margin:0 auto;}" +
+    ".top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #e5e7eb;padding-bottom:10px;margin-bottom:14px;}" +
+    ".title{font-size:18px;font-weight:700;}" +
+    ".meta{font-size:12px;color:#6b7280;}" +
+    ".box{border:1px solid #e5e7eb;border-radius:10px;padding:14px;}" +
+    ".label{font-size:12px;color:#6b7280;margin-bottom:6px;}" +
+    ".value{font-size:14px;font-weight:600;margin-bottom:10px;}" +
+    ".content{white-space:pre-wrap;font-size:14px;line-height:1.55;color:#111827;}" +
+    ".sign{margin-top:22px;display:flex;justify-content:flex-end;}" +
+    ".sign .line{width:260px;border-top:1px solid #111827;margin-top:40px;text-align:center;padding-top:6px;font-size:12px;color:#111827;}" +
+    "@media print{body{margin:0;} .wrap{max-width:none;margin:0;padding:18px;} }" +
+    "</style></head><body><div class='wrap'>" +
+    (cabecalho ? cabecalho : "") +
+    "<div class='top'><div class='title'>" + tit + "</div>" +
+    "<div class='meta'>Data: " + _prontuarioHtmlEscape_(dataBr) + "</div></div>" +
+    "<div class='box'>" +
+    "<div class='label'>Paciente</div><div class='value'>" + nome + "</div>" +
+    corpoHtml +
+    "</div>" +
+    "<div class='sign'><div class='line'>Assinatura / Carimbo</div></div>" +
+    "</div></body></html>"
+  );
+}
+
+// --------- ATESTADO ---------
+function _prontuarioDocAtestadoGerarPdf_(payload) {
+  var idPaciente = String(payload.idPaciente || "").trim();
+  var dataIso = String(payload.data || "").trim();
+  var dias = Number(payload.dias || 0) || 0;
+  var cid = String(payload.cid || "").trim();
+  var texto = String(payload.texto || "").trim();
+
+  var pacienteNome = _prontuarioDocGetPacienteNome_(idPaciente);
+
+  if (!texto) {
+    texto = "Atesto para os devidos fins que o(a) paciente acima identificado(a) esteve sob atendimento médico.";
+  }
+
+  var corpo = "";
+  if (dias > 0) {
+    corpo += "<div class='label'>Afastamento</div><div class='content'>" + _prontuarioHtmlEscape_(String(dias)) + " dia(s)</div><br>";
+  }
+  if (cid) {
+    corpo += "<div class='label'>CID</div><div class='content'>" + _prontuarioHtmlEscape_(cid) + "</div><br>";
+  }
+  corpo += "<div class='label'>Texto</div><div class='content'>" + _prontuarioHtmlEscape_(texto) + "</div>";
+
+  return { html: _prontuarioDocBaseHtml_("Atestado médico", pacienteNome, corpo, dataIso) };
+}
+
+// --------- COMPARECIMENTO (refinado) ---------
+function _prontuarioDocComparecimentoGerarPdf_(payload) {
+  var idPaciente = String(payload.idPaciente || "").trim();
+  var dataIso = String(payload.data || "").trim();
+
+  var entrada = String(payload.entrada || "").trim();
+  var saida = String(payload.saida || "").trim();
+  var horarioLegacy = String(payload.horario || "").trim();
+
+  var texto = String(payload.texto || "").trim();
+  var pacienteNome = _prontuarioDocGetPacienteNome_(idPaciente);
+
+  if (!texto) {
+    texto = "Declaro, para os devidos fins, que o(a) paciente acima compareceu a esta unidade para atendimento médico.";
+  }
+
+  var corpo = "";
+
+  // Horário: preferir entrada/saída; manter compat com horário livre
+  if (entrada || saida) {
+    corpo += "<div class='label'>Horário</div><div class='content'>" +
+      _prontuarioHtmlEscape_("Entrada: " + (entrada || "—") + " · Saída: " + (saida || "—")) +
+      "</div><br>";
+  } else if (horarioLegacy) {
+    corpo += "<div class='label'>Horário</div><div class='content'>" +
+      _prontuarioHtmlEscape_(horarioLegacy) +
+      "</div><br>";
+  }
+
+  corpo += "<div class='label'>Declaração</div><div class='content'>" + _prontuarioHtmlEscape_(texto) + "</div>";
+
+  return { html: _prontuarioDocBaseHtml_("Declaração de comparecimento", pacienteNome, corpo, dataIso) };
+}
+
+// --------- LAUDO ---------
+function _prontuarioDocLaudoGerarPdf_(payload) {
+  var idPaciente = String(payload.idPaciente || "").trim();
+  var dataIso = String(payload.data || "").trim();
+  var titulo = String(payload.titulo || "").trim() || "Laudo";
+  var texto = String(payload.texto || "").trim();
+
+  var pacienteNome = _prontuarioDocGetPacienteNome_(idPaciente);
+
+  if (!texto) texto = "Descreva o laudo clínico.";
+
+  var corpo =
+    "<div class='label'>Título</div><div class='content'>" + _prontuarioHtmlEscape_(titulo) + "</div><br>" +
+    "<div class='label'>Conteúdo</div><div class='content'>" + _prontuarioHtmlEscape_(texto) + "</div>";
+
+  return { html: _prontuarioDocBaseHtml_("Laudo", pacienteNome, corpo, dataIso) };
+}
+
+// --------- ENCAMINHAMENTO ---------
+function _prontuarioDocEncaminhamentoGerarPdf_(payload) {
+  var idPaciente = String(payload.idPaciente || "").trim();
+  var dataIso = String(payload.data || "").trim();
+  var destino = String(payload.destino || "").trim();
+  var prioridade = String(payload.prioridade || "").trim();
+  var texto = String(payload.texto || "").trim();
+
+  var pacienteNome = _prontuarioDocGetPacienteNome_(idPaciente);
+
+  if (!texto) {
+    texto = "Encaminho o(a) paciente acima para avaliação / seguimento.";
+  }
+
+  var corpo = "";
+  if (destino) {
+    corpo += "<div class='label'>Destino</div><div class='content'>" + _prontuarioHtmlEscape_(destino) + "</div><br>";
+  }
+  if (prioridade) {
+    corpo += "<div class='label'>Prioridade</div><div class='content'>" + _prontuarioHtmlEscape_(prioridade) + "</div><br>";
+  }
+
+  corpo += "<div class='label'>Motivo / Observações</div><div class='content'>" + _prontuarioHtmlEscape_(texto) + "</div>";
+
+  return { html: _prontuarioDocBaseHtml_("Encaminhamento", pacienteNome, corpo, dataIso) };
+}
+
+// ============================================================
 // Paginação: EVOLUÇÕES (cursor por timestamp)
+// (mantido igual ao seu arquivo atual)
 // ============================================================
 
 function _prontuarioEvolucaoListarPorPacientePaged_(payload) {
@@ -363,6 +561,7 @@ function _prontuarioEvolucaoListarPorPacientePaged_(payload) {
 
 // ============================================================
 // Paginação: RECEITAS (cursor por timestamp)
+// (mantido igual ao seu arquivo atual)
 // ============================================================
 
 function _prontuarioReceitaListarPorPacientePaged_(payload) {
@@ -419,6 +618,7 @@ function _prontuarioReceitaListarPorPacientePaged_(payload) {
 
 // ============================================================
 // Timeline unificada (paginada por cursor)
+// (mantido igual ao seu arquivo atual)
 // ============================================================
 
 function _prontuarioTimelineListarPorPaciente_(payload) {
@@ -518,7 +718,6 @@ function _prontuarioTimelineListarPorPaciente_(payload) {
     });
   }
 
-  // ✅ Ordenação correta
   events.sort(function (a, b) {
     return _prontuarioParseDateMs_(b && b.ts) - _prontuarioParseDateMs_(a && a.ts);
   });
