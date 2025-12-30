@@ -31,6 +31,11 @@
  *
  * ✅ Compatibilidade:
  * - Este arquivo mantém aliases para schemas antigos (Nome, senhaHash, PasswordHash, etc).
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - getUsuariosSheet_ agora tenta PRONTIO_getDb_ -> Repo_getDb_ -> ActiveSpreadsheet,
+ *   alinhando com Auth.gs / AgendaConfig.gs.
+ * - Usuarios_findByLoginForAuth_ retorna também nomeCompleto (sem quebrar quem usa "nome").
  */
 
 var USUARIOS_SHEET_NAME = "Usuarios";
@@ -72,15 +77,28 @@ function handleUsuariosAction(action, payload, ctx) {
 }
 
 /**
- * ✅ Ajuste mínimo:
+ * ✅ Ajuste mínimo (SEM QUEBRAR):
  * - Se PRONTIO_getDb_ existir (DEV/PROD), usa ele.
+ * - Se Repo_getDb_ existir (Repository.gs), usa ele.
  * - Senão, cai no SpreadsheetApp.getActiveSpreadsheet() (legado).
  */
 function getUsuariosSheet_() {
   var ss;
+
   try {
-    if (typeof PRONTIO_getDb_ === "function") ss = PRONTIO_getDb_();
-    else ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (typeof PRONTIO_getDb_ === "function") {
+      ss = PRONTIO_getDb_();
+    }
+  } catch (_) {}
+
+  try {
+    if (!ss && typeof Repo_getDb_ === "function") {
+      ss = Repo_getDb_();
+    }
+  } catch (_) {}
+
+  try {
+    if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
   } catch (_) {
     ss = SpreadsheetApp.getActiveSpreadsheet();
   }
@@ -300,6 +318,9 @@ function Usuarios_Listar_(payload) {
 /**
  * Busca usuário por identificador para autenticação (inclui senhaHash).
  * ✅ Pilar A: Aceita Login OU Email (case-insensitive). Prioriza Login.
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - Retorna também nomeCompleto (alias de "nome") para o Auth.gs usar sem depender de colunas antigas.
  */
 function Usuarios_findByLoginForAuth_(identifier) {
   identifier = (identifier || "").toString().trim().toLowerCase();
@@ -330,11 +351,15 @@ function Usuarios_findByLoginForAuth_(identifier) {
     var rowLogin = idx.login >= 0 ? String(_uGet_(row, idx.login) || "").trim().toLowerCase() : "";
     var rowEmail = idx.email >= 0 ? String(_uGet_(row, idx.email) || "").trim().toLowerCase() : "";
 
+    var nomeRaw = idx.nome >= 0 ? String(_uGet_(row, idx.nome) || "") : "";
+    var nomeCompleto = nomeRaw; // coluna NomeCompleto/alias
+
     // Prioridade 1: Login
     if (rowLogin && rowLogin === identifier) {
       return {
         id: String(_uGet_(row, idx.id) || ""),
-        nome: idx.nome >= 0 ? String(_uGet_(row, idx.nome) || "") : "",
+        nome: nomeRaw,
+        nomeCompleto: nomeCompleto, // ✅ novo (compat)
         login: idx.login >= 0 ? String(_uGet_(row, idx.login) || "") : "",
         email: idx.email >= 0 ? String(_uGet_(row, idx.email) || "") : "",
         perfil: idx.perfil >= 0 ? String(_uGet_(row, idx.perfil) || "") : "",
@@ -347,7 +372,8 @@ function Usuarios_findByLoginForAuth_(identifier) {
     if (!foundByEmail && rowEmail && rowEmail === identifier) {
       foundByEmail = {
         id: String(_uGet_(row, idx.id) || ""),
-        nome: idx.nome >= 0 ? String(_uGet_(row, idx.nome) || "") : "",
+        nome: nomeRaw,
+        nomeCompleto: nomeCompleto, // ✅ novo (compat)
         login: idx.login >= 0 ? String(_uGet_(row, idx.login) || "") : "",
         email: idx.email >= 0 ? String(_uGet_(row, idx.email) || "") : "",
         perfil: idx.perfil >= 0 ? String(_uGet_(row, idx.perfil) || "") : "",
@@ -531,6 +557,7 @@ function Usuarios_Criar_(payload) {
   return {
     id: novoId,
     nome: nome,
+    nomeCompleto: nome, // compat útil
     login: login,
     email: email,
     perfil: perfil,
@@ -619,6 +646,7 @@ function Usuarios_Atualizar_(payload) {
   return {
     id: id,
     nome: nome,
+    nomeCompleto: nome, // compat útil
     login: login,
     email: email,
     perfil: perfil,

@@ -62,6 +62,11 @@
  * - Cache (se Cache.gs existir) para reduzir leitura da planilha
  * - Invalida cache no salvar
  * - Mantém contrato e comportamento existentes
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - Aceita aliases de action: AgendaConfig.Obter / AgendaConfig.Salvar (além de AgendaConfig_*)
+ * - Valida e normaliza HH:MM, duração e dias_ativos
+ * - Normaliza dias_ativos para UPPER e apenas valores permitidos (SEG..DOM)
  */
 
 var AGENDA_CONFIG_SHEET_NAME = "AgendaConfig";
@@ -77,7 +82,13 @@ var _AGENDA_CFG_CACHE_TTL_SEC_ = 60 * 10; // 10 min (seguro)
 // ============================================================
 
 function handleAgendaConfigAction(action, payload) {
-  switch (action) {
+  var a = String(action || "").trim();
+
+  // ✅ aliases sem quebrar
+  if (a === "AgendaConfig.Obter") a = "AgendaConfig_Obter";
+  if (a === "AgendaConfig.Salvar") a = "AgendaConfig_Salvar";
+
+  switch (a) {
     case "AgendaConfig_Obter":
       return agendaConfigObter_();
 
@@ -85,7 +96,7 @@ function handleAgendaConfigAction(action, payload) {
       return agendaConfigSalvar_(payload);
 
     default:
-      var err = new Error("Ação de configuração de agenda desconhecida: " + action);
+      var err = new Error("Ação de configuração de agenda desconhecida: " + a);
       err.code = "AGENDA_CONFIG_UNKNOWN_ACTION";
       err.details = { action: String(action || "") };
       throw err;
@@ -160,6 +171,61 @@ function _agendaCfgCacheRemove_(key) {
 function _agendaCfgCacheInvalidateAll_() {
   _agendaCfgCacheRemove_(_AGENDA_CFG_CACHE_KEY_MAP_);
   _agendaCfgCacheRemove_(_AGENDA_CFG_CACHE_KEY_CFG_);
+}
+
+// ============================================================
+// Normalizações/validações (sem quebrar)
+// ============================================================
+
+function _agendaCfgNormalizeHHMM_(v, fallback) {
+  var s = String(v || "").trim();
+  if (!s) return fallback;
+
+  // aceita "8:00" e normaliza para "08:00"
+  var m = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return fallback;
+
+  var hh = parseInt(m[1], 10);
+  var mm = parseInt(m[2], 10);
+  if (!isFinite(hh) || !isFinite(mm)) return fallback;
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return fallback;
+
+  return (hh < 10 ? "0" : "") + hh + ":" + m[2];
+}
+
+function _agendaCfgNormalizeDuracao_(v, fallback) {
+  var n = parseInt(String(v || "").trim(), 10);
+  if (!isFinite(n) || n <= 0) return fallback;
+  // evita valores absurdos
+  if (n > 240) return fallback; // 4h por slot é improvável; fallback seguro
+  return n;
+}
+
+function _agendaCfgNormalizeDiasAtivos_(raw, fallbackArr) {
+  var allowed = { SEG: true, TER: true, QUA: true, QUI: true, SEX: true, SAB: true, DOM: true };
+
+  var list = [];
+  if (Array.isArray(raw)) {
+    list = raw.map(function (x) { return String(x || "").trim().toUpperCase(); });
+  } else {
+    var s = String(raw || "").trim();
+    if (s) {
+      list = s.split(",").map(function (x) { return String(x || "").trim().toUpperCase(); });
+    }
+  }
+
+  list = list.filter(function (d) { return d && allowed[d] === true; });
+
+  // remove duplicados preservando ordem
+  var seen = {};
+  var uniq = [];
+  for (var i = 0; i < list.length; i++) {
+    var d = list[i];
+    if (!seen[d]) { seen[d] = true; uniq.push(d); }
+  }
+
+  if (!uniq.length) return (fallbackArr || []).slice();
+  return uniq;
 }
 
 // ============================================================
@@ -241,19 +307,9 @@ function agendaConfigObter_() {
     return defaults;
   }
 
-  var diasAtivosRaw = String(map.DIAS_ATIVOS || "").trim();
-  var diasAtivosArr;
-  if (diasAtivosRaw) {
-    diasAtivosArr = diasAtivosRaw
-      .split(",")
-      .map(function (s) { return String(s || "").trim(); })
-      .filter(function (s) { return s; });
-  } else {
-    diasAtivosArr = defaults.dias_ativos.slice();
-  }
+  var diasAtivosArr = _agendaCfgNormalizeDiasAtivos_(map.DIAS_ATIVOS, defaults.dias_ativos);
 
-  var duracao = parseInt(map.DURACAO_GRADE_MINUTOS || defaults.duracao_grade_minutos, 10);
-  if (isNaN(duracao) || duracao <= 0) duracao = defaults.duracao_grade_minutos;
+  var duracao = _agendaCfgNormalizeDuracao_(map.DURACAO_GRADE_MINUTOS, defaults.duracao_grade_minutos);
 
   var cfg = {
     medicoNomeCompleto: String(map.MEDICO_NOME_COMPLETO || defaults.medicoNomeCompleto || "").trim(),
@@ -267,8 +323,8 @@ function agendaConfigObter_() {
 
     logoUrl: String(map.LOGO_URL || defaults.logoUrl || "").trim(),
 
-    hora_inicio_padrao: String(map.HORA_INICIO_PADRAO || defaults.hora_inicio_padrao || "").trim(),
-    hora_fim_padrao: String(map.HORA_FIM_PADRAO || defaults.hora_fim_padrao || "").trim(),
+    hora_inicio_padrao: _agendaCfgNormalizeHHMM_(map.HORA_INICIO_PADRAO, defaults.hora_inicio_padrao),
+    hora_fim_padrao: _agendaCfgNormalizeHHMM_(map.HORA_FIM_PADRAO, defaults.hora_fim_padrao),
     duracao_grade_minutos: duracao,
     dias_ativos: diasAtivosArr
   };
@@ -300,6 +356,7 @@ function agendaConfigSalvar_(payload) {
     rowByKey[chave] = i + 2;
   }
 
+  // Campos texto (mantém como veio)
   _agendaConfigUpsert_(sheet, rowByKey, "MEDICO_NOME_COMPLETO", payload.medicoNomeCompleto);
   _agendaConfigUpsert_(sheet, rowByKey, "MEDICO_CRM", payload.medicoCRM);
   _agendaConfigUpsert_(sheet, rowByKey, "MEDICO_ESPECIALIDADE", payload.medicoEspecialidade);
@@ -311,15 +368,20 @@ function agendaConfigSalvar_(payload) {
 
   _agendaConfigUpsert_(sheet, rowByKey, "LOGO_URL", payload.logoUrl);
 
-  _agendaConfigUpsert_(sheet, rowByKey, "HORA_INICIO_PADRAO", payload.hora_inicio_padrao);
-  _agendaConfigUpsert_(sheet, rowByKey, "HORA_FIM_PADRAO", payload.hora_fim_padrao);
-  _agendaConfigUpsert_(sheet, rowByKey, "DURACAO_GRADE_MINUTOS", payload.duracao_grade_minutos);
+  // ✅ Normaliza e valida campos críticos (sem quebrar: se inválido, salva o fallback atual)
+  var current = agendaConfigObter_();
+
+  var hi = _agendaCfgNormalizeHHMM_(payload.hora_inicio_padrao, current.hora_inicio_padrao);
+  var hf = _agendaCfgNormalizeHHMM_(payload.hora_fim_padrao, current.hora_fim_padrao);
+  var dur = _agendaCfgNormalizeDuracao_(payload.duracao_grade_minutos, current.duracao_grade_minutos);
+
+  _agendaConfigUpsert_(sheet, rowByKey, "HORA_INICIO_PADRAO", hi);
+  _agendaConfigUpsert_(sheet, rowByKey, "HORA_FIM_PADRAO", hf);
+  _agendaConfigUpsert_(sheet, rowByKey, "DURACAO_GRADE_MINUTOS", dur);
 
   if (typeof payload.dias_ativos !== "undefined") {
-    var diasAtivosValue = "";
-    if (Array.isArray(payload.dias_ativos)) diasAtivosValue = payload.dias_ativos.join(",");
-    else if (typeof payload.dias_ativos === "string") diasAtivosValue = payload.dias_ativos;
-
+    var diasArr = _agendaCfgNormalizeDiasAtivos_(payload.dias_ativos, current.dias_ativos);
+    var diasAtivosValue = diasArr.join(",");
     _agendaConfigUpsert_(sheet, rowByKey, "DIAS_ATIVOS", diasAtivosValue);
   }
 

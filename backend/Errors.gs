@@ -6,6 +6,12 @@
  *
  * Envelope padrão esperado:
  * { success:boolean, data:any, errors:[{code,message,details?}], requestId }
+ *
+ * ✅ UPDATE (SEM QUEBRAR):
+ * - Mantém todos os códigos existentes.
+ * - Adiciona códigos AUTH adicionais usados no front (api.js):
+ *   AUTH_EXPIRED, AUTH_TOKEN_EXPIRED, AUTH_NO_TOKEN
+ * - Não altera formato do envelope.
  */
 
 var Errors = (function () {
@@ -16,9 +22,14 @@ var Errors = (function () {
     PERMISSION_DENIED: "PERMISSION_DENIED",
     INTERNAL_ERROR: "INTERNAL_ERROR",
 
-    // ✅ NOVOS (não quebram legado; só padronizam AUTH)
+    // ✅ AUTH (padronização; não quebra legado)
     AUTH_REQUIRED: "AUTH_REQUIRED",
-    AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS"
+    AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS",
+
+    // ✅ AUTH extras (compat com front)
+    AUTH_EXPIRED: "AUTH_EXPIRED",
+    AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
+    AUTH_NO_TOKEN: "AUTH_NO_TOKEN"
   };
 
   function make(code, message, details) {

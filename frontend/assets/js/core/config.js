@@ -19,13 +19,14 @@
     const path = (global.location && global.location.pathname) || "";
 
     if (host === "localhost" || host === "127.0.0.1") return "dev";
+
     if (host.endsWith("github.io")) {
       if (path.startsWith("/prontio-dev/")) return "dev";
       if (path.startsWith("/prontio-prod/")) return "prod";
       return "dev";
     }
 
-    // Observação: qualquer outro host cai em "prod" (como já era)
+    // Qualquer outro host assume produção
     return "prod";
   }
 
@@ -36,15 +37,35 @@
     prod: "https://script.google.com/macros/s/AKfycbwGwSrgphYjR374ftYwbMczqnJzWTZvQXyyfcDGhyHsCGfuxbjd7FfhBEkUHoKrKC6AWQ/exec"
   };
 
-  PRONTIO.config.env = ENV;
+  // ENV normalizado
+  PRONTIO.config.env = ENV === "prod" ? "prod" : "dev";
 
-  // ✅ prioridade: meta prontio-api-url (se preenchido) -> senão, usa ENV
+  // ✅ prioridade:
+  // 1) <meta name="prontio-api-url">
+  // 2) URL pelo ENV
+  // 3) fallback DEV
   const metaUrl = metaApiUrl_();
-  PRONTIO.config.apiUrl = metaUrl || API_URLS[ENV] || API_URLS.dev;
+  PRONTIO.config.apiUrl =
+    metaUrl ||
+    API_URLS[PRONTIO.config.env] ||
+    API_URLS.dev;
 
-  PRONTIO.config.apiTimeout = 20000;
+  // =========================
+  // TIMEOUT DA API
+  // =========================
+
+  // Valor oficial (usado pelo api.js)
+  PRONTIO.config.apiTimeoutMs = 20000;
+
+  // Alias retrocompatível (não usado pelo api.js, mas mantido)
+  PRONTIO.config.apiTimeout = PRONTIO.config.apiTimeoutMs;
 
   if (global.console) {
-    console.info("[PRONTIO.config]", "ENV =", PRONTIO.config.env, "| API =", PRONTIO.config.apiUrl);
+    console.info(
+      "[PRONTIO.config]",
+      "ENV =", PRONTIO.config.env,
+      "| API =", PRONTIO.config.apiUrl,
+      "| TIMEOUT =", PRONTIO.config.apiTimeoutMs + "ms"
+    );
   }
 })(window);

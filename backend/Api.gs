@@ -20,12 +20,12 @@
  *   ou PRONTIO_routeAction_ (router legado padrão incluído aqui).
  *
  * ✅ UPDATE (retrocompatível - AGENDA):
- * - PRONTIO_routeAction_ agora também roteia actions de Agenda_* para handleAgendaAction,
- *   igual já fazia para Pacientes_*.
+ * - PRONTIO_routeAction_ separa AgendaConfig_* antes de Agenda_* / Agenda.*
+ * - Suporte legado direto para "Agenda_ValidarConflito" via Agenda_Action_ValidarConflito (se existir)
  *
- * ✅ UPDATE (retrocompatível - PRONTUÁRIO):
- * - PRONTIO_routeAction_ agora também roteia actions de Prontuario.* para handleProntuarioAction,
- *   garantindo funcionamento mesmo sem Registry.
+ * ✅ FIX (SEM QUEBRAR):
+ * - Auditoria best-effort com Audit_log_ / Audit_securityEvent_ quando disponíveis
+ * - duration_ms também em envelopes de erro quando possível
  */
 
 var PRONTIO_API_VERSION = typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV";
@@ -68,9 +68,18 @@ function doGet(e) {
       var payload = req.payload || {};
 
       if (!action) {
-        return _respondMaybeJsonp_(e, _err_(requestId, [
+        var envErr = _err_(requestId, [
           { code: "VALIDATION_ERROR", message: 'Campo "action" é obrigatório.', details: { field: "action" } }
-        ], { action: "GET(action)", startedAt: startedAt }));
+        ], { action: "GET(action)", startedAt: startedAt });
+
+        _auditBestEffort_(null, {
+          requestId: requestId,
+          action: "GET(action)",
+          startedAtMs: startedAt.getTime(),
+          startedAtIso: startedAt.toISOString()
+        }, "DENY", null, null, envErr);
+
+        return _respondMaybeJsonp_(e, _withMetaDuration_(envErr, startedAt));
       }
 
       var ctx = {
@@ -85,16 +94,21 @@ function doGet(e) {
 
       var entry = Registry_getAction_(action);
 
-      // ✅ UPDATE: fallback legado (também no GET)
+      // ✅ fallback legado (também no GET)
       if (!entry) {
         var legacyDataGet = _tryLegacyRoute_(action, payload, ctx);
         if (legacyDataGet !== null) {
-          return _respondMaybeJsonp_(e, _ok_(requestId, legacyDataGet, { action: action, legacy: true, startedAt: startedAt }));
+          var okLegacyGet = _ok_(requestId, legacyDataGet, { action: action, legacy: true, startedAt: startedAt });
+          _auditBestEffort_(e, ctx, "SUCCESS", null, null, okLegacyGet);
+          return _respondMaybeJsonp_(e, okLegacyGet);
         }
 
-        return _respondMaybeJsonp_(e, _err_(requestId, [
+        var envNotFound = _err_(requestId, [
           { code: "NOT_FOUND", message: "Action não registrada.", details: { action: action } }
-        ], { action: action, startedAt: startedAt }));
+        ], { action: action, startedAt: startedAt });
+
+        _auditBestEffort_(e, ctx, "DENY", null, null, envNotFound);
+        return _respondMaybeJsonp_(e, _withMetaDuration_(envNotFound, startedAt));
       }
 
       // Resolve user (token vem no payload)
@@ -108,11 +122,17 @@ function doGet(e) {
       if (entry.requiresAuth) {
         if (typeof Auth_requireAuth_ === "function" && typeof Errors !== "undefined" && Errors) {
           var authRes = Auth_requireAuth_(ctx, payload);
-          if (!authRes.success) return _respondMaybeJsonp_(e, _withMetaDuration_(authRes, startedAt));
+          if (!authRes.success) {
+            _auditBestEffort_(e, ctx, "DENY", null, null, authRes);
+            return _respondMaybeJsonp_(e, _withMetaDuration_(authRes, startedAt));
+          }
         } else {
-          return _respondMaybeJsonp_(e, _err_(requestId, [
+          var envAuthMissing = _err_(requestId, [
             { code: "INTERNAL_ERROR", message: "Auth requerido, mas Auth.gs/Errors.gs não disponível.", details: { action: action } }
-          ], { action: action, startedAt: startedAt }));
+          ], { action: action, startedAt: startedAt });
+
+          _auditBestEffort_(e, ctx, "FAIL", null, null, envAuthMissing);
+          return _respondMaybeJsonp_(e, _withMetaDuration_(envAuthMissing, startedAt));
         }
       }
 
@@ -120,21 +140,30 @@ function doGet(e) {
       if (entry.roles && entry.roles.length) {
         if (typeof Auth_requireRoles_ === "function" && typeof Errors !== "undefined" && Errors) {
           var roleRes = Auth_requireRoles_(ctx, entry.roles);
-          if (!roleRes.success) return _respondMaybeJsonp_(e, _withMetaDuration_(roleRes, startedAt));
+          if (!roleRes.success) {
+            _auditBestEffort_(e, ctx, "DENY", null, null, roleRes);
+            return _respondMaybeJsonp_(e, _withMetaDuration_(roleRes, startedAt));
+          }
         } else {
-          return _respondMaybeJsonp_(e, _err_(requestId, [
+          var envRolesMissing = _err_(requestId, [
             { code: "INTERNAL_ERROR", message: "Roles requeridas, mas Auth.gs/Errors.gs não disponível.", details: { action: action, roles: entry.roles } }
-          ], { action: action, startedAt: startedAt }));
+          ], { action: action, startedAt: startedAt });
+
+          _auditBestEffort_(e, ctx, "FAIL", null, null, envRolesMissing);
+          return _respondMaybeJsonp_(e, _withMetaDuration_(envRolesMissing, startedAt));
         }
       }
 
       // Validations
       if (entry.validations && entry.validations.length && typeof Validators_run_ === "function") {
         var vRes = Validators_run_(ctx, entry.validations, payload);
-        if (!vRes.success) return _respondMaybeJsonp_(e, _withMetaDuration_(vRes, startedAt));
+        if (!vRes.success) {
+          _auditBestEffort_(e, ctx, "DENY", null, null, vRes);
+          return _respondMaybeJsonp_(e, _withMetaDuration_(vRes, startedAt));
+        }
       }
 
-      // Locks
+      // Locks + Handler
       var data;
       if (entry.requiresLock && typeof Locks_withLock_ === "function") {
         data = Locks_withLock_(ctx, entry.lockKey || action, function () {
@@ -144,11 +173,17 @@ function doGet(e) {
         data = entry.handler(ctx, payload);
       }
 
-      return _respondMaybeJsonp_(e, _ok_(requestId, data, { action: action, startedAt: startedAt }));
+      var ok = _ok_(requestId, data, { action: action, startedAt: startedAt });
+
+      _auditBestEffort_(e, ctx, "SUCCESS", null, null, ok);
+      return _respondMaybeJsonp_(e, ok);
     }
   } catch (err) {
     var rid = _makeRequestId_();
-    return _respondMaybeJsonp_(e, _exceptionToErrorResponse_(rid, err));
+    var startedAtErr = new Date();
+    var envErr2 = _exceptionToErrorResponse_(rid, err);
+    _auditBestEffort_(e, { requestId: rid, action: "GET", startedAtMs: startedAtErr.getTime(), startedAtIso: startedAtErr.toISOString(), user: null }, "FAIL", null, err, envErr2);
+    return _respondMaybeJsonp_(e, _withMetaDuration_(envErr2, startedAtErr));
   }
 
   // 2) Modo informativo original
@@ -172,9 +207,12 @@ function doPost(e) {
     var payload = req.payload || {};
 
     if (!action) {
-      return _withCors_(_jsonOutput_(_err_(requestId, [
+      var envMissingAction = _err_(requestId, [
         { code: "VALIDATION_ERROR", message: 'Campo "action" é obrigatório.', details: { field: "action" } }
-      ], { startedAt: startedAt })));
+      ], { startedAt: startedAt });
+
+      _auditBestEffort_(e, { requestId: requestId, action: "POST", startedAtMs: startedAt.getTime(), startedAtIso: startedAt.toISOString(), user: null }, "DENY", null, null, envMissingAction);
+      return _withCors_(_jsonOutput_(_withMetaDuration_(envMissingAction, startedAt)));
     }
 
     var ctx = {
@@ -190,16 +228,20 @@ function doPost(e) {
     var entry = Registry_getAction_(action);
 
     if (!entry) {
-      // ✅ Mantém seu fallback legado, mas agora tenta também PRONTIO_routeAction_
+      // fallback legado
       var legacyDataPost = _tryLegacyRoute_(action, payload, ctx);
       if (legacyDataPost !== null) {
         var okLegacy = _ok_(requestId, legacyDataPost, { action: action, legacy: true, startedAt: startedAt });
+        _auditBestEffort_(e, ctx, "SUCCESS", null, null, okLegacy);
         return _withCors_(_jsonOutput_(okLegacy));
       }
 
-      return _withCors_(_jsonOutput_(_err_(requestId, [
+      var envNotFound = _err_(requestId, [
         { code: "NOT_FOUND", message: "Action não registrada.", details: { action: action } }
-      ], { action: action, startedAt: startedAt })));
+      ], { action: action, startedAt: startedAt });
+
+      _auditBestEffort_(e, ctx, "DENY", null, null, envNotFound);
+      return _withCors_(_jsonOutput_(_withMetaDuration_(envNotFound, startedAt)));
     }
 
     if (typeof Auth_getUserContext_ === "function") {
@@ -211,28 +253,43 @@ function doPost(e) {
     if (entry.requiresAuth) {
       if (typeof Auth_requireAuth_ === "function" && typeof Errors !== "undefined" && Errors) {
         var authRes2 = Auth_requireAuth_(ctx, payload);
-        if (!authRes2.success) return _withCors_(_jsonOutput_(_withMetaDuration_(authRes2, startedAt)));
+        if (!authRes2.success) {
+          _auditBestEffort_(e, ctx, "DENY", null, null, authRes2);
+          return _withCors_(_jsonOutput_(_withMetaDuration_(authRes2, startedAt)));
+        }
       } else {
-        return _withCors_(_jsonOutput_(_err_(requestId, [
+        var envAuthMissing = _err_(requestId, [
           { code: "INTERNAL_ERROR", message: "Auth requerido, mas Auth.gs/Errors.gs não disponível.", details: { action: action } }
-        ], { action: action, startedAt: startedAt })));
+        ], { action: action, startedAt: startedAt });
+
+        _auditBestEffort_(e, ctx, "FAIL", null, null, envAuthMissing);
+        return _withCors_(_jsonOutput_(_withMetaDuration_(envAuthMissing, startedAt)));
       }
     }
 
     if (entry.roles && entry.roles.length) {
       if (typeof Auth_requireRoles_ === "function" && typeof Errors !== "undefined" && Errors) {
         var roleRes2 = Auth_requireRoles_(ctx, entry.roles);
-        if (!roleRes2.success) return _withCors_(_jsonOutput_(_withMetaDuration_(roleRes2, startedAt)));
+        if (!roleRes2.success) {
+          _auditBestEffort_(e, ctx, "DENY", null, null, roleRes2);
+          return _withCors_(_jsonOutput_(_withMetaDuration_(roleRes2, startedAt)));
+        }
       } else {
-        return _withCors_(_jsonOutput_(_err_(requestId, [
+        var envRolesMissing = _err_(requestId, [
           { code: "INTERNAL_ERROR", message: "Roles requeridas, mas Auth.gs/Errors.gs não disponível.", details: { action: action, roles: entry.roles } }
-        ], { action: action, startedAt: startedAt })));
+        ], { action: action, startedAt: startedAt });
+
+        _auditBestEffort_(e, ctx, "FAIL", null, null, envRolesMissing);
+        return _withCors_(_jsonOutput_(_withMetaDuration_(envRolesMissing, startedAt)));
       }
     }
 
     if (entry.validations && entry.validations.length && typeof Validators_run_ === "function") {
       var vRes2 = Validators_run_(ctx, entry.validations, payload);
-      if (!vRes2.success) return _withCors_(_jsonOutput_(_withMetaDuration_(vRes2, startedAt)));
+      if (!vRes2.success) {
+        _auditBestEffort_(e, ctx, "DENY", null, null, vRes2);
+        return _withCors_(_jsonOutput_(_withMetaDuration_(vRes2, startedAt)));
+      }
     }
 
     var data;
@@ -245,10 +302,13 @@ function doPost(e) {
     }
 
     var ok = _ok_(requestId, data, { action: action, startedAt: startedAt });
+    _auditBestEffort_(e, ctx, "SUCCESS", null, null, ok);
     return _withCors_(_jsonOutput_(ok));
 
   } catch (err) {
-    return _withCors_(_jsonOutput_(_exceptionToErrorResponse_(requestId, err)));
+    var envErr = _exceptionToErrorResponse_(requestId, err);
+    _auditBestEffort_(e, { requestId: requestId, action: "POST", startedAtMs: startedAt.getTime(), startedAtIso: startedAt.toISOString(), user: null }, "FAIL", null, err, envErr);
+    return _withCors_(_jsonOutput_(_withMetaDuration_(envErr, startedAt)));
   }
 }
 
@@ -276,18 +336,28 @@ function _tryLegacyRoute_(action, payload, ctx) {
  * Router legado padrão.
  * ✅ Suporte direto para:
  * - Pacientes_* via handlePacientesAction
- * - Agenda_* via handleAgendaAction
- * - ✅ Prontuario.* via handleProntuarioAction
+ * - AgendaConfig_* via handleAgendaConfigAction
+ * - Agenda_* / Agenda.* via handleAgendaAction
+ * - Prontuario.* via handleProntuarioAction
+ * - Agenda_ValidarConflito via Agenda_Action_ValidarConflito (se existir)
  */
 function PRONTIO_routeAction_(action, payload, ctx) {
   var a = String(action || "");
 
-  // ✅ Prontuário (fachada)
+  // Prontuário (fachada)
   if (a.indexOf("Prontuario.") === 0 || a.indexOf("Prontuario_") === 0) {
     if (typeof handleProntuarioAction !== "function") {
       _apiThrow_("INTERNAL_ERROR", "handleProntuarioAction não está disponível (Prontuario.gs não carregado?).", { action: action });
     }
     return handleProntuarioAction(action, payload);
+  }
+
+  // AgendaConfig (precisa vir ANTES de Agenda)
+  if (a.indexOf("AgendaConfig_") === 0 || a.indexOf("AgendaConfig.") === 0) {
+    if (typeof handleAgendaConfigAction !== "function") {
+      _apiThrow_("INTERNAL_ERROR", "handleAgendaConfigAction não está disponível (AgendaConfig.gs não carregado?).", { action: action });
+    }
+    return handleAgendaConfigAction(action, payload);
   }
 
   // Pacientes (novo/antigo)
@@ -298,8 +368,13 @@ function PRONTIO_routeAction_(action, payload, ctx) {
     return handlePacientesAction(action, payload);
   }
 
-  // Agenda (novo/antigo)
-  if (a.indexOf("Agenda_") === 0 || a.indexOf("Agenda") === 0) {
+  // Validação de conflito (helper) — mantém compat sem obrigar Agenda.gs
+  if (a === "Agenda_ValidarConflito" && typeof Agenda_Action_ValidarConflito === "function") {
+    return Agenda_Action_ValidarConflito(payload || {});
+  }
+
+  // Agenda (novo/antigo) — restringe para não capturar AgendaConfig_*
+  if (a.indexOf("Agenda_") === 0 || a.indexOf("Agenda.") === 0) {
     if (typeof handleAgendaAction !== "function") {
       _apiThrow_("INTERNAL_ERROR", "handleAgendaAction não está disponível (Agenda.gs não carregado?).", { action: action });
     }
@@ -514,4 +589,39 @@ function _exceptionToErrorResponse_(requestId, err) {
   }
 
   return _err_(requestId, [{ code: code, message: message, details: details }]);
+}
+
+// ======================
+// Audit (best-effort)
+// ======================
+
+function _auditBestEffort_(e, ctx, outcome, entity, entityId, envelopeOrErr) {
+  try {
+    // Preferência: Audit_log_ (estruturado)
+    if (typeof Audit_log_ === "function") {
+      var startedAtMs = ctx && ctx.startedAtMs ? Number(ctx.startedAtMs) : null;
+      var dur = startedAtMs ? (new Date().getTime() - startedAtMs) : null;
+
+      Audit_log_(ctx, {
+        outcome: outcome || "UNKNOWN",
+        entity: entity || null,
+        entityId: entityId || null,
+        durationMs: (typeof dur === "number" ? dur : null),
+        error: (envelopeOrErr && envelopeOrErr.success === false) ? (envelopeOrErr.errors || envelopeOrErr) : null,
+        extra: {
+          callback: (e && e.parameter && e.parameter.callback) ? String(e.parameter.callback) : null,
+          isJsonp: !!(e && e.parameter && e.parameter.callback)
+        }
+      });
+      return true;
+    }
+
+    // Compat: Audit_securityEvent_ se existir
+    if (typeof Audit_securityEvent_ === "function") {
+      Audit_securityEvent_(ctx, "Api", ctx && ctx.action ? ctx.action : "Api", outcome || "UNKNOWN", {}, {});
+      return true;
+    }
+  } catch (_) {}
+
+  return false;
 }

@@ -11,6 +11,11 @@
  * Melhorias aplicadas:
  * - Proteção contra concorrência (race condition) usando Lock.
  * - Opção de UUID quando sequencial não for necessário.
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - Tolerância a JSON corrompido em IDS_COUNTERS (não quebra execução).
+ * - Normaliza contador para número válido (evita NaN/negativo).
+ * - Mantém exatamente o formato ID_<ENTITY>_%06d.
  */
 
 var IDS_META_KEY = "IDS_COUNTERS";
@@ -34,7 +39,7 @@ function Ids_nextId_(entity) {
 
   // Se existir Locks_withLock_, usa o padrão do projeto
   if (typeof Locks_withLock_ === "function") {
-    // ctx pode ser null aqui; Locks_withLock_ deve suportar isso ou ignorar ctx
+    // ctx pode ser null aqui; Locks_withLock_ deve suportar isso
     return Locks_withLock_(null, lockKey, function () {
       return _Ids_nextIdUnsafe_(entity);
     });
@@ -56,13 +61,31 @@ function Ids_nextId_(entity) {
 function _Ids_nextIdUnsafe_(entityUpper) {
   var props = PropertiesService.getScriptProperties();
   var raw = props.getProperty(IDS_META_KEY);
-  var counters = raw ? JSON.parse(raw) : {};
+
+  var counters;
+  try {
+    counters = raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    // ✅ FIX: se JSON estiver corrompido, não quebra; reinicia mapa
+    counters = {};
+  }
+  if (!counters || typeof counters !== "object") counters = {};
 
   var current = Number(counters[entityUpper] || 0);
+
+  // ✅ FIX: normalização defensiva
+  if (!isFinite(current) || current < 0) current = 0;
+
   current++;
 
   counters[entityUpper] = current;
-  props.setProperty(IDS_META_KEY, JSON.stringify(counters));
+
+  // best-effort: salvar (não deve falhar, mas evita quebrar execução por exceção rara)
+  try {
+    props.setProperty(IDS_META_KEY, JSON.stringify(counters));
+  } catch (_) {
+    // se falhar o setProperty, ainda assim devolvemos o ID gerado (compat)
+  }
 
   return "ID_" + entityUpper + "_" + Utilities.formatString("%06d", current);
 }
@@ -106,8 +129,20 @@ function Ids_resetCounter_(entity) {
 function _Ids_resetUnsafe_(entityUpper) {
   var props = PropertiesService.getScriptProperties();
   var raw = props.getProperty(IDS_META_KEY);
-  var counters = raw ? JSON.parse(raw) : {};
+
+  var counters;
+  try {
+    counters = raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    counters = {};
+  }
+  if (!counters || typeof counters !== "object") counters = {};
+
   counters[entityUpper] = 0;
-  props.setProperty(IDS_META_KEY, JSON.stringify(counters));
+
+  try {
+    props.setProperty(IDS_META_KEY, JSON.stringify(counters));
+  } catch (_) {}
+
   return { ok: true, entity: entityUpper, resetTo: 0 };
 }

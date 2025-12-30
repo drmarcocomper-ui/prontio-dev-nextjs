@@ -2,11 +2,12 @@
 /**
  * PRONTIO - Página de Agenda (front)
  *
- * Melhorias aplicadas:
- * - Visão semanal em grade completa (slots pela config).
- * - Filtros persistidos (nome/status) aplicam em dia e semana.
- * - Destaque de "agora" e botão para pular.
- * - Status do select alinhado com backend (AGENDADO/CONFIRMADO/EM_ATENDIMENTO/CONCLUIDO/FALTOU/CANCELADO).
+ * Melhorias aplicadas (sem quebrar):
+ * - Robustez contra "corridas" (race) em carregar dia/semana (token de requisição).
+ * - Status: suporta melhor status canônicos do backend (MARCADO/ATENDIDO/AGUARDANDO/REMARCADO)
+ *   mantendo compat com rótulos antigos ("Agendado"/"Concluído"/etc.).
+ * - Resumo do dia: contabiliza ATENDIDO além de CONCLUIDO.
+ * - Mensagens de erro mais consistentes e seguras.
  */
 
 (function (global, document) {
@@ -74,6 +75,12 @@
     let agendamentosOriginaisDia = [];
     let agendamentosOriginaisSemana = []; // DTOs UI (todos do período)
     let horaFocoDia = null;
+
+    // =====================
+    // Controle anti-race (não quebra; só evita UI voltar no tempo)
+    // =====================
+    let reqSeqDia = 0;
+    let reqSeqSemana = 0;
 
     // =====================
     // Modais - Novo
@@ -164,7 +171,7 @@
     let agendaConfigCarregada = false;
 
     // =====================
-    // Controle de concorrência
+    // Controle de concorrência (ações)
     // =====================
     const inFlight = {
       statusById: new Set(),
@@ -415,11 +422,36 @@
         resumo.total++;
 
         const s = stripAccents(String(ag.status || "")).toLowerCase();
-        if (s.includes("falt")) resumo.faltas++;
-        else if (s.includes("cancel")) resumo.cancelados++;
-        else if (s.includes("concl")) resumo.concluidos++;
-        else if (s.includes("em_atend") || s.includes("em atend") || s.includes("atend")) resumo.em_atendimento++;
-        else if (s.includes("confirm")) resumo.confirmados++;
+
+        // faltas
+        if (s.includes("falt")) {
+          resumo.faltas++;
+          return;
+        }
+
+        // cancelados
+        if (s.includes("cancel")) {
+          resumo.cancelados++;
+          return;
+        }
+
+        // concluídos (aceita CONCLUIDO e ATENDIDO)
+        if (s.includes("concl") || s.includes("atendid")) {
+          resumo.concluidos++;
+          return;
+        }
+
+        // em atendimento
+        if (s.includes("em_atend") || s.includes("em atend") || (s.includes("atend") && !s.includes("atendid"))) {
+          resumo.em_atendimento++;
+          return;
+        }
+
+        // confirmados
+        if (s.includes("confirm")) {
+          resumo.confirmados++;
+          return;
+        }
       });
 
       return resumo;
@@ -430,10 +462,13 @@
 
       try {
         const data = await callApiData({ action: "AgendaConfig_Obter", payload: {} });
-        if (data) {
+        if (data && typeof data === "object") {
           agendaConfig.hora_inicio_padrao = data.hora_inicio_padrao || agendaConfig.hora_inicio_padrao;
           agendaConfig.hora_fim_padrao = data.hora_fim_padrao || agendaConfig.hora_fim_padrao;
-          agendaConfig.duracao_grade_minutos = data.duracao_grade_minutos || agendaConfig.duracao_grade_minutos;
+
+          // garante número válido
+          const dur = parseInt(String(data.duracao_grade_minutos || ""), 10);
+          if (isFinite(dur) && dur > 0) agendaConfig.duracao_grade_minutos = dur;
         }
       } catch (error) {
         console.warn("Agenda: erro ao carregar AgendaConfig_Obter, usando defaults.", error);
@@ -488,6 +523,7 @@
         return r;
       } catch (e) {
         console.warn("Pré-validação conflito indisponível (fallback):", e);
+        // fallback seguro: não bloqueia usuário
         return { ok: true, conflitos: [], intervalo: null, erro: "" };
       }
     }
@@ -769,7 +805,12 @@
 
     function mostrarErro(mensagem) {
       if (!listaHorariosEl) return;
-      listaHorariosEl.innerHTML = `<div class="agenda-erro">${mensagem}</div>`;
+      // evita injeção acidental por interpolação
+      const wrap = document.createElement("div");
+      wrap.className = "agenda-erro";
+      wrap.textContent = String(mensagem || "Erro.");
+      listaHorariosEl.innerHTML = "";
+      listaHorariosEl.appendChild(wrap);
     }
 
     function atualizarResumoDia(resumo) {
@@ -787,6 +828,24 @@
       return { termo, statusFiltro };
     }
 
+    function matchesFiltroStatus_(statusValue, statusFiltro) {
+      if (!statusFiltro) return true;
+      const s = stripAccents(String(statusValue || "")).toLowerCase();
+
+      // compat: filtro do select é humano ("concluído"), backend pode ser "ATENDIDO"
+      if (statusFiltro.includes("concl")) {
+        return s.includes("concl") || s.includes("atendid");
+      }
+      if (statusFiltro.includes("agend")) {
+        return s.includes("agend") || s.includes("marc");
+      }
+      if (statusFiltro.includes("em atendimento") || statusFiltro.includes("em_atend") || statusFiltro.includes("atend")) {
+        return s.includes("em_atend") || s.includes("em atend") || (s.includes("atend") && !s.includes("atendid"));
+      }
+
+      return s.includes(statusFiltro);
+    }
+
     function matchesFiltro_(ag, termo, statusFiltro) {
       if (!ag) return false;
 
@@ -796,9 +855,7 @@
       }
 
       if (statusFiltro) {
-        const s = stripAccents(String(ag.status || "")).toLowerCase();
-        // statusFiltro vem do <select> (ex.: "confirmado" / "em atendimento")
-        if (!s.includes(statusFiltro)) return false;
+        if (!matchesFiltroStatus_(ag.status, statusFiltro)) return false;
       }
 
       return true;
@@ -807,6 +864,8 @@
     async function carregarAgendaDia() {
       const dataStr = inputData.value;
       if (!dataStr) return;
+
+      const mySeq = ++reqSeqDia;
 
       await carregarAgendaConfigSeNecessario();
 
@@ -819,6 +878,9 @@
           payload: { inicio: startOfDayIso_(dataStr), fim: endOfDayIso_(dataStr), incluirCancelados: true }
         });
 
+        // se outra requisição mais nova já rodou, não atualiza UI com resposta antiga
+        if (mySeq !== reqSeqDia) return;
+
         const items = (data && data.items) ? data.items : [];
         const agsUi = items.map(dtoToUiAg_).filter((ag) => ag && ag.data === dataStr);
 
@@ -826,13 +888,14 @@
         atualizarResumoDia(computeResumoDia_(agsUi));
         aplicarFiltrosDia();
       } catch (error) {
+        if (mySeq !== reqSeqDia) return;
         console.error(error);
         mostrarErro(
           "Não foi possível carregar a agenda do dia: " +
             (error && error.message ? error.message : String(error))
         );
       } finally {
-        removerEstadoCarregando();
+        if (mySeq === reqSeqDia) removerEstadoCarregando();
       }
     }
 
@@ -974,6 +1037,8 @@
       const dataStr = inputData.value;
       if (!dataStr) return;
 
+      const mySeq = ++reqSeqSemana;
+
       if (semanaGridEl) semanaGridEl.innerHTML = '<div class="agenda-loading">Carregando semana...</div>';
 
       try {
@@ -988,6 +1053,8 @@
           action: "Agenda.ListarPorPeriodo",
           payload: { inicio: ini.toISOString(), fim: fim.toISOString(), incluirCancelados: true }
         });
+
+        if (mySeq !== reqSeqSemana) return;
 
         const items = (data && data.items) ? data.items : [];
         const agsUi = items.map(dtoToUiAg_);
@@ -1014,12 +1081,17 @@
 
         desenharSemanaGrid({ dias, slots, byDayHour });
       } catch (error) {
+        if (mySeq !== reqSeqSemana) return;
         console.error(error);
         if (semanaGridEl) {
-          semanaGridEl.innerHTML =
-            '<div class="agenda-erro">Não foi possível carregar a semana: ' +
-            (error && error.message ? error.message : String(error)) +
-            "</div>";
+          const msg =
+            "Não foi possível carregar a semana: " +
+            (error && error.message ? error.message : String(error));
+          semanaGridEl.innerHTML = "";
+          const wrap = document.createElement("div");
+          wrap.className = "agenda-erro";
+          wrap.textContent = msg;
+          semanaGridEl.appendChild(wrap);
         }
       }
     }
@@ -1049,6 +1121,7 @@
       corner.textContent = "";
       headerRow.appendChild(corner);
 
+      // mantém o mesmo layout original (6 colunas) para não quebrar CSS existente
       dias.slice(0, 6).forEach((ds) => {
         const cell = document.createElement("div");
         cell.className = "semana-cell semana-header-cell semana-sticky-cell";
@@ -1136,37 +1209,60 @@
     ];
 
     function normalizeStatusLabel_(s) {
+      // aceita status UI e canônico backend
       const v = stripAccents(String(s || "")).trim().toLowerCase();
       if (!v) return "Agendado";
+
+      // concluído/atendido
+      if (v.includes("concl") || v.includes("atendid")) return "Concluído";
+
+      // em atendimento
+      if (v.includes("em_atend") || v.includes("em atend") || (v.includes("atend") && !v.includes("atendid"))) {
+        return "Em atendimento";
+      }
+
+      // aguardando (backend canônico)
+      if (v.includes("aguard")) return "Confirmado"; // melhor aproximação na UI atual
+
+      // confirmado
       if (v.includes("confirm")) return "Confirmado";
-      if (v.includes("em_atend") || v.includes("em atend")) return "Em atendimento";
-      if (v.includes("atend") && !v.includes("concl")) return "Em atendimento";
-      if (v.includes("concl")) return "Concluído";
+
+      // faltou
       if (v.includes("falt")) return "Faltou";
+
+      // cancelado
       if (v.includes("cancel")) return "Cancelado";
-      if (v.includes("agend")) return "Agendado";
+
+      // marcado/agendado
+      if (v.includes("marc") || v.includes("agend")) return "Agendado";
+
+      // remarcado (backend canônico) -> UI atual não tem opção, cai em Agendado
+      if (v.includes("remarc")) return "Agendado";
+
       return "Agendado";
     }
 
     function mapStatusToBackend_(label) {
+      // mantém compat com seu backend Agenda.gs (normaliza internamente)
       const v = stripAccents(String(label || "")).toLowerCase();
       if (v.includes("confirm")) return "CONFIRMADO";
       if (v.includes("em atend") || v.includes("em_atend")) return "EM_ATENDIMENTO";
       if (v.includes("atend") && !v.includes("concl")) return "EM_ATENDIMENTO";
-      if (v.includes("concl")) return "CONCLUIDO";
+      if (v.includes("concl")) return "CONCLUIDO"; // backend converte para ATENDIDO
       if (v.includes("falt")) return "FALTOU";
       if (v.includes("cancel")) return "CANCELADO";
-      return "AGENDADO";
+      return "AGENDADO"; // backend converte para MARCADO
     }
 
     function getStatusClass(status) {
       if (!status) return "status-agendado";
       const s = stripAccents(String(status)).toLowerCase();
+
       if (s.includes("confirm")) return "status-confirmado";
-      if (s.includes("em_atend") || s.includes("em atend") || (s.includes("atend") && !s.includes("concl"))) return "status-em-atendimento";
+      if (s.includes("em_atend") || s.includes("em atend") || (s.includes("atend") && !s.includes("atendid"))) return "status-em-atendimento";
       if (s.includes("falt")) return "status-falta";
       if (s.includes("cancel")) return "status-cancelado";
-      if (s.includes("concl")) return "status-concluido";
+      if (s.includes("concl") || s.includes("atendid")) return "status-concluido";
       return "status-agendado";
     }
 

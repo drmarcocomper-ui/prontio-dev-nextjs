@@ -8,9 +8,35 @@
  * - Mantém LockService.getScriptLock() (Apps Script é script-wide).
  * - Melhora detalhes do erro (ctx/action/requestId/key) para diagnóstico.
  * - Garante releaseLock em finally.
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - Detecção de timeout mais robusta (mensagens variam).
+ * - Usa Errors.CODES.CONFLICT quando existir (fallback "CONFLICT").
+ * - Só tenta releaseLock se waitLock teve sucesso (best-effort).
  */
 
 var LOCK_TIMEOUT_MS = 30000;
+
+function _locksConflictCode_() {
+  try {
+    if (typeof Errors !== "undefined" && Errors && Errors.CODES && Errors.CODES.CONFLICT) {
+      return Errors.CODES.CONFLICT;
+    }
+  } catch (_) {}
+  return "CONFLICT";
+}
+
+function _locksIsTimeoutMessage_(msg) {
+  var m = String(msg || "").toLowerCase();
+
+  // Variações comuns no Apps Script:
+  // "Lock timeout", "Timed out waiting for lock", "Exception: LockService ... timed out", etc.
+  if (m.indexOf("timed out") >= 0) return true;
+  if (m.indexOf("timeout") >= 0 && m.indexOf("lock") >= 0) return true;
+  if (m.indexOf("lockservice") >= 0 && m.indexOf("timeout") >= 0) return true;
+
+  return false;
+}
 
 /**
  * Executa função protegida por lock.
@@ -21,22 +47,20 @@ var LOCK_TIMEOUT_MS = 30000;
 function Locks_withLock_(ctx, key, fn) {
   var lock = LockService.getScriptLock();
   var lockKey = "LOCK_" + String(key || "GLOBAL");
+  var acquired = false;
 
   try {
     lock.waitLock(LOCK_TIMEOUT_MS);
+    acquired = true;
     return fn();
   } catch (e) {
-    // Em geral, waitLock lança erro quando expira o timeout.
-    // Também pode cair aqui se o fn() lançar (nesse caso, rethrow sem mascarar).
-    // Vamos diferenciar:
+    // waitLock lança erro quando expira timeout.
+    // Também pode cair aqui se fn() lançar (nesse caso, rethrow sem mascarar).
     var msg = String(e && e.message ? e.message : e);
 
-    // Se parece erro de timeout do lock, normaliza como CONFLICT.
-    var isLockTimeout = msg.toLowerCase().indexOf("lock") >= 0 && msg.toLowerCase().indexOf("timeout") >= 0;
-
-    if (isLockTimeout) {
+    if (_locksIsTimeoutMessage_(msg)) {
       var err = new Error("Recurso em uso. Tente novamente.");
-      err.code = "CONFLICT";
+      err.code = _locksConflictCode_();
       err.details = {
         lockKey: lockKey,
         key: String(key || "GLOBAL"),
@@ -50,8 +74,9 @@ function Locks_withLock_(ctx, key, fn) {
     // Se não é timeout, é erro do handler/funcão protegida -> rethrow original
     throw e;
   } finally {
-    try {
-      lock.releaseLock();
-    } catch (_) {}
+    // Só tenta release se waitLock teve sucesso (best-effort)
+    if (acquired) {
+      try { lock.releaseLock(); } catch (_) {}
+    }
   }
 }

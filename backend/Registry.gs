@@ -25,6 +25,10 @@
  * ✅ UPDATE (AUDITORIA - sem quebrar):
  * - _pacientesHandler_ agora repassa ctx para handlePacientesAction(actionName, payload, ctx)
  *   (habilita auditoria completa no Pacientes.gs quando a chamada vem pelo Registry).
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - AgendaConfig_Obter / AgendaConfig_Salvar / Agenda_ValidarConflito agora verificam os handlers
+ *   em call-time (na execução), evitando “congelar” _Registry_missingHandler_ caso a ordem de carregamento varie.
  */
 
 var REGISTRY_ACTIONS = null;
@@ -497,11 +501,15 @@ function _Registry_build_() {
     lockKey: null
   };
 
+  // ✅ FIX: call-time handler (não congela no build)
   map["AgendaConfig_Obter"] = {
     action: "AgendaConfig_Obter",
-    handler: (typeof handleAgendaConfigAction === "function")
-      ? function (ctx, payload) { return handleAgendaConfigAction("AgendaConfig_Obter", payload || {}); }
-      : _Registry_missingHandler_("handleAgendaConfigAction"),
+    handler: function (ctx, payload) {
+      if (typeof handleAgendaConfigAction !== "function") {
+        return _Registry_missingHandler_("handleAgendaConfigAction")(ctx, payload);
+      }
+      return handleAgendaConfigAction("AgendaConfig_Obter", payload || {});
+    },
     requiresAuth: true,
     roles: [],
     validations: [],
@@ -509,11 +517,15 @@ function _Registry_build_() {
     lockKey: null
   };
 
+  // ✅ FIX: call-time handler (não congela no build)
   map["AgendaConfig_Salvar"] = {
     action: "AgendaConfig_Salvar",
-    handler: (typeof handleAgendaConfigAction === "function")
-      ? function (ctx, payload) { return handleAgendaConfigAction("AgendaConfig_Salvar", payload || {}); }
-      : _Registry_missingHandler_("handleAgendaConfigAction"),
+    handler: function (ctx, payload) {
+      if (typeof handleAgendaConfigAction !== "function") {
+        return _Registry_missingHandler_("handleAgendaConfigAction")(ctx, payload);
+      }
+      return handleAgendaConfigAction("AgendaConfig_Salvar", payload || {});
+    },
     requiresAuth: true,
     roles: [],
     validations: [],
@@ -521,11 +533,15 @@ function _Registry_build_() {
     lockKey: "AGENDA_CONFIG"
   };
 
+  // ✅ FIX: call-time handler (não congela no build)
   map["Agenda_ValidarConflito"] = {
     action: "Agenda_ValidarConflito",
-    handler: (typeof Agenda_Action_ValidarConflito === "function")
-      ? function (ctx, payload) { return Agenda_Action_ValidarConflito(payload || {}); }
-      : _Registry_missingHandler_("Agenda_Action_ValidarConflito"),
+    handler: function (ctx, payload) {
+      if (typeof Agenda_Action_ValidarConflito !== "function") {
+        return _Registry_missingHandler_("Agenda_Action_ValidarConflito")(ctx, payload);
+      }
+      return Agenda_Action_ValidarConflito(payload || {});
+    },
     requiresAuth: true,
     roles: [],
     validations: [],

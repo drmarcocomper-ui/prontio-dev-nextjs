@@ -6,12 +6,17 @@
  * ✅ Padrão profissional mantido:
  * - NÃO existe logoff automático por inatividade aqui.
  * - Existe auto-redirecionamento SOMENTE quando o backend sinaliza
- *   erro de autenticação/permissão (token inválido/expirado/ausente).
+ *   erro de autenticação (token inválido/expirado/ausente).
  *
  * ✅ Ajuste de escalabilidade:
  * - Auto-logout em erro AUTH_* pode ser configurado via:
  *     PRONTIO.config.autoLogoutOnAuthError = true|false
  *   (default: true)
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - Não faz auto-logout por PERMISSION_DENIED (normalmente significa falta de role).
+ * - Mantém compat: se vier PERMISSION_DENIED com details.reason === "AUTH_REQUIRED",
+ *   então trata como auth e pode redirecionar.
  */
 
 (function (global) {
@@ -119,15 +124,35 @@
 
   const UX_AUTH_KEYS = { LAST_AUTH_REASON: "prontio.auth.lastAuthReason" };
 
-  function shouldAutoLogout_(errCode) {
+  function isAuthErrorCode_(errCode) {
     const c = String(errCode || "").toUpperCase();
     return (
       c === "AUTH_REQUIRED" ||
       c === "AUTH_EXPIRED" ||
       c === "AUTH_TOKEN_EXPIRED" ||
-      c === "AUTH_NO_TOKEN" ||
-      c === "PERMISSION_DENIED"
+      c === "AUTH_NO_TOKEN"
     );
+  }
+
+  /**
+   * ✅ FIX (SEM QUEBRAR):
+   * - PERMISSION_DENIED não deve derrubar sessão automaticamente.
+   * - Porém, se o backend retornar PERMISSION_DENIED com details.reason === "AUTH_REQUIRED",
+   *   tratamos como autenticação necessária (compat).
+   */
+  function shouldAutoLogout_(errCode, errDetails) {
+    if (isAuthErrorCode_(errCode)) return true;
+
+    const c = String(errCode || "").toUpperCase();
+    if (c !== "PERMISSION_DENIED") return false;
+
+    const reason =
+      errDetails && typeof errDetails === "object"
+        ? String(errDetails.reason || "").toUpperCase()
+        : "";
+
+    // compat: backends antigos podem usar PERMISSION_DENIED + reason AUTH_REQUIRED
+    return reason === "AUTH_REQUIRED";
   }
 
   function isAutoLogoutEnabled_() {
@@ -148,7 +173,7 @@
   }
 
   function tryAutoLogout_(reasonCode) {
-    // ✅ mantém padrão: ao detectar erro de AUTH/PERMISSION, encerra sessão e redireciona
+    // ✅ mantém padrão: ao detectar erro de AUTH (ou compat), encerra sessão e redireciona
     // ✅ respeita flag de config
     if (!isAutoLogoutEnabled_()) return;
 
@@ -270,8 +295,8 @@
 
     const primary = getPrimaryError_(envelope);
 
-    // ✅ Auto-logout somente em erros de AUTH/PERMISSION (padrão profissional)
-    if (shouldAutoLogout_(primary.code)) {
+    // ✅ Auto-logout somente em erros de AUTH (e compat PERMISSION_DENIED + reason AUTH_REQUIRED)
+    if (shouldAutoLogout_(primary.code, primary.details)) {
       tryAutoLogout_(primary.code);
     }
 

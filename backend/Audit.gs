@@ -12,11 +12,17 @@
  * IMPORTANTÍSSIMO:
  * - Não acessa Google Sheets diretamente.
  * - Persistência na aba "Audit" é feita via Repo_insert_ (Repository.gs).
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - Adiciona Audit_securityEvent_ (chamado por Auth.gs/Usuarios.gs) com sanitização.
+ * - Protege Script Properties contra excesso (tamanho e itens grandes).
+ * - Garante que error/extra sejam sempre strings curtas na persistência.
  */
 
 var AUDIT_BUFFER_ENABLED = true;
 var AUDIT_BUFFER_KEY = "PRONTIO_AUDIT_BUFFER";
 var AUDIT_BUFFER_MAX = 200; // mantém últimos N eventos
+var AUDIT_BUFFER_MAX_BYTES = 70000; // limite defensivo p/ Script Properties (best-effort)
 
 // Persistência em sheet "Audit"
 var AUDIT_PERSIST_ENABLED = true;
@@ -50,12 +56,13 @@ function Audit_log_(ctx, event) {
       entityId: event.entityId || null,
       durationMs: (typeof event.durationMs === "number") ? event.durationMs : null,
 
+      // Nunca persistir objetos enormes aqui sem truncar no stringify
       error: event.error || null,
       extra: event.extra || null
     };
 
     // 1) Log em execução (sempre)
-    Logger.log("[AUDIT] " + JSON.stringify(entry));
+    try { Logger.log("[AUDIT] " + _auditStringifySafe_(entry, 4000)); } catch (_) {}
 
     // 2) Buffer persistente opcional (para debug)
     if (AUDIT_BUFFER_ENABLED) {
@@ -71,6 +78,40 @@ function Audit_log_(ctx, event) {
   } catch (e) {
     // Nunca quebra request por falha de audit
     try { Logger.log("[AUDIT_FAIL] " + String(e)); } catch (_) {}
+    return false;
+  }
+}
+
+/**
+ * ✅ Helper de evento de segurança (best-effort)
+ * Usado por Auth.gs e Usuarios.gs.
+ *
+ * Exemplo de uso:
+ * Audit_securityEvent_(ctx, "Auth_Login", "AUTH_LOGIN", "SUCCESS", { ... }, { id, login })
+ *
+ * Regras:
+ * - Não loga senha/token.
+ * - Sanitiza payloads e limita tamanho.
+ */
+function Audit_securityEvent_(ctx, source, eventType, outcome, details, target) {
+  try {
+    ctx = ctx || {};
+    var safeDetails = _auditSanitizeSecurityDetails_(details);
+    var safeTarget = _auditSanitizeTarget_(target);
+
+    return Audit_log_(ctx, {
+      outcome: String(outcome || "UNKNOWN"),
+      entity: String(eventType || source || "SECURITY"),
+      entityId: safeTarget && safeTarget.id ? String(safeTarget.id) : null,
+      error: null,
+      extra: {
+        source: String(source || ""),
+        eventType: String(eventType || ""),
+        details: safeDetails,
+        target: safeTarget
+      }
+    });
+  } catch (_) {
     return false;
   }
 }
@@ -104,25 +145,53 @@ function Audit_clearBuffer_() {
 // ======================
 
 function _auditAppendBuffer_(entry) {
-  var props = PropertiesService.getScriptProperties();
-  var raw = props.getProperty(AUDIT_BUFFER_KEY);
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var raw = props.getProperty(AUDIT_BUFFER_KEY);
 
-  var arr = [];
-  if (raw) {
-    try {
-      arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) arr = [];
-    } catch (_) {
-      arr = [];
+    var arr = [];
+    if (raw) {
+      try {
+        arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) arr = [];
+      } catch (_) {
+        arr = [];
+      }
     }
-  }
 
-  arr.push(entry);
-  if (arr.length > AUDIT_BUFFER_MAX) {
-    arr = arr.slice(arr.length - AUDIT_BUFFER_MAX);
-  }
+    // Evita crescer demais (trunca campos pesados)
+    var slim = _auditSlimEntryForBuffer_(entry);
 
-  props.setProperty(AUDIT_BUFFER_KEY, JSON.stringify(arr));
+    arr.push(slim);
+    if (arr.length > AUDIT_BUFFER_MAX) {
+      arr = arr.slice(arr.length - AUDIT_BUFFER_MAX);
+    }
+
+    // Proteção de tamanho total no Script Properties (best-effort)
+    var json = _auditStringifySafe_(arr, AUDIT_BUFFER_MAX_BYTES);
+    props.setProperty(AUDIT_BUFFER_KEY, json);
+  } catch (_) {
+    // best-effort
+  }
+}
+
+function _auditSlimEntryForBuffer_(entry) {
+  entry = entry || {};
+  // mantém estrutura, mas limita error/extra
+  return {
+    ts: entry.ts || null,
+    requestId: entry.requestId || null,
+    action: entry.action || null,
+    env: entry.env || null,
+    apiVersion: entry.apiVersion || null,
+    user: entry.user || null,
+    outcome: entry.outcome || null,
+    entity: entry.entity || null,
+    entityId: entry.entityId || null,
+    durationMs: entry.durationMs || null,
+    error: entry.error ? _auditStringifySafe_(entry.error, 400) : null,
+    extra: entry.extra ? _auditStringifySafe_(entry.extra, 800) : null
+  };
 }
 
 function _auditSafeUser_(user) {
@@ -137,8 +206,54 @@ function _auditSafeUser_(user) {
 
   // Opcional: nome (depende da sua política)
   if (user.nome !== undefined) safe.nome = user.nome;
+  if (user.nomeCompleto !== undefined) safe.nomeCompleto = user.nomeCompleto;
 
   return safe;
+}
+
+function _auditSanitizeSecurityDetails_(details) {
+  // Remove campos sensíveis (senha, token etc.) e limita tamanho
+  if (!details || typeof details !== "object") {
+    if (typeof details === "string") return _auditStringifySafe_(details, 800);
+    return details || null;
+  }
+
+  var out = {};
+  var blockedKeys = {
+    senha: true,
+    password: true,
+    token: true,
+    authToken: true,
+    senhaHash: true,
+    passwordHash: true
+  };
+
+  try {
+    Object.keys(details).forEach(function (k) {
+      var key = String(k || "");
+      var lk = key.toLowerCase();
+      if (blockedKeys[lk]) return;
+
+      var v = details[k];
+      // não explode com objetos grandes
+      if (typeof v === "string") out[key] = v.slice(0, 800);
+      else if (typeof v === "number" || typeof v === "boolean" || v === null) out[key] = v;
+      else out[key] = _auditStringifySafe_(v, 800);
+    });
+  } catch (_) {}
+
+  return out;
+}
+
+function _auditSanitizeTarget_(target) {
+  if (!target || typeof target !== "object") return null;
+
+  var out = {};
+  if (target.id !== undefined) out.id = String(target.id || "");
+  if (target.login !== undefined) out.login = String(target.login || "");
+  if (target.email !== undefined) out.email = String(target.email || "");
+  if (target.perfil !== undefined) out.perfil = String(target.perfil || "");
+  return out;
 }
 
 /**

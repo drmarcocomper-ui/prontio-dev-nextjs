@@ -13,6 +13,14 @@
  * - Auth_Login
  * - Auth_Me
  * - Auth_Logout
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - Auth_requireAuth_ agora tenta devolver code AUTH_REQUIRED (quando disponível),
+ *   evitando que o front trate "sem login" como PERMISSION_DENIED.
+ * - Auth_requireRoles_ mantém PERMISSION_DENIED para "sem role", mas com reason ROLE_REQUIRED.
+ * - Pilar H: se o índice em cache (por userId) estiver vazio, deriva tokens pela coluna UserId
+ *   na aba AuthSessions e revoga mesmo assim (não depende só do cache).
+ * - DB provider: tenta PRONTIO_getDb_ -> Repo_getDb_ -> ActiveSpreadsheet.
  */
 
 var AUTH_CACHE_PREFIX = typeof AUTH_CACHE_PREFIX !== "undefined" ? AUTH_CACHE_PREFIX : "PRONTIO_AUTH_";
@@ -49,14 +57,63 @@ var AUTH_SESSIONS_SHEET = typeof AUTH_SESSIONS_SHEET !== "undefined" ? AUTH_SESS
  * - UserId
  */
 
+// =====================
+// Error code helpers (SEM QUEBRAR)
+// =====================
+
+function _authCode_(preferred, fallback) {
+  // preferred: string, fallback: string
+  try {
+    if (typeof Errors !== "undefined" && Errors && Errors.CODES) {
+      // se preferido existir em Errors.CODES, usa o valor; senão tenta fallback se existir
+      if (preferred && Errors.CODES[preferred]) return Errors.CODES[preferred];
+      if (fallback && Errors.CODES[fallback]) return Errors.CODES[fallback];
+    }
+  } catch (_) {}
+  // fallback literal (string)
+  return preferred || fallback || "INTERNAL_ERROR";
+}
+
+function _authResp_(ctx, code, message, details) {
+  if (typeof Errors !== "undefined" && Errors && typeof Errors.response === "function") {
+    return Errors.response(ctx, code, message, details);
+  }
+  // Fallback mínimo (mantém compat com Api.gs que espera envelope em Errors.*)
+  var err = new Error(String(message || "Erro."));
+  err.code = String(code || "INTERNAL_ERROR");
+  err.details = details === undefined ? null : details;
+  throw err;
+}
+
+function _authOk_(ctx, data) {
+  if (typeof Errors !== "undefined" && Errors && typeof Errors.ok === "function") {
+    return Errors.ok(ctx, data || { ok: true });
+  }
+  return { success: true, data: data || { ok: true }, errors: [] };
+}
+
+// =====================
+// DB helpers
+// =====================
+
 function Auth__getDb_() {
   // Usa PRONTIO_getDb_ se existir (mesma fonte do resto do sistema)
   try {
     if (typeof PRONTIO_getDb_ === "function") {
-      var ss = PRONTIO_getDb_();
-      if (ss) return ss;
+      var ss0 = PRONTIO_getDb_();
+      if (ss0) return ss0;
     }
   } catch (_) {}
+
+  // Compat com Repository.gs (se existir)
+  try {
+    if (typeof Repo_getDb_ === "function") {
+      var ss1 = Repo_getDb_();
+      if (ss1) return ss1;
+    }
+  } catch (_) {}
+
+  // Fallback: planilha ativa
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
@@ -123,6 +180,54 @@ function Auth__revokeSession_(token) {
 
   var sh = Auth__getSessionsSheet_();
   sh.getRange(found.rowIndex, 4, 1, 1).setValue(new Date().toISOString());
+}
+
+/**
+ * ✅ NOVO (SEM QUEBRAR):
+ * Deriva tokens ativos do usuário diretamente da planilha (coluna UserId),
+ * ignorando sessões revogadas/expiradas.
+ */
+function Auth__findActiveTokensByUserIdFromSheet_(userId) {
+  userId = String(userId || "").trim();
+  if (!userId) return [];
+
+  var sh = Auth__getSessionsSheet_();
+  var lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+
+  var values = sh.getRange(2, 1, lastRow - 1, 5).getValues();
+  var out = [];
+  var nowMs = Date.now();
+
+  for (var i = 0; i < values.length; i++) {
+    var token = String(values[i][0] || "").trim();
+    var expiresAtIso = String(values[i][2] || "").trim();
+    var revokedAtIso = String(values[i][3] || "").trim();
+    var uid = String(values[i][4] || "").trim();
+
+    if (!token) continue;
+    if (uid !== userId) continue;
+    if (revokedAtIso) continue;
+
+    if (expiresAtIso) {
+      var expMs = Date.parse(expiresAtIso);
+      if (isFinite(expMs) && expMs > 0 && expMs < nowMs) continue;
+    }
+
+    out.push(token);
+  }
+
+  // remove duplicados
+  var uniq = [];
+  var seen = {};
+  for (var j = 0; j < out.length; j++) {
+    var t = out[j];
+    if (!seen[t]) {
+      seen[t] = true;
+      uniq.push(t);
+    }
+  }
+  return uniq;
 }
 
 function Auth__loadSessionUser_(token) {
@@ -193,20 +298,26 @@ function Auth_getTokenFromPayload_(payload) {
 
 function Auth_requireAuth_(ctx, payload) {
   var user = Auth_getUserContext_(payload);
+
   if (!user) {
-    return Errors.response(ctx, Errors.CODES.PERMISSION_DENIED, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
+    // ✅ FIX: usa code de autenticação (quando disponível), sem quebrar envelope Errors
+    var code = _authCode_("AUTH_REQUIRED", "PERMISSION_DENIED");
+    return _authResp_(ctx, code, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
   }
+
   ctx.user = user;
-  return Errors.ok(ctx, { ok: true });
+  return _authOk_(ctx, { ok: true });
 }
 
 function Auth_requireRoles_(ctx, roles) {
   roles = roles || [];
-  if (!roles.length) return Errors.ok(ctx, { ok: true });
+  if (!roles.length) return _authOk_(ctx, { ok: true });
 
   var user = ctx && ctx.user ? ctx.user : null;
   if (!user) {
-    return Errors.response(ctx, Errors.CODES.PERMISSION_DENIED, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
+    // ✅ FIX: mesmo comportamento do requireAuth_
+    var code = _authCode_("AUTH_REQUIRED", "PERMISSION_DENIED");
+    return _authResp_(ctx, code, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
   }
 
   var userRoles = Auth_rolesForUser_(user);
@@ -214,13 +325,16 @@ function Auth_requireRoles_(ctx, roles) {
   var allowed = required.some(function (r) { return userRoles.indexOf(r) >= 0; });
 
   if (!allowed) {
-    return Errors.response(ctx, Errors.CODES.PERMISSION_DENIED, "Sem permissão para esta ação.", {
+    // Mantém PERMISSION_DENIED, mas com reason explícito (evita ambiguidade)
+    var code2 = _authCode_("PERMISSION_DENIED", "PERMISSION_DENIED");
+    return _authResp_(ctx, code2, "Sem permissão para esta ação.", {
+      reason: "ROLE_REQUIRED",
       requiredRoles: required,
       userRoles: userRoles
     });
   }
 
-  return Errors.ok(ctx, { ok: true });
+  return _authOk_(ctx, { ok: true });
 }
 
 function Auth_rolesForUser_(user) {
@@ -293,17 +407,30 @@ function Auth_destroyAllSessionsForUser_(userId) {
   if (!userId) return { ok: true, removed: 0 };
 
   var cache = CacheService.getScriptCache();
+
+  // 1) tenta pelo índice (cache)
   var list = Auth__getUserTokenList_(userId);
 
+  // 2) ✅ FIX: se índice vazio, deriva pelo Sheet (UserId)
+  if (!list || !list.length) {
+    try { list = Auth__findActiveTokensByUserIdFromSheet_(userId); } catch (_) { list = []; }
+  }
+
+  // 3) revoga/remover cache e marca revoked em Sheets
+  var removed = 0;
   for (var i = 0; i < list.length; i++) {
     var token = String(list[i] || "").trim();
     if (!token) continue;
+    removed++;
+
     try { cache.remove(AUTH_CACHE_PREFIX + token); } catch (_) {}
     try { Auth__revokeSession_(token); } catch (_) {}
   }
 
+  // limpa índice do cache
   try { cache.remove(Auth__sessionsKey_(userId)); } catch (_) {}
-  return { ok: true, removed: list.length };
+
+  return { ok: true, removed: removed };
 }
 
 function Auth_createSession_(user) {
@@ -332,6 +459,13 @@ function Auth_destroySession_(token) {
     if (raw) {
       var u = _authNormalizeUser_(JSON.parse(raw));
       if (u && u.id) Auth__removeTokenFromUserIndex_(u.id, token);
+    } else {
+      // ✅ best-effort: se não tiver no cache, tenta descobrir userId pelo sheet e remover do índice
+      var found = Auth__findSessionRowByToken_(token);
+      if (found && found.row) {
+        var uid = String(found.row[4] || "").trim();
+        if (uid) Auth__removeTokenFromUserIndex_(uid, token);
+      }
     }
   } catch (_) {}
 
@@ -351,14 +485,14 @@ function Auth_Login(ctx, payload) {
 
   if (!login || !senha) {
     var err = new Error("Informe login e senha.");
-    err.code = (Errors && Errors.CODES) ? Errors.CODES.VALIDATION_ERROR : "VALIDATION_ERROR";
+    err.code = (Errors && Errors.CODES) ? (Errors.CODES.VALIDATION_ERROR || "VALIDATION_ERROR") : "VALIDATION_ERROR";
     err.details = { fields: ["login", "senha"] };
     throw err;
   }
 
   if (typeof Usuarios_findByLoginForAuth_ !== "function") {
     var e1 = new Error("Módulo de usuários não disponível para autenticação.");
-    e1.code = (Errors && Errors.CODES) ? Errors.CODES.INTERNAL_ERROR : "INTERNAL_ERROR";
+    e1.code = (Errors && Errors.CODES) ? (Errors.CODES.INTERNAL_ERROR || "INTERNAL_ERROR") : "INTERNAL_ERROR";
     e1.details = { missing: "Usuarios_findByLoginForAuth_" };
     throw e1;
   }
@@ -375,7 +509,7 @@ function Auth_Login(ctx, payload) {
 
   if (typeof Usuarios_verifyPassword_ !== "function") {
     var e3 = new Error("Validação de senha indisponível.");
-    e3.code = (Errors && Errors.CODES) ? Errors.CODES.INTERNAL_ERROR : "INTERNAL_ERROR";
+    e3.code = (Errors && Errors.CODES) ? (Errors.CODES.INTERNAL_ERROR || "INTERNAL_ERROR") : "INTERNAL_ERROR";
     e3.details = { missing: "Usuarios_verifyPassword_" };
     throw e3;
   }

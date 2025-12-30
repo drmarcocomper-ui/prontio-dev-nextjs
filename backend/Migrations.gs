@@ -11,6 +11,12 @@
  * - Front NÃO conhece Sheets.
  * - Aqui é backend-only. Nomes de abas/colunas são internos.
  * - Usa PRONTIO_getDb_() (Utils.gs) para selecionar DEV/PROD.
+ *
+ * ✅ FIX (SEM QUEBRAR):
+ * - Adiciona wrapper Meta_DbStatus(ctx,payload) chamando Migrations_getDbStatus_()
+ *   (Registry.gs normalmente registra Meta_DbStatus).
+ * - Inclui headers para AuthSessions e AgendaConfig no MIGRATIONS_SHEETS, para bootstrap consistente
+ *   (não interfere se já existe; só garante header idempotente).
  */
 
 var MIGRATIONS_LATEST_VERSION = 2;
@@ -36,6 +42,9 @@ var MIGRATIONS_META_HEADERS = ["key", "value", "updatedAt"];
  * ✅ UPDATE (Documentos):
  * - Adiciona aba "Encaminhamento" para busca (formulário) com header garantido.
  * - Adiciona aba "CID" para autocomplete de CID / doença com header garantido.
+ *
+ * ✅ UPDATE (SEM QUEBRAR):
+ * - Adiciona AuthSessions e AgendaConfig (abas já usadas por Auth.gs e AgendaConfig.gs).
  */
 var MIGRATIONS_SHEETS = {
   "__meta": MIGRATIONS_META_HEADERS,
@@ -238,6 +247,33 @@ var MIGRATIONS_SHEETS = {
   ],
 
   // =========================
+  // CONFIG / AUTH (SEM QUEBRAR)
+  // =========================
+
+  /**
+   * AuthSessions (usada pelo Auth.gs)
+   * Colunas conforme Auth.gs:
+   * - Token | UserJson | ExpiresAtIso | RevokedAtIso | UserId
+   */
+  "AuthSessions": [
+    "Token",
+    "UserJson",
+    "ExpiresAtIso",
+    "RevokedAtIso",
+    "UserId"
+  ],
+
+  /**
+   * AgendaConfig (usada pelo AgendaConfig.gs)
+   * Colunas conforme AgendaConfig.gs:
+   * - Chave | Valor
+   */
+  "AgendaConfig": [
+    "Chave",
+    "Valor"
+  ],
+
+  // =========================
   // DOCUMENTOS (buscas / autocomplete)
   // =========================
 
@@ -271,6 +307,14 @@ var MIGRATIONS_SHEETS = {
  */
 function Meta_BootstrapDb(ctx, payload) {
   return Migrations_bootstrap_();
+}
+
+/**
+ * ✅ FIX (SEM QUEBRAR):
+ * Wrapper esperado no Registry: Meta_DbStatus
+ */
+function Meta_DbStatus(ctx, payload) {
+  return Migrations_getDbStatus_();
 }
 
 /**
