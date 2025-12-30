@@ -1,3 +1,4 @@
+// backend/AgendaConfig.gs
 /**
  * PRONTIO - Módulo de Configuração da Agenda / Sistema
  *
@@ -57,28 +58,24 @@
  *    dias_ativos: ["SEG","TER",...]
  *  }
  *
- *  Ou seja:
- *   - Planilha usa CHAVES em MAIÚSCULAS
- *   - JSON para o front usa nomes camelCase
- *   - dias_ativos é SEMPRE ARRAY no JSON
- *
- * ✅ MATURAÇÃO (sem quebrar):
- * - Remove SpreadsheetApp direto: usa o DB do Repository (Repo_getDb_ / PRONTIO_getDb_).
- * - Garante header ["Chave","Valor"] mesmo sem MIGRATIONS_SHEETS para AgendaConfig.
- * - Mantém contrato e comportamento existentes.
+ * ✅ Atualização segura:
+ * - Cache (se Cache.gs existir) para reduzir leitura da planilha
+ * - Invalida cache no salvar
+ * - Mantém contrato e comportamento existentes
  */
 
 var AGENDA_CONFIG_SHEET_NAME = "AgendaConfig";
-
-// Header esperado (backend-only)
 var AGENDA_CONFIG_HEADER = ["Chave", "Valor"];
 
-/**
- * Roteador interno da AgendaConfig.
- * Chamado via Registry:
- * - AgendaConfig_Obter
- * - AgendaConfig_Salvar
- */
+// cache keys (script cache)
+var _AGENDA_CFG_CACHE_KEY_MAP_ = "agendaConfig:map:v1";
+var _AGENDA_CFG_CACHE_KEY_CFG_ = "agendaConfig:cfg:v1";
+var _AGENDA_CFG_CACHE_TTL_SEC_ = 60 * 10; // 10 min (seguro)
+
+// ============================================================
+// Router (Registry / legado)
+// ============================================================
+
 function handleAgendaConfigAction(action, payload) {
   switch (action) {
     case "AgendaConfig_Obter":
@@ -95,10 +92,10 @@ function handleAgendaConfigAction(action, payload) {
   }
 }
 
-/**
- * Retorna o Spreadsheet (DEV/PROD) pelo Repository.
- * (Centraliza a seleção do banco e evita SpreadsheetApp direto.)
- */
+// ============================================================
+// Infra
+// ============================================================
+
 function _agendaConfigGetDb_() {
   if (typeof Repo_getDb_ !== "function") {
     var e = new Error("AgendaConfig: Repo_getDb_ não disponível (Repository.gs não carregado?).");
@@ -109,51 +106,78 @@ function _agendaConfigGetDb_() {
   return Repo_getDb_();
 }
 
-/**
- * Obtém/cria a aba e garante header "Chave|Valor".
- * Não depende de MIGRATIONS_SHEETS para esta aba (config key/value).
- */
 function _agendaConfigGetSheet_() {
   var db = _agendaConfigGetDb_();
 
   var sheet = db.getSheetByName(AGENDA_CONFIG_SHEET_NAME);
-  if (!sheet) {
-    sheet = db.insertSheet(AGENDA_CONFIG_SHEET_NAME);
-  }
+  if (!sheet) sheet = db.insertSheet(AGENDA_CONFIG_SHEET_NAME);
 
   _agendaConfigEnsureHeader_(sheet);
   return sheet;
 }
 
 function _agendaConfigEnsureHeader_(sheet) {
-  // Garante 2 colunas com header. Se vazio, cria. Se diferente, corrige.
   var lastCol = Math.max(2, sheet.getLastColumn() || 0);
 
-  // lê linha 1 (no mínimo 2 cols)
   var row1 = sheet.getRange(1, 1, 1, Math.max(2, lastCol)).getValues()[0] || [];
   var h1 = String(row1[0] || "").trim();
   var h2 = String(row1[1] || "").trim();
 
   var isBlank = (!h1 && !h2);
-
   if (isBlank) {
     sheet.getRange(1, 1, 1, 2).setValues([AGENDA_CONFIG_HEADER]);
     return;
   }
 
-  // Se tiver algo mas estiver diferente, reescreve as 2 primeiras colunas do header.
   if (h1 !== AGENDA_CONFIG_HEADER[0] || h2 !== AGENDA_CONFIG_HEADER[1]) {
     sheet.getRange(1, 1, 1, 2).setValues([AGENDA_CONFIG_HEADER]);
   }
 }
 
-/**
- * Lê mapa {CHAVE: valor} da aba.
- */
+// ============================================================
+// Cache helpers (opcionais)
+// ============================================================
+
+function _agendaCfgCacheGet_(key) {
+  try {
+    if (typeof Cache_getJson_ === "function") return Cache_getJson_(key);
+  } catch (_) {}
+  return null;
+}
+
+function _agendaCfgCacheSet_(key, obj, ttl) {
+  try {
+    if (typeof Cache_setJson_ === "function") Cache_setJson_(key, obj, ttl);
+  } catch (_) {}
+}
+
+function _agendaCfgCacheRemove_(key) {
+  try {
+    if (typeof Cache_remove_ === "function") Cache_remove_(key);
+  } catch (_) {}
+}
+
+function _agendaCfgCacheInvalidateAll_() {
+  _agendaCfgCacheRemove_(_AGENDA_CFG_CACHE_KEY_MAP_);
+  _agendaCfgCacheRemove_(_AGENDA_CFG_CACHE_KEY_CFG_);
+}
+
+// ============================================================
+// Read/Write
+// ============================================================
+
 function _agendaConfigReadMap_() {
+  // tenta cache do mapa
+  var cached = _agendaCfgCacheGet_(_AGENDA_CFG_CACHE_KEY_MAP_);
+  if (cached && typeof cached === "object") return cached;
+
   var sheet = _agendaConfigGetSheet_();
   var lastRow = sheet.getLastRow();
-  if (!lastRow || lastRow < 2) return {};
+  if (!lastRow || lastRow < 2) {
+    var empty = {};
+    _agendaCfgCacheSet_(_AGENDA_CFG_CACHE_KEY_MAP_, empty, _AGENDA_CFG_CACHE_TTL_SEC_);
+    return empty;
+  }
 
   var values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
   var map = {};
@@ -165,13 +189,10 @@ function _agendaConfigReadMap_() {
     map[chave] = valor;
   }
 
+  _agendaCfgCacheSet_(_AGENDA_CFG_CACHE_KEY_MAP_, map, _AGENDA_CFG_CACHE_TTL_SEC_);
   return map;
 }
 
-/**
- * Faz upsert de uma chave (CHAVE -> Valor) na aba.
- * Mantém compat: se linha existe, atualiza; senão, adiciona no final.
- */
 function _agendaConfigUpsert_(sheet, rowByKey, key, value) {
   if (typeof value === "undefined") return;
 
@@ -188,7 +209,15 @@ function _agendaConfigUpsert_(sheet, rowByKey, key, value) {
   }
 }
 
+// ============================================================
+// Public API
+// ============================================================
+
 function agendaConfigObter_() {
+  // tenta cache do cfg pronto (já normalizado)
+  var cachedCfg = _agendaCfgCacheGet_(_AGENDA_CFG_CACHE_KEY_CFG_);
+  if (cachedCfg && typeof cachedCfg === "object") return cachedCfg;
+
   var defaults = {
     medicoNomeCompleto: "",
     medicoCRM: "",
@@ -208,11 +237,10 @@ function agendaConfigObter_() {
   try {
     map = _agendaConfigReadMap_();
   } catch (e) {
-    // Se houver falha de acesso ao DB, devolve defaults sem quebrar o front.
+    // se falhar acesso, devolve defaults sem quebrar
     return defaults;
   }
 
-  // DIAS_ATIVOS na planilha é string: "SEG,TER,QUA,QUI,SEX"
   var diasAtivosRaw = String(map.DIAS_ATIVOS || "").trim();
   var diasAtivosArr;
   if (diasAtivosRaw) {
@@ -225,28 +253,27 @@ function agendaConfigObter_() {
   }
 
   var duracao = parseInt(map.DURACAO_GRADE_MINUTOS || defaults.duracao_grade_minutos, 10);
-  if (isNaN(duracao) || duracao <= 0) {
-    duracao = defaults.duracao_grade_minutos;
-  }
+  if (isNaN(duracao) || duracao <= 0) duracao = defaults.duracao_grade_minutos;
 
   var cfg = {
-    medicoNomeCompleto: String(map.MEDICO_NOME_COMPLETO || defaults.medicoNomeCompleto),
-    medicoCRM: String(map.MEDICO_CRM || defaults.medicoCRM),
-    medicoEspecialidade: String(map.MEDICO_ESPECIALIDADE || defaults.medicoEspecialidade),
+    medicoNomeCompleto: String(map.MEDICO_NOME_COMPLETO || defaults.medicoNomeCompleto || "").trim(),
+    medicoCRM: String(map.MEDICO_CRM || defaults.medicoCRM || "").trim(),
+    medicoEspecialidade: String(map.MEDICO_ESPECIALIDADE || defaults.medicoEspecialidade || "").trim(),
 
-    clinicaNome: String(map.CLINICA_NOME || defaults.clinicaNome),
-    clinicaEndereco: String(map.CLINICA_ENDERECO || defaults.clinicaEndereco),
-    clinicaTelefone: String(map.CLINICA_TELEFONE || defaults.clinicaTelefone),
-    clinicaEmail: String(map.CLINICA_EMAIL || defaults.clinicaEmail),
+    clinicaNome: String(map.CLINICA_NOME || defaults.clinicaNome || "").trim(),
+    clinicaEndereco: String(map.CLINICA_ENDERECO || defaults.clinicaEndereco || "").trim(),
+    clinicaTelefone: String(map.CLINICA_TELEFONE || defaults.clinicaTelefone || "").trim(),
+    clinicaEmail: String(map.CLINICA_EMAIL || defaults.clinicaEmail || "").trim(),
 
-    logoUrl: String(map.LOGO_URL || defaults.logoUrl),
+    logoUrl: String(map.LOGO_URL || defaults.logoUrl || "").trim(),
 
-    hora_inicio_padrao: String(map.HORA_INICIO_PADRAO || defaults.hora_inicio_padrao),
-    hora_fim_padrao: String(map.HORA_FIM_PADRAO || defaults.hora_fim_padrao),
+    hora_inicio_padrao: String(map.HORA_INICIO_PADRAO || defaults.hora_inicio_padrao || "").trim(),
+    hora_fim_padrao: String(map.HORA_FIM_PADRAO || defaults.hora_fim_padrao || "").trim(),
     duracao_grade_minutos: duracao,
     dias_ativos: diasAtivosArr
   };
 
+  _agendaCfgCacheSet_(_AGENDA_CFG_CACHE_KEY_CFG_, cfg, _AGENDA_CFG_CACHE_TTL_SEC_);
   return cfg;
 }
 
@@ -257,26 +284,22 @@ function agendaConfigSalvar_(payload) {
 
   var lastRow = sheet.getLastRow();
   if (!lastRow || lastRow < 1) {
-    // defensivo: garante header
     sheet.getRange(1, 1, 1, 2).setValues([AGENDA_CONFIG_HEADER]);
     lastRow = 1;
   }
 
-  // Lê as chaves existentes (linha 2..lastRow)
   var values = [];
   if (lastRow >= 2) {
     values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
   }
 
-  // Mapa de chave -> linha
   var rowByKey = {};
   for (var i = 0; i < values.length; i++) {
     var chave = String(values[i][0] || "").trim();
     if (!chave) continue;
-    rowByKey[chave] = i + 2; // linha real
+    rowByKey[chave] = i + 2;
   }
 
-  // Mapeia JSON camelCase → chaves da planilha
   _agendaConfigUpsert_(sheet, rowByKey, "MEDICO_NOME_COMPLETO", payload.medicoNomeCompleto);
   _agendaConfigUpsert_(sheet, rowByKey, "MEDICO_CRM", payload.medicoCRM);
   _agendaConfigUpsert_(sheet, rowByKey, "MEDICO_ESPECIALIDADE", payload.medicoEspecialidade);
@@ -292,18 +315,16 @@ function agendaConfigSalvar_(payload) {
   _agendaConfigUpsert_(sheet, rowByKey, "HORA_FIM_PADRAO", payload.hora_fim_padrao);
   _agendaConfigUpsert_(sheet, rowByKey, "DURACAO_GRADE_MINUTOS", payload.duracao_grade_minutos);
 
-  // dias_ativos: no JSON é array; na planilha é string "SEG,TER,QUA,..."
-  // ✅ maturação: só grava se vier explicitamente; senão mantém o valor atual
   if (typeof payload.dias_ativos !== "undefined") {
     var diasAtivosValue = "";
-    if (Array.isArray(payload.dias_ativos)) {
-      diasAtivosValue = payload.dias_ativos.join(",");
-    } else if (typeof payload.dias_ativos === "string") {
-      diasAtivosValue = payload.dias_ativos;
-    }
+    if (Array.isArray(payload.dias_ativos)) diasAtivosValue = payload.dias_ativos.join(",");
+    else if (typeof payload.dias_ativos === "string") diasAtivosValue = payload.dias_ativos;
+
     _agendaConfigUpsert_(sheet, rowByKey, "DIAS_ATIVOS", diasAtivosValue);
   }
 
-  // Retorna novamente a configuração consolidada (já normalizada)
+  // ✅ invalida cache para refletir imediatamente no cabeçalho/documentos
+  _agendaCfgCacheInvalidateAll_();
+
   return agendaConfigObter_();
 }

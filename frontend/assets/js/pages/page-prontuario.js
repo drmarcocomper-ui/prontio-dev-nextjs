@@ -753,14 +753,14 @@
 
   // ✅ Atualizado: payload novo + compatível
   function _collectDocPayload_(ctx) {
-    const t = String(docTipoAtual || "").toLowerCase();
-    const payload = {
-      idPaciente: String(ctx.idPaciente || "").trim(),
-      idAgenda: String(ctx.idAgenda || "").trim(),
-      tipoDocumento: t,
-      data: qs("#docData")?.value || "",
-      texto: qs("#docTexto")?.value || "",
-    };
+  const t = String(docTipoAtual || "").toLowerCase();
+  const payload = {
+    idPaciente: String(ctx.idPaciente || ctx.ID_Paciente || "").trim(),
+    idAgenda: String(ctx.idAgenda || ctx.ID_Agenda || "").trim(),
+    tipoDocumento: t,
+    data: qs("#docData")?.value || "",
+    texto: qs("#docTexto")?.value || "",
+  };
 
     if (t === "atestado") {
       payload.dias = Number(qs("#docDias")?.value || 0);

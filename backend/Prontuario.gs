@@ -289,14 +289,50 @@ function _prontuarioPacienteObterResumo_(payload) {
 
   var p = (raw && raw.paciente) ? raw.paciente : raw;
 
-  var nome = _prontuarioPickFirst_(p, ["nomeCompleto", "nomeExibicao", "nomeSocial", "nome"]);
-  var dn = _prontuarioPickFirst_(p, ["dataNascimento", "DataNascimento", "data_nascimento", "nascimento"]);
-  var profissao = _prontuarioPickFirst_(p, ["profissao", "Profissao"]);
-  var planoSaude = _prontuarioPickFirst_(p, ["planoSaude", "PlanoSaude", "convenio", "Convenio", "plano"]);
-  var carteirinha = _prontuarioPickFirst_(p, [
-    "numeroCarteirinha", "NumeroCarteirinha",
-    "carteirinha", "Carteirinha"
-  ]);
+  var nome = _prontuarioPickFirst_(p, [
+  "nomeCompleto",
+  "nomeExibicao",
+  "nomeSocial",
+  "nome",
+  "Nome",
+  "NOME",
+  "nome_paciente",
+  "Nome_Paciente",
+  "nomePaciente"
+]);
+
+var dn = _prontuarioPickFirst_(p, [
+  "dataNascimento",
+  "DataNascimento",
+  "data_nascimento",
+  "nascimento",
+  "Nascimento",
+  "DATA_NASCIMENTO"
+]);
+
+var profissao = _prontuarioPickFirst_(p, [
+  "profissao",
+  "Profissao",
+  "PROFISSAO"
+]);
+
+var planoSaude = _prontuarioPickFirst_(p, [
+  "planoSaude",
+  "PlanoSaude",
+  "convenio",
+  "Convenio",
+  "plano",
+  "Plano"
+]);
+
+var carteirinha = _prontuarioPickFirst_(p, [
+  "numeroCarteirinha",
+  "NumeroCarteirinha",
+  "carteirinha",
+  "Carteirinha",
+  "NUMERO_CARTEIRINHA"
+]);
+
 
   var idade = _prontuarioPickFirst_(p, ["idade", "Idade"]);
   if (!idade) {
