@@ -7,6 +7,10 @@
 // ✅ Suporta bind do botão "Sair" do seu sidebar (data-nav-action="logout")
 // ✅ Mantém compat com chaves antigas de token
 // ✅ Integra com PRONTIO.core.session (estado de UI) + cache Nome/Perfil (topbar)
+//
+// ✅ PASSO 2 (padronização global):
+// - Trata codes AUTH_* canônicos e aplica forceLogoutLocal quando necessário,
+//   mesmo quando me() é chamado diretamente.
 // ============================================================
 
 (function (global, document) {
@@ -50,6 +54,20 @@
       if (!ls) return;
       ls.removeItem(k);
     } catch (_) {}
+  }
+
+  // ------------------------------------------------------------
+  // PASSO 2: helpers de code AUTH
+  // ------------------------------------------------------------
+
+  function isAuthErrorCode_(code) {
+    const c = String(code || "").toUpperCase();
+    return (
+      c === "AUTH_REQUIRED" ||
+      c === "AUTH_EXPIRED" ||
+      c === "AUTH_TOKEN_EXPIRED" ||
+      c === "AUTH_NO_TOKEN"
+    );
   }
 
   // ------------------------------------------------------------
@@ -138,96 +156,6 @@
   }
 
   // ------------------------------------------------------------
-  // Auth actions (LOGIN / ME)
-  // ------------------------------------------------------------
-
-  /**
-   * Login:
-   * payload: { login, senha }
-   * retorno esperado do backend: { token, user, expiresIn }
-   */
-  async function login(args) {
-    args = args || {};
-    const loginStr = String(args.login || "").trim();
-    const senhaStr = String(args.senha || "").trim();
-
-    if (!loginStr || !senhaStr) {
-      const err = new Error("Informe login e senha.");
-      err.code = "VALIDATION_ERROR";
-      err.details = { fields: ["login", "senha"] };
-      throw err;
-    }
-
-    const callApiData = getCallApiData_();
-    if (!callApiData) {
-      const err = new Error("API não disponível (callApiData indefinido).");
-      err.code = "CLIENT_NO_API";
-      throw err;
-    }
-
-    const data = await callApiData({
-      action: "Auth_Login",
-      payload: { login: loginStr, senha: senhaStr }
-    });
-
-    if (!data || !data.token) {
-      const err = new Error("Resposta inválida do login (token ausente).");
-      err.code = "CLIENT_INVALID_LOGIN_RESPONSE";
-      err.details = { data: data || null };
-      throw err;
-    }
-
-    setToken(data.token);
-
-    // ✅ Estado de sessão UI + cache imediato para topbar
-    if (data.user && typeof data.user === "object") {
-      setSessionUser_(data.user);
-      cacheTopbarUser_(data.user);
-    }
-
-    return data;
-  }
-
-  /**
-   * Me:
-   * - valida token atual no backend
-   */
-  async function me() {
-    const token = getToken();
-    if (!token) {
-      const err = new Error("Token ausente.");
-      err.code = "AUTH_REQUIRED";
-      err.details = { field: "token" };
-      throw err;
-    }
-
-    const callApiData = getCallApiData_();
-    if (!callApiData) {
-      const err = new Error("API não disponível (callApiData indefinido).");
-      err.code = "CLIENT_NO_API";
-      throw err;
-    }
-
-    const res = await callApiData({
-      action: "Auth_Me",
-      payload: { token }
-    });
-
-    // ✅ Atualiza sessão UI quando o backend retornar user
-    try {
-      // seu backend retorna { user: {...} }
-      const userObj = (res && res.user) ? res.user : null;
-
-      if (userObj) {
-        setSessionUser_(userObj);
-        cacheTopbarUser_(userObj);
-      }
-    } catch (_) {}
-
-    return res;
-  }
-
-  // ------------------------------------------------------------
   // Logout resiliente (sempre funciona)
   // ------------------------------------------------------------
 
@@ -246,7 +174,6 @@
     if (clearChat) safeRemove_(LS_KEYS.CHAT_USER);
 
     if (redirect) {
-      // ✅ Sempre cair no /login.html (raiz), não relativo à pasta atual
       try { global.location.href = "/login.html"; } catch (_) {}
     }
   }
@@ -301,10 +228,108 @@
   }
 
   // ------------------------------------------------------------
+  // Auth actions (LOGIN / ME)
+  // ------------------------------------------------------------
+
+  /**
+   * Login:
+   * payload: { login, senha }
+   * retorno esperado do backend: { token, user, expiresIn }
+   */
+  async function login(args) {
+    args = args || {};
+    const loginStr = String(args.login || "").trim();
+    const senhaStr = String(args.senha || "").trim();
+
+    if (!loginStr || !senhaStr) {
+      const err = new Error("Informe login e senha.");
+      err.code = "VALIDATION_ERROR";
+      err.details = { fields: ["login", "senha"] };
+      throw err;
+    }
+
+    const callApiData = getCallApiData_();
+    if (!callApiData) {
+      const err = new Error("API não disponível (callApiData indefinido).");
+      err.code = "CLIENT_NO_API";
+      throw err;
+    }
+
+    const data = await callApiData({
+      action: "Auth_Login",
+      payload: { login: loginStr, senha: senhaStr }
+    });
+
+    if (!data || !data.token) {
+      const err = new Error("Resposta inválida do login (token ausente).");
+      err.code = "CLIENT_INVALID_LOGIN_RESPONSE";
+      err.details = { data: data || null };
+      throw err;
+    }
+
+    setToken(data.token);
+
+    // ✅ Estado de sessão UI + cache imediato para topbar
+    if (data.user && typeof data.user === "object") {
+      setSessionUser_(data.user);
+      cacheTopbarUser_(data.user);
+    }
+
+    return data;
+  }
+
+  /**
+   * Me:
+   * - valida token atual no backend
+   * ✅ PASSO 2: se retornar AUTH_*, aplica forceLogoutLocal
+   */
+  async function me() {
+    const token = getToken();
+    if (!token) {
+      const err = new Error("Token ausente.");
+      err.code = "AUTH_NO_TOKEN";
+      err.details = { field: "token" };
+      // comportamento consistente: derruba local também
+      forceLogoutLocal("AUTH_NO_TOKEN", { redirect: false });
+      throw err;
+    }
+
+    const callApiData = getCallApiData_();
+    if (!callApiData) {
+      const err = new Error("API não disponível (callApiData indefinido).");
+      err.code = "CLIENT_NO_API";
+      throw err;
+    }
+
+    try {
+      const res = await callApiData({
+        action: "Auth_Me",
+        payload: { token }
+      });
+
+      // ✅ Atualiza sessão UI quando o backend retornar user
+      try {
+        const userObj = (res && res.user) ? res.user : null;
+        if (userObj) {
+          setSessionUser_(userObj);
+          cacheTopbarUser_(userObj);
+        }
+      } catch (_) {}
+
+      return res;
+    } catch (e) {
+      // ✅ Se for erro AUTH canônico, encerra sessão local também (mesmo se api.js já fizer isso)
+      if (e && isAuthErrorCode_(e.code)) {
+        forceLogoutLocal(String(e.code || "AUTH_REQUIRED"), { redirect: true, clearChat: true });
+      }
+      throw e;
+    }
+  }
+
+  // ------------------------------------------------------------
   // Bind botão "Sair" + confirmação
   // ------------------------------------------------------------
 
-  // ✅ trava simples para evitar dupla execução (ex.: listener duplicado em sidebar/auth)
   let _logoutClickInFlight = false;
 
   function bindLogoutButtons(root) {
@@ -323,7 +348,6 @@
       el.addEventListener("click", async (ev) => {
         try { ev.preventDefault(); } catch (_) {}
 
-        // ✅ evita clique duplo / handlers duplicados
         if (_logoutClickInFlight) return;
         _logoutClickInFlight = true;
 
@@ -333,7 +357,6 @@
 
           await logout({ redirect: true, clearChat: true });
         } finally {
-          // libera no próximo tick para evitar reentrância
           global.setTimeout(() => { _logoutClickInFlight = false; }, 0);
         }
       });
@@ -363,13 +386,11 @@
 
   PRONTIO.auth.bindLogoutButtons = bindLogoutButtons;
 
-  // ✅ helpers de usuário (para topbar e outras telas)
   PRONTIO.auth.getCurrentUser = function () {
     const s = getSession_();
     return (s && typeof s.getUser === "function") ? s.getUser() : null;
   };
 
-  // Bind automático após DOM
   try {
     if (document && document.readyState !== "loading") {
       bindLogoutButtons(document);

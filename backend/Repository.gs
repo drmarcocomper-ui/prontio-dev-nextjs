@@ -21,6 +21,10 @@
  *   procuram linha pelo ID lendo apenas a coluna do ID + uma linha (não a tabela inteira).
  * - Cache best-effort (ScriptCache) de idValue -> rowIndex com TTL curto, reduzindo leituras repetidas.
  * - Mantém assinaturas e comportamento esperado (incluindo erro em insert quando header vazio).
+ *
+ * ✅ PASSO 2 (padronização global, sem quebrar):
+ * - Repo_update_ invalida cache do índice (sheetName+idField) após escrita, evitando “cache fantasma”.
+ * - Repo_insert_ usa setValues ao invés de appendRow (mais previsível) e normaliza undefined/null -> "".
  */
 
 // ======================
@@ -34,6 +38,15 @@ function Repo_getDb_() {
     throw new Error("Repo_getDb_: PRONTIO_getDb_ não encontrado (Utils.gs).");
   }
   return PRONTIO_getDb_();
+}
+
+/**
+ * Normalização de célula para escrita:
+ * - undefined/null vira string vazia (padrão do Sheets no PRONTIO)
+ * - demais valores são mantidos
+ */
+function _repoCell_(v) {
+  return (v === undefined || v === null) ? "" : v;
 }
 
 /**
@@ -94,7 +107,7 @@ function Repo_getHeader_(sheet) {
   if (!lastCol || lastCol < 1) return [];
   return sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
     return String(h || "").trim();
-  });
+  }).filter(function (h) { return !!h; }); // evita colunas “fantasmas” vazias
 }
 
 // ======================
@@ -170,7 +183,6 @@ function _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue) {
   }
 
   // 3) reconstroi cache (best-effort) só quando precisa (scan já leu ids)
-  //    Atenção: não é obrigatório; mas ajuda muito em updates repetidos.
   try {
     var mapObj = {};
     for (var j = 0; j < ids.length; j++) {
@@ -236,13 +248,15 @@ function Repo_insert_(sheetName, obj) {
   var row = new Array(header.length);
   for (var c = 0; c < header.length; c++) {
     var k = header[c];
-    row[c] = (obj[k] !== undefined) ? obj[k] : "";
+    row[c] = _repoCell_(obj[k]);
   }
 
-  sheet.appendRow(row);
+  // ✅ mais previsível que appendRow em alguns casos (filtros/linhas vazias)
+  var newRow = sheet.getLastRow() + 1;
+  sheet.getRange(newRow, 1, 1, header.length).setValues([row]);
 
-  // best-effort: invalida cache do índice dessa entidade, se o caller souber idField.
-  // Não sabemos idField aqui; então não invalidamos. O TTL curto cobre.
+  // Não sabemos idField aqui; cache é por (sheetName+idField).
+  // TTL curto cobre inserts; updates invalidam quando conhecem idField.
   return obj;
 }
 
@@ -263,7 +277,7 @@ function Repo_update_(sheetName, idField, idValue, patch) {
   for (var c = 0; c < header.length; c++) {
     var k = header[c];
     if (patch[k] !== undefined) {
-      row[c] = patch[k];
+      row[c] = _repoCell_(patch[k]);
       changed = true;
     }
   }
@@ -273,10 +287,8 @@ function Repo_update_(sheetName, idField, idValue, patch) {
   // escreve apenas a linha alterada
   sheet.getRange(rowIndex, 1, 1, header.length).setValues([row]);
 
-  // cache pode ter ficado ok; mas se a linha mudou de posição (raro), TTL resolve.
-  // Se quiser ser agressivo, invalida o cache para este sheet+idField:
-  // (mantemos simples e seguro)
-  // _repoCacheInvalidate_(sheetName, idField);
+  // ✅ PASSO 2: invalida cache do índice dessa entidade para evitar cache fantasma
+  _repoCacheInvalidate_(sheetName, idField);
 
   return true;
 }

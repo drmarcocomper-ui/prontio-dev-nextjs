@@ -10,6 +10,10 @@
 // ✅ Opção 2 (produto): mantém controle de inatividade, SEM logoff automático.
 // - startIdleTimer NÃO chama mais callbacks que executem logout por padrão.
 // - Ao estourar o timeout, dispara um evento "prontio:idle-timeout" (hook futuro).
+//
+// ✅ PASSO 2 (padronização global - front):
+// - Adiciona ensureAuthenticated(): bloqueio local + validação server-side via PRONTIO.auth.me()
+// - Dispara eventos "prontio:session-changed" quando user muda/limpa.
 
 (function (global) {
   "use strict";
@@ -58,7 +62,6 @@
       const ev = new CustomEvent("prontio:idle-timeout", { detail });
       global.dispatchEvent(ev);
     } catch (e) {
-      // IE/ambientes antigos: fallback silencioso
       try {
         const ev = document.createEvent("Event");
         ev.initEvent("prontio:idle-timeout", true, true);
@@ -66,6 +69,25 @@
         global.dispatchEvent(ev);
       } catch (_) {}
     }
+  }
+
+  function dispatchSessionChanged_(payload) {
+    try {
+      const detail = payload || {};
+      const ev = new CustomEvent("prontio:session-changed", { detail });
+      global.dispatchEvent(ev);
+    } catch (e) {
+      try {
+        const ev = document.createEvent("Event");
+        ev.initEvent("prontio:session-changed", true, true);
+        ev.detail = payload || {};
+        global.dispatchEvent(ev);
+      } catch (_) {}
+    }
+  }
+
+  function getAuth_() {
+    return PRONTIO.auth || null;
   }
 
   const Session = {
@@ -84,6 +106,7 @@
     setUser(user) {
       memoryState.user = user || null;
       touchActivity();
+      dispatchSessionChanged_({ type: "setUser", user: memoryState.user });
     },
 
     /**
@@ -104,11 +127,13 @@
         lastActivityAt: Date.now()
       };
       saveToStorage();
+      dispatchSessionChanged_({ type: "clear", user: null });
     },
 
     setLastPatientId(id) {
       memoryState.lastPatientId = id || null;
       touchActivity();
+      dispatchSessionChanged_({ type: "setLastPatientId", lastPatientId: memoryState.lastPatientId });
     },
 
     getLastPatientId() {
@@ -119,10 +144,54 @@
       // string no formato YYYY-MM-DD (quem define é o backend)
       memoryState.lastAgendaDate = dateStr || null;
       touchActivity();
+      dispatchSessionChanged_({ type: "setLastAgendaDate", lastAgendaDate: memoryState.lastAgendaDate });
     },
 
     getLastAgendaDate() {
       return memoryState.lastAgendaDate;
+    },
+
+    /**
+     * ✅ PASSO 2: guard oficial (UI-first) para garantir sessão válida
+     * - Bloqueia localmente se não houver token (requireAuth).
+     * - Valida no backend via auth.me() (que já trata AUTH_* e pode redirecionar).
+     *
+     * @param {Object} opts
+     * @param {boolean} [opts.redirect=true] - permite redirecionar para /login.html
+     * @returns {Promise<boolean>} true se ok, false se redirecionou/negou
+     */
+    async ensureAuthenticated(opts) {
+      opts = opts || {};
+      const redirect = opts.redirect !== false;
+
+      const auth = getAuth_();
+      if (!auth || typeof auth.requireAuth !== "function") {
+        console.warn("[Session] ensureAuthenticated: PRONTIO.auth.requireAuth não disponível.");
+        return true; // não bloqueia para não quebrar páginas offline/dev
+      }
+
+      // 1) Bloqueio local imediato
+      const okLocal = auth.requireAuth({ redirect: redirect });
+      if (!okLocal) return false;
+
+      // 2) Validação server-side (canônica)
+      if (typeof auth.me === "function") {
+        try {
+          const res = await auth.me();
+          // auth.me já chama session.setUser internamente (via auth.js), mas garantimos se vier user aqui:
+          if (res && res.user) this.setUser(res.user);
+          return true;
+        } catch (e) {
+          // auth.me já costuma redirecionar em AUTH_*; se não redirecionou, aplica fallback
+          if (redirect && auth.forceLogoutLocal && e && e.code) {
+            try { auth.forceLogoutLocal(String(e.code), { redirect: true, clearChat: true }); } catch (_) {}
+            return false;
+          }
+          return false;
+        }
+      }
+
+      return true;
     },
 
     /**
@@ -142,7 +211,6 @@
     startIdleTimer(options) {
       const timeoutMs = (options && options.timeoutMs) || 30 * 60 * 1000;
 
-      // Mantém compat, mas NÃO executa por padrão.
       const onTimeout = (options && options.onTimeout) || function () {};
       const allowOnTimeout = !!(options && options.allowOnTimeout === true);
 
@@ -158,7 +226,6 @@
           clearInterval(idleTimer);
           idleTimer = null;
 
-          // ✅ Hook profissional: evento para UI (aviso/bloqueio), sem logout.
           dispatchIdleTimeoutEvent_({
             timeoutMs,
             inactiveForMs: diff,
@@ -166,7 +233,6 @@
             userPresent: !!memoryState.user
           });
 
-          // Compat: só chama callback se explicitamente autorizado
           if (allowOnTimeout) {
             try {
               onTimeout();
@@ -174,16 +240,12 @@
               console.warn("[Session] Erro no onTimeout (allowOnTimeout=true).", e);
             }
           } else {
-            // log leve para debug (sem forçar saída)
             console.warn("[Session] Timeout de inatividade atingido (sem logoff automático).");
           }
         }
-      }, 60 * 1000); // verifica a cada 1 minuto
+      }, 60 * 1000);
     },
 
-    /**
-     * Para o timer de inatividade (se estiver rodando).
-     */
     stopIdleTimer() {
       if (idleTimer) {
         clearInterval(idleTimer);
@@ -191,11 +253,6 @@
       }
     },
 
-    /**
-     * Registra listeners para atualizar lastActivityAt
-     * sempre que o usuário interagir com a interface.
-     * (somente front-end)
-     */
     _setupActivityListeners() {
       const events = ["click", "keydown", "mousemove", "scroll", "touchstart"];
       events.forEach((ev) => {

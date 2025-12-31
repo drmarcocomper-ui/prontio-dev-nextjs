@@ -28,6 +28,9 @@
  * ✅ FIX (SEM QUEBRAR):
  * - Auditoria best-effort com Audit_log_ / Audit_securityEvent_ quando disponíveis
  * - duration_ms também em envelopes de erro quando possível
+ *
+ * ✅ PASSO 2 (padronização global):
+ * - _exceptionToErrorResponse_ usa Errors.fromException / Errors.normalizeCode quando disponível
  */
 
 var PRONTIO_API_VERSION = typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV";
@@ -183,7 +186,7 @@ function doGet(e) {
   } catch (err) {
     var rid = _makeRequestId_();
     var startedAtErr = new Date();
-    var envErr2 = _exceptionToErrorResponse_(rid, err);
+    var envErr2 = _exceptionToErrorResponse_(rid, err, { requestId: rid, action: "GET", startedAt: startedAtErr });
     _auditBestEffort_(e, { requestId: rid, action: "GET", startedAtMs: startedAtErr.getTime(), startedAtIso: startedAtErr.toISOString(), user: null }, "FAIL", null, err, envErr2);
     return _respondMaybeJsonp_(e, _withMetaDuration_(envErr2, startedAtErr));
   }
@@ -265,7 +268,7 @@ function doPost(e) {
         ], { action: action, startedAt: startedAt });
 
         _auditBestEffort_(e, ctx, "FAIL", null, null, envAuthMissing);
-        return _withCors_(_jsonOutput_(_withMetaDuration_(envAuthMissing, startedAt)));
+        return _withCors_(_jsonOutput_(_withMetaDuration_(envAuthMissing, startedAt))));
       }
     }
 
@@ -308,7 +311,7 @@ function doPost(e) {
     return _withCors_(_jsonOutput_(ok));
 
   } catch (err) {
-    var envErr = _exceptionToErrorResponse_(requestId, err);
+    var envErr = _exceptionToErrorResponse_(requestId, err, { requestId: requestId, action: "POST", startedAt: startedAt });
     _auditBestEffort_(e, { requestId: requestId, action: "POST", startedAtMs: startedAt.getTime(), startedAtIso: startedAt.toISOString(), user: null }, "FAIL", null, err, envErr);
     return _withCors_(_jsonOutput_(_withMetaDuration_(envErr, startedAt)));
   }
@@ -581,7 +584,37 @@ function _err_(requestId, errors, meta) {
   return out;
 }
 
-function _exceptionToErrorResponse_(requestId, err) {
+/**
+ * ✅ PASSO 2:
+ * Converte exception em envelope padronizado, usando Errors.fromException quando disponível.
+ * ctxHint é opcional: { requestId, action, startedAt }
+ */
+function _exceptionToErrorResponse_(requestId, err, ctxHint) {
+  ctxHint = ctxHint || {};
+  var ctx = {
+    requestId: requestId,
+    action: ctxHint.action || null,
+    env: PRONTIO_ENV,
+    apiVersion: PRONTIO_API_VERSION
+  };
+
+  // Preferência: Errors.fromException (padroniza code e meta)
+  try {
+    if (typeof Errors !== "undefined" && Errors && typeof Errors.fromException === "function") {
+      var env = Errors.fromException(ctx, err, "Erro interno.");
+
+      // Normaliza code se existir helper
+      try {
+        if (Errors.normalizeCode && env && env.errors && env.errors[0]) {
+          env.errors[0].code = Errors.normalizeCode(env.errors[0].code);
+        }
+      } catch (_) {}
+
+      return env;
+    }
+  } catch (_) {}
+
+  // Fallback antigo
   var code = "INTERNAL_ERROR";
   var message = "Erro interno.";
   var details = null;
@@ -595,7 +628,7 @@ function _exceptionToErrorResponse_(requestId, err) {
     message = String(err);
   }
 
-  return _err_(requestId, [{ code: code, message: message, details: details }]);
+  return _err_(requestId, [{ code: code, message: message, details: details }], { action: ctxHint.action || null });
 }
 
 // ======================
@@ -604,7 +637,6 @@ function _exceptionToErrorResponse_(requestId, err) {
 
 function _auditBestEffort_(e, ctx, outcome, entity, entityId, envelopeOrErr) {
   try {
-    // Preferência: Audit_log_ (estruturado)
     if (typeof Audit_log_ === "function") {
       var startedAtMs = ctx && ctx.startedAtMs ? Number(ctx.startedAtMs) : null;
       var dur = startedAtMs ? (new Date().getTime() - startedAtMs) : null;
@@ -623,7 +655,6 @@ function _auditBestEffort_(e, ctx, outcome, entity, entityId, envelopeOrErr) {
       return true;
     }
 
-    // Compat: Audit_securityEvent_ se existir
     if (typeof Audit_securityEvent_ === "function") {
       Audit_securityEvent_(ctx, "Api", ctx && ctx.action ? ctx.action : "Api", outcome || "UNKNOWN", {}, {});
       return true;

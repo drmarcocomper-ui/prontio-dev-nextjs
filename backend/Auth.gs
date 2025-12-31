@@ -21,6 +21,12 @@
  * - Pilar H: se o índice em cache (por userId) estiver vazio, deriva tokens pela coluna UserId
  *   na aba AuthSessions e revoga mesmo assim (não depende só do cache).
  * - DB provider: tenta PRONTIO_getDb_ -> Repo_getDb_ -> ActiveSpreadsheet.
+ *
+ * ✅ PASSO 2 (padronização global de erro):
+ * - Diferencia:
+ *   - AUTH_NO_TOKEN (sem token)
+ *   - AUTH_TOKEN_EXPIRED (token expirado)
+ *   - AUTH_REQUIRED (token inválido/revogado ou login obrigatório)
  */
 
 var AUTH_CACHE_PREFIX = typeof AUTH_CACHE_PREFIX !== "undefined" ? AUTH_CACHE_PREFIX : "PRONTIO_AUTH_";
@@ -65,12 +71,10 @@ function _authCode_(preferred, fallback) {
   // preferred: string, fallback: string
   try {
     if (typeof Errors !== "undefined" && Errors && Errors.CODES) {
-      // se preferido existir em Errors.CODES, usa o valor; senão tenta fallback se existir
       if (preferred && Errors.CODES[preferred]) return Errors.CODES[preferred];
       if (fallback && Errors.CODES[fallback]) return Errors.CODES[fallback];
     }
   } catch (_) {}
-  // fallback literal (string)
   return preferred || fallback || "INTERNAL_ERROR";
 }
 
@@ -97,7 +101,6 @@ function _authOk_(ctx, data) {
 // =====================
 
 function Auth__getDb_() {
-  // Usa PRONTIO_getDb_ se existir (mesma fonte do resto do sistema)
   try {
     if (typeof PRONTIO_getDb_ === "function") {
       var ss0 = PRONTIO_getDb_();
@@ -105,7 +108,6 @@ function Auth__getDb_() {
     }
   } catch (_) {}
 
-  // Compat com Repository.gs (se existir)
   try {
     if (typeof Repo_getDb_ === "function") {
       var ss1 = Repo_getDb_();
@@ -113,7 +115,6 @@ function Auth__getDb_() {
     }
   } catch (_) {}
 
-  // Fallback: planilha ativa
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
@@ -217,7 +218,6 @@ function Auth__findActiveTokensByUserIdFromSheet_(userId) {
     out.push(token);
   }
 
-  // remove duplicados
   var uniq = [];
   var seen = {};
   for (var j = 0; j < out.length; j++) {
@@ -230,42 +230,62 @@ function Auth__findActiveTokensByUserIdFromSheet_(userId) {
   return uniq;
 }
 
-function Auth__loadSessionUser_(token) {
+/**
+ * ✅ PASSO 2:
+ * Retorna status detalhado da sessão.
+ * { status:"VALID"|"EXPIRED"|"REVOKED"|"NOT_FOUND", user?:obj, expiresAtIso?:string }
+ */
+function Auth__getSessionStatus_(token) {
   token = String(token || "").trim();
-  if (!token) return null;
+  if (!token) return { status: "NOT_FOUND" };
 
-  // 1) Cache primeiro
-  var raw = CacheService.getScriptCache().get(AUTH_CACHE_PREFIX + token);
-  if (raw) {
-    try { return _authNormalizeUser_(JSON.parse(raw)); } catch (_) {}
-  }
+  // 1) Cache primeiro (se existe no cache, consideramos válido pois TTL acompanha expiração)
+  try {
+    var raw = CacheService.getScriptCache().get(AUTH_CACHE_PREFIX + token);
+    if (raw) {
+      try {
+        var u0 = _authNormalizeUser_(JSON.parse(raw));
+        if (u0) return { status: "VALID", user: u0 };
+      } catch (_) {}
+    }
+  } catch (_) {}
 
-  // 2) Fallback em Sheets
+  // 2) Sheets
   var found = Auth__findSessionRowByToken_(token);
-  if (!found || !found.row) return null;
+  if (!found || !found.row) return { status: "NOT_FOUND" };
 
   var userJson = String(found.row[1] || "").trim();
   var expiresAtIso = String(found.row[2] || "").trim();
   var revokedAtIso = String(found.row[3] || "").trim();
 
-  if (revokedAtIso) return null;
+  if (revokedAtIso) return { status: "REVOKED", expiresAtIso: expiresAtIso };
 
   if (expiresAtIso) {
     var expMs = Date.parse(expiresAtIso);
-    if (isFinite(expMs) && expMs > 0 && expMs < Date.now()) return null;
+    if (isFinite(expMs) && expMs > 0 && expMs < Date.now()) {
+      return { status: "EXPIRED", expiresAtIso: expiresAtIso };
+    }
   }
 
+  // Se não está revogado/expirado, tenta carregar user
   try {
     var u = userJson ? JSON.parse(userJson) : null;
     u = _authNormalizeUser_(u);
-    if (!u) return null;
+    if (!u) return { status: "NOT_FOUND" };
 
     // rehidrata cache (best-effort)
     try { CacheService.getScriptCache().put(AUTH_CACHE_PREFIX + token, JSON.stringify(u), AUTH_TTL_SECONDS); } catch (_) {}
-    return u;
+
+    return { status: "VALID", user: u, expiresAtIso: expiresAtIso };
   } catch (_) {
-    return null;
+    return { status: "NOT_FOUND" };
   }
+}
+
+function Auth__loadSessionUser_(token) {
+  var st = Auth__getSessionStatus_(token);
+  if (st && st.status === "VALID") return st.user || null;
+  return null;
 }
 
 /**
@@ -297,15 +317,30 @@ function Auth_getTokenFromPayload_(payload) {
 }
 
 function Auth_requireAuth_(ctx, payload) {
-  var user = Auth_getUserContext_(payload);
+  payload = payload || {};
+  var token = Auth_getTokenFromPayload_(payload);
 
-  if (!user) {
-    // ✅ FIX: usa code de autenticação (quando disponível), sem quebrar envelope Errors
-    var code = _authCode_("AUTH_REQUIRED", "PERMISSION_DENIED");
-    return _authResp_(ctx, code, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
+  // ✅ PASSO 2: distinguir "sem token"
+  if (!token) {
+    var codeNoToken = _authCode_("AUTH_NO_TOKEN", "AUTH_REQUIRED");
+    return _authResp_(ctx, codeNoToken, "Token ausente.", { reason: "AUTH_NO_TOKEN" });
   }
 
-  ctx.user = user;
+  // Verifica status detalhado
+  var st = Auth__getSessionStatus_(token);
+
+  if (!st || st.status !== "VALID") {
+    if (st && st.status === "EXPIRED") {
+      var codeExp = _authCode_("AUTH_TOKEN_EXPIRED", "AUTH_EXPIRED");
+      return _authResp_(ctx, codeExp, "Sessão expirada.", { reason: "AUTH_TOKEN_EXPIRED", expiresAtIso: st.expiresAtIso || null });
+    }
+
+    // Revogado ou não encontrado -> exigir login
+    var codeReq = _authCode_("AUTH_REQUIRED", "PERMISSION_DENIED");
+    return _authResp_(ctx, codeReq, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
+  }
+
+  ctx.user = st.user;
   return _authOk_(ctx, { ok: true });
 }
 
@@ -315,7 +350,6 @@ function Auth_requireRoles_(ctx, roles) {
 
   var user = ctx && ctx.user ? ctx.user : null;
   if (!user) {
-    // ✅ FIX: mesmo comportamento do requireAuth_
     var code = _authCode_("AUTH_REQUIRED", "PERMISSION_DENIED");
     return _authResp_(ctx, code, "Login obrigatório.", { reason: "AUTH_REQUIRED" });
   }
@@ -325,7 +359,6 @@ function Auth_requireRoles_(ctx, roles) {
   var allowed = required.some(function (r) { return userRoles.indexOf(r) >= 0; });
 
   if (!allowed) {
-    // Mantém PERMISSION_DENIED, mas com reason explícito (evita ambiguidade)
     var code2 = _authCode_("PERMISSION_DENIED", "PERMISSION_DENIED");
     return _authResp_(ctx, code2, "Sem permissão para esta ação.", {
       reason: "ROLE_REQUIRED",
@@ -460,7 +493,6 @@ function Auth_destroySession_(token) {
       var u = _authNormalizeUser_(JSON.parse(raw));
       if (u && u.id) Auth__removeTokenFromUserIndex_(u.id, token);
     } else {
-      // ✅ best-effort: se não tiver no cache, tenta descobrir userId pelo sheet e remover do índice
       var found = Auth__findSessionRowByToken_(token);
       if (found && found.row) {
         var uid = String(found.row[4] || "").trim();
@@ -525,14 +557,11 @@ function Auth_Login(ctx, payload) {
 
   try { if (typeof Usuarios_markUltimoLogin_ === "function") Usuarios_markUltimoLogin_(u.id); } catch (_) {}
 
-  // ✅ Ajuste: carregar NomeCompleto (sem quebrar quem só tem "nome")
   var nomeCompleto = (u.nomeCompleto || u.NomeCompleto || u.nome || u.Nome || "").toString().trim();
 
   var session = Auth_createSession_({
     id: u.id,
-    // mantém compat
     nome: u.nome,
-    // ✅ novo: preferível para UI
     nomeCompleto: nomeCompleto,
     login: u.login,
     email: u.email,
@@ -551,20 +580,29 @@ function Auth_Me(ctx, payload) {
 
   if (!token) {
     var e = new Error("Token ausente.");
-    e.code = (Errors && Errors.CODES && Errors.CODES.AUTH_REQUIRED) ? Errors.CODES.AUTH_REQUIRED : "AUTH_REQUIRED";
-    e.details = { field: "token" };
+    e.code = (Errors && Errors.CODES && Errors.CODES.AUTH_NO_TOKEN) ? Errors.CODES.AUTH_NO_TOKEN : "AUTH_NO_TOKEN";
+    e.details = { field: "token", reason: "AUTH_NO_TOKEN" };
     throw e;
   }
 
-  var user = ctx && ctx.user ? ctx.user : Auth_getUserContext_(payload);
-  if (!user) {
+  // ✅ PASSO 2: diferencia expirado vs inválido
+  var st = Auth__getSessionStatus_(token);
+  if (!st || st.status !== "VALID") {
+    if (st && st.status === "EXPIRED") {
+      var eExp = new Error("Sessão expirada.");
+      eExp.code = (Errors && Errors.CODES && Errors.CODES.AUTH_TOKEN_EXPIRED) ? Errors.CODES.AUTH_TOKEN_EXPIRED : "AUTH_TOKEN_EXPIRED";
+      eExp.details = { reason: "AUTH_TOKEN_EXPIRED", expiresAtIso: st.expiresAtIso || null };
+      throw eExp;
+    }
     var e2 = new Error("Login obrigatório.");
     e2.code = (Errors && Errors.CODES && Errors.CODES.AUTH_REQUIRED) ? Errors.CODES.AUTH_REQUIRED : "AUTH_REQUIRED";
     e2.details = { reason: "AUTH_REQUIRED" };
     throw e2;
   }
 
-  return { user: _authNormalizeUser_(user) };
+  // garante ctx.user
+  if (ctx) ctx.user = st.user;
+  return { user: _authNormalizeUser_(st.user) };
 }
 
 function Auth_Logout(ctx, payload) {
@@ -582,16 +620,12 @@ function _authNormalizeUser_(user) {
   var perfil = (user.perfil !== undefined ? user.perfil : (user.Perfil || user.role || "usuario"));
   perfil = (perfil || "usuario").toString().trim().toLowerCase();
 
-  // ✅ Ajuste: normalizar NomeCompleto também
   var nomeCompleto = (user.nomeCompleto || user.NomeCompleto || user.nome || user.Nome || "").toString().trim();
 
   return {
     id: user.id !== undefined ? user.id : (user.ID_Usuario || user.idUsuario || null),
     nome: user.nome !== undefined ? user.nome : (user.Nome || null),
-
-    // ✅ novo (para UI): NomeCompleto
     nomeCompleto: nomeCompleto || null,
-
     login: user.login !== undefined ? user.login : (user.Login || null),
     email: user.email !== undefined ? user.email : (user.Email || null),
     perfil: perfil

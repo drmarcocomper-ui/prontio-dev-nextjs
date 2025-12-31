@@ -7,6 +7,10 @@
 //
 // No HTML da página (ex.: pacientes.html):
 // <body data-page="pacientes">
+//
+// ✅ PASSO 2 (padronização):
+// - detectPageId aceita múltiplos atributos: data-page, data-page-id, data-pageId
+//   para evitar divergências entre páginas.
 
 (function (global) {
   "use strict";
@@ -19,40 +23,43 @@
     currentPageId: null,
     started: false,
 
-    /**
-     * Registra uma função de inicialização para uma página.
-     * @param {string} pageId - identificador da página (ex.: "pacientes")
-     * @param {Function} initFn - função que inicializa a página
-     */
     register(pageId, initFn) {
       if (!pageId || typeof initFn !== "function") {
         console.warn("[Router] register chamado com parâmetros inválidos", pageId, initFn);
         return;
       }
-      this.routes[pageId] = initFn;
+      this.routes[String(pageId).toLowerCase().trim()] = initFn;
     },
 
-    /**
-     * Descobre o ID da página baseado no atributo data-page do body
-     * ou, em último caso, pelo nome do arquivo da URL.
-     */
     detectPageId() {
       const body = document.body;
-      if (body && body.dataset && body.dataset.page) {
-        return body.dataset.page;
-      }
+
+      // ✅ prioriza atributos explícitos (padroniza lower-case)
+      try {
+        if (body) {
+          // data-page="x"
+          if (body.dataset && body.dataset.page) return String(body.dataset.page).toLowerCase().trim();
+
+          // data-page-id="x"
+          const pidAttr = body.getAttribute("data-page-id");
+          if (pidAttr) return String(pidAttr).toLowerCase().trim();
+
+          // data-pageId="x" (caso algum HTML use camel)
+          if (body.dataset && body.dataset.pageId) return String(body.dataset.pageId).toLowerCase().trim();
+
+          // data-page="x" via getAttribute (fallback)
+          const pAttr = body.getAttribute("data-page");
+          if (pAttr) return String(pAttr).toLowerCase().trim();
+        }
+      } catch (_) {}
 
       // fallback: tenta extrair do caminho da URL, ex.: /pacientes.html -> "pacientes"
       const path = global.location.pathname || "";
       const fileName = path.split("/").pop() || "";
       const withoutExt = fileName.replace(/\.[^/.]+$/, ""); // remove extensão
-      return withoutExt || "index";
+      return (withoutExt || "index").toLowerCase().trim();
     },
 
-    /**
-     * Inicializa o router: descobre página atual e chama a função registrada.
-     * Deve ser chamado uma única vez (idealmente em main.js, no DOMContentLoaded).
-     */
     start() {
       if (this.started) return;
       this.started = true;
@@ -68,6 +75,7 @@
           console.error(`[Router] Erro ao inicializar página '${pageId}'`, err);
         }
       } else {
+        // não é erro fatal, mas ajuda debug
         console.warn(`[Router] Nenhuma rota registrada para a página '${pageId}'`);
       }
     }

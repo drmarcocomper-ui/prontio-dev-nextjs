@@ -8,11 +8,16 @@
 // - Este arquivo fica como fallback/compat.
 // - Se main.js já rodou, este guard não interfere.
 //
-// Isso preserva seu histórico e evita comportamento duplicado.
+// ✅ PASSO 2 (padronização):
+// - Usa PRONTIO.auth.requireAuth (local) + PRONTIO.auth.me() (server-side)
+// - me() já trata AUTH_* e aplica logout/redirect de forma consistente.
 // =====================================
 
 (function (global) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
+
+  // evita rodar duas vezes em casos de includes duplicados
+  let _ran = false;
 
   function isLoginPage_() {
     try {
@@ -34,6 +39,9 @@
   }
 
   async function boot_() {
+    if (_ran) return;
+    _ran = true;
+
     // Não roda no login
     if (isLoginPage_()) return;
 
@@ -45,17 +53,26 @@
       return;
     }
 
-    // 1) Bloqueio básico
+    // 1) Bloqueio local imediato (sem flash)
     const ok = PRONTIO.auth.requireAuth({ redirect: true });
     if (!ok) return;
 
-    // 2) Validação server-side (se existir)
+    // 2) Validação server-side canônica
+    // - usa PRONTIO.auth.me() (não ensureSession), pois me() já padroniza AUTH_* e pode redirecionar.
     try {
-      if (typeof PRONTIO.auth.ensureSession === "function") {
-        const okServer = await PRONTIO.auth.ensureSession({ redirect: true });
-        if (!okServer) return;
+      if (PRONTIO.auth && typeof PRONTIO.auth.me === "function") {
+        await PRONTIO.auth.me();
       }
     } catch (e) {
+      // Se me() falhar por qualquer motivo, garantimos saída segura
+      try {
+        if (PRONTIO.auth && typeof PRONTIO.auth.forceLogoutLocal === "function") {
+          PRONTIO.auth.forceLogoutLocal((e && e.code) ? String(e.code) : "AUTH_REQUIRED", { redirect: true, clearChat: true });
+          return;
+        }
+      } catch (_) {}
+
+      // fallback mínimo
       try {
         PRONTIO.auth.clearSession && PRONTIO.auth.clearSession();
         PRONTIO.auth.requireAuth({ redirect: true });
@@ -64,5 +81,12 @@
     }
   }
 
-  global.document?.addEventListener("DOMContentLoaded", boot_);
+  try {
+    if (global.document && global.document.readyState !== "loading") {
+      boot_();
+    } else {
+      global.document && global.document.addEventListener("DOMContentLoaded", boot_);
+    }
+  } catch (_) {}
+
 })(window);
