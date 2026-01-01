@@ -1,28 +1,25 @@
-/**
- * PRONTIO - Page bootstrap: Agenda
- * - Mantém este arquivo pequeno: apenas delega para PRONTIO.agenda.init()
+/* PRONTIO - Page bootstrap: Agenda
+ * Antes: monolito gigantesco aqui.
+ * Agora: a lógica mora em /assets/js/agenda/*.js
  */
-(function (global) {
+(function (global, document) {
   "use strict";
 
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
   PRONTIO.pages = PRONTIO.pages || {};
 
   function initAgendaPage() {
-    const body = global.document && global.document.body;
-    const pageId =
-      (body &&
-        (body.getAttribute("data-page-id") ||
-          (body.dataset && (body.dataset.pageId || body.dataset.page)))) ||
-      "";
+    const body = document.body;
+    const pageId = body.dataset.pageId || body.getAttribute("data-page") || null;
+    if (pageId !== "agenda") return;
 
-    if (String(pageId).toLowerCase().trim() !== "agenda") return;
-
-    if (PRONTIO.agenda && typeof PRONTIO.agenda.init === "function") {
-      PRONTIO.agenda.init();
-    } else {
-      console.warn("[PRONTIO.agenda] PRONTIO.agenda.init não encontrado. Verifique ordem dos scripts.");
+    if (!PRONTIO.Agenda || typeof PRONTIO.Agenda.initPage !== "function") {
+      console.error("[PRONTIO][Agenda] Módulo PRONTIO.Agenda.initPage não encontrado.");
+      alert("Agenda não inicializada (scripts não carregados).");
+      return;
     }
+
+    PRONTIO.Agenda.initPage();
   }
 
   if (typeof PRONTIO.registerPage === "function") {
@@ -30,4 +27,4 @@
   } else {
     PRONTIO.pages.agenda = { init: initAgendaPage };
   }
-})(window);
+})(window, document);

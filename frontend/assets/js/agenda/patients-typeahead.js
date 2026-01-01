@@ -1,166 +1,186 @@
-/**
- * PRONTIO - Agenda Patients Typeahead
- * - Seleção obrigatória: retorna objeto {ID_Paciente, nome, telefone, documento, data_nascimento}
+/* PRONTIO - Agenda Patients Typeahead (patients-typeahead.js)
+ * Typeahead reutilizável para inputs de paciente (novo/editar)
  */
-(function (global) {
+(function () {
   "use strict";
 
-  const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
-  PRONTIO.agenda = PRONTIO.agenda || {};
+  const root = (window.PRONTIO = window.PRONTIO || {});
+  root.Agenda = root.Agenda || {};
 
-  const callApiData =
-    (PRONTIO.api && PRONTIO.api.callApiData) ||
-    global.callApiData;
-
-  function normalizePatient_(p) {
+  function normalizePatientObj_(p) {
+    if (!p) return null;
     return {
-      ID_Paciente: String(p.ID_Paciente || p.idPaciente || p.id || ""),
+      ID_Paciente: String(p.ID_Paciente || p.idPaciente || p.id || p.ID || p.id_paciente || ""),
       nome: String(p.nome || p.nomeCompleto || p.nomeExibicao || ""),
-      telefone: String(p.telefone || p.telefonePrincipal || ""),
       documento: String(p.documento || p.cpf || ""),
+      telefone: String(p.telefone || p.telefonePrincipal || ""),
       data_nascimento: String(p.data_nascimento || p.dataNascimento || "")
     };
   }
 
-  async function apiBuscar_(termo, limite) {
-    const t = String(termo || "").trim();
-    if (t.length < 2) return [];
-    const data = await callApiData({
-      action: "Pacientes_BuscarSimples",
-      payload: { termo: t, limite: limite || 12 }
-    });
-    const arr = (data && data.pacientes) ? data.pacientes : [];
-    return arr.map(normalizePatient_).filter((x) => x && x.ID_Paciente && x.nome);
-  }
-
-  function attach(inputEl, opts) {
-    opts = opts || {};
+  function attach(ctx, opts) {
+    const inputEl = opts && opts.inputEl ? opts.inputEl : null;
     if (!inputEl) return;
 
-    const onSelected = typeof opts.onSelected === "function" ? opts.onSelected : function () {};
-    const onTyping = typeof opts.onTyping === "function" ? opts.onTyping : function () {};
-    const limit = opts.limit || 12;
+    const api = ctx.api;
+    const utils = ctx.utils;
 
-    const panel = document.createElement("div");
+    const getSelected = opts.getSelected || function () { return null; };
+    const setSelected = opts.setSelected || function () {};
+    const onSelected = opts.onSelected || function () {};
+    const onManualTyping = opts.onManualTyping || function () {};
+
+    let panel = document.createElement("div");
     panel.className = "typeahead-panel hidden";
     panel.setAttribute("role", "listbox");
-
-    const parent = inputEl.parentElement || inputEl.parentNode;
-    if (parent && parent.appendChild) {
-      if (parent.style) parent.style.position = parent.style.position || "relative";
-      parent.appendChild(panel);
-    }
 
     let items = [];
     let activeIndex = -1;
     let debounceTimer = null;
     let lastQuery = "";
 
-    function hide() {
+    function ensureMounted_() {
+      if (panel.parentNode) return;
+      const parent = inputEl.parentElement;
+      if (parent) parent.style.position = parent.style.position || "relative";
+      (parent || inputEl.parentNode).appendChild(panel);
+    }
+
+    function hide_() {
       panel.classList.add("hidden");
       panel.innerHTML = "";
       items = [];
       activeIndex = -1;
     }
 
-    function show() {
+    function show_() {
       panel.classList.remove("hidden");
     }
 
-    function render() {
+    function render_() {
+      if (!items.length) return hide_();
       panel.innerHTML = "";
-      if (!items.length) return hide();
 
       items.forEach((p, idx) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "typeahead-item";
         btn.setAttribute("role", "option");
+        btn.dataset.index = String(idx);
         if (idx === activeIndex) btn.classList.add("active");
 
-        const l1 = document.createElement("div");
-        l1.className = "typeahead-item-nome";
-        l1.textContent = p.nome || "(sem nome)";
+        const line1 = document.createElement("div");
+        line1.className = "typeahead-item-nome";
+        line1.textContent = p.nome || "(sem nome)";
 
-        const l2 = document.createElement("div");
-        l2.className = "typeahead-item-detalhes";
+        const line2 = document.createElement("div");
+        line2.className = "typeahead-item-detalhes";
         const parts = [];
         if (p.documento) parts.push(p.documento);
         if (p.telefone) parts.push(p.telefone);
         if (p.data_nascimento) parts.push("Nasc.: " + p.data_nascimento);
-        l2.textContent = parts.join(" • ");
+        line2.textContent = parts.join(" • ");
 
-        btn.appendChild(l1);
-        if (l2.textContent) btn.appendChild(l2);
+        btn.appendChild(line1);
+        if (line2.textContent) btn.appendChild(line2);
 
         btn.addEventListener("mousedown", (e) => e.preventDefault());
         btn.addEventListener("click", () => {
-          hide();
-          inputEl.value = p.nome;
+          setSelected(p);
+          utils.setPacienteIdOnInput(inputEl, p);
+          inputEl.value = p.nome || "";
+          hide_();
           onSelected(p);
         });
 
         panel.appendChild(btn);
       });
 
-      show();
+      show_();
     }
 
-    async function fetch(q) {
+    async function fetch_(q) {
       const query = String(q || "").trim();
-      if (query.length < 2) return hide();
+      if (query.length < 2) return hide_();
 
       lastQuery = query;
       try {
-        const results = await apiBuscar_(query, limit);
+        const r = await api.buscarPacientesSimples(query, 12);
         if (String(inputEl.value || "").trim() !== lastQuery) return;
-        items = results || [];
+
+        const arr = (r && r.pacientes) ? r.pacientes : [];
+        items = arr.map(normalizePatientObj_).filter(Boolean);
         activeIndex = items.length ? 0 : -1;
-        render();
+        render_();
       } catch (e) {
-        console.warn("[Agenda] typeahead buscar falhou:", e);
-        hide();
+        console.warn("[PRONTIO][Agenda] Typeahead erro:", e);
+        hide_();
+      }
+    }
+
+    function clearIfTextMismatch_() {
+      const sel = getSelected();
+      if (!sel) return;
+
+      const typed = String(inputEl.value || "").trim();
+      const selNome = String(sel.nome || "").trim();
+
+      if (!typed || typed !== selNome) {
+        setSelected(null);
+        utils.setPacienteIdOnInput(inputEl, null);
       }
     }
 
     inputEl.addEventListener("input", () => {
-      onTyping();
+      clearIfTextMismatch_();
+      onManualTyping();
+
       const q = String(inputEl.value || "").trim();
       if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => fetch(q), 220);
+      debounceTimer = setTimeout(() => fetch_(q), 220);
     });
 
     inputEl.addEventListener("focus", () => {
+      ensureMounted_();
       const q = String(inputEl.value || "").trim();
-      if (q.length >= 2) fetch(q);
+      if (q.length >= 2) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetch_(q), 10);
+      }
     });
 
-    inputEl.addEventListener("blur", () => setTimeout(() => hide(), 180));
+    inputEl.addEventListener("blur", () => setTimeout(() => hide_(), 180));
 
     inputEl.addEventListener("keydown", (e) => {
       if (panel.classList.contains("hidden")) return;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
+        if (!items.length) return;
         activeIndex = Math.min(activeIndex + 1, items.length - 1);
-        render();
+        render_();
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
+        if (!items.length) return;
         activeIndex = Math.max(activeIndex - 1, 0);
-        render();
+        render_();
       } else if (e.key === "Enter") {
         if (activeIndex >= 0 && items[activeIndex]) {
           e.preventDefault();
           const p = items[activeIndex];
-          hide();
-          inputEl.value = p.nome;
+          setSelected(p);
+          utils.setPacienteIdOnInput(inputEl, p);
+          inputEl.value = p.nome || "";
+          hide_();
           onSelected(p);
         }
       } else if (e.key === "Escape") {
-        hide();
+        hide_();
       }
     });
+
+    ensureMounted_();
   }
 
-  PRONTIO.agenda.patientsTypeahead = { attach };
-})(window);
+  root.Agenda.patientsTypeahead = { attach };
+})();

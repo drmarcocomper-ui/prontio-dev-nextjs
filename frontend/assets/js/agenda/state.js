@@ -1,52 +1,86 @@
-/**
- * PRONTIO - Agenda State (LOCAL)
- * - Estado exclusivo da Agenda (UI), não interfere com PRONTIO.core.state
+/* PRONTIO - Agenda State (state.js)
+ * Estado em memória:
+ * - modoVisao, agendaConfig, cache de dia/semana, foco, inFlight, anti-race seq
  */
-(function (global) {
+(function () {
   "use strict";
 
-  const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
-  PRONTIO.agenda = PRONTIO.agenda || {};
+  const root = (window.PRONTIO = window.PRONTIO || {});
+  root.Agenda = root.Agenda || {};
 
-  const _state = {
-    pacienteSelecionado: null,
-    modoVisao: "dia", // "dia" | "semana" (semana entra na etapa 2B)
-    filtros: { nome: "", status: "" },
-    dataSelecionada: null
-  };
+  const state = {
+    _ctx: null,
+    _data: {
+      modoVisao: "dia",
+      agendaConfig: {
+        hora_inicio_padrao: "08:00",
+        hora_fim_padrao: "18:00",
+        duracao_grade_minutos: 15
+      },
+      agendaConfigCarregada: false,
 
-  PRONTIO.agenda.state = {
-    getPacienteSelecionado() {
-      return _state.pacienteSelecionado;
-    },
-    setPacienteSelecionado(p) {
-      _state.pacienteSelecionado = p || null;
-    },
+      // dados carregados
+      agendamentosOriginaisDia: [],
+      agendamentosOriginaisSemana: [],
 
-    getModoVisao() {
-      return _state.modoVisao;
-    },
-    setModoVisao(modo) {
-      _state.modoVisao = (modo === "semana") ? "semana" : "dia";
-    },
+      // UI
+      horaFocoDia: null,
 
-    getFiltros() {
-      return { ..._state.filtros };
-    },
-    setFiltros(f) {
-      _state.filtros.nome = String((f && f.nome) || "");
-      _state.filtros.status = String((f && f.status) || "");
-    },
+      // anti-race
+      reqSeqDia: 0,
+      reqSeqSemana: 0,
 
-    getDataSelecionada() {
-      return _state.dataSelecionada;
-    },
-    setDataSelecionada(ymd) {
-      _state.dataSelecionada = ymd ? String(ymd) : null;
-    },
-
-    resetModalNovo() {
-      _state.pacienteSelecionado = null;
+      // inFlight
+      inFlight: {
+        statusById: new Set(),
+        removerBloqById: new Set()
+      }
     }
   };
-})(window);
+
+  function init(ctx) {
+    state._ctx = ctx || null;
+  }
+
+  function get(key) {
+    return state._data[key];
+  }
+
+  function set(key, value) {
+    state._data[key] = value;
+  }
+
+  function bumpSeqDia() {
+    state._data.reqSeqDia += 1;
+    return state._data.reqSeqDia;
+  }
+
+  function bumpSeqSemana() {
+    state._data.reqSeqSemana += 1;
+    return state._data.reqSeqSemana;
+  }
+
+  function setConfig(patch) {
+    const cfg = state._data.agendaConfig || {};
+    state._data.agendaConfig = Object.assign({}, cfg, patch || {});
+  }
+
+  function markConfigLoaded() {
+    state._data.agendaConfigCarregada = true;
+  }
+
+  function isConfigLoaded() {
+    return state._data.agendaConfigCarregada === true;
+  }
+
+  root.Agenda.state = {
+    init,
+    get,
+    set,
+    bumpSeqDia,
+    bumpSeqSemana,
+    setConfig,
+    markConfigLoaded,
+    isConfigLoaded
+  };
+})();
