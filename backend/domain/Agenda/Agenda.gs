@@ -918,7 +918,7 @@ function Agenda_Legacy_ValidarConflito_(ctx, payload) {
       erro: (err && err.message) ? String(err.message) : "Conflito de horário.",
       conflitos: conflitos,
       intervalo: { data: dataStr, hora_inicio: horaStr, duracao_minutos: dur },
-      code: (err && err.code) ? String(err.code) : "CONFLICT" // ✅ ajuda debug sem quebrar front
+      code: (err && err.code) ? String(err.code) : "CONFLICT"
     };
   }
 }
@@ -1123,30 +1123,59 @@ function _agendaThrow_(code, message, details) {
 }
 
 // ============================================================
+// ✅ RESOLUÇÃO DE PACIENTE (LEGACY): nome oficial = nomeCompleto
+// ============================================================
+
+var _agendaPacienteCache_ = null;
+
+function _agendaTryGetPacienteById_(idPaciente) {
+  var id = String(idPaciente || "").trim();
+  if (!id) return null;
+
+  if (!_agendaPacienteCache_) _agendaPacienteCache_ = {};
+  if (Object.prototype.hasOwnProperty.call(_agendaPacienteCache_, id)) return _agendaPacienteCache_[id];
+
+  var p = null;
+
+  try {
+    // Preferir qualquer função de domínio, se existir
+    if (typeof Pacientes_getById_ === "function") {
+      p = Pacientes_getById_(id);
+    } else if (typeof Pacientes_Action_ObterPorId_ === "function") {
+      var r = Pacientes_Action_ObterPorId_(
+        { action: "Agenda.ResolvePaciente", user: null, env: (typeof PRONTIO_ENV !== "undefined" ? PRONTIO_ENV : "DEV"), apiVersion: (typeof PRONTIO_API_VERSION !== "undefined" ? PRONTIO_API_VERSION : "1.0.0-DEV") },
+        { idPaciente: id }
+      );
+      p = (r && (r.item || r.paciente || r.data)) ? (r.item || r.paciente || r.data) : null;
+    } else {
+      // Fallback: entidade "Pacientes" com chave "idPaciente" (conforme sua planilha)
+      p = Repo_getById_("Pacientes", "idPaciente", id) ||
+          Repo_getById_("Pacientes", "ID_Paciente", id) ||
+          Repo_getById_("Paciente", "idPaciente", id) ||
+          Repo_getById_("Paciente", "ID_Paciente", id);
+    }
+  } catch (_) {
+    p = null;
+  }
+
+  _agendaPacienteCache_[id] = p;
+  return p;
+}
+
+function _agendaExtractPacienteNomeOficial_(pacienteObj) {
+  if (!pacienteObj || typeof pacienteObj !== "object") return "";
+  // ✅ Nome oficial definido por você: nomeCompleto
+  var s = String(pacienteObj.nomeCompleto || "").trim();
+  if (s) return s;
+  // fallbacks só para compatibilidade defensiva
+  s = String(pacienteObj.nome || pacienteObj.Nome || pacienteObj.NOME || "").trim();
+  return s;
+}
+
+// ============================================================
 // ✅ IMPLEMENTAÇÃO FALTANTE (LEGACY): _agendaLegacyDtoToFront_
 // ============================================================
 
-/**
- * Converte DTO (novo) -> shape que o front antigo espera.
- * Saída (UI legacy):
- * {
- *   ID_Agenda, ID_Paciente,
- *   data:"YYYY-MM-DD",
- *   hora_inicio:"HH:MM",
- *   hora_fim:"HH:MM",
- *   duracao_minutos:number,
- *   nome_paciente:string,
- *   telefone_paciente:string,
- *   documento_paciente:string,
- *   motivo:string,
- *   canal:string,
- *   origem:string,
- *   status:string,
- *   tipo:string,
- *   bloqueio:boolean,
- *   permite_encaixe:boolean
- * }
- */
 function _agendaLegacyDtoToFront_(dto) {
   dto = _agendaNormalizeRowToDto_(dto || {});
 
@@ -1157,28 +1186,34 @@ function _agendaLegacyDtoToFront_(dto) {
   var dtIni = _agendaParseDate_(dto.inicio);
   var dtFim = _agendaParseDate_(dto.fim);
 
-  // Se datas inválidas, ainda devolve algo (não quebra render)
   var dataStr = dtIni ? _agendaFormatDate_(dtIni) : "";
   var hIni = dtIni ? _agendaFormatHHMM_(dtIni) : "";
   var hFim = dtFim ? _agendaFormatHHMM_(dtFim) : "";
   var durMin = 0;
   if (dtIni && dtFim) durMin = Math.max(1, Math.round((dtFim.getTime() - dtIni.getTime()) / 60000));
 
-  // Notas legacy podem carregar metadados do paciente/canal/etc.
   var notasObj = _agendaLegacyTryParseNotas_(dto.notas);
-  var nomePaciente = String(notasObj.nome_paciente || dto.titulo || "").trim();
+
+  // ⚠️ Antes: nome_paciente caía em dto.titulo (incorreto).
+  // Agora: nome oficial é resolvido via Pacientes.nomeCompleto.
+  var nomePaciente = String(notasObj.nome_paciente || "").trim();
   var telefonePaciente = String(notasObj.telefone_paciente || "").trim();
   var documentoPaciente = String(notasObj.documento_paciente || "").trim();
   var motivo = String(notasObj.motivo || dto.titulo || "").trim();
   var canal = String(notasObj.canal || "").trim();
 
-  // fallback adicional: se ainda vazio e não é bloqueio
-  if (!nomePaciente && tipo !== AGENDA_TIPO.BLOQUEIO) nomePaciente = String(dto.titulo || "").trim();
-
   var isBloqueio = (tipo === AGENDA_TIPO.BLOQUEIO) || (notasObj && notasObj.bloqueio === true);
-
-  // permitir encaixe pode estar em notas legacy
   var permiteEncaixe = (notasObj && notasObj.permite_encaixe === true);
+
+  // ✅ FIX: se não veio nome nas notas, resolve pelo idPaciente (nomeCompleto)
+  if (!isBloqueio && !nomePaciente) {
+    var p = _agendaTryGetPacienteById_(dto.idPaciente);
+    var resolved = _agendaExtractPacienteNomeOficial_(p);
+    if (resolved) nomePaciente = resolved;
+  }
+
+  // fallback final (evitar vazio na UI)
+  if (!isBloqueio && !nomePaciente) nomePaciente = "(sem nome)";
 
   return {
     ID_Agenda: String(dto.idAgenda || ""),
@@ -1204,14 +1239,6 @@ function _agendaLegacyDtoToFront_(dto) {
 // ✅ IMPLEMENTAÇÃO FALTANTE (LEGACY): _agendaLegacyBuildResumo_
 // ============================================================
 
-/**
- * Calcula resumo (compat com front antigo):
- * { total, confirmados, faltas, cancelados, concluidos, em_atendimento }
- *
- * Regras:
- * - ignora bloqueios
- * - concluidos conta ATENDIDO e também CONCLUIDO (retrocompat)
- */
 function _agendaLegacyBuildResumo_(ags) {
   var resumo = {
     total: 0,
@@ -1232,22 +1259,11 @@ function _agendaLegacyBuildResumo_(ags) {
 
     var st = String(ag.status || "").toUpperCase();
 
-    // CANCELADO
     if (st.indexOf("CANCEL") >= 0) { resumo.cancelados++; continue; }
-
-    // FALTOU
     if (st.indexOf("FALT") >= 0) { resumo.faltas++; continue; }
-
-    // EM_ATENDIMENTO
     if (st.indexOf("EM_ATEND") >= 0) { resumo.em_atendimento++; continue; }
-
-    // CONCLUIDO/ATENDIDO
     if (st.indexOf("CONCL") >= 0 || st.indexOf("ATENDID") >= 0) { resumo.concluidos++; continue; }
-
-    // CONFIRMADO / AGUARDANDO
     if (st.indexOf("CONFIRM") >= 0 || st.indexOf("AGUARD") >= 0) { resumo.confirmados++; continue; }
-
-    // MARCADO (não soma em campos específicos)
   }
 
   return resumo;

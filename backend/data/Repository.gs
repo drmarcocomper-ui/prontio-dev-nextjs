@@ -25,6 +25,10 @@
  * ✅ PASSO 2 (padronização global, sem quebrar):
  * - Repo_update_ invalida cache do índice (sheetName+idField) após escrita, evitando “cache fantasma”.
  * - Repo_insert_ usa setValues ao invés de appendRow (mais previsível) e normaliza undefined/null -> "".
+ *
+ * ✅ ATUALIZAÇÃO (robustez sem quebrar):
+ * - Quando usa cache (id->rowIndex), valida se o ID naquela linha ainda confere.
+ *   Isso evita retornar linha errada se o cache estiver obsoleto.
  */
 
 // ======================
@@ -163,7 +167,15 @@ function _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue) {
   if (cached && cached[target]) {
     var ri = parseInt(cached[target], 10);
     if (isFinite(ri) && ri >= 2 && ri <= sheet.getLastRow()) {
-      return ri;
+      // ✅ ATUALIZAÇÃO: valida se a linha ainda corresponde ao ID (evita cache obsoleto)
+      try {
+        var cellVal = sheet.getRange(ri, idxId + 1, 1, 1).getValues()[0][0];
+        if (String(cellVal) === target) {
+          return ri;
+        }
+      } catch (_) {
+        // ignora e faz scan abaixo
+      }
     }
     // cache ruim/obsoleto
   }
