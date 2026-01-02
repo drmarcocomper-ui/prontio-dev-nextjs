@@ -1,4 +1,4 @@
-// frontend/assets/js/features/agenda/agenda.events.js
+// frontend/assets/js/features/agenda/agenda.entry.js
 (function (global) {
   "use strict";
 
@@ -6,109 +6,154 @@
   PRONTIO.features = PRONTIO.features || {};
   PRONTIO.features.agenda = PRONTIO.features.agenda || {};
 
-  /**
-   * Binder de eventos COMPATÍVEL com o controller NOVO:
-   * controller = { state, actions, view }
-   *
-   * ⚠️ NÃO usa controller.initWithDom (legado).
-   */
-  function bindAgendaEvents({ document, dom, controller }) {
-    const actions = controller && controller.actions ? controller.actions : null;
-    const view = controller && controller.view ? controller.view : null;
+  // ✅ GARANTIA: registra o entry SEMPRE (mesmo se algo falhar depois)
+  // Isso evita exatamente o cenário: "script carregou, mas entry.init não existe".
+  PRONTIO.features.agenda.entry = PRONTIO.features.agenda.entry || {};
 
-    if (!actions || !dom) {
-      console.error("[AgendaEvents] controller.actions/dom ausentes.");
-      return;
-    }
+  function getEl(doc, id) {
+    const el = doc.getElementById(id);
+    if (!el) console.warn(`[Agenda] elemento #${id} não encontrado.`);
+    return el;
+  }
 
-    // ====== DATA ======
-    dom.inputData && dom.inputData.addEventListener("change", () => actions.onChangeData());
+  function collectDom(doc) {
+    const inputData = getEl(doc, "input-data");
+    if (!inputData) return null;
 
-    dom.btnHoje && dom.btnHoje.addEventListener("click", () => actions.onHoje());
-    dom.btnAgora && dom.btnAgora.addEventListener("click", () => actions.onAgora());
+    return {
+      inputData,
 
-    dom.btnDiaAnterior && dom.btnDiaAnterior.addEventListener("click", () => actions.onNav(-1));
-    dom.btnDiaPosterior && dom.btnDiaPosterior.addEventListener("click", () => actions.onNav(+1));
+      btnHoje: getEl(doc, "btn-hoje"),
+      btnAgora: getEl(doc, "btn-agora"),
+      btnDiaAnterior: getEl(doc, "btn-dia-anterior"),
+      btnDiaPosterior: getEl(doc, "btn-dia-posterior"),
 
-    // ====== VISÃO ======
-    dom.btnVisaoDia && dom.btnVisaoDia.addEventListener("click", () => actions.setVisao("dia"));
-    dom.btnVisaoSemana && dom.btnVisaoSemana.addEventListener("click", () => actions.setVisao("semana"));
+      secDia: doc.querySelector(".agenda-dia"),
+      secSemana: getEl(doc, "agenda-semana"),
+      semanaGridEl: getEl(doc, "agenda-semana-grid"),
+      btnVisaoDia: getEl(doc, "btn-visao-dia"),
+      btnVisaoSemana: getEl(doc, "btn-visao-semana"),
 
-    // ====== FILTROS ======
-    let filtroDebounce = null;
-    function scheduleFiltros() {
-      if (filtroDebounce) clearTimeout(filtroDebounce);
-      filtroDebounce = setTimeout(() => {
-        actions.onFiltrosChanged(
-          dom.inputFiltroNome ? dom.inputFiltroNome.value : "",
-          dom.selectFiltroStatus ? dom.selectFiltroStatus.value : ""
-        );
-      }, 120);
-    }
+      listaHorariosEl: getEl(doc, "agenda-lista-horarios"),
 
-    dom.inputFiltroNome && dom.inputFiltroNome.addEventListener("input", scheduleFiltros);
-    dom.inputFiltroNome && dom.inputFiltroNome.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); scheduleFiltros(); }
-    });
-    dom.selectFiltroStatus && dom.selectFiltroStatus.addEventListener("change", scheduleFiltros);
+      inputFiltroNome: getEl(doc, "filtro-nome"),
+      selectFiltroStatus: getEl(doc, "filtro-status"),
+      btnLimparFiltros: getEl(doc, "btn-limpar-filtros"),
 
-    dom.btnLimparFiltros && dom.btnLimparFiltros.addEventListener("click", () => actions.limparFiltros());
+      btnNovoAgendamento: getEl(doc, "btn-novo-agendamento"),
+      btnBloquearHorario: getEl(doc, "btn-bloquear-horario"),
 
-    // ====== AÇÕES ======
-    dom.btnNovoAgendamento && dom.btnNovoAgendamento.addEventListener("click", () => actions.abrirModalNovo());
-    dom.btnBloquearHorario && dom.btnBloquearHorario.addEventListener("click", () => actions.abrirModalBloqueio());
+      // modal novo
+      modalNovo: getEl(doc, "modal-novo-agendamento"),
+      btnFecharModalNovo: getEl(doc, "btn-fechar-modal"),
+      btnCancelarModalNovo: getEl(doc, "btn-cancelar-modal"),
+      formNovo: getEl(doc, "form-novo-agendamento"),
+      msgNovo: getEl(doc, "novo-agendamento-mensagem"),
+      novoHoraInicio: getEl(doc, "novo-hora-inicio"),
+      novoDuracao: getEl(doc, "novo-duracao"),
+      novoNomePaciente: getEl(doc, "novo-nome-paciente"),
+      novoTelefone: getEl(doc, "novo-telefone"),
+      novoTipo: getEl(doc, "novo-tipo"),
+      novoMotivo: getEl(doc, "novo-motivo"),
+      novoOrigem: getEl(doc, "novo-origem"),
+      novoCanal: getEl(doc, "novo-canal"),
+      novoPermiteEncaixe: getEl(doc, "novo-permite-encaixe"),
+      btnSelecionarPaciente: getEl(doc, "btn-selecionar-paciente"),
+      btnLimparPaciente: getEl(doc, "btn-limpar-paciente"),
+      btnSubmitNovo: getEl(doc, "btn-submit-novo"),
 
-    // ====== MODAL NOVO ======
-    dom.btnFecharModalNovo && dom.btnFecharModalNovo.addEventListener("click", () => actions.fecharModalNovo());
-    dom.btnCancelarModalNovo && dom.btnCancelarModalNovo.addEventListener("click", () => actions.fecharModalNovo());
-    dom.modalNovo && dom.modalNovo.addEventListener("click", (event) => {
-      if (event.target === dom.modalNovo) actions.fecharModalNovo();
-    });
-    dom.formNovo && dom.formNovo.addEventListener("submit", (e) => { e.preventDefault(); actions.submitNovo(); });
+      // modal editar
+      modalEdit: getEl(doc, "modal-editar-agendamento"),
+      btnFecharModalEditar: getEl(doc, "btn-fechar-modal-editar"),
+      btnCancelarEditar: getEl(doc, "btn-cancelar-editar"),
+      formEditar: getEl(doc, "form-editar-agendamento"),
+      msgEditar: getEl(doc, "editar-agendamento-mensagem"),
+      editIdAgenda: getEl(doc, "edit-id-agenda"),
+      editData: getEl(doc, "edit-data"),
+      editHoraInicio: getEl(doc, "edit-hora-inicio"),
+      editDuracao: getEl(doc, "edit-duracao"),
+      editNomePaciente: getEl(doc, "edit-nome-paciente"),
+      editTipo: getEl(doc, "edit-tipo"),
+      editMotivo: getEl(doc, "edit-motivo"),
+      editOrigem: getEl(doc, "edit-origem"),
+      editCanal: getEl(doc, "edit-canal"),
+      editPermiteEncaixe: getEl(doc, "edit-permite-encaixe"),
+      btnEditSelecionarPaciente: getEl(doc, "btn-edit-selecionar-paciente"),
+      btnEditLimparPaciente: getEl(doc, "btn-edit-limpar-paciente"),
+      btnSubmitEditar: getEl(doc, "btn-submit-editar"),
 
-    // ====== MODAL EDITAR ======
-    dom.btnFecharModalEditar && dom.btnFecharModalEditar.addEventListener("click", () => actions.fecharModalEditar());
-    dom.btnCancelarEditar && dom.btnCancelarEditar.addEventListener("click", () => actions.fecharModalEditar());
-    dom.modalEdit && dom.modalEdit.addEventListener("click", (event) => {
-      if (event.target === dom.modalEdit) actions.fecharModalEditar();
-    });
-    dom.formEditar && dom.formEditar.addEventListener("submit", (e) => { e.preventDefault(); actions.submitEditar(); });
+      // modal bloqueio
+      modalBloqueio: getEl(doc, "modal-bloqueio"),
+      btnFecharModalBloqueio: getEl(doc, "btn-fechar-modal-bloqueio"),
+      btnCancelarBloqueio: getEl(doc, "btn-cancelar-bloqueio"),
+      formBloqueio: getEl(doc, "form-bloqueio"),
+      msgBloqueio: getEl(doc, "bloqueio-mensagem"),
+      bloqHoraInicio: getEl(doc, "bloq-hora-inicio"),
+      bloqDuracao: getEl(doc, "bloq-duracao"),
+      btnSubmitBloqueio: getEl(doc, "btn-submit-bloqueio"),
 
-    // ====== MODAL BLOQUEIO ======
-    dom.btnFecharModalBloqueio && dom.btnFecharModalBloqueio.addEventListener("click", () => actions.fecharModalBloqueio());
-    dom.btnCancelarBloqueio && dom.btnCancelarBloqueio.addEventListener("click", () => actions.fecharModalBloqueio());
-    dom.modalBloqueio && dom.modalBloqueio.addEventListener("click", (event) => {
-      if (event.target === dom.modalBloqueio) actions.fecharModalBloqueio();
-    });
-    dom.formBloqueio && dom.formBloqueio.addEventListener("submit", (e) => { e.preventDefault(); actions.submitBloqueio(); });
+      // modal pacientes
+      modalPacientes: getEl(doc, "modal-pacientes"),
+      buscaPacienteTermo: getEl(doc, "busca-paciente-termo"),
+      listaPacientesEl: getEl(doc, "lista-pacientes"),
+      msgPacientesEl: getEl(doc, "pacientes-resultado-msg"),
+      btnFecharModalPacientes: getEl(doc, "btn-fechar-modal-pacientes")
+    };
+  }
 
-    // ====== PACIENTES PICKER (reutilizável) ======
-    dom.btnSelecionarPaciente && dom.btnSelecionarPaciente.addEventListener("click", () => actions.openPacientePicker("novo"));
-    dom.btnEditSelecionarPaciente && dom.btnEditSelecionarPaciente.addEventListener("click", () => actions.openPacientePicker("editar"));
+  // ✅ init BLINDADO: se qualquer dependência faltar, loga e não quebra o registro do entry
+  function init(env) {
+    env = env || {};
+    const doc = env.document || global.document;
 
-    dom.btnFecharModalPacientes && dom.btnFecharModalPacientes.addEventListener("click", () => actions.closePacientePicker());
-
-    dom.btnLimparPaciente && dom.btnLimparPaciente.addEventListener("click", () => actions.clearPaciente("novo"));
-    dom.btnEditLimparPaciente && dom.btnEditLimparPaciente.addEventListener("click", () => actions.clearPaciente("editar"));
-
-    // ====== ESC fecha modal ======
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Escape") return;
-
-      if (actions.isPacientePickerOpen && actions.isPacientePickerOpen()) {
-        e.preventDefault();
-        actions.closePacientePicker();
+    try {
+      const dom = collectDom(doc);
+      if (!dom) {
+        console.error("[PRONTIO][Agenda] DOM da Agenda incompleto (input-data ausente).");
         return;
       }
 
-      if (view && view.isModalVisible) {
-        if (view.isModalVisible(dom.modalPacientes)) { e.preventDefault(); actions.closePacientePicker(); return; }
-        if (view.isModalVisible(dom.modalBloqueio)) { e.preventDefault(); actions.fecharModalBloqueio(); return; }
-        if (view.isModalVisible(dom.modalEdit)) { e.preventDefault(); actions.fecharModalEditar(); return; }
-        if (view.isModalVisible(dom.modalNovo)) { e.preventDefault(); actions.fecharModalNovo(); return; }
+      const factory =
+        PRONTIO.features &&
+        PRONTIO.features.agenda &&
+        PRONTIO.features.agenda.controller &&
+        typeof PRONTIO.features.agenda.controller.createAgendaController === "function"
+          ? PRONTIO.features.agenda.controller.createAgendaController
+          : null;
+
+      if (!factory) {
+        console.error("[PRONTIO][Agenda] createAgendaController não encontrado. (assets/js/features/agenda/agenda.controller.js)");
+        return;
       }
-    });
+
+      const controller = factory({ document: doc });
+
+      if (!controller || !controller.actions || typeof controller.actions.init !== "function") {
+        console.error("[PRONTIO][Agenda] controller.actions.init não disponível. Controller=", controller);
+        return;
+      }
+
+      controller.actions.init(dom);
+
+      const binder =
+        PRONTIO.features &&
+        PRONTIO.features.agenda &&
+        PRONTIO.features.agenda.events &&
+        typeof PRONTIO.features.agenda.events.bindAgendaEvents === "function"
+          ? PRONTIO.features.agenda.events.bindAgendaEvents
+          : null;
+
+      if (binder) {
+        binder({ document: doc, dom, controller });
+      } else {
+        console.warn("[PRONTIO][Agenda] bindAgendaEvents não encontrado (agenda.events.js).");
+      }
+    } catch (e) {
+      console.error("[PRONTIO][Agenda] Falha dentro de agenda.entry.init:", e);
+    }
   }
 
-  PRONTIO.features.agenda.events = { bindAgendaEvents };
+  // ✅ agora sim: expõe init SEMPRE
+  PRONTIO.features.agenda.entry.init = init;
+
 })(window);
