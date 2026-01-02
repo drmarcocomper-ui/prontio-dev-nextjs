@@ -1,13 +1,4 @@
 // frontend/assets/js/pages/page-agenda.js
-/**
- * PRONTIO — Page bootstrap: Agenda
- * --------------------------------
- * ✅ Arquitetura atual:
- * - NÃO usa PRONTIO.Agenda.initPage (legacy)
- * - Usa o entry do módulo novo: PRONTIO.features.agenda.entry
- * - main.js é quem carrega os scripts; este arquivo só dispara init.
- */
-
 (function (global, document) {
   "use strict";
 
@@ -26,35 +17,22 @@
         ? PRONTIO.features.agenda.entry
         : null;
 
-    if (!entry) {
-      console.error("[PRONTIO][Agenda] agenda.entry não encontrado. Verifique se assets/js/features/agenda/agenda.entry.js foi carregado via main.js.");
+    if (!entry || typeof entry.init !== "function") {
+      console.error("[PRONTIO][Agenda] agenda.entry.init não encontrado.");
       return;
     }
 
-    // Tentativas de inicialização (mantém compat com nomes possíveis)
+    // ✅ passa window também (evita env.window undefined em qualquer versão do entry)
     try {
-      if (typeof entry.init === "function") return entry.init({ document: document });
-      if (typeof entry.initPage === "function") return entry.initPage({ document: document });
-      if (typeof entry.bootstrap === "function") return entry.bootstrap({ document: document });
+      entry.init({ document: document, window: global });
     } catch (e) {
       console.error("[PRONTIO][Agenda] Erro ao inicializar agenda.entry:", e);
-      return;
     }
-
-    console.error("[PRONTIO][Agenda] agenda.entry carregado, mas sem método init/initPage/bootstrap.");
   }
 
   PRONTIO.pages.agenda = PRONTIO.pages.agenda || {};
   PRONTIO.pages.agenda.init = initAgendaPage;
 
-  // router (se existir)
-  try {
-    if (PRONTIO.core && PRONTIO.core.router && typeof PRONTIO.core.router.register === "function") {
-      PRONTIO.core.router.register("agenda", initAgendaPage);
-    }
-  } catch (_) {}
-
-  // registerPage (se existir)
   try {
     if (typeof PRONTIO.registerPage === "function") {
       PRONTIO.registerPage("agenda", initAgendaPage);

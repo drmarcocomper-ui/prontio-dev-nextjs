@@ -1,14 +1,10 @@
 // frontend/assets/js/features/agenda/agenda.entry.js
 (function (global) {
+  "use strict";
+
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
   PRONTIO.features = PRONTIO.features || {};
   PRONTIO.features.agenda = PRONTIO.features.agenda || {};
-
-  const { createAgendaState } = PRONTIO.features.agenda.state;
-  const { createAgendaApi } = PRONTIO.features.agenda.api;
-  const { createAgendaView } = PRONTIO.features.agenda.view;
-  const { createAgendaController } = PRONTIO.features.agenda.controller;
-  const { bindAgendaEvents } = PRONTIO.features.agenda.events;
 
   function getEl(doc, id) {
     const el = doc.getElementById(id);
@@ -17,199 +13,147 @@
   }
 
   function collectDom(doc) {
-    // Page root
     const inputData = getEl(doc, "input-data");
     if (!inputData) return null;
 
-    // Header controls
-    const btnHoje = getEl(doc, "btn-hoje");
-    const btnAgora = getEl(doc, "btn-agora");
-    const btnDiaAnterior = getEl(doc, "btn-dia-anterior");
-    const btnDiaPosterior = getEl(doc, "btn-dia-posterior");
-
-    // View toggles
-    const secDia = doc.querySelector(".agenda-dia");
-    const secSemana = doc.getElementById("agenda-semana");
-    const semanaGridEl = getEl(doc, "agenda-semana-grid");
-    const btnVisaoDia = getEl(doc, "btn-visao-dia");
-    const btnVisaoSemana = getEl(doc, "btn-visao-semana");
-
-    // Day list + resumo
-    const listaHorariosEl = getEl(doc, "agenda-lista-horarios");
-    const resumoTotalEl = getEl(doc, "resumo-total");
-    const resumoConfirmadosEl = getEl(doc, "resumo-confirmados");
-    const resumoFaltasEl = getEl(doc, "resumo-faltas");
-    const resumoCanceladosEl = getEl(doc, "resumo-cancelados");
-    const resumoConcluidosEl = getEl(doc, "resumo-concluidos");
-    const resumoEmAtendimentoEl = getEl(doc, "resumo-em-atendimento");
-
-    // Filtros
-    const inputFiltroNome = getEl(doc, "filtro-nome");
-    const selectFiltroStatus = getEl(doc, "filtro-status");
-    const btnLimparFiltros = getEl(doc, "btn-limpar-filtros");
-
-    // Actions
-    const btnNovoAgendamento = getEl(doc, "btn-novo-agendamento");
-    const btnBloquearHorario = getEl(doc, "btn-bloquear-horario");
-
-    // Modal: Novo
-    const modalNovo = getEl(doc, "modal-novo-agendamento");
-    const btnFecharModalNovo = getEl(doc, "btn-fechar-modal");
-    const btnCancelarModalNovo = getEl(doc, "btn-cancelar-modal");
-    const formNovo = getEl(doc, "form-novo-agendamento");
-    const msgNovo = getEl(doc, "novo-agendamento-mensagem");
-
-    const novoHoraInicio = getEl(doc, "novo-hora-inicio");
-    const novoDuracao = getEl(doc, "novo-duracao");
-    const novoNomePaciente = getEl(doc, "novo-nome-paciente");
-    const novoTelefone = getEl(doc, "novo-telefone");
-    const novoTipo = getEl(doc, "novo-tipo");
-    const novoMotivo = getEl(doc, "novo-motivo");
-    const novoOrigem = getEl(doc, "novo-origem");
-    const novoCanal = getEl(doc, "novo-canal");
-    const novoPermiteEncaixe = getEl(doc, "novo-permite-encaixe");
-
-    const btnSelecionarPaciente = getEl(doc, "btn-selecionar-paciente");
-    const btnLimparPaciente = getEl(doc, "btn-limpar-paciente");
-    const btnSubmitNovo = getEl(doc, "btn-submit-novo");
-
-    // Modal: Editar
-    const modalEdit = getEl(doc, "modal-editar-agendamento");
-    const btnFecharModalEditar = getEl(doc, "btn-fechar-modal-editar");
-    const btnCancelarEditar = getEl(doc, "btn-cancelar-editar");
-    const formEditar = getEl(doc, "form-editar-agendamento");
-    const msgEditar = getEl(doc, "editar-agendamento-mensagem");
-
-    const editIdAgenda = getEl(doc, "edit-id-agenda");
-    const editData = getEl(doc, "edit-data");
-    const editHoraInicio = getEl(doc, "edit-hora-inicio");
-    const editDuracao = getEl(doc, "edit-duracao");
-    const editNomePaciente = getEl(doc, "edit-nome-paciente");
-    const editTipo = getEl(doc, "edit-tipo");
-    const editMotivo = getEl(doc, "edit-motivo");
-    const editOrigem = getEl(doc, "edit-origem");
-    const editCanal = getEl(doc, "edit-canal");
-    const editPermiteEncaixe = getEl(doc, "edit-permite-encaixe");
-
-    const btnEditSelecionarPaciente = getEl(doc, "btn-edit-selecionar-paciente");
-    const btnEditLimparPaciente = getEl(doc, "btn-edit-limpar-paciente");
-    const btnSubmitEditar = getEl(doc, "btn-submit-editar");
-
-    // Modal: Bloqueio
-    const modalBloqueio = getEl(doc, "modal-bloqueio");
-    const btnFecharModalBloqueio = getEl(doc, "btn-fechar-modal-bloqueio");
-    const btnCancelarBloqueio = getEl(doc, "btn-cancelar-bloqueio");
-    const formBloqueio = getEl(doc, "form-bloqueio");
-    const msgBloqueio = getEl(doc, "bloqueio-mensagem");
-    const bloqHoraInicio = getEl(doc, "bloq-hora-inicio");
-    const bloqDuracao = getEl(doc, "bloq-duracao");
-    const btnSubmitBloqueio = getEl(doc, "btn-submit-bloqueio");
-
-    // Modal: Pacientes (fallback)
-    const modalPacientes = getEl(doc, "modal-pacientes");
-    const buscaPacienteTermo = getEl(doc, "busca-paciente-termo");
-    const listaPacientesEl = getEl(doc, "lista-pacientes");
-    const msgPacientesEl = getEl(doc, "pacientes-resultado-msg");
-    const btnFecharModalPacientes = getEl(doc, "btn-fechar-modal-pacientes");
-
     return {
+      // root
       inputData,
-      btnHoje,
-      btnAgora,
-      btnDiaAnterior,
-      btnDiaPosterior,
 
-      secDia,
-      secSemana,
-      semanaGridEl,
-      btnVisaoDia,
-      btnVisaoSemana,
+      // topo
+      btnHoje: getEl(doc, "btn-hoje"),
+      btnAgora: getEl(doc, "btn-agora"),
+      btnDiaAnterior: getEl(doc, "btn-dia-anterior"),
+      btnDiaPosterior: getEl(doc, "btn-dia-posterior"),
 
-      listaHorariosEl,
-      resumoTotalEl,
-      resumoConfirmadosEl,
-      resumoFaltasEl,
-      resumoCanceladosEl,
-      resumoConcluidosEl,
-      resumoEmAtendimentoEl,
+      // visão
+      secDia: doc.querySelector(".agenda-dia"),
+      secSemana: getEl(doc, "agenda-semana"),
+      semanaGridEl: getEl(doc, "agenda-semana-grid"),
+      btnVisaoDia: getEl(doc, "btn-visao-dia"),
+      btnVisaoSemana: getEl(doc, "btn-visao-semana"),
 
-      inputFiltroNome,
-      selectFiltroStatus,
-      btnLimparFiltros,
+      // lista
+      listaHorariosEl: getEl(doc, "agenda-lista-horarios"),
 
-      btnNovoAgendamento,
-      btnBloquearHorario,
+      // filtros
+      inputFiltroNome: getEl(doc, "filtro-nome"),
+      selectFiltroStatus: getEl(doc, "filtro-status"),
+      btnLimparFiltros: getEl(doc, "btn-limpar-filtros"),
+
+      // ações
+      btnNovoAgendamento: getEl(doc, "btn-novo-agendamento"),
+      btnBloquearHorario: getEl(doc, "btn-bloquear-horario"),
 
       // modal novo
-      modalNovo,
-      btnFecharModalNovo,
-      btnCancelarModalNovo,
-      formNovo,
-      msgNovo,
-      novoHoraInicio,
-      novoDuracao,
-      novoNomePaciente,
-      novoTelefone,
-      novoTipo,
-      novoMotivo,
-      novoOrigem,
-      novoCanal,
-      novoPermiteEncaixe,
-      btnSelecionarPaciente,
-      btnLimparPaciente,
-      btnSubmitNovo,
+      modalNovo: getEl(doc, "modal-novo-agendamento"),
+      btnFecharModalNovo: getEl(doc, "btn-fechar-modal"),
+      btnCancelarModalNovo: getEl(doc, "btn-cancelar-modal"),
+      formNovo: getEl(doc, "form-novo-agendamento"),
+      msgNovo: getEl(doc, "novo-agendamento-mensagem"),
+      novoHoraInicio: getEl(doc, "novo-hora-inicio"),
+      novoDuracao: getEl(doc, "novo-duracao"),
+      novoNomePaciente: getEl(doc, "novo-nome-paciente"),
+      novoTelefone: getEl(doc, "novo-telefone"),
+      novoTipo: getEl(doc, "novo-tipo"),
+      novoMotivo: getEl(doc, "novo-motivo"),
+      novoOrigem: getEl(doc, "novo-origem"),
+      novoCanal: getEl(doc, "novo-canal"),
+      novoPermiteEncaixe: getEl(doc, "novo-permite-encaixe"),
+      btnSelecionarPaciente: getEl(doc, "btn-selecionar-paciente"),
+      btnLimparPaciente: getEl(doc, "btn-limpar-paciente"),
+      btnSubmitNovo: getEl(doc, "btn-submit-novo"),
 
       // modal editar
-      modalEdit,
-      btnFecharModalEditar,
-      btnCancelarEditar,
-      formEditar,
-      msgEditar,
-      editIdAgenda,
-      editData,
-      editHoraInicio,
-      editDuracao,
-      editNomePaciente,
-      editTipo,
-      editMotivo,
-      editOrigem,
-      editCanal,
-      editPermiteEncaixe,
-      btnEditSelecionarPaciente,
-      btnEditLimparPaciente,
-      btnSubmitEditar,
+      modalEdit: getEl(doc, "modal-editar-agendamento"),
+      btnFecharModalEditar: getEl(doc, "btn-fechar-modal-editar"),
+      btnCancelarEditar: getEl(doc, "btn-cancelar-editar"),
+      formEditar: getEl(doc, "form-editar-agendamento"),
+      msgEditar: getEl(doc, "editar-agendamento-mensagem"),
+      editIdAgenda: getEl(doc, "edit-id-agenda"),
+      editData: getEl(doc, "edit-data"),
+      editHoraInicio: getEl(doc, "edit-hora-inicio"),
+      editDuracao: getEl(doc, "edit-duracao"),
+      editNomePaciente: getEl(doc, "edit-nome-paciente"),
+      editTipo: getEl(doc, "edit-tipo"),
+      editMotivo: getEl(doc, "edit-motivo"),
+      editOrigem: getEl(doc, "edit-origem"),
+      editCanal: getEl(doc, "edit-canal"),
+      editPermiteEncaixe: getEl(doc, "edit-permite-encaixe"),
+      btnEditSelecionarPaciente: getEl(doc, "btn-edit-selecionar-paciente"),
+      btnEditLimparPaciente: getEl(doc, "btn-edit-limpar-paciente"),
+      btnSubmitEditar: getEl(doc, "btn-submit-editar"),
 
       // modal bloqueio
-      modalBloqueio,
-      btnFecharModalBloqueio,
-      btnCancelarBloqueio,
-      formBloqueio,
-      msgBloqueio,
-      bloqHoraInicio,
-      bloqDuracao,
-      btnSubmitBloqueio,
+      modalBloqueio: getEl(doc, "modal-bloqueio"),
+      btnFecharModalBloqueio: getEl(doc, "btn-fechar-modal-bloqueio"),
+      btnCancelarBloqueio: getEl(doc, "btn-cancelar-bloqueio"),
+      formBloqueio: getEl(doc, "form-bloqueio"),
+      msgBloqueio: getEl(doc, "bloqueio-mensagem"),
+      bloqHoraInicio: getEl(doc, "bloq-hora-inicio"),
+      bloqDuracao: getEl(doc, "bloq-duracao"),
+      btnSubmitBloqueio: getEl(doc, "btn-submit-bloqueio"),
 
       // modal pacientes
-      modalPacientes,
-      buscaPacienteTermo,
-      listaPacientesEl,
-      msgPacientesEl,
-      btnFecharModalPacientes
+      modalPacientes: getEl(doc, "modal-pacientes"),
+      buscaPacienteTermo: getEl(doc, "busca-paciente-termo"),
+      listaPacientesEl: getEl(doc, "lista-pacientes"),
+      msgPacientesEl: getEl(doc, "pacientes-resultado-msg"),
+      btnFecharModalPacientes: getEl(doc, "btn-fechar-modal-pacientes")
     };
   }
 
-  async function init({ document, window }) {
+  async function init(env) {
+    env = env || {};
+    const document = env.document || global.document;
+
+    // ✅ blindagem: se env.window vier undefined, usa global
+    const win = env.window || global;
+
     const dom = collectDom(document);
-    if (!dom) return;
+    if (!dom) {
+      console.error("[PRONTIO][Agenda] DOM da Agenda incompleto (input-data ausente).");
+      return;
+    }
 
-    const state = createAgendaState(window.localStorage);
-    const api = createAgendaApi(PRONTIO);
-    const view = createAgendaView({ document, window, dom, state });
-    const controller = createAgendaController({ api, view, state, window });
+    const factory =
+      PRONTIO.features &&
+      PRONTIO.features.agenda &&
+      PRONTIO.features.agenda.controller &&
+      typeof PRONTIO.features.agenda.controller.createAgendaController === "function"
+        ? PRONTIO.features.agenda.controller.createAgendaController
+        : null;
 
-    bindAgendaEvents({ document, dom, controller, state, view });
+    if (!factory) {
+      console.error("[PRONTIO][Agenda] createAgendaController não encontrado. Verifique assets/js/features/agenda/agenda.controller.js.");
+      return;
+    }
 
-    await controller.init();
+    // ✅ controller novo: recebe env (document) e cria api/view internamente
+    const controller = factory({ document: document });
+
+    if (!controller || !controller.actions || typeof controller.actions.init !== "function") {
+      console.error("[PRONTIO][Agenda] controller.actions.init não disponível.");
+      return;
+    }
+
+    // init do controller (monta dom + inicia visão)
+    controller.actions.init(dom);
+
+    // bind de eventos (compatível com actions)
+    const binder =
+      PRONTIO.features &&
+      PRONTIO.features.agenda &&
+      PRONTIO.features.agenda.events &&
+      typeof PRONTIO.features.agenda.events.bindAgendaEvents === "function"
+        ? PRONTIO.features.agenda.events.bindAgendaEvents
+        : null;
+
+    if (binder) {
+      binder({ document, dom, controller, window: win });
+    } else {
+      console.warn("[PRONTIO][Agenda] binder de eventos não encontrado (agenda.events.js).");
+    }
   }
 
   PRONTIO.features.agenda.entry = { init };
