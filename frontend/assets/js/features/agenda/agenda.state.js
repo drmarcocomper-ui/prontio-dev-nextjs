@@ -17,6 +17,11 @@
     }
   }
 
+  /**
+   * Estado ÚNICO da Agenda (UI state).
+   * - Persistidos: modoVisao + filtros
+   * - Runtime (não persistidos): seleção, listas, concorrência, reqSeq, etc.
+   */
   function createAgendaState(storage) {
     const modoSalvo = storage ? storage.getItem(KEY_VIEW) : null;
     const modoVisao = modoSalvo === "semana" ? "semana" : "dia";
@@ -24,13 +29,18 @@
     const filtrosSalvos = storage ? safeJsonParse(storage.getItem(KEY_FILTERS), null) : null;
 
     return {
+      // ===== Persistidos =====
       modoVisao,
-      dataSelecionada: "",
-
       filtros: {
         nome: String((filtrosSalvos && filtrosSalvos.nome) || ""),
         status: String((filtrosSalvos && filtrosSalvos.status) || "")
       },
+
+      // ===== Runtime =====
+      dataSelecionada: "",
+
+      // foco/scroll (runtime)
+      horaFocoDia: null,
 
       // config
       config: {
@@ -40,16 +50,19 @@
       },
       configCarregada: false,
 
-      // dados
-      agendamentosPeriodo: [], // sempre DTO canônico
-      agendamentosDiaUi: [], // já no shape UI simplificado para render
+      // dados (DTO e UI)
+      agendamentosPeriodo: [], // DTO canônico (se quiser guardar bruto)
+      agendamentosDiaUi: [], // UI simplificado (dia)
 
       // seleção
       pacienteNovo: null,
       pacienteEditar: null,
       agendamentoEmEdicao: null,
 
-      // concorrência leve
+      // concorrência (runtime)
+      reqSeqDia: 0,
+      reqSeqSemana: 0,
+
       inFlight: {
         statusById: new Set(),
         desbloquearById: new Set()

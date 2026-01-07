@@ -2,16 +2,8 @@
 /**
  * PRONTIO — Agenda Controller (Front)
  * ------------------------------------------------------------
- * Modelo ouro (replicável):
- * - Agenda: usa SOMENTE AgendaApi (features/agenda/agenda.api.js) com actions canônicas.
- * - Pacientes: usa SOMENTE PacientesApi (features/pacientes/pacientes.api.js).
- * - View: render/estado visual (features/agenda/agenda.view.js).
- * - Formatters: helpers puros (features/agenda/agenda.formatters.js).
- * - Widgets: typeahead genérico (assets/js/widgets/widget-typeahead.js).
- *
- * ✅ Padronização (2026):
- * - Nome do paciente no front: "nomeCompleto"
- * - Removido uso de "nome_paciente"
+ * ✅ Ajuste: usa o estado ÚNICO de features/agenda/agenda.state.js
+ * (elimina duplicação de state e chaves)
  */
 
 (function (global) {
@@ -24,6 +16,30 @@
   const FX = PRONTIO.features.agenda.formatters;
   const createAgendaApi = PRONTIO.features.agenda.api && PRONTIO.features.agenda.api.createAgendaApi;
   const createAgendaView = PRONTIO.features.agenda.view && PRONTIO.features.agenda.view.createAgendaView;
+
+  const createAgendaState =
+    PRONTIO.features &&
+    PRONTIO.features.agenda &&
+    PRONTIO.features.agenda.state &&
+    typeof PRONTIO.features.agenda.state.createAgendaState === "function"
+      ? PRONTIO.features.agenda.state.createAgendaState
+      : null;
+
+  const KEY_VIEW =
+    PRONTIO.features &&
+    PRONTIO.features.agenda &&
+    PRONTIO.features.agenda.state &&
+    PRONTIO.features.agenda.state.KEY_VIEW
+      ? PRONTIO.features.agenda.state.KEY_VIEW
+      : "prontio.agenda.modoVisao";
+
+  const KEY_FILTERS =
+    PRONTIO.features &&
+    PRONTIO.features.agenda &&
+    PRONTIO.features.agenda.state &&
+    PRONTIO.features.agenda.state.KEY_FILTERS
+      ? PRONTIO.features.agenda.state.KEY_FILTERS
+      : "prontio.agenda.filtros.v2";
 
   const createPacientesPicker =
     PRONTIO.features &&
@@ -54,29 +70,23 @@
 
     const view = createAgendaView ? createAgendaView({ document: env && env.document ? env.document : document }) : null;
 
-    const state = {
-      modoVisao: (localStorage.getItem("prontio.agenda.modoVisao") === "semana") ? "semana" : "dia",
-      filtros: loadFiltros_("prontio.agenda.filtros.v1"),
+    // ✅ Estado ÚNICO da feature
+    const storage = global.localStorage || null;
+    const state = createAgendaState ? createAgendaState(storage) : {
+      modoVisao: (storage && storage.getItem(KEY_VIEW) === "semana") ? "semana" : "dia",
+      filtros: { nome: "", status: "" },
       dataSelecionada: "",
-
-      agsDiaUi: [],
       horaFocoDia: null,
-
+      config: { hora_inicio_padrao: "08:00", hora_fim_padrao: "18:00", duracao_grade_minutos: 15 },
+      configCarregada: false,
+      agendamentosPeriodo: [],
+      agendamentosDiaUi: [],
       pacienteNovo: null,
       pacienteEditar: null,
       agendamentoEmEdicao: null,
-
       reqSeqDia: 0,
       reqSeqSemana: 0,
-      inFlightStatus: new Set(),
-      inFlightDesbloq: new Set(),
-
-      config: {
-        hora_inicio_padrao: "08:00",
-        hora_fim_padrao: "18:00",
-        duracao_grade_minutos: 15
-      },
-      configCarregada: false
+      inFlight: { statusById: new Set(), desbloquearById: new Set() }
     };
 
     let dom = null;
@@ -86,25 +96,18 @@
     let detachTypeaheadEditar = null;
 
     // =========================
-    // Storage filtros
+    // Persist helpers (modoVisao + filtros)
     // =========================
-    function loadFiltros_(key) {
+    function persistModo_() {
       try {
-        const raw = localStorage.getItem(key);
-        if (!raw) return { nome: "", status: "" };
-        const obj = JSON.parse(raw);
-        return {
-          nome: String(obj && obj.nome ? obj.nome : ""),
-          status: String(obj && obj.status ? obj.status : "")
-        };
-      } catch (_) {
-        return { nome: "", status: "" };
-      }
+        if (storage) storage.setItem(KEY_VIEW, state.modoVisao);
+      } catch (_) {}
     }
 
-    function saveFiltros_() {
+    function persistFiltros_() {
       try {
-        localStorage.setItem("prontio.agenda.filtros.v1", JSON.stringify(state.filtros));
+        if (!storage) return;
+        storage.setItem(KEY_FILTERS, JSON.stringify({ nome: state.filtros.nome || "", status: state.filtros.status || "" }));
       } catch (_) {}
     }
 
@@ -112,10 +115,8 @@
     // Helpers gerais
     // =========================
 
-    // ✅ Nome oficial no front: nomeCompleto
     function getNomeCompleto_(obj) {
       if (!obj) return "";
-      // compat com possíveis retornos antigos do PacientesApi
       return String(obj.nomeCompleto || obj.nome || "").trim();
     }
 
@@ -166,7 +167,6 @@
     function matchesFiltro_(ag, termo, statusFiltro) {
       if (!ag) return false;
 
-      // ✅ antes: ag.nome_paciente
       if (termo) {
         const nome = FX.stripAccents(String(ag.nomeCompleto || "")).toLowerCase();
         if (!nome.includes(termo)) return false;
@@ -209,10 +209,10 @@
       const now = getNowSlot_();
       const isHoje = now.dataStr === dataStr;
 
-      view.setResumo(FX.computeResumoDia(state.agsDiaUi || []));
+      view.setResumo(FX.computeResumoDia(state.agendamentosDiaUi || []));
 
       const map = new Map();
-      (state.agsDiaUi || []).forEach((ag) => {
+      (state.agendamentosDiaUi || []).forEach((ag) => {
         const hora = FX.normalizeHora(ag.hora_inicio);
         if (!hora) return;
         if (!matchesFiltro_(ag, termo, statusFiltro)) return;
@@ -262,7 +262,9 @@
         if (mySeq !== state.reqSeqDia) return;
 
         const itemsDto = (data && data.items) ? data.items : [];
-        state.agsDiaUi = (itemsDto || [])
+        state.agendamentosPeriodo = itemsDto || [];
+
+        state.agendamentosDiaUi = (itemsDto || [])
           .map(FX.dtoToUi)
           .filter(Boolean)
           .filter((x) => x.data === dataStr);
@@ -299,6 +301,8 @@
         if (mySeq !== state.reqSeqSemana) return;
 
         const itemsDto = (data && data.items) ? data.items : [];
+        state.agendamentosPeriodo = itemsDto || [];
+
         const agsUi = (itemsDto || []).map(FX.dtoToUi).filter(Boolean);
 
         const { termo, statusFiltro } = getFiltroNormalized_();
@@ -404,7 +408,7 @@
     }
 
     // =========================
-    // Typeahead (widget) + PacientesApi
+    // Typeahead + PacientesApi
     // =========================
     function setupTypeahead_() {
       if (!attachTypeahead) {
@@ -495,7 +499,7 @@
         if (dom.inputFiltroNome) dom.inputFiltroNome.value = state.filtros.nome || "";
         if (dom.selectFiltroStatus) dom.selectFiltroStatus.value = state.filtros.status || "";
 
-        // Picker modal (reutilizável) — usa PacientesApi
+        // Picker modal
         if (createPacientesPicker && pacientesApi && dom.modalPacientes && dom.buscaPacienteTermo && dom.listaPacientesEl && dom.msgPacientesEl) {
           pacientesPicker = createPacientesPicker({
             document: env && env.document ? env.document : document,
@@ -547,7 +551,7 @@
       setVisao(modo) {
         if (modo !== "dia" && modo !== "semana") return;
         state.modoVisao = modo;
-        try { localStorage.setItem("prontio.agenda.modoVisao", modo); } catch (_) {}
+        persistModo_();
         view && view.setVisao && view.setVisao(modo, dom.btnVisaoDia, dom.btnVisaoSemana);
         if (modo === "dia") carregarDia_();
         else carregarSemana_();
@@ -605,7 +609,7 @@
       onFiltrosChanged(nome, status) {
         state.filtros.nome = String(nome || "");
         state.filtros.status = String(status || "");
-        saveFiltros_();
+        persistFiltros_();
         if (state.modoVisao === "dia") renderDia_();
         else carregarSemana_();
       },
@@ -613,7 +617,7 @@
       limparFiltros() {
         state.filtros.nome = "";
         state.filtros.status = "";
-        saveFiltros_();
+        persistFiltros_();
         if (dom.inputFiltroNome) dom.inputFiltroNome.value = "";
         if (dom.selectFiltroStatus) dom.selectFiltroStatus.value = "";
         if (state.modoVisao === "dia") renderDia_();
@@ -655,7 +659,6 @@
         if (dom.editHoraInicio) dom.editHoraInicio.value = ag.hora_inicio || "";
         if (dom.editDuracao) dom.editDuracao.value = ag.duracao_minutos || 15;
 
-        // ✅ antes: ag.nome_paciente
         if (dom.editNomePaciente) dom.editNomePaciente.value = String(ag.nomeCompleto || "").trim();
 
         if (dom.editTipo) dom.editTipo.value = ag.tipo || "";
@@ -699,11 +702,9 @@
           return;
         }
         try {
-          // ✅ padronizado: nomeCompleto
           localStorage.setItem("prontio.pacienteSelecionado", JSON.stringify({
             ID_Paciente: ag.ID_Paciente,
             nomeCompleto: String(ag.nomeCompleto || "").trim(),
-            // compat (outros pontos podem ainda ler "nome")
             nome: String(ag.nomeCompleto || "").trim(),
             documento: ag.documento_paciente || "",
             telefone: ag.telefone_paciente || ""
@@ -718,9 +719,9 @@
 
       async mudarStatus(idAgenda, labelUi, cardEl) {
         if (!idAgenda) return;
-        if (state.inFlightStatus.has(idAgenda)) return;
+        if (state.inFlight.statusById.has(idAgenda)) return;
 
-        state.inFlightStatus.add(idAgenda);
+        state.inFlight.statusById.add(idAgenda);
         cardEl && cardEl.classList.add("agendamento-atualizando");
 
         try {
@@ -735,18 +736,18 @@
           alert("Erro ao mudar status: " + (err.message || String(err)));
           cardEl && cardEl.classList.remove("agendamento-atualizando");
         } finally {
-          state.inFlightStatus.delete(idAgenda);
+          state.inFlight.statusById.delete(idAgenda);
         }
       },
 
       async desbloquear(idAgenda, cardEl) {
         if (!idAgenda) return;
-        if (state.inFlightDesbloq.has(idAgenda)) return;
+        if (state.inFlight.desbloquearById.has(idAgenda)) return;
 
         const ok = confirm("Deseja realmente remover este bloqueio de horário?");
         if (!ok) return;
 
-        state.inFlightDesbloq.add(idAgenda);
+        state.inFlight.desbloquearById.add(idAgenda);
         cardEl && cardEl.classList.add("agendamento-atualizando");
 
         try {
@@ -758,7 +759,7 @@
           alert("Erro ao remover bloqueio: " + (err.message || String(err)));
           cardEl && cardEl.classList.remove("agendamento-atualizando");
         } finally {
-          state.inFlightDesbloq.delete(idAgenda);
+          state.inFlight.desbloquearById.delete(idAgenda);
         }
       },
 

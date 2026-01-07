@@ -2,19 +2,9 @@
 /**
  * PRONTIO — Pacientes API (Front)
  * ------------------------------------------------------------
- * Objetivo:
- * - Centralizar ações de pacientes (contrato profissional) em 1 lugar.
- * - Permitir migração suave do legado:
- *   - Preferir "Pacientes.BuscarSimples"
- *   - Fallback para "Pacientes_BuscarSimples"
- *
- * Regras:
- * - Não conhece DOM.
- * - Só conhece callApiData (core).
- *
- * ✅ Padronização (2026):
- * - Nome no front: "nomeCompleto" (oficial)
- * - Campo "nome" fica como alias (compat), mas não é mais a verdade.
+ * ✅ Expandido:
+ * - listar / criar / atualizar / alterarStatusAtivo / buscarSimples
+ * - dot-actions (canônico quando existir) + fallback underscore/legacy
  */
 
 (function (global) {
@@ -58,17 +48,15 @@
     return unwrapData(res);
   }
 
-  /**
-   * Normaliza paciente vindo do backend (novo ou legado) para o shape usado no front.
-   * ✅ Nome oficial: nomeCompleto
-   *
-   * Aceita chaves comuns do projeto:
-   * - idPaciente / ID_Paciente / id / ID
-   * - nomeCompleto / nome / Nome
-   * - cpf / documento
-   * - telefonePrincipal / telefone
-   * - dataNascimento / data_nascimento
-   */
+  async function callWithFallback(callApiData, actionDot, actionUnderscore, payload) {
+    try {
+      return await callAction(callApiData, actionDot, payload || {});
+    } catch (e) {
+      if (!actionUnderscore) throw e;
+      return await callAction(callApiData, actionUnderscore, payload || {});
+    }
+  }
+
   function normalizePatientObj(p) {
     if (!p || typeof p !== "object") return null;
 
@@ -82,7 +70,6 @@
       ""
     ).trim();
 
-    // Documento: prioriza CPF quando existir
     const documento = String(
       p.cpf ||
       p.CPF ||
@@ -107,11 +94,8 @@
 
     return {
       idPaciente,
-      // ✅ oficial
       nomeCompleto,
-      // alias (compat com partes antigas; não usar como "verdade")
-      nome: nomeCompleto,
-
+      nome: nomeCompleto, // alias compat
       documento,
       telefone,
       data_nascimento: dataNascimento
@@ -127,22 +111,35 @@
 
       const payload = { termo: t, limite: (typeof limite === "number" && limite > 0) ? limite : 12 };
 
-      // Preferência: contrato novo
-      try {
-        const data = await callAction(callApiData, "Pacientes.BuscarSimples", payload);
-        return {
-          pacientes: (data && data.pacientes ? data.pacientes : []).map(normalizePatientObj).filter(Boolean)
-        };
-      } catch (e) {
-        // fallback: legado
-        const data = await callAction(callApiData, "Pacientes_BuscarSimples", payload);
-        return {
-          pacientes: (data && data.pacientes ? data.pacientes : []).map(normalizePatientObj).filter(Boolean)
-        };
-      }
+      // Registry suporta dot e underscore
+      const data = await callWithFallback(callApiData, "Pacientes.BuscarSimples", "Pacientes_BuscarSimples", payload);
+      return {
+        pacientes: (data && data.pacientes ? data.pacientes : []).map(normalizePatientObj).filter(Boolean)
+      };
     }
 
-    return { buscarSimples };
+    async function listar(payload) {
+      // Registry: Pacientes.Listar alias de Pacientes_Listar
+      return await callWithFallback(callApiData, "Pacientes.Listar", "Pacientes_Listar", payload || {});
+    }
+
+    async function criar(payload) {
+      // Registry: Pacientes.Criar alias de Pacientes_Criar
+      return await callWithFallback(callApiData, "Pacientes.Criar", "Pacientes_Criar", payload || {});
+    }
+
+    async function atualizar(payload) {
+      // Atualizar não aparece no Registry que você mandou, mas o Api.gs tem fallback legado via PRONTIO_routeAction_.
+      // Então chamamos a action legada diretamente.
+      return await callAction(callApiData, "Pacientes_Atualizar", payload || {});
+    }
+
+    async function alterarStatusAtivo(payload) {
+      // Registry: Pacientes.AlterarStatusAtivo alias de Pacientes_AlterarStatusAtivo
+      return await callWithFallback(callApiData, "Pacientes.AlterarStatusAtivo", "Pacientes_AlterarStatusAtivo", payload || {});
+    }
+
+    return { buscarSimples, listar, criar, atualizar, alterarStatusAtivo };
   }
 
   PRONTIO.features.pacientes.api = { createPacientesApi, normalizePatientObj };

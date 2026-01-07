@@ -4,7 +4,8 @@
  *
  * ✅ PROFISSIONAL:
  * - Este script roda SOMENTE em body[data-page-id="receita"]
- *   (evita competir com o painel do Prontuário).
+ * - Integra com main.js via PRONTIO.pages.receita.init
+ * - Fallback DOMContentLoaded só se main.js não rodar
  *
  * Features:
  * - Sugestões legíveis (nome + detalhes)
@@ -26,6 +27,7 @@
 
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
   PRONTIO.pages = PRONTIO.pages || {};
+  PRONTIO.pages.receita = PRONTIO.pages.receita || {};
   PRONTIO._pageInited = PRONTIO._pageInited || {};
 
   const callApiData =
@@ -168,7 +170,7 @@
       posologia: "",
       via: "",
       quantidade: "",
-      observacao: "",
+      observacao: ""
     };
   }
 
@@ -360,7 +362,7 @@
         posologia: String(i.posologia || "").trim(),
         via: String(i.via || "").trim(),
         quantidade: String(i.quantidade || "").trim(),
-        observacao: String(i.observacao || "").trim(),
+        observacao: String(i.observacao || "").trim()
       }));
   }
 
@@ -376,7 +378,7 @@
       idAgenda: ctxPaciente.idAgenda,
       dataReceita: qs("#receitaData")?.value || "",
       observacoes: qs("#receitaObservacoes")?.value || "",
-      itens: itensParaPayload_(),
+      itens: itensParaPayload_()
     };
 
     if (!payload.itens.length) return alert("Informe ao menos um medicamento.");
@@ -397,7 +399,7 @@
 
     if (acao === "Receita.SalvarFinal" && idReceita) {
       const pdf = await callApiData({ action: "Receita.GerarPdf", payload: { idReceita } });
-      const win = window.open("", "_blank");
+      const win = global.open("", "_blank");
       if (!win) return alert("Pop-up bloqueado. Libere para imprimir a receita.");
       win.document.open();
       win.document.write(pdf?.html || "");
@@ -414,11 +416,10 @@
   // ============================================================
 
   function init() {
-    // ✅ trava anti-duplo-init (main.js + fallback)
+    // ✅ trava anti-duplo-init
     if (PRONTIO._pageInited.receita === true) return;
     PRONTIO._pageInited.receita = true;
 
-    // Página receita pode ter form id="formReceita" ou reutilizar id="formReceitaProntuario"
     const form = qs("#formReceita") || qs("#formReceitaProntuario");
     const container = qs("#receitaItensContainer");
     if (!form || !container) return;
@@ -444,7 +445,6 @@
   }
 
   // ✅ main.js chama PRONTIO.pages[pageId].init()
-  PRONTIO.pages.receita = PRONTIO.pages.receita || {};
   PRONTIO.pages.receita.init = init;
 
   // ✅ compat com router antigo (se existir)
@@ -454,10 +454,12 @@
     }
   } catch (_) {}
 
-  // fallback (mantém compat p/ abrir HTML “solto”)
-  document.readyState === "loading"
-    ? document.addEventListener("DOMContentLoaded", init)
-    : init();
+  // ✅ fallback: se main.js não rodar, inicializa sozinho
+  if (!PRONTIO._mainBootstrapped) {
+    document.readyState === "loading"
+      ? document.addEventListener("DOMContentLoaded", init)
+      : init();
+  }
 
   function escapeHtml(s) {
     return String(s || "")

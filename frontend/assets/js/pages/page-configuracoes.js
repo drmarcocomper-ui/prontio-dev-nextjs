@@ -2,32 +2,24 @@
 // PRONTIO - pages/page-configuracoes.js
 // Página de Configurações do PRONTIO
 //
-// Responsabilidades:
-// - Carregar configurações via API (AgendaConfig_Obter)
-// - Enviar configurações via API (AgendaConfig_Salvar)
-// - Lidar com formulário de:
-//   - dados do médico
-//   - dados da clínica
-//   - logo (URL)
-//   - parâmetros da agenda (horário padrão, dias ativos, etc.)
+// ✅ Alinhado ao Registry.gs:
+// - AgendaConfig: AgendaConfig.Obter / AgendaConfig.Salvar (com fallback underscore)
+// - Clínica: Clinica_Get / Clinica_Update
 //
-// Integrações:
-// - API: PRONTIO.api.callApi (core/api.js)
-// - Mensagens: PRONTIO.widgets.toast (se disponível) ou <div id="mensagemConfig">
-//
-// Inicialização:
-// - Registrada em PRONTIO.registerPageInitializer("configuracoes", fn)
-// - Chamada por main.js quando <body data-page="configuracoes">
+// Observações de compat:
+// - Se o usuário não tiver role admin, Clinica_Update pode retornar PERMISSION_DENIED.
+//   Nesse caso, a página ainda salva AgendaConfig, e mostra aviso para Clínica.
 // =====================================
 
 (function (global, document) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
   const api = PRONTIO.api || {};
-  const callApi =
-    typeof api.callApi === "function"
-      ? api.callApi
-      : typeof global.callApi === "function"
-      ? global.callApi
+
+  const callApiData =
+    typeof api.callApiData === "function"
+      ? api.callApiData
+      : typeof global.callApiData === "function"
+      ? global.callApiData
       : null;
 
   // Widgets de mensagem (toast) – se disponíveis
@@ -41,9 +33,7 @@
   // -----------------------------------------
   // Helpers de mensagem
   // -----------------------------------------
-
   function mostrarMensagemConfig(texto, tipo) {
-    // Se o widget de toast estiver disponível, usa ele
     if (pageMessages) {
       const opts =
         tipo === "sucesso"
@@ -66,7 +56,6 @@
       }
     }
 
-    // Fallback: manipula <div id="mensagemConfig"> diretamente
     const div = document.getElementById("mensagemConfig");
     if (!div) return;
 
@@ -112,25 +101,15 @@
   // -----------------------------------------
   // Helpers de formulário (dias da semana)
   // -----------------------------------------
-
-  /**
-   * Lê os checkboxes dos dias da semana e retorna um array de códigos (SEG, TER, ...).
-   */
   function obterDiasAtivosDoFormulario() {
     const chks = document.querySelectorAll(".chk-dia-ativo");
     const dias = [];
     chks.forEach((chk) => {
-      if (chk.checked) {
-        dias.push(chk.value);
-      }
+      if (chk.checked) dias.push(chk.value);
     });
     return dias;
   }
 
-  /**
-   * Marca os checkboxes de dias da semana com base em um array de códigos.
-   * @param {string[]} dias
-   */
   function aplicarDiasAtivosNoFormulario(dias) {
     const chks = document.querySelectorAll(".chk-dia-ativo");
     const setDias = new Set(dias || []);
@@ -140,128 +119,39 @@
   }
 
   // -----------------------------------------
-  // Carregar configurações do backend
+  // API helpers
   // -----------------------------------------
-
-  async function carregarConfiguracoes() {
-    if (!callApi) {
-      console.error(
-        "[PRONTIO.configuracoes] callApi não encontrado. Verifique core/api.js."
-      );
-      mostrarMensagemConfig(
-        "Erro interno: API não disponível no front. Verifique console.",
-        "erro"
-      );
-      return;
+  async function callWithFallback_(actionDot, actionUnderscore, payload) {
+    if (!callApiData) {
+      const err = new Error("API não disponível no front (callApiData indefinido).");
+      err.code = "CLIENT_NO_API";
+      throw err;
     }
 
     try {
-      mostrarMensagemConfig("Carregando configurações...", "info");
-
-      // IMPORTANTE:
-      // core/api.js já garante:
-      // - envio em formato { action, payload }
-      // - resposta { success, data, errors } tratada
-      // - lança erro em caso de !success
-      // Aqui recebemos DIRETO o objeto data (cfg).
-      const cfg = await callApi({
-        action: "AgendaConfig_Obter",
-        payload: {},
-      });
-
-      const configData = cfg || {};
-
-      // Dados do médico
-      const medicoNomeEl = document.getElementById("medicoNomeCompleto");
-      const medicoCrmEl = document.getElementById("medicoCRM");
-      const medicoEspEl = document.getElementById("medicoEspecialidade");
-
-      if (medicoNomeEl) {
-        medicoNomeEl.value = configData.medicoNomeCompleto || "";
+      return await callApiData({ action: actionDot, payload: payload || {} });
+    } catch (e) {
+      if (actionUnderscore) {
+        return await callApiData({ action: actionUnderscore, payload: payload || {} });
       }
-      if (medicoCrmEl) {
-        medicoCrmEl.value = configData.medicoCRM || "";
-      }
-      if (medicoEspEl) {
-        medicoEspEl.value = configData.medicoEspecialidade || "";
-      }
-
-      // Dados da clínica
-      const clinicaNomeEl = document.getElementById("clinicaNome");
-      const clinicaEnderecoEl = document.getElementById("clinicaEndereco");
-      const clinicaTelefoneEl = document.getElementById("clinicaTelefone");
-      const clinicaEmailEl = document.getElementById("clinicaEmail");
-
-      if (clinicaNomeEl) {
-        clinicaNomeEl.value = configData.clinicaNome || "";
-      }
-      if (clinicaEnderecoEl) {
-        clinicaEnderecoEl.value = configData.clinicaEndereco || "";
-      }
-      if (clinicaTelefoneEl) {
-        clinicaTelefoneEl.value = configData.clinicaTelefone || "";
-      }
-      if (clinicaEmailEl) {
-        clinicaEmailEl.value = configData.clinicaEmail || "";
-      }
-
-      // Logo (URL)
-      const logoInput = document.getElementById("clinicaLogoUrl");
-      if (logoInput) {
-        logoInput.value = configData.logoUrl || "";
-      }
-
-      // Preferências da agenda
-      const horaIniEl = document.getElementById("agendaHoraInicioPadrao");
-      const horaFimEl = document.getElementById("agendaHoraFimPadrao");
-      const intervaloEl = document.getElementById("agendaIntervaloMinutos");
-
-      if (horaIniEl) {
-        horaIniEl.value = configData.hora_inicio_padrao || "";
-      }
-      if (horaFimEl) {
-        horaFimEl.value = configData.hora_fim_padrao || "";
-      }
-      if (intervaloEl) {
-        intervaloEl.value =
-          configData.duracao_grade_minutos != null
-            ? String(configData.duracao_grade_minutos)
-            : "";
-      }
-
-      aplicarDiasAtivosNoFormulario(configData.dias_ativos || []);
-
-      mostrarMensagemConfig(
-        "Configurações carregadas com sucesso.",
-        "sucesso"
-      );
-    } catch (error) {
-      console.error("[PRONTIO.configuracoes] Erro ao carregar configurações:", error);
-      const msg =
-        (error && error.message) ||
-        "Erro inesperado ao carregar configurações.";
-      mostrarMensagemConfig(msg, "erro");
+      throw e;
     }
   }
 
-  // -----------------------------------------
-  // Salvar configurações no backend
-  // -----------------------------------------
-
-  async function salvarConfiguracoes() {
-    if (!callApi) {
-      console.error(
-        "[PRONTIO.configuracoes] callApi não encontrado. Verifique core/api.js."
-      );
-      mostrarMensagemConfig(
-        "Erro interno: API não disponível no front. Verifique console.",
-        "erro"
-      );
-      return;
+  async function callDirect_(action, payload) {
+    if (!callApiData) {
+      const err = new Error("API não disponível no front (callApiData indefinido).");
+      err.code = "CLIENT_NO_API";
+      throw err;
     }
+    return await callApiData({ action: action, payload: payload || {} });
+  }
 
-    const medicoNomeCompletoEl =
-      document.getElementById("medicoNomeCompleto");
+  // -----------------------------------------
+  // Mapeamento UI <-> Data
+  // -----------------------------------------
+  function readForm_() {
+    const medicoNomeCompletoEl = document.getElementById("medicoNomeCompleto");
     const medicoCrmEl = document.getElementById("medicoCRM");
     const medicoEspEl = document.getElementById("medicoEspecialidade");
 
@@ -275,83 +165,240 @@
     const horaFimEl = document.getElementById("agendaHoraFimPadrao");
     const intervaloEl = document.getElementById("agendaIntervaloMinutos");
 
-    const medicoNomeCompleto = (medicoNomeCompletoEl?.value || "").trim();
-    const medicoCRM = (medicoCrmEl?.value || "").trim();
-    const medicoEspecialidade = (medicoEspEl?.value || "").trim();
+    const medicoNomeCompleto = (medicoNomeCompletoEl && medicoNomeCompletoEl.value ? medicoNomeCompletoEl.value : "").trim();
+    const medicoCRM = (medicoCrmEl && medicoCrmEl.value ? medicoCrmEl.value : "").trim();
+    const medicoEspecialidade = (medicoEspEl && medicoEspEl.value ? medicoEspEl.value : "").trim();
 
-    const clinicaNome = (clinicaNomeEl?.value || "").trim();
-    const clinicaEndereco = (clinicaEnderecoEl?.value || "").trim();
-    const clinicaTelefone = (clinicaTelefoneEl?.value || "").trim();
-    const clinicaEmail = (clinicaEmailEl?.value || "").trim();
+    const clinicaNome = (clinicaNomeEl && clinicaNomeEl.value ? clinicaNomeEl.value : "").trim();
+    const clinicaEndereco = (clinicaEnderecoEl && clinicaEnderecoEl.value ? clinicaEnderecoEl.value : "").trim();
+    const clinicaTelefone = (clinicaTelefoneEl && clinicaTelefoneEl.value ? clinicaTelefoneEl.value : "").trim();
+    const clinicaEmail = (clinicaEmailEl && clinicaEmailEl.value ? clinicaEmailEl.value : "").trim();
+    const logoUrl = (clinicaLogoUrlEl && clinicaLogoUrlEl.value ? clinicaLogoUrlEl.value : "").trim();
 
-    const logoUrl = (clinicaLogoUrlEl?.value || "").trim();
-
-    const agendaHoraInicioPadrao = horaIniEl ? horaIniEl.value : "";
-    const agendaHoraFimPadrao = horaFimEl ? horaFimEl.value : "";
-    const agendaIntervaloMinutos = intervaloEl ? intervaloEl.value : "";
+    const agendaHoraInicioPadrao = horaIniEl ? String(horaIniEl.value || "").trim() : "";
+    const agendaHoraFimPadrao = horaFimEl ? String(horaFimEl.value || "").trim() : "";
+    const agendaIntervaloMinutos = intervaloEl ? String(intervaloEl.value || "").trim() : "";
 
     const agendaDiasAtivos = obterDiasAtivosDoFormulario();
 
-    // Validações mínimas
-    if (!medicoNomeCompleto) {
+    return {
+      medico: {
+        medicoNomeCompleto,
+        medicoCRM,
+        medicoEspecialidade
+      },
+      clinica: {
+        clinicaNome,
+        clinicaEndereco,
+        clinicaTelefone,
+        clinicaEmail,
+        logoUrl
+      },
+      agenda: {
+        hora_inicio_padrao: agendaHoraInicioPadrao,
+        hora_fim_padrao: agendaHoraFimPadrao,
+        duracao_grade_minutos: Number(agendaIntervaloMinutos || 30),
+        dias_ativos: agendaDiasAtivos
+      }
+    };
+  }
+
+  function applyAgendaConfigToForm_(configData) {
+    const medicoNomeEl = document.getElementById("medicoNomeCompleto");
+    const medicoCrmEl = document.getElementById("medicoCRM");
+    const medicoEspEl = document.getElementById("medicoEspecialidade");
+
+    if (medicoNomeEl) medicoNomeEl.value = configData.medicoNomeCompleto || "";
+    if (medicoCrmEl) medicoCrmEl.value = configData.medicoCRM || "";
+    if (medicoEspEl) medicoEspEl.value = configData.medicoEspecialidade || "";
+
+    const horaIniEl = document.getElementById("agendaHoraInicioPadrao");
+    const horaFimEl = document.getElementById("agendaHoraFimPadrao");
+    const intervaloEl = document.getElementById("agendaIntervaloMinutos");
+
+    if (horaIniEl) horaIniEl.value = configData.hora_inicio_padrao || "";
+    if (horaFimEl) horaFimEl.value = configData.hora_fim_padrao || "";
+    if (intervaloEl) {
+      intervaloEl.value =
+        configData.duracao_grade_minutos != null ? String(configData.duracao_grade_minutos) : "";
+    }
+
+    aplicarDiasAtivosNoFormulario(configData.dias_ativos || []);
+  }
+
+  function applyClinicaToForm_(clinicaData) {
+    const clinicaNomeEl = document.getElementById("clinicaNome");
+    const clinicaEnderecoEl = document.getElementById("clinicaEndereco");
+    const clinicaTelefoneEl = document.getElementById("clinicaTelefone");
+    const clinicaEmailEl = document.getElementById("clinicaEmail");
+    const clinicaLogoUrlEl = document.getElementById("clinicaLogoUrl");
+
+    if (clinicaNomeEl) clinicaNomeEl.value = clinicaData.clinicaNome || clinicaData.nome || "";
+    if (clinicaEnderecoEl) clinicaEnderecoEl.value = clinicaData.clinicaEndereco || clinicaData.endereco || "";
+    if (clinicaTelefoneEl) clinicaTelefoneEl.value = clinicaData.clinicaTelefone || clinicaData.telefone || "";
+    if (clinicaEmailEl) clinicaEmailEl.value = clinicaData.clinicaEmail || clinicaData.email || "";
+
+    const logoUrl = clinicaData.logoUrl || clinicaData.clinicaLogoUrl || clinicaData.logo || "";
+    if (clinicaLogoUrlEl) clinicaLogoUrlEl.value = logoUrl || "";
+  }
+
+  // -----------------------------------------
+  // Load (AgendaConfig + Clínica)
+  // -----------------------------------------
+  async function carregarConfiguracoes() {
+    if (!callApiData) {
+      mostrarMensagemConfig("Erro interno: API não disponível no front (callApiData).", "erro");
+      return;
+    }
+
+    limparMensagemConfig();
+    mostrarMensagemConfig("Carregando configurações...", "info");
+
+    // Carrega em paralelo (best-effort)
+    const results = await Promise.allSettled([
+      // AgendaConfig (dot + fallback underscore)
+      callWithFallback_("AgendaConfig.Obter", "AgendaConfig_Obter", {}),
+      // Clínica (actions do Registry)
+      callDirect_("Clinica_Get", {})
+    ]);
+
+    const rAgenda = results[0];
+    const rClinica = results[1];
+
+    let okAgenda = false;
+    let okClinica = false;
+
+    if (rAgenda.status === "fulfilled") {
+      const cfg = rAgenda.value || {};
+      applyAgendaConfigToForm_(cfg);
+      okAgenda = true;
+    }
+
+    if (rClinica.status === "fulfilled") {
+      const clin = rClinica.value || {};
+      applyClinicaToForm_(clin);
+      okClinica = true;
+    }
+
+    if (okAgenda && okClinica) {
+      mostrarMensagemConfig("Configurações carregadas com sucesso.", "sucesso");
+      return;
+    }
+
+    if (okAgenda && !okClinica) {
+      const reason = rClinica.reason;
+      const msg = (reason && reason.message) ? String(reason.message) : "Falha ao carregar dados da clínica.";
+      mostrarMensagemConfig("Agenda carregada. Clínica: " + msg, "aviso");
+      return;
+    }
+
+    if (!okAgenda && okClinica) {
+      const reason = rAgenda.reason;
+      const msg = (reason && reason.message) ? String(reason.message) : "Falha ao carregar configuração da agenda.";
+      mostrarMensagemConfig("Clínica carregada. Agenda: " + msg, "aviso");
+      return;
+    }
+
+    // ambos falharam
+    {
+      const msgA = (rAgenda.reason && rAgenda.reason.message) ? String(rAgenda.reason.message) : "AgendaConfig.Obter falhou.";
+      const msgC = (rClinica.reason && rClinica.reason.message) ? String(rClinica.reason.message) : "Clinica_Get falhou.";
+      mostrarMensagemConfig("Falha ao carregar: " + msgA + " | " + msgC, "erro");
+    }
+  }
+
+  // -----------------------------------------
+  // Save (AgendaConfig + Clínica)
+  // -----------------------------------------
+  async function salvarConfiguracoes() {
+    const formData = readForm_();
+
+    // Validações mínimas (mantidas)
+    if (!formData.medico.medicoNomeCompleto) {
       mostrarMensagemConfig("Informe o nome completo do médico.", "erro");
       return;
     }
-    if (!medicoCRM) {
+    if (!formData.medico.medicoCRM) {
       mostrarMensagemConfig("Informe o CRM.", "erro");
       return;
     }
 
     mostrarMensagemConfig("Salvando configurações...", "info");
 
-    const payloadConfig = {
-      medicoNomeCompleto,
-      medicoCRM,
-      medicoEspecialidade,
-      clinicaNome,
-      clinicaEndereco,
-      clinicaTelefone,
-      clinicaEmail,
-      logoUrl,
-      hora_inicio_padrao: agendaHoraInicioPadrao,
-      hora_fim_padrao: agendaHoraFimPadrao,
-      duracao_grade_minutos: Number(agendaIntervaloMinutos || 30),
-      dias_ativos: agendaDiasAtivos,
+    // 1) Salva AgendaConfig (dot + fallback underscore)
+    const payloadAgendaConfig = {
+      medicoNomeCompleto: formData.medico.medicoNomeCompleto,
+      medicoCRM: formData.medico.medicoCRM,
+      medicoEspecialidade: formData.medico.medicoEspecialidade,
+      hora_inicio_padrao: formData.agenda.hora_inicio_padrao,
+      hora_fim_padrao: formData.agenda.hora_fim_padrao,
+      duracao_grade_minutos: formData.agenda.duracao_grade_minutos,
+      dias_ativos: formData.agenda.dias_ativos
     };
 
-    try {
-      // callApi lança erro se success === false lá no backend
-      await callApi({
-        action: "AgendaConfig_Salvar",
-        payload: payloadConfig,
-      });
+    // 2) Salva Clínica (Clinica_Update)
+    // NOTE: Registry indica roles:["admin"] para Clinica_Update
+    const payloadClinica = {
+      clinicaNome: formData.clinica.clinicaNome,
+      clinicaEndereco: formData.clinica.clinicaEndereco,
+      clinicaTelefone: formData.clinica.clinicaTelefone,
+      clinicaEmail: formData.clinica.clinicaEmail,
+      logoUrl: formData.clinica.logoUrl
+    };
 
+    const results = await Promise.allSettled([
+      callWithFallback_("AgendaConfig.Salvar", "AgendaConfig_Salvar", payloadAgendaConfig),
+      callDirect_("Clinica_Update", payloadClinica)
+    ]);
+
+    const rAgenda = results[0];
+    const rClinica = results[1];
+
+    const okAgenda = rAgenda.status === "fulfilled";
+    const okClinica = rClinica.status === "fulfilled";
+
+    if (okAgenda && okClinica) {
       mostrarMensagemConfig("Configurações salvas com sucesso.", "sucesso");
-    } catch (error) {
-      console.error("[PRONTIO.configuracoes] Erro ao salvar configurações:", error);
-      const msg =
-        (error && error.message) ||
-        "Erro inesperado ao salvar configurações.";
-      mostrarMensagemConfig(msg, "erro");
+      return;
+    }
+
+    if (okAgenda && !okClinica) {
+      const reason = rClinica.reason;
+      const code = reason && reason.code ? String(reason.code) : "";
+      const msg = (reason && reason.message) ? String(reason.message) : "Falha ao salvar clínica.";
+      // Se não for admin, isso é esperado pelo contrato do Registry.
+      if (code === "PERMISSION_DENIED") {
+        mostrarMensagemConfig("Agenda salva. Clínica não salva (permissão admin necessária).", "aviso");
+      } else {
+        mostrarMensagemConfig("Agenda salva. Clínica: " + msg, "aviso");
+      }
+      return;
+    }
+
+    if (!okAgenda && okClinica) {
+      const reason = rAgenda.reason;
+      const msg = (reason && reason.message) ? String(reason.message) : "Falha ao salvar agenda.";
+      mostrarMensagemConfig("Clínica salva. Agenda: " + msg, "aviso");
+      return;
+    }
+
+    // ambos falharam
+    {
+      const msgA = (rAgenda.reason && rAgenda.reason.message) ? String(rAgenda.reason.message) : "AgendaConfig.Salvar falhou.";
+      const msgC = (rClinica.reason && rClinica.reason.message) ? String(rClinica.reason.message) : "Clinica_Update falhou.";
+      mostrarMensagemConfig("Falha ao salvar: " + msgA + " | " + msgC, "erro");
     }
   }
 
   // -----------------------------------------
   // Inicializador da página
   // -----------------------------------------
-
   function initConfiguracoesPage() {
     const form = document.getElementById("formConfiguracoes");
     const btnRecarregar = document.getElementById("btnRecarregarConfig");
 
-    if (!callApi) {
-      console.error(
-        "[PRONTIO.configuracoes] callApi não disponível. Verifique core/api.js."
-      );
-      mostrarMensagemConfig(
-        "Erro interno: API não disponível no front. Verifique console.",
-        "erro"
-      );
+    if (!callApiData) {
+      mostrarMensagemConfig("Erro interno: API não disponível no front (callApiData).", "erro");
       return;
     }
 
@@ -368,21 +415,14 @@
       });
     }
 
-    // Carrega configurações iniciais ao abrir a página
     carregarConfiguracoes();
   }
 
   // -----------------------------------------
   // Registro no PRONTIO (para main.js)
   // -----------------------------------------
+  PRONTIO.pages = PRONTIO.pages || {};
+  PRONTIO.pages.configuracoes = PRONTIO.pages.configuracoes || {};
+  PRONTIO.pages.configuracoes.init = initConfiguracoesPage;
 
-  if (typeof PRONTIO.registerPageInitializer === "function") {
-    PRONTIO.registerPageInitializer("configuracoes", initConfiguracoesPage);
-  } else {
-    // fallback: se o app.js ainda não estiver no padrão novo
-    PRONTIO.pages = PRONTIO.pages || {};
-    PRONTIO.pages.configuracoes = {
-      init: initConfiguracoesPage,
-    };
-  }
 })(window, document);

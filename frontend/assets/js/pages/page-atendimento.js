@@ -3,7 +3,7 @@
 //
 // ✅ Preferencial: SyncAPartirDeHoje + ListarFilaAPartirDeHoje (range, ex.: 30 dias)
 // ✅ Fallback 1: SyncHoje + ListarFilaHoje
-// ✅ Fallback 2 (novo): Agenda.ListarPorPeriodo (range), SEM routeAction_
+// ✅ Fallback 2 (canônico via Registry): Agenda.Listar (range), SEM routeAction_
 // ✅ Ações por linha: Chegou / Chamar / Iniciar / Concluir / Cancelar (mantidas)
 // ✅ Botão "Chamar próximo" (mantido)
 
@@ -126,11 +126,27 @@
     }
   }
 
+  function _todayYmd_() {
+    const d = new Date();
+    return `${d.getFullYear()}-${_pad2_(d.getMonth() + 1)}-${_pad2_(d.getDate())}`;
+  }
+
+  function _addDaysYmd_(ymd, days) {
+    const m = String(ymd || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return ymd;
+    const y = Number(m[1]);
+    const mo = Number(m[2]) - 1;
+    const da = Number(m[3]);
+    const dt = new Date(y, mo, da, 0, 0, 0, 0);
+    dt.setDate(dt.getDate() + Number(days || 0));
+    return `${dt.getFullYear()}-${_pad2_(dt.getMonth() + 1)}-${_pad2_(dt.getDate())}`;
+  }
+
   function normalizeRow_(raw, fonte) {
     if (fonte === "atendimento") {
       const idAgenda = raw.idAgenda || raw.ID_Agenda || "";
       const idPaciente = raw.idPaciente || raw.ID_Paciente || "";
-      const data = raw.dataRef || raw.data || ""; // dataRef no backend
+      const data = raw.dataRef || raw.data || "";
       const hora = raw.hora || raw.horaConsulta || "";
       const pacienteNome =
         raw.nomePaciente || raw.pacienteNome || raw.paciente || raw.nome || idPaciente || "";
@@ -140,8 +156,7 @@
       return { fonte, idAtendimento, idAgenda, idPaciente, data, hora, pacienteNome, tipo, status, _raw: raw };
     }
 
-    // fonte agenda (novo: Agenda.ListarPorPeriodo)
-    // dto do Agenda.gs: { idAgenda, idPaciente, inicio, fim, titulo, tipo, status, ... }
+    // fonte agenda (DTO Agenda.gs): { idAgenda, idPaciente, inicio, fim, titulo, tipo, status, ... }
     const idAgenda2 = raw.idAgenda || raw.ID_Agenda || "";
     const idPaciente2 = raw.idPaciente || raw.ID_Paciente || "";
     const ini = raw.inicio || "";
@@ -177,7 +192,6 @@
       return span;
     }
 
-    // agenda
     if (s === "AGENDADO") span.classList.add("badge-agendado");
     else if (s === "CONFIRMADO") span.classList.add("badge-confirmado");
     else if (s === "CANCELADO") span.classList.add("badge-cancelado");
@@ -340,30 +354,16 @@
     infoUltimaAtualizacao.textContent = `Atualizado em ${dd}/${mm}/${yyyy} às ${hh}:${min}`;
   }
 
-  function _startOfDay_(d) {
-    const x = new Date(d);
-    x.setHours(0, 0, 0, 0);
-    return x;
-  }
-
-  function _endOfDay_(d) {
-    const x = new Date(d);
-    x.setHours(23, 59, 59, 999);
-    return x;
-  }
-
-  // ✅ Fallback final novo: Agenda.ListarPorPeriodo (sem routeAction_)
+  // ✅ Fallback final canônico: Agenda.Listar (adapter do Registry)
   async function carregarAgendaPorPeriodoFallback_() {
-    const hoje = new Date();
-    const inicio = _startOfDay_(hoje);
-    const fim = _endOfDay_(new Date(Date.now() + (DEFAULT_RANGE_DIAS - 1) * 24 * 60 * 60 * 1000));
+    const inicioYmd = _todayYmd_();
+    const fimYmd = _addDaysYmd_(inicioYmd, DEFAULT_RANGE_DIAS - 1);
 
     const dataAgenda = await callApiData({
-      action: "Agenda.ListarPorPeriodo",
+      action: "Agenda.Listar",
       payload: {
-        inicio: inicio.toISOString(),
-        fim: fim.toISOString(),
-        incluirCancelados: false
+        periodo: { inicio: inicioYmd, fim: fimYmd },
+        filtros: { incluirCancelados: false }
       }
     });
 
@@ -371,7 +371,6 @@
     return items.map((it) => normalizeRow_(it, "agenda"));
   }
 
-  // ✅ NOVO: tenta carregar "a partir de hoje" (range). Se não existir, cai pro fluxo antigo.
   async function carregarListaAtendimento() {
     msgs.info("Carregando atendimentos...");
     renderizarEstadoCarregando();
@@ -421,7 +420,7 @@
         return;
       }
 
-      // 3) Fallback final: agenda (novo) — sem actions legadas
+      // 3) Fallback final: Agenda.Listar (Registry adapter)
       const rowsAgenda = await carregarAgendaPorPeriodoFallback_();
       renderizarLinhas(rowsAgenda);
 
@@ -520,10 +519,9 @@
     carregarListaAtendimento();
   }
 
-  if (typeof PRONTIO.registerPage === "function") {
-    PRONTIO.registerPage("atendimento", initAtendimentoPage);
-  } else {
-    PRONTIO.pages = PRONTIO.pages || {};
-    PRONTIO.pages.atendimento = { init: initAtendimentoPage };
-  }
+  // ✅ Garante PRONTIO.pages.atendimento para o main.js
+  PRONTIO.pages = PRONTIO.pages || {};
+  PRONTIO.pages.atendimento = PRONTIO.pages.atendimento || {};
+  PRONTIO.pages.atendimento.init = initAtendimentoPage;
+
 })(window, document);

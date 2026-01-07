@@ -4,24 +4,24 @@
 // Pilar F: Gestão de Usuários (Admin)
 // Compatível com usuarios.html atual
 //
-// Ações usadas:
+// Ações usadas (Registry):
 // - Usuarios_Listar
 // - Usuarios_Criar
 // - Usuarios_Atualizar
 // - Usuarios_ResetSenhaAdmin
 //
-// MELHORIAS (SEM QUEBRAR):
-// - Modais: prioriza padrão "hidden + aria-hidden" (main.js), mantendo fallback.
-// - Senha: desabilita campo ao editar (senha só para novo usuário).
-// - UX: Enter salva (no modal e reset), botão busy por operação, validação básica de e-mail.
-// - Render/estado: evita mensagens "sucesso" em sequência e mantém tabela consistente.
+// ✅ Padronizado (main.js):
+// - PRONTIO.pages.usuarios.init = initUsuariosPage
+// - Fallback DOMContentLoaded só se main.js não rodar
 // =====================================
 
 (function (global, document) {
   "use strict";
 
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
-  const auth = PRONTIO.auth || {};
+  PRONTIO.pages = PRONTIO.pages || {};
+  PRONTIO.pages.usuarios = PRONTIO.pages.usuarios || {};
+
   const api = PRONTIO.api || {};
 
   // ---------- helpers ----------
@@ -75,13 +75,11 @@
     const el = $(id);
     if (!el) return;
 
-    // padrão main.js: hidden + aria-hidden
     el.hidden = false;
     el.classList.add("is-open");
     el.classList.remove("is-hidden");
     el.setAttribute("aria-hidden", "false");
 
-    // foco inicial best-effort
     try {
       const focusable = el.querySelector("input,select,textarea,button");
       if (focusable) focusable.focus();
@@ -144,8 +142,27 @@
   function looksLikeEmail_(email) {
     email = String(email || "").trim();
     if (!email) return true;
-    // simples e seguro (não "valida RFC", só evita erros óbvios)
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+  }
+
+  async function ensureAuthenticated_() {
+    // ✅ Guard oficial do core
+    try {
+      if (PRONTIO.core && PRONTIO.core.session && typeof PRONTIO.core.session.ensureAuthenticated === "function") {
+        const ok = await PRONTIO.core.session.ensureAuthenticated({ redirect: true });
+        return !!ok;
+      }
+    } catch (_) {}
+
+    // fallback compat
+    try {
+      if (PRONTIO.auth && typeof PRONTIO.auth.requireAuth === "function") {
+        const ok = PRONTIO.auth.requireAuth({ redirect: true });
+        return !!ok;
+      }
+    } catch (_) {}
+
+    return true;
   }
 
   // ---------- state ----------
@@ -157,7 +174,6 @@
   function setInFlight_(v) {
     IN_FLIGHT = !!v;
     setButtonBusy_("btnRecarregar", IN_FLIGHT);
-    // btnNovoUsuario é aberto por data-modal-open, então não travamos sempre
   }
 
   // ---------- API wrappers ----------
@@ -262,14 +278,11 @@
 
     showMsg_("usuariosMsg", "", "info");
 
-    // best-effort: garantir sessão
-    try {
-      if (auth && typeof auth.ensureSession === "function") {
-        await auth.ensureSession({ redirect: true });
-      } else if (auth && typeof auth.requireAuth === "function") {
-        auth.requireAuth({ redirect: true });
-      }
-    } catch (_) {}
+    const okAuth = await ensureAuthenticated_();
+    if (!okAuth) {
+      setInFlight_(false);
+      return;
+    }
 
     setTableLoading_("Carregando...");
 
@@ -277,7 +290,6 @@
       const list = await apiList_();
       USERS = Array.isArray(list) ? list : [];
       render_();
-      // mensagem mais discreta (evita "sucesso" repetitivo)
       showMsg_("usuariosMsg", "", "info");
     } catch (e) {
       USERS = [];
@@ -522,7 +534,6 @@
         if (ev.key !== "Enter") return;
         const tag = String(ev.target && ev.target.tagName ? ev.target.tagName : "").toLowerCase();
         if (tag === "textarea") return;
-        // não salva se o modal estiver fechado
         if (isHidden_(modalUsuario)) return;
         ev.preventDefault();
         saveUser_();
@@ -545,22 +556,20 @@
   }
 
   function initUsuariosPage() {
-    const body = document.body;
-    const pageId = (body && body.dataset && (body.dataset.pageId || body.dataset.page)) || "";
-    if (String(pageId).toLowerCase() !== "usuarios") return;
-
-    if (body.getAttribute("data-usuarios-inited") === "1") return;
-    body.setAttribute("data-usuarios-inited", "1");
+    // idempotente
+    if (PRONTIO.pages.usuarios._inited === true) return;
+    PRONTIO.pages.usuarios._inited = true;
 
     bind_();
     refresh_();
   }
 
-  // ✅ Integra com loader do main.js
-  if (typeof PRONTIO.registerPage === "function") {
-    PRONTIO.registerPage("usuarios", initUsuariosPage);
-  } else {
-    PRONTIO.pages = PRONTIO.pages || {};
-    PRONTIO.pages.usuarios = { init: initUsuariosPage };
+  // ✅ padrão profissional: main.js chama page.init()
+  PRONTIO.pages.usuarios.init = initUsuariosPage;
+
+  // ✅ fallback: se main.js não rodar
+  if (!PRONTIO._mainBootstrapped) {
+    document.addEventListener("DOMContentLoaded", initUsuariosPage);
   }
+
 })(window, document);

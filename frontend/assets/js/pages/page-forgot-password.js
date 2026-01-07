@@ -6,11 +6,25 @@
 // - Loading (Enviando...)
 // - Cooldown de reenvio (anti-spam UX)
 // - Resposta sempre genérica (não vaza existência)
+//
+// ✅ Padronizado (main.js):
+// - PRONTIO.pages["forgot-password"].init = init
+// - Fallback DOMContentLoaded só se main.js não rodar
 // =====================================
 
 (function (global, document) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
+  PRONTIO.pages = PRONTIO.pages || {};
+  PRONTIO.pages["forgot-password"] = PRONTIO.pages["forgot-password"] || {};
+
   const api = PRONTIO.api || {};
+
+  const callApiData =
+    (api && typeof api.callApiData === "function")
+      ? api.callApiData
+      : (typeof global.callApiData === "function")
+      ? global.callApiData
+      : null;
 
   const UX = {
     COOLDOWN_SECONDS: 90,
@@ -43,7 +57,7 @@
   }
 
   function clearMsg_() {
-    const el = qs("mensagemForgot"); // ✅ precisa existir no HTML
+    const el = qs("mensagemForgot"); // precisa existir no HTML
     if (!el) return;
     el.textContent = "";
     el.classList.add("is-hidden");
@@ -51,7 +65,7 @@
   }
 
   function showMsg_(msg, type) {
-    const el = qs("mensagemForgot"); // ✅ precisa existir no HTML
+    const el = qs("mensagemForgot"); // precisa existir no HTML
     if (!el) return;
 
     el.textContent = msg || "";
@@ -65,8 +79,10 @@
   }
 
   function assertApi_() {
-    if (!api || typeof api.callApiData !== "function") {
-      throw new Error("API não disponível.");
+    if (!callApiData) {
+      const err = new Error("API não disponível.");
+      err.code = "CLIENT_NO_API";
+      throw err;
     }
   }
 
@@ -146,24 +162,24 @@
     try {
       assertApi_();
 
-      await api.callApiData({
+      await callApiData({
         action: "Auth_ForgotPassword_Request",
         payload: { identifier }
       });
 
-      // ✅ mensagem genérica de sucesso (não vaza existência)
+      // mensagem genérica (não vaza existência)
       showMsg_(
         "Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.",
         "success"
       );
 
-      // inicia cooldown (UX anti-spam)
+      // cooldown anti-spam
       const newUntil = nowMs_() + UX.COOLDOWN_SECONDS * 1000;
       setCooldownUntil_(newUntil);
       startCooldownUI_();
 
     } catch (e) {
-      // ✅ Mesmo no erro, mantém mensagem genérica
+      // Mesmo no erro, mantém mensagem genérica
       showMsg_(
         "Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.",
         "success"
@@ -173,7 +189,6 @@
       setCooldownUntil_(newUntil);
       startCooldownUI_();
     } finally {
-      // não “pisca” texto do botão se já entrou em cooldown
       const until2 = getCooldownUntil_();
       const inCooldown = until2 && until2 > nowMs_();
       if (!inCooldown) setBusy_(false, null);
@@ -182,10 +197,13 @@
   }
 
   function init() {
-    const form = qs("formForgotPassword"); // ✅ precisa existir no HTML
+    // idempotente
+    if (PRONTIO.pages["forgot-password"]._inited === true) return;
+    PRONTIO.pages["forgot-password"]._inited = true;
+
+    const form = qs("formForgotPassword"); // precisa existir no HTML
     if (!form) return;
 
-    // evita bind duplicado
     if (form.dataset.boundSubmit === "1") return;
     form.dataset.boundSubmit = "1";
 
@@ -193,9 +211,12 @@
     form.addEventListener("submit", handleSubmit);
   }
 
-  // compat: tanto standalone quanto lazy-load
-  document.addEventListener("DOMContentLoaded", init);
-  if (PRONTIO.registerPage) {
-    PRONTIO.registerPage("forgot-password", init);
+  // ✅ padrão profissional: main.js chama page.init()
+  PRONTIO.pages["forgot-password"].init = init;
+
+  // ✅ fallback: se por algum motivo main.js não rodar, inicializa sozinho
+  if (!PRONTIO._mainBootstrapped) {
+    document.addEventListener("DOMContentLoaded", init);
   }
+
 })(window, document);

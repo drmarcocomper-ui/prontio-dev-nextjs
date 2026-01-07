@@ -1,14 +1,6 @@
 // =====================================
 // PRONTIO - core/ui-core.js
 // Utilidades genéricas de UI
-//
-// Responsabilidades:
-// - Mostrar/ocultar loading global
-// - Atualizar nome do usuário na sidebar
-// - Ajustar ano no rodapé
-// - Pequenos helpers de interface reutilizáveis
-//
-// Não contém regras de negócio.
 // =====================================
 
 (function (global, document) {
@@ -59,16 +51,43 @@
   // Sidebar / nome do usuário / ano
   // -----------------------------------------
 
+  function _safeGetLs_(key) {
+    try {
+      return global.localStorage ? (global.localStorage.getItem(key) || "") : "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function _deriveUserName_(userObj) {
+    if (!userObj || typeof userObj !== "object") return "";
+    return String(
+      userObj.nomeCompleto ||
+      userObj.NomeCompleto ||
+      userObj.nome ||
+      userObj.Nome ||
+      userObj.userName ||
+      ""
+    ).trim();
+  }
+
   function updateSidebarUserName() {
     const el = document.getElementById("sidebarUserName");
     if (!el) return;
 
-    if (!auth || typeof auth.getUserName !== "function") {
-      el.textContent = "Usuário";
-      return;
-    }
+    // ✅ Correção: não depende de auth.getUserName (não existe no auth.js atual)
+    let nome = "";
 
-    const nome = auth.getUserName();
+    try {
+      if (auth && typeof auth.getCurrentUser === "function") {
+        const u = auth.getCurrentUser();
+        nome = _deriveUserName_(u);
+      }
+    } catch (_) {}
+
+    // fallback: cache rápido gravado pelo auth.js (topbar cache)
+    if (!nome) nome = _safeGetLs_("PRONTIO_CURRENT_USER_NAME");
+
     el.textContent = nome || "Usuário";
   }
 
@@ -80,7 +99,7 @@
 
   // -----------------------------------------
   // Títulos de página (topbar)
-// -----------------------------------------
+  // -----------------------------------------
   function setTopbarTitle(title, subtitle) {
     const titleEl = qs("#topbar-title-text") || qs(".topbar-title-main h1");
     const subtitleEl = qs("#topbar-subtitle") || qs(".topbar-subtitle");
@@ -95,8 +114,7 @@
 
   // -----------------------------------------
   // Inicialização leve de UI global
-  // (chamada pelo main.js, se quiser)
-// -----------------------------------------
+  // -----------------------------------------
   function initGlobalUI() {
     updateSidebarUserName();
     updateSidebarYear();

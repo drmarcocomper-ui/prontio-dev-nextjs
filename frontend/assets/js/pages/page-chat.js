@@ -2,19 +2,15 @@
 // ============================================
 // PRONTIO - Página de Chat
 //
-// Padrão PRONTIO (assets/js/api.js):
-// - callApi     => retorna ENVELOPE { success, data, errors }
-// - callApiData => retorna DIRETO o "data" e lança erro se success=false
-//
-// Ações usadas no backend:
+// Ações usadas no backend (Registry):
 // - chat.sendMessage
 // - chat.listMessages
 // - chat.listMessagesSince
 // - chat.markAsRead
 // - chat.getUnreadSummary
-// - chat.listByAgenda / chat.listByPaciente (via params)
-// - agenda.peekNextPatient / agenda.nextPatient
-// - usuarios.listAll
+// - chat.listByPaciente / chat.sendByPaciente (opcional)
+// - usuarios.listAll (compat chat)
+// - agenda.peekNextPatient / agenda.nextPatient (compat chat)
 // ============================================
 
 (function (global, document) {
@@ -22,7 +18,6 @@
 
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
 
-  // ✅ padrão novo
   const callApiData =
     (PRONTIO.api && PRONTIO.api.callApiData) ||
     global.callApiData ||
@@ -32,10 +27,6 @@
         new Error("API não disponível nesta página (callApiData indefinido).")
       );
     };
-
-  // ------------------------------------------
-  // CONFIGURAÇÕES BÁSICAS DO CHAT
-  // ------------------------------------------
 
   let currentRoomId = "default";
 
@@ -56,10 +47,6 @@
   let lastUserActivityTs = Date.now();
 
   let lastTimestampByRoom = {};
-
-  // ------------------------------------------
-  // HELPERS GERAIS
-  // ------------------------------------------
 
   function getQueryParams() {
     const params = {};
@@ -88,10 +75,6 @@
     }
   }
 
-  // ------------------------------------------
-  // ELEMENTOS DE UI
-  // ------------------------------------------
-
   let messagesContainer;
   let chatForm;
   let chatInput;
@@ -111,10 +94,6 @@
   let nextPatientStatusPillEl;
   let btnNextPatient;
   let btnRefreshNextPatient;
-
-  // ------------------------------------------
-  // SALAS
-  // ------------------------------------------
 
   function getRoomButtons() {
     return document.querySelectorAll(".chat-room");
@@ -150,10 +129,6 @@
     attachRoomButtonEvents(btn);
     return btn;
   }
-
-  // ------------------------------------------
-  // UI: MENSAGEM
-  // ------------------------------------------
 
   function createMessageElement(msg) {
     const isMe = msg.sender === currentUserName;
@@ -230,10 +205,6 @@
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
-  // ------------------------------------------
-  // LEITURA / NÃO LIDAS
-  // ------------------------------------------
-
   async function markRoomAsRead() {
     if (!currentUserId) return;
     const lastTs = lastTimestampByRoom[currentRoomId];
@@ -245,14 +216,11 @@
         payload: {
           roomId: currentRoomId,
           userId: currentUserId,
-          lastTimestamp: lastTs,
-        },
+          lastTimestamp: lastTs
+        }
       });
     } catch (error) {
-      console.warn(
-        "[PRONTIO.chat] Erro ao marcar mensagens como lidas:",
-        error && error.message ? error.message : String(error)
-      );
+      console.warn("[PRONTIO.chat] Erro ao marcar mensagens como lidas:", error && error.message ? error.message : String(error));
     }
   }
 
@@ -262,7 +230,7 @@
     try {
       const result = await callApiData({
         action: "chat.getUnreadSummary",
-        payload: { userId: currentUserId },
+        payload: { userId: currentUserId }
       });
 
       const rooms = (result && result.rooms) || [];
@@ -273,10 +241,7 @@
 
       applyUnreadBadges(map);
     } catch (error) {
-      console.warn(
-        "[PRONTIO.chat] Erro ao atualizar resumo de não lidas:",
-        error && error.message ? error.message : String(error)
-      );
+      console.warn("[PRONTIO.chat] Erro ao atualizar resumo de não lidas:", error && error.message ? error.message : String(error));
     }
   }
 
@@ -304,15 +269,11 @@
     });
   }
 
-  // ------------------------------------------
-  // CARREGAR MENSAGENS
-  // ------------------------------------------
-
   async function loadMessages(showErrors = false) {
     try {
       const result = await callApiData({
         action: "chat.listMessages",
-        payload: { roomId: currentRoomId },
+        payload: { roomId: currentRoomId }
       });
 
       const messages = (result && result.messages) || [];
@@ -339,8 +300,8 @@
         action: "chat.listMessagesSince",
         payload: {
           roomId: currentRoomId,
-          afterTimestamp: lastTs,
-        },
+          afterTimestamp: lastTs
+        }
       });
 
       const newMessages = (result && result.messages) || [];
@@ -355,10 +316,6 @@
     }
   }
 
-  // ------------------------------------------
-  // ENVIAR MENSAGEM
-  // ------------------------------------------
-
   async function sendMessage(text) {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -369,8 +326,8 @@
         payload: {
           roomId: currentRoomId,
           sender: currentUserName,
-          message: trimmed,
-        },
+          message: trimmed
+        }
       });
 
       const messages = (result && result.messages) ? result.messages : [];
@@ -395,8 +352,8 @@
         payload: {
           roomId: roomId,
           sender: "Sistema",
-          message: text,
-        },
+          message: text
+        }
       });
 
       if (roomId === currentRoomId) {
@@ -405,16 +362,9 @@
         await updateUnreadSummary();
       }
     } catch (error) {
-      console.warn(
-        "[PRONTIO.chat] Falha ao enviar mensagem de sistema:",
-        error && error.message ? error.message : String(error)
-      );
+      console.warn("[PRONTIO.chat] Falha ao enviar mensagem de sistema:", error && error.message ? error.message : String(error));
     }
   }
-
-  // ------------------------------------------
-  // USUÁRIO DO CHAT
-  // ------------------------------------------
 
   function updateUserLabel() {
     if (!currentUserLabel) return;
@@ -451,7 +401,7 @@
     const info = {
       idUsuario: user.idUsuario,
       nome: user.nome,
-      tipo: user.tipo || "",
+      tipo: user.tipo || ""
     };
     global.localStorage.setItem(LOCALSTORAGE_USER_INFO_KEY, JSON.stringify(info));
 
@@ -464,7 +414,7 @@
   async function fetchUsersFromBackend() {
     const result = await callApiData({
       action: "usuarios.listAll",
-      payload: {},
+      payload: {}
     });
 
     const users = (result && result.users) || [];
@@ -475,13 +425,11 @@
     const users = await fetchUsersFromBackend();
 
     if (!users || users.length === 0) {
-      const nome = global.prompt(
-        "Nenhum usuário cadastrado. Informe um nome para usar no chat:"
-      );
+      const nome = global.prompt("Nenhum usuário cadastrado. Informe um nome para usar no chat:");
       const fakeUser = {
         idUsuario: "FAKE-" + Date.now(),
         nome: nome || "Usuário",
-        tipo: "LOCAL",
+        tipo: "LOCAL"
       };
       return fakeUser;
     }
@@ -535,10 +483,6 @@
     }
   }
 
-  // ------------------------------------------
-  // GERENCIAMENTO DE SALAS
-  // ------------------------------------------
-
   function setCurrentRoom(roomId, label, description) {
     currentRoomId = roomId || "default";
 
@@ -586,15 +530,12 @@
     const baseId = idPaciente || idAgenda || "sem-id";
     const roomId = "paciente-" + baseId;
 
-    const label =
-      patient.nomePaciente ? `Paciente: ${patient.nomePaciente}` : "Sala do paciente";
+    const label = patient.nomePaciente ? `Paciente: ${patient.nomePaciente}` : "Sala do paciente";
 
     const dataTexto = patient.dataBr || patient.data || "";
     const horaTexto = patient.horario || "";
     const descBase = `${dataTexto} ${horaTexto}`.trim();
-    const description = descBase
-      ? `Sala de anotações internas (${descBase})`
-      : "Sala de anotações internas do paciente";
+    const description = descBase ? `Sala de anotações internas (${descBase})` : "Sala de anotações internas do paciente";
 
     const btn = createDynamicRoom(roomId, label, description);
     if (!btn) return;
@@ -602,10 +543,6 @@
     btn.classList.add("chat-room--active");
     setCurrentRoom(roomId, label, description);
   }
-
-  // ------------------------------------------
-  // NAV LINKS (AGENDA / PRONTUÁRIO)
-  // ------------------------------------------
 
   function setupNavLinks(params) {
     const agendaId = params.agendaId || params.idAgenda || "";
@@ -654,13 +591,9 @@
 
     if (agendaId) {
       const roomId = "agenda-" + agendaId;
-      const label = pacienteNome
-        ? `Consulta: ${pacienteNome}`
-        : `Consulta ${agendaId}`;
+      const label = pacienteNome ? `Consulta: ${pacienteNome}` : `Consulta ${agendaId}`;
       const descBase = `${data} ${horario}`.trim();
-      const description = descBase
-        ? `Chat da consulta (${descBase})`
-        : "Chat desta consulta";
+      const description = descBase ? `Chat da consulta (${descBase})` : "Chat desta consulta";
 
       const btn = createDynamicRoom(roomId, label, description);
       if (btn) {
@@ -671,9 +604,7 @@
       }
     } else if (pacienteId) {
       const roomId = "paciente-" + pacienteId;
-      const label = pacienteNome
-        ? `Paciente: ${pacienteNome}`
-        : `Paciente ${pacienteId}`;
+      const label = pacienteNome ? `Paciente: ${pacienteNome}` : `Paciente ${pacienteId}`;
       const description = "Chat crônico do paciente";
 
       const btn = createDynamicRoom(roomId, label, description);
@@ -692,10 +623,6 @@
     }
   }
 
-  // ------------------------------------------
-  // PRÓXIMO PACIENTE
-  // ------------------------------------------
-
   function setNextPatientStatusPill(mode, text) {
     if (!nextPatientStatusPillEl) return;
 
@@ -705,7 +632,7 @@
   }
 
   function updateNextPatientPanel(patient, options = {}) {
-    const { isCalled } = options;
+    const isCalled = options && options.isCalled;
 
     if (!nextPatientSummaryEl || !nextPatientDetailsEl) return;
 
@@ -737,7 +664,7 @@
     try {
       const result = await callApiData({
         action: "agenda.peekNextPatient",
-        payload: {},
+        payload: {}
       });
 
       const data = result || {};
@@ -760,7 +687,7 @@
     try {
       const result = await callApiData({
         action: "agenda.nextPatient",
-        payload: {},
+        payload: {}
       });
 
       const data = result || {};
@@ -799,10 +726,6 @@
 
     loadNextPatient(false);
   }
-
-  // ------------------------------------------
-  // POLLING INTELIGENTE
-  // ------------------------------------------
 
   function updateLastUserActivity() {
     lastUserActivityTs = Date.now();
@@ -857,10 +780,6 @@
     });
   }
 
-  // ------------------------------------------
-  // EVENTOS DE UI
-  // ------------------------------------------
-
   function setupEventHandlers() {
     if (chatForm) {
       chatForm.addEventListener("submit", function (event) {
@@ -896,13 +815,7 @@
     setupActivityTracking();
   }
 
-  // ------------------------------------------
-  // INIT PAGE
-  // ------------------------------------------
-
   async function initChatPage() {
-    console.log("[PRONTIO.chat] initChatPage");
-
     messagesContainer = document.getElementById("chat-messages");
     chatForm = document.getElementById("chat-form");
     chatInput = document.getElementById("chat-input");
@@ -936,21 +849,14 @@
     scheduleAutoRefresh(CHAT_INTERVAL_ACTIVE);
   }
 
-  if (typeof PRONTIO.registerPage === "function") {
-    PRONTIO.registerPage("chat", initChatPage);
-  } else {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => {
-        initChatPage().catch((err) => {
-          console.error("[PRONTIO.chat] Erro ao iniciar o chat:", err);
-          global.alert("Erro ao iniciar o chat. Verifique a conexão com a API.");
-        });
-      });
-    } else {
-      initChatPage().catch((err) => {
-        console.error("[PRONTIO.chat] Erro ao iniciar o chat:", err);
-        global.alert("Erro ao iniciar o chat. Verifique a conexão com a API.");
-      });
-    }
-  }
+  // ✅ Garante PRONTIO.pages.chat para o main.js
+  PRONTIO.pages = PRONTIO.pages || {};
+  PRONTIO.pages.chat = PRONTIO.pages.chat || {};
+  PRONTIO.pages.chat.init = function () {
+    initChatPage().catch((err) => {
+      console.error("[PRONTIO.chat] Erro ao iniciar o chat:", err);
+      global.alert("Erro ao iniciar o chat. Verifique a conexão com a API.");
+    });
+  };
+
 })(window, document);

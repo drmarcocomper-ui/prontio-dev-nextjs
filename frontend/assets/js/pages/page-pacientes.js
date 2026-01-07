@@ -4,11 +4,20 @@
 (function (global, document) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
 
-  const callApiData =
+  // ✅ Passo: usar PacientesApi (features) como fachada
+  const pacientesApi =
+    PRONTIO.features &&
+    PRONTIO.features.pacientes &&
+    PRONTIO.features.pacientes.api &&
+    typeof PRONTIO.features.pacientes.api.createPacientesApi === "function"
+      ? PRONTIO.features.pacientes.api.createPacientesApi(PRONTIO)
+      : null;
+
+  const fallbackCallApiData =
     (PRONTIO.api && PRONTIO.api.callApiData) ||
     global.callApiData ||
     function () {
-      console.error("[Pacientes] callApiData não encontrado. Verifique assets/js/api.js.");
+      console.error("[Pacientes] callApiData não encontrado.");
       return Promise.reject(new Error("API não inicializada (callApiData indefinido)."));
     };
 
@@ -200,7 +209,6 @@
   let pageSizeAtual = 50;
   let lastPaging = null;
 
-  // ✅ Modo carregando: trava UI durante chamadas e aplica aria-busy
   function setLoading_(isLoading) {
     carregando = !!isLoading;
 
@@ -266,7 +274,6 @@
         if (btnPrev) btnPrev.disabled = !(usarPaginacao && lastPaging && lastPaging.hasPrev);
         if (btnNext) btnNext.disabled = !(usarPaginacao && lastPaging && lastPaging.hasNext);
 
-        // Botões da lista dependem de seleção ativa
         const hasSel = !!pacienteSelecionadoId;
         const btnIr = document.getElementById("btnIrProntuario");
         const btnEd = document.getElementById("btnEditar");
@@ -278,7 +285,6 @@
         if (btnEd) btnEd.disabled = !hasSel;
         if (btnCp) btnCp.disabled = !hasSel;
 
-        // Inativar/reativar depende de ativo
         if (btnIn && btnRe) {
           if (!hasSel) {
             btnIn.disabled = true;
@@ -294,7 +300,6 @@
           }
         }
 
-        // Form / edição
         const btnSalvar = document.getElementById("btnSalvarPaciente");
         const btnCancelar = document.getElementById("btnCancelarEdicao");
         if (btnSalvar) btnSalvar.disabled = false;
@@ -728,26 +733,21 @@
       return;
     }
 
-    let action = "Pacientes_Criar";
-    let mensagemProcesso = "Salvando paciente...";
-    let mensagemSucesso = "Paciente salvo com sucesso!";
-
     const estaEditando = modoEdicao && idEmEdicao;
 
-    if (estaEditando) {
-      action = "Pacientes_Atualizar";
-      mensagemProcesso = "Atualizando paciente...";
-      mensagemSucesso = "Paciente atualizado com sucesso!";
-    }
-
-    mostrarMensagem(mensagemProcesso, "info");
+    mostrarMensagem(estaEditando ? "Atualizando paciente..." : "Salvando paciente...", "info");
     setLoading_(true);
 
     const payload = estaEditando ? Object.assign({ idPaciente: idEmEdicao }, dados) : dados;
 
     let resp;
     try {
-      resp = await callApiData({ action, payload });
+      if (pacientesApi) {
+        resp = estaEditando ? await pacientesApi.atualizar(payload) : await pacientesApi.criar(payload);
+      } else {
+        // fallback compat
+        resp = await fallbackCallApiData({ action: estaEditando ? "Pacientes_Atualizar" : "Pacientes_Criar", payload });
+      }
     } catch (err) {
       const msg = (err && err.message) || "Erro ao salvar/atualizar paciente.";
       console.error("PRONTIO: erro em salvarPaciente:", err);
@@ -758,7 +758,7 @@
 
     await carregarPacientes();
 
-    mostrarMensagem(mensagemSucesso, "sucesso");
+    mostrarMensagem(estaEditando ? "Paciente atualizado com sucesso!" : "Paciente salvo com sucesso!", "sucesso");
 
     const warnings = resp && resp.warnings ? resp.warnings : null;
     if (warnings && Array.isArray(warnings) && warnings.length) {
@@ -801,10 +801,11 @@
 
     let data;
     try {
-      data = await callApiData({
-        action: "Pacientes_Listar",
-        payload: payload
-      });
+      if (pacientesApi && typeof pacientesApi.listar === "function") {
+        data = await pacientesApi.listar(payload);
+      } else {
+        data = await fallbackCallApiData({ action: "Pacientes_Listar", payload: payload });
+      }
     } catch (err) {
       const msg = (err && err.message) || "Erro ao carregar pacientes.";
       console.error("PRONTIO: erro em carregarPacientes:", err);
@@ -893,7 +894,7 @@
 
       const tr = document.createElement("tr");
       tr.dataset.idPaciente = id;
-      tr.dataset.nomeCompleto = nome; // ✅ padronizado
+      tr.dataset.nomeCompleto = nome;
       tr.dataset.ativo = ativoBool ? "SIM" : "NAO";
 
       if (!ativoBool) tr.classList.add("linha-inativa");
@@ -1066,9 +1067,7 @@
           origem: "pacientes",
           ID_Paciente: pacienteSelecionadoId,
           idPaciente: pacienteSelecionadoId,
-          // ✅ padronizado (removido nome_paciente)
           nomeCompleto: pacienteSelecionadoNomeCompleto || "",
-          // alias (compat)
           nome: pacienteSelecionadoNomeCompleto || ""
         })
       );
@@ -1096,10 +1095,14 @@
     setLoading_(true);
 
     try {
-      await callApiData({
-        action: "Pacientes_AlterarStatusAtivo",
-        payload: { idPaciente: pacienteSelecionadoId, ativo: ativoDesejado }
-      });
+      if (pacientesApi && typeof pacientesApi.alterarStatusAtivo === "function") {
+        await pacientesApi.alterarStatusAtivo({ idPaciente: pacienteSelecionadoId, ativo: ativoDesejado });
+      } else {
+        await fallbackCallApiData({
+          action: "Pacientes_AlterarStatusAtivo",
+          payload: { idPaciente: pacienteSelecionadoId, ativo: ativoDesejado }
+        });
+      }
     } catch (err) {
       const msg = (err && err.message) || "Erro ao alterar status do paciente.";
       console.error("PRONTIO: erro em alterarStatusPaciente:", err);

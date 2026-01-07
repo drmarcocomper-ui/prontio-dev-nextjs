@@ -301,6 +301,17 @@
     } catch (_) {}
 
     await loadOnce_("assets/js/core/auth.js");
+
+    // ✅ Tema: fonte da verdade é core/theme.js
+    await loadOnce_("assets/js/core/theme.js");
+    try {
+      if (PRONTIO.theme && typeof PRONTIO.theme.init === "function") {
+        PRONTIO.theme.init();
+      } else if (PRONTIO.ui && typeof PRONTIO.ui.initTheme === "function") {
+        PRONTIO.ui.initTheme();
+      }
+    } catch (_) {}
+
     await loadOnce_("assets/js/core/app.js");
 
     try {
@@ -433,51 +444,6 @@
   PRONTIO.ui.modals.bindTriggers = bindModalTriggers_;
 
   // ============================================================
-  // Tema
-  // ============================================================
-  function initThemeToggle_() {
-    const btn = document.querySelector(".js-toggle-theme");
-    if (!btn) return;
-
-    function apply(theme) {
-      document.body.setAttribute("data-theme", theme);
-      try { localStorage.setItem("prontio_theme", theme); } catch (e) {}
-
-      const sun = document.querySelector(".js-theme-icon-sun");
-      const moon = document.querySelector(".js-theme-icon-moon");
-      if (sun && moon) {
-        if (theme === "dark") {
-          sun.style.display = "none";
-          moon.style.display = "";
-        } else {
-          sun.style.display = "";
-          moon.style.display = "none";
-        }
-      }
-      btn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
-    }
-
-    let theme = "light";
-    try {
-      theme = localStorage.getItem("prontio_theme") || (document.body.getAttribute("data-theme") || "light");
-    } catch (e) {
-      theme = document.body.getAttribute("data-theme") || "light";
-    }
-
-    apply(theme);
-
-    if (btn.getAttribute("data-theme-bound") === "1") return;
-    btn.setAttribute("data-theme-bound", "1");
-
-    btn.addEventListener("click", function () {
-      const cur = document.body.getAttribute("data-theme") || "light";
-      apply(cur === "dark" ? "light" : "dark");
-    });
-  }
-
-  PRONTIO.ui.initTheme = initThemeToggle_;
-
-  // ============================================================
   // Chat widget
   // ============================================================
   async function ensureChatWidgetLoaded_() {
@@ -527,7 +493,7 @@
             await PRONTIO.widgets.topbar.init();
           }
 
-          initThemeToggle_();
+          // ✅ Tema já foi inicializado no ensureCoreLoaded_ via core/theme.js
           bindModalTriggers_(document);
           await ensureChatWidgetLoaded_();
         }

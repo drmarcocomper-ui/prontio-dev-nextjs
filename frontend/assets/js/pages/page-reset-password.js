@@ -6,11 +6,25 @@
 // - Loading "Validando link..."
 // - Desabilita formulário se token ausente/inválido
 // - Mantém mensagens genéricas (não vaza detalhes)
+//
+// ✅ Padronizado (main.js):
+// - PRONTIO.pages["reset-password"].init = init
+// - Fallback DOMContentLoaded só se main.js não rodar
 // =====================================
 
 (function (global, document) {
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
+  PRONTIO.pages = PRONTIO.pages || {};
+  PRONTIO.pages["reset-password"] = PRONTIO.pages["reset-password"] || {};
+
   const $ = (id) => document.getElementById(id);
+
+  const callApiData =
+    (PRONTIO.api && typeof PRONTIO.api.callApiData === "function")
+      ? PRONTIO.api.callApiData
+      : (typeof global.callApiData === "function")
+      ? global.callApiData
+      : null;
 
   function showMsg(msg, type) {
     const el = $("msgReset");
@@ -34,8 +48,10 @@
   }
 
   function assertApi() {
-    if (!PRONTIO.api || typeof PRONTIO.api.callApiData !== "function") {
-      throw new Error("API não disponível.");
+    if (!callApiData) {
+      const err = new Error("API não disponível.");
+      err.code = "CLIENT_NO_API";
+      throw err;
     }
   }
 
@@ -53,7 +69,6 @@
     const inp = $(inputId);
     if (!btn || !inp) return;
 
-    // evita bind duplicado
     if (btn.dataset.boundToggle === "1") return;
     btn.dataset.boundToggle = "1";
 
@@ -94,7 +109,7 @@
     // valida antecipadamente para UX (sem vazar detalhes)
     try {
       assertApi();
-      const res = await PRONTIO.api.callApiData({
+      const res = await callApiData({
         action: "Auth_ForgotPassword_ValidateToken",
         payload: { token }
       });
@@ -142,7 +157,7 @@
     try {
       assertApi();
 
-      await PRONTIO.api.callApiData({
+      await callApiData({
         action: "Auth_ForgotPassword_Reset",
         payload: { token, novaSenha: s1 }
       });
@@ -166,6 +181,10 @@
   }
 
   async function init() {
+    // idempotente
+    if (PRONTIO.pages["reset-password"]._inited === true) return;
+    PRONTIO.pages["reset-password"]._inited = true;
+
     togglePassword("toggleSenha1", "rpSenha1");
     togglePassword("toggleSenha2", "rpSenha2");
 
@@ -199,11 +218,12 @@
     setFormEnabled_(true);
   }
 
-  // compat: standalone
-  document.addEventListener("DOMContentLoaded", () => { init(); });
+  // ✅ padrão profissional: main.js chama page.init()
+  PRONTIO.pages["reset-password"].init = init;
 
-  // compat: lazy-load
-  if (PRONTIO.registerPage) {
-    PRONTIO.registerPage("reset-password", init);
+  // ✅ fallback: se por algum motivo main.js não rodar, inicializa sozinho
+  if (!PRONTIO._mainBootstrapped) {
+    document.addEventListener("DOMContentLoaded", () => { init(); });
   }
+
 })(window, document);
