@@ -4,6 +4,15 @@
   PRONTIO.pages = PRONTIO.pages || {};
   PRONTIO._pageInited = PRONTIO._pageInited || {};
 
+  // ✅ Guard: não inicializa fora da página Prontuário
+  try {
+    const body = document && document.body;
+    const pageId = body && body.dataset ? String(body.dataset.pageId || body.getAttribute("data-page-id") || "") : "";
+    if (pageId && pageId !== "prontuario") return;
+  } catch (_) {
+    // se não conseguir ler body/dataset, segue (fallback)
+  }
+
   const callApiData =
     (PRONTIO.api && PRONTIO.api.callApiData) ||
     global.callApiData ||
@@ -768,7 +777,6 @@
 
     container.innerHTML = html;
 
-    // wires
     if (t === "atestado") _wireCidAutocomplete_();
     if (t === "encaminhamento") _wireEncaminhamentoAutocomplete_();
 
@@ -776,7 +784,6 @@
     if (focusEl && typeof focusEl.focus === "function") setTimeout(() => focusEl.focus(), 0);
   }
 
-  // ✅ Atualizado: payload novo + compatível
   function _collectDocPayload_(ctx) {
     const t = String(docTipoAtual || "").toLowerCase();
     const payload = {
@@ -792,7 +799,6 @@
       payload.exibirCid = !!qs("#docExibirCid")?.checked;
       payload.observacoes = String(qs("#docObs")?.value || "").trim();
 
-      // Texto principal será gerado no backend
       payload.texto = "";
 
       if (docState.atestado.cidObj) {
@@ -831,7 +837,6 @@
       payload.telefone = String(qs("#docEncTelefone")?.value || "").trim();
       payload.avaliacao = String(qs("#docEncAvaliacao")?.value || "").trim();
 
-      // compat antigo
       payload.destino = payload.encaminhamento;
       payload.texto = payload.avaliacao || payload.texto;
 
@@ -841,7 +846,6 @@
     return payload;
   }
 
-  // ✅ Atualizado: tenta primeiro Prontuario.*.GerarPdf, mas mantém fallbacks
   async function _gerarDocumento_(ctx) {
     const t = String(docTipoAtual || "").toLowerCase();
     if (!t) return;
@@ -922,18 +926,15 @@
 
     documentosPanelAside = documentosPanel.querySelector(".slide-panel");
 
-    // fechar
     qsa("[data-close-documentos]").forEach((btn) => {
       btn.addEventListener("click", () => fecharDocumentosPanel_());
     });
 
-    // clique fora
     documentosPanel.addEventListener("click", (ev) => {
       if (!documentosPanelAside) return;
       if (ev.target === documentosPanel) fecharDocumentosPanel_();
     });
 
-    // submenu -> formulário
     qsa("#documentosChooser .doc-choice").forEach((btn) => {
       btn.addEventListener("click", () => {
         const tipo = btn.getAttribute("data-doc") || "";
@@ -941,7 +942,6 @@
       });
     });
 
-    // voltar
     qs("#btnDocVoltar")?.addEventListener("click", () => {
       _resetDocumentosUi_();
       const chooser = qs("#documentosChooser");
@@ -949,7 +949,6 @@
       if (first && typeof first.focus === "function") first.focus();
     });
 
-    // submit
     qs("#formDocumentoProntuario")?.addEventListener("submit", (ev) => {
       ev.preventDefault();
       _gerarDocumento_(ctx);
@@ -1346,7 +1345,6 @@
     try {
       const base = new URL("exames.html", global.location.origin);
       if (ctx.idPaciente) base.searchParams.set("pacienteId", ctx.idPaciente);
-      // ✅ padronizado (nomeCompleto)
       if (ctx.nomeCompleto) base.searchParams.set("pacienteNomeCompleto", ctx.nomeCompleto);
       if (ctx.idAgenda) base.searchParams.set("agendaId", ctx.idAgenda);
       global.location.href = base.toString();
@@ -1393,7 +1391,7 @@
       const dt = parseDataHora(dataRaw);
       if (dt) {
         const dia = String(dt.getDate()).padStart(2, "0");
-        const mes = String(dt.getMonth() + 1).padStart(2, "0");
+        const mes = String(dt.getMonth() + 1).padStart(2, "0"); // ✅ FIX AQUI
         const ano = dt.getFullYear();
         const hora = String(dt.getHours()).padStart(2, "0");
         const min = String(dt.getMinutes()).padStart(2, "0");
@@ -1659,9 +1657,7 @@
 
       const metaExtra =
         dataCriacaoFmt || dataReceitaFmt
-          ? `Criada em ${dataCriacaoFmt || "—"} · Data da receita: ${
-              dataReceitaFmt || (dataCriacaoFmt ? dataCriacaoFmt.split(" ")[0] : "—")
-            }`
+          ? `Criada em ${dataCriacaoFmt || "—"} · Data da receita: ${dataReceitaFmt || (dataCriacaoFmt ? dataCriacaoFmt.split(" ")[0] : "—")}`
           : "";
 
       li.innerHTML = `
@@ -1804,8 +1800,6 @@
     qs("#btnAcaoNovaEvolucao")?.addEventListener("click", abrirNovaEvolucao_);
     qs("#btnAcaoReceita")?.addEventListener("click", () => abrirReceitaNoPainel_(ctx));
     qs("#btnAcaoExames")?.addEventListener("click", () => abrirExames_(ctx));
-
-    // ✅ Documentos agora abre o painel (não navega)
     qs("#btnAcaoDocumentos")?.addEventListener("click", () => abrirDocumentosPanel_());
 
     // Evolução salvar
@@ -1863,22 +1857,21 @@
     });
   }
 
+  // ✅ main.js chama PRONTIO.pages[pageId].init()
   PRONTIO.pages.prontuario = PRONTIO.pages.prontuario || {};
   PRONTIO.pages.prontuario.init = initProntuario;
 
+  // ✅ compat com router antigo (se existir)
   try {
     if (PRONTIO.core && PRONTIO.core.router && typeof PRONTIO.core.router.register === "function") {
       PRONTIO.core.router.register("prontuario", initProntuario);
     }
   } catch (_) {}
 
-  if (typeof PRONTIO.registerPage === "function") {
-    PRONTIO.registerPage("prontuario", initProntuario);
+  // ✅ fallback: se main.js não rodar, inicializa sozinho
+  if (!PRONTIO._mainBootstrapped) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initProntuario);
+    else initProntuario();
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initProntuario);
-  } else {
-    initProntuario();
-  }
 })(window, document);
