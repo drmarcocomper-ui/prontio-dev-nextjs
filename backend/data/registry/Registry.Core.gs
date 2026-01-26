@@ -1,3 +1,5 @@
+// backend/data/registry/Registry.Core.gs
+
 function _Registry_missingHandler_(fnName) {
   return function (ctx, payload) {
     var err = new Error("Handler não disponível no deploy: " + String(fnName));
@@ -192,20 +194,47 @@ function Registry_RegisterCore_(map) {
   };
 }
 
+/**
+ * ✅ NOVO (SEM QUEBRAR):
+ * Chama Registry_RegisterX_(map) apenas se a função existir no deploy.
+ * Isso evita quebrar o build do registry quando algum arquivo estiver vazio
+ * ou não estiver incluído no deploy atual.
+ */
+function _Registry_callRegisterIfExists_(fnName, map) {
+  fnName = String(fnName || "").trim();
+  if (!fnName) return false;
+
+  try {
+    var root = (typeof globalThis !== "undefined") ? globalThis : this;
+    var fn = root ? root[fnName] : null;
+    if (typeof fn === "function") {
+      fn(map);
+      return true;
+    }
+  } catch (_) {}
+
+  return false;
+}
+
 function _Registry_build_() {
   var map = {};
 
-  Registry_RegisterCore_(map);
-  Registry_RegisterAuth_(map);
-  Registry_RegisterUsuarios_(map);
-  Registry_RegisterClinicaProfissionais_(map);
-  Registry_RegisterMetaHealth_(map);
-  Registry_RegisterAtendimento_(map);
-  Registry_RegisterAgenda_(map);
-  Registry_RegisterProntuario_(map);
-  Registry_RegisterChat_(map);
-  Registry_RegisterPacientes_(map);
-  Registry_RegisterReceitaMedicamentos_(map);
+  // Núcleo (obrigatórios)
+  _Registry_callRegisterIfExists_("Registry_RegisterCore_", map);
+  _Registry_callRegisterIfExists_("Registry_RegisterAuth_", map);
+  _Registry_callRegisterIfExists_("Registry_RegisterUsuarios_", map);
+
+  // ✅ opcionais: não podem derrubar o boot se estiverem ausentes/vazios
+  _Registry_callRegisterIfExists_("Registry_RegisterClinicaProfissionais_", map);
+  _Registry_callRegisterIfExists_("Registry_RegisterMetaHealth_", map);
+
+  // Demais módulos (dependem do deploy)
+  _Registry_callRegisterIfExists_("Registry_RegisterAtendimento_", map);
+  _Registry_callRegisterIfExists_("Registry_RegisterAgenda_", map);
+  _Registry_callRegisterIfExists_("Registry_RegisterProntuario_", map);
+  _Registry_callRegisterIfExists_("Registry_RegisterChat_", map);
+  _Registry_callRegisterIfExists_("Registry_RegisterPacientes_", map);
+  _Registry_callRegisterIfExists_("Registry_RegisterReceitaMedicamentos_", map);
 
   return map;
 }
