@@ -23,9 +23,14 @@
  *   - err.envelope (envelope completo quando disponível)
  *   - err.errors (array de errors do backend)
  * - Exporta PRONTIO.api.getPrimaryError para o front decidir por code sem duplicar lógica.
+ *
+ * ✅ CANÔNICO (Namespace):
+ * - NÃO exporta funções globais (nada fora de PRONTIO no window).
  */
 
 (function (global) {
+  "use strict";
+
   const PRONTIO = (global.PRONTIO = global.PRONTIO || {});
   PRONTIO.api = PRONTIO.api || {};
 
@@ -65,8 +70,9 @@
   }
 
   function ensureEnvelope_(json) {
-    if (!json || typeof json !== "object")
+    if (!json || typeof json !== "object") {
       throw new Error("Resposta inválida da API (não é JSON objeto).");
+    }
     if (!("success" in json) || !("data" in json) || !("errors" in json)) {
       throw new Error("Resposta inválida da API (envelope fora do padrão PRONTIO).");
     }
@@ -210,12 +216,25 @@
       let script = null;
       let timer = null;
 
-      const cleanup = () => {
-        try {
-          delete global[cbName];
-        } catch (_) {
-          global[cbName] = undefined;
+      // ✅ limpeza segura: em timeout, mantém NOOP temporário para absorver resposta tardia
+      const cleanup = (keepCallbackNoop) => {
+        if (keepCallbackNoop) {
+          global[cbName] = function () {};
+          global.setTimeout(() => {
+            try {
+              delete global[cbName];
+            } catch (_) {
+              global[cbName] = undefined;
+            }
+          }, 60000); // 60s de janela para respostas tardias
+        } else {
+          try {
+            delete global[cbName];
+          } catch (_) {
+            global[cbName] = undefined;
+          }
         }
+
         if (script && script.parentNode) script.parentNode.removeChild(script);
         if (timer) clearTimeout(timer);
       };
@@ -223,14 +242,14 @@
       timer = setTimeout(() => {
         if (done) return;
         done = true;
-        cleanup();
+        cleanup(true); // ✅ mantém noop
         reject(new Error("Timeout ao chamar API (JSONP)."));
       }, timeoutMs);
 
       global[cbName] = (data) => {
         if (done) return;
         done = true;
-        cleanup();
+        cleanup(false);
         resolve(data);
       };
 
@@ -241,7 +260,7 @@
       script.onerror = () => {
         if (done) return;
         done = true;
-        cleanup();
+        cleanup(false);
         reject(new Error("Falha de rede ao chamar API (JSONP)."));
       };
 
@@ -290,7 +309,9 @@
     try {
       json = await jsonp_(url, getTimeoutMs_());
     } catch (e) {
-      throw new Error("Falha de rede ao chamar API: " + normalizeError_(e));
+      const err = new Error("Falha de rede ao chamar API: " + normalizeError_(e));
+      err.code = "CLIENT_NETWORK_ERROR";
+      throw err;
     }
 
     return ensureEnvelope_(json);
@@ -319,7 +340,10 @@
     try {
       err.envelope = envelope || null;
       err.errors = (envelope && Array.isArray(envelope.errors)) ? envelope.errors : [];
-      err.requestId = envelope && (envelope.requestId || (envelope.meta && envelope.meta.request_id)) ? (envelope.requestId || envelope.meta.request_id) : null;
+      err.requestId =
+        envelope && (envelope.requestId || (envelope.meta && envelope.meta.request_id))
+          ? (envelope.requestId || envelope.meta.request_id)
+          : null;
       err.action = envelope && envelope.meta && envelope.meta.action ? envelope.meta.action : null;
     } catch (_) {}
 
@@ -332,14 +356,10 @@
     return envelope.data;
   }
 
+  // Exports (somente no namespace PRONTIO)
   PRONTIO.api.callApiEnvelope = callApiEnvelope;
   PRONTIO.api.callApiData = callApiData;
   PRONTIO.api.assertSuccess = assertSuccess_;
   PRONTIO.api.getPrimaryError = getPrimaryError_;
-
-  // ✅ Globals (para debug e compat)
-  global.callApi = callApiEnvelope;
-  global.callApiEnvelope = callApiEnvelope; // alias
-  global.callApiData = callApiData;
 
 })(window);

@@ -3,6 +3,7 @@
 // Página de Login (FRONT-END)
 // Pilar D: UX do Login (login ou e-mail)
 // + Pilar I: mensagem amigável em sessão expirada
+// + Segurança: remove credenciais da URL (NUNCA aceitar senha em querystring)
 // =====================================
 
 (function (global, document) {
@@ -172,6 +173,30 @@
     });
   }
 
+  // ✅ Segurança: remove credenciais da URL (não permite usuario/senha via querystring)
+  function scrubSensitiveQueryParams_() {
+    try {
+      const url = new URL(global.location.href);
+
+      const hasUser = url.searchParams.has("usuario") || url.searchParams.has("user");
+      const hasPass = url.searchParams.has("senha") || url.searchParams.has("password");
+
+      if (!hasUser && !hasPass) return;
+
+      // Remover parâmetros sensíveis
+      url.searchParams.delete("usuario");
+      url.searchParams.delete("user");
+      url.searchParams.delete("senha");
+      url.searchParams.delete("password");
+
+      // Atualizar URL sem recarregar
+      global.history.replaceState({}, document.title, url.toString());
+
+      // Aviso (sem expor valores)
+      showMessage("⚠️ Removemos credenciais da URL por segurança. Use o formulário de login.", "warning");
+    } catch (_) {}
+  }
+
   // ✅ Pilar I: mensagem amigável quando veio de sessão expirada/inválida
   function showAuthReasonIfAny_() {
     const reason = String(lsGet(UX_KEYS.LAST_AUTH_REASON) || "").trim();
@@ -229,6 +254,9 @@
     // ✅ trava idempotente (page.init pode ser chamado mais de uma vez)
     if (PRONTIO.pages && PRONTIO.pages.login && PRONTIO.pages.login._inited === true) return;
     PRONTIO.pages.login._inited = true;
+
+    // ✅ Segurança: remove credenciais da URL
+    scrubSensitiveQueryParams_();
 
     setYear();
     applyUxHints_();

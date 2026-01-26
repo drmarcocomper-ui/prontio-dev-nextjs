@@ -11,6 +11,9 @@
 // ✅ PASSO 2 (padronização global):
 // - Trata codes AUTH_* canônicos e aplica forceLogoutLocal quando necessário,
 //   mesmo quando me() é chamado diretamente.
+//
+// ✅ CANÔNICO (Namespace):
+// - NÃO depende de globals (window.callApiData etc.). Usa apenas PRONTIO.api.*
 // ============================================================
 
 (function (global, document) {
@@ -146,13 +149,31 @@
   }
 
   // ------------------------------------------------------------
-  // API accessor (callApiData)
+  // API accessor (callApiData) — CANÔNICO: só PRONTIO.api
   // ------------------------------------------------------------
 
   function getCallApiData_() {
     if (PRONTIO.api && typeof PRONTIO.api.callApiData === "function") return PRONTIO.api.callApiData;
-    if (typeof global.callApiData === "function") return global.callApiData;
     return null;
+  }
+
+  // ------------------------------------------------------------
+  // URL helpers
+  // ------------------------------------------------------------
+
+  function resolveLoginUrl_() {
+    // ✅ evita quebrar em GitHub Pages/subpath (não usa "/login.html")
+    try {
+      const base =
+        (global.document && global.document.baseURI) ? String(global.document.baseURI) : String(global.location.href);
+      const u = new URL(base);
+      u.pathname = u.pathname.replace(/\/[^/]*$/, "/login.html");
+      u.search = "";
+      u.hash = "";
+      return u.toString();
+    } catch (_) {
+      return "login.html";
+    }
   }
 
   // ------------------------------------------------------------
@@ -174,7 +195,7 @@
     if (clearChat) safeRemove_(LS_KEYS.CHAT_USER);
 
     if (redirect) {
-      try { global.location.href = "/login.html"; } catch (_) {}
+      try { global.location.href = resolveLoginUrl_(); } catch (_) {}
     }
   }
 
@@ -199,7 +220,7 @@
       await callApiData({ action: "Auth_Logout", payload: { token } });
       forceLogoutLocal("AUTH_LOGOUT", { redirect, clearChat });
       return { ok: true, local: true, remote: true };
-    } catch (e) {
+    } catch (_) {
       forceLogoutLocal("AUTH_LOGOUT_FALLBACK", { redirect, clearChat });
       return { ok: true, local: true, remote: false, fallback: true };
     }
@@ -250,7 +271,7 @@
 
     const callApiData = getCallApiData_();
     if (!callApiData) {
-      const err = new Error("API não disponível (callApiData indefinido).");
+      const err = new Error("API não disponível (PRONTIO.api.callApiData indefinido).");
       err.code = "CLIENT_NO_API";
       throw err;
     }
@@ -296,7 +317,7 @@
 
     const callApiData = getCallApiData_();
     if (!callApiData) {
-      const err = new Error("API não disponível (callApiData indefinido).");
+      const err = new Error("API não disponível (PRONTIO.api.callApiData indefinido).");
       err.code = "CLIENT_NO_API";
       throw err;
     }
@@ -318,7 +339,7 @@
 
       return res;
     } catch (e) {
-      // ✅ Se for erro AUTH canônico, encerra sessão local também (mesmo se api.js já fizer isso)
+      // ✅ Se for erro AUTH canônico, encerra sessão local também
       if (e && isAuthErrorCode_(e.code)) {
         forceLogoutLocal(String(e.code || "AUTH_REQUIRED"), { redirect: true, clearChat: true });
       }
