@@ -30,33 +30,33 @@
 
     atendimento: { js: ["assets/js/pages/page-atendimento.js"], css: ["assets/css/pages/page-atendimento.css"] },
 
-    // ✅ Agenda (Split modular — 2026-01)
-    // Ordem importa: formatters/view/api/state -> módulos -> controller/events/entry -> page bootstrap
-    agenda: {
-      js: [
-        // base da feature
-        "assets/js/features/agenda/agenda.formatters.js",
-        "assets/js/features/agenda/agenda.view.js",
-        "assets/js/features/agenda/agenda.api.js",
-        "assets/js/features/agenda/agenda.state.js",
+agenda: {
+  js: [
+    "assets/js/features/agenda/agenda.formatters.js",
+    "assets/js/features/agenda/agenda.view.js",
+    "assets/js/features/agenda/agenda.api.js",
+    "assets/js/features/agenda/agenda.state.js",
 
-        // módulos split
-        "assets/js/features/agenda/agenda.pacientesCache.js",
-        "assets/js/features/agenda/agenda.filtros.js",
-        "assets/js/features/agenda/agenda.loaders.js",
-        "assets/js/features/agenda/agenda.uiActions.js",
-        "assets/js/features/agenda/agenda.editActions.js",
+    // ✅ dependências de pacientes/autocomplete
+    "assets/js/widgets/widget-typeahead.js",
+    "assets/js/features/pacientes/pacientes.api.js",
+    "assets/js/features/pacientes/pacientes.picker.js",
 
-        // controller + events + entry (registra init)
-        "assets/js/features/agenda/agenda.controller.js",
-        "assets/js/features/agenda/agenda.events.js",
-        "assets/js/features/agenda/agenda.entry.js",
+    "assets/js/features/agenda/agenda.pacientesCache.js",
+    "assets/js/features/agenda/agenda.filtros.js",
+    "assets/js/features/agenda/agenda.loaders.js",
+    "assets/js/features/agenda/agenda.uiActions.js",
+    "assets/js/features/agenda/agenda.editActions.js",
 
-        // page bootstrap (chama entry.init)
-        "assets/js/pages/page-agenda.js"
-      ],
-      css: ["assets/css/pages/page-agenda.css"]
-    },
+    "assets/js/features/agenda/agenda.controller.js",
+    "assets/js/features/agenda/agenda.events.js",
+    "assets/js/features/agenda/agenda.entry.js",
+
+    "assets/js/pages/page-agenda.js"
+  ],
+  css: ["assets/css/pages/page-agenda.css"]
+},
+
 
     chat: { js: ["assets/js/pages/page-chat.js"], css: ["assets/css/pages/page-chat.css"] },
     configuracoes: { js: ["assets/js/pages/page-configuracoes.js"], css: ["assets/css/pages/page-configuracoes.css"] },

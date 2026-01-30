@@ -1,17 +1,4 @@
 // frontend/assets/js/features/agenda/agenda.controller.js
-/**
- * PRONTIO — Agenda Controller (Front)
- * ------------------------------------------------------------
- * Controller FINO (orquestrador)
- *
- * Responsabilidades:
- * - Inicializar state, api e view
- * - Conectar módulos especializados
- * - Injetar dependências de UI (ex.: pacientesPicker) no state
- * - Expor actions públicas para agenda.entry.js
- * - Bridge: expor actions ao loader via state.controllerActions
- */
-
 (function (global) {
   "use strict";
 
@@ -23,14 +10,14 @@
   const createAgendaView = PRONTIO.features.agenda.view?.createAgendaView;
   const createAgendaState = PRONTIO.features.agenda.state?.createAgendaState;
 
-  // módulos
   const createAgendaLoaders = PRONTIO.features.agenda.loaders?.createAgendaLoaders;
   const createAgendaUiActions = PRONTIO.features.agenda.uiActions?.createAgendaUiActions;
   const createAgendaEditActions = PRONTIO.features.agenda.editActions?.createAgendaEditActions;
 
-  // integração opcional: picker de pacientes
   const createPacientesApi = PRONTIO.features?.pacientes?.api?.createPacientesApi || null;
   const createPacientesPicker = PRONTIO.features?.pacientes?.picker?.createPacientesPicker || null;
+
+  const attachTypeahead = PRONTIO.widgets?.typeahead?.attach || null;
 
   function createAgendaController(env) {
     env = env || {};
@@ -55,14 +42,26 @@
       return null;
     }
 
+    // Pacientes API (1x)
+    const pacientesApi = (createPacientesApi && typeof createPacientesApi === "function")
+      ? createPacientesApi(PRONTIO)
+      : null;
+
+    function nomePaciente_(p) {
+      return String(p?.nomeCompleto || p?.nome || "").trim();
+    }
+
+    function telefonePaciente_(p) {
+      return String(p?.telefone || p?.telefonePrincipal || p?.telefone_principal || "").trim();
+    }
+
     function tryInitPacientesPicker_(dom) {
       state.pacientesPicker = null;
 
-      if (!createPacientesApi || !createPacientesPicker) return;
-      if (!dom || !dom.modalPacientes || !dom.buscaPacienteTermo || !dom.listaPacientesEl || !dom.msgPacientesEl) return;
-
-      const pacientesApi = createPacientesApi(PRONTIO);
       if (!pacientesApi || typeof pacientesApi.buscarSimples !== "function") return;
+      if (!createPacientesPicker) return;
+
+      if (!dom || !dom.modalPacientes || !dom.buscaPacienteTermo || !dom.listaPacientesEl || !dom.msgPacientesEl) return;
 
       try {
         const picker = createPacientesPicker({
@@ -79,8 +78,17 @@
           },
           onSelect: (p, ctx2) => {
             const mode = (ctx2 && ctx2.mode) ? String(ctx2.mode) : "novo";
-            if (mode === "editar") state.pacienteEditar = p;
-            else state.pacienteNovo = p;
+
+            if (mode === "editar") {
+              state.pacienteEditar = p;
+              if (dom.editNomePaciente) dom.editNomePaciente.value = nomePaciente_(p);
+            } else {
+              state.pacienteNovo = p;
+              if (dom.novoNomePaciente) dom.novoNomePaciente.value = nomePaciente_(p);
+              if (dom.novoTelefone && !String(dom.novoTelefone.value || "").trim()) {
+                dom.novoTelefone.value = telefonePaciente_(p);
+              }
+            }
           }
         });
 
@@ -92,48 +100,108 @@
       }
     }
 
+    function setupTypeahead_(dom) {
+      if (!attachTypeahead) return;
+      if (!pacientesApi || typeof pacientesApi.buscarSimples !== "function") return;
+
+      function renderItem(p) {
+        const title = nomePaciente_(p) || "(sem nome)";
+        const tel = telefonePaciente_(p);
+        return { title, subtitle: tel ? tel : "" };
+      }
+
+      function invalidateIfMismatch(inputEl, selectedGetter, selectedClear) {
+        const typed = String(inputEl.value || "").trim();
+        const sel = selectedGetter();
+        const selNome = sel ? nomePaciente_(sel) : "";
+        if (!typed || !sel) return;
+        if (typed !== selNome) selectedClear();
+      }
+
+      // Novo
+      if (dom.novoNomePaciente) {
+        attachTypeahead({
+          inputEl: dom.novoNomePaciente,
+          minChars: 2,
+          debounceMs: 220,
+          fetchItems: async (q) => {
+            const data = await pacientesApi.buscarSimples(q, 12);
+            return (data && data.pacientes) ? data.pacientes : [];
+          },
+          renderItem,
+          onInputChanged: () => invalidateIfMismatch(
+            dom.novoNomePaciente,
+            () => state.pacienteNovo,
+            () => { state.pacienteNovo = null; }
+          ),
+          onSelect: (p) => {
+            state.pacienteNovo = p;
+            dom.novoNomePaciente.value = nomePaciente_(p);
+            if (dom.novoTelefone && !String(dom.novoTelefone.value || "").trim()) {
+              dom.novoTelefone.value = telefonePaciente_(p);
+            }
+          }
+        });
+      }
+
+      // Editar
+      if (dom.editNomePaciente) {
+        attachTypeahead({
+          inputEl: dom.editNomePaciente,
+          minChars: 2,
+          debounceMs: 220,
+          fetchItems: async (q) => {
+            const data = await pacientesApi.buscarSimples(q, 12);
+            return (data && data.pacientes) ? data.pacientes : [];
+          },
+          renderItem,
+          onInputChanged: () => invalidateIfMismatch(
+            dom.editNomePaciente,
+            () => state.pacienteEditar,
+            () => { state.pacienteEditar = null; }
+          ),
+          onSelect: (p) => {
+            state.pacienteEditar = p;
+            dom.editNomePaciente.value = nomePaciente_(p);
+          }
+        });
+      }
+    }
+
     const actions = {
       init(dom) {
         state.dom = dom;
 
-        // injeta picker no state (para uiActions)
         tryInitPacientesPicker_(dom);
+        setupTypeahead_(dom);
 
         uiActions.init(dom);
         loaders.init(dom);
       },
 
-      // navegação / visão
       setVisao: uiActions.setVisao,
       onChangeData: uiActions.onChangeData,
       onHoje: uiActions.onHoje,
       onAgora: uiActions.onAgora,
       onNav: uiActions.onNav,
 
-      // filtros
       onFiltrosChanged: uiActions.onFiltrosChanged,
       limparFiltros: uiActions.limparFiltros,
 
-      // pacientes
       openPacientePicker: uiActions.openPacientePicker,
       closePacientePicker: uiActions.closePacientePicker,
       isPacientePickerOpen: uiActions.isPacientePickerOpen,
       clearPaciente: uiActions.clearPaciente,
 
-      // modais (Novo/Bloqueio são UI-only)
       abrirModalNovo: uiActions.abrirModalNovo,
       fecharModalNovo: uiActions.fecharModalNovo,
       abrirModalBloqueio: uiActions.abrirModalBloqueio,
       fecharModalBloqueio: uiActions.fecharModalBloqueio,
 
-      // modais (Editar precisa preencher campos -> editActions)
       abrirModalEditar: editActions.abrirModalEditar,
       fecharModalEditar: editActions.fecharModalEditar,
-
-      // prontuário (monta contexto -> editActions)
       abrirProntuario: editActions.abrirProntuario,
 
-      // mutações
       submitNovo: editActions.submitNovo,
       submitEditar: editActions.submitEditar,
       submitBloqueio: editActions.submitBloqueio,
@@ -141,9 +209,7 @@
       desbloquear: editActions.desbloquear
     };
 
-    // bridge para callbacks do loader/render
     state.controllerActions = actions;
-
     return { state, actions, view };
   }
 
