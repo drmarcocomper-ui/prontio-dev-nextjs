@@ -1,34 +1,20 @@
+// backend/data/Repository.gs
 /**
  * ============================================================
- * PRONTIO - Repository.gs (FASE 1)
+ * PRONTIO - Repository.gs (CANÔNICO)
  * ============================================================
- * Único ponto de acesso ao Google Sheets.
+ * Único ponto de acesso físico ao Google Sheets.
  *
- * Fornece as funções usadas pela Agenda nova:
- * - Repo_list_(sheetName)
- * - Repo_getById_(sheetName, idField, idValue)
- * - Repo_insert_(sheetName, obj)
- * - Repo_update_(sheetName, idField, idValue, patch)
- * - Repo_softDelete_(sheetName, idField, idValue)  (opcional)
+ * Regras canônicas (PRONTIO):
+ * - Repo NÃO cria abas.
+ * - Repo NÃO cria/atualiza headers.
+ * - Estrutura (abas + headers) é criada SOMENTE por Migrations (Migrations_bootstrap_).
+ * - Em runtime, se schema não estiver pronto, Repo falha (fail-fast).
  *
- * Observações:
- * - Usa PRONTIO_getDb_() (Utils.gs) para selecionar DEV/PROD.
- * - As abas/headers são internas (backend-only).
- * - Header é garantido conforme Migrations.gs (MIGRATIONS_SHEETS) quando disponível.
- *
- * ✅ FIX (SEM QUEBRAR):
- * - Repo_getById_ e Repo_update_ agora são mais eficientes:
- *   procuram linha pelo ID lendo apenas a coluna do ID + uma linha (não a tabela inteira).
- * - Cache best-effort (ScriptCache) de idValue -> rowIndex com TTL curto, reduzindo leituras repetidas.
- * - Mantém assinaturas e comportamento esperado (incluindo erro em insert quando header vazio).
- *
- * ✅ PASSO 2 (padronização global, sem quebrar):
- * - Repo_update_ invalida cache do índice (sheetName+idField) após escrita, evitando “cache fantasma”.
- * - Repo_insert_ usa setValues ao invés de appendRow (mais previsível) e normaliza undefined/null -> "".
- *
- * ✅ ATUALIZAÇÃO (robustez sem quebrar):
- * - Quando usa cache (id->rowIndex), valida se o ID naquela linha ainda confere.
- *   Isso evita retornar linha errada se o cache estiver obsoleto.
+ * Mantém:
+ * - Assinaturas Repo_list_/getById_/insert_/update_/softDelete_
+ * - Otimização getById/update com scan só da coluna ID + cache best-effort (ScriptCache).
+ * ============================================================
  */
 
 // ======================
@@ -54,70 +40,60 @@ function _repoCell_(v) {
 }
 
 /**
- * Garante que a aba exista e que tenha header.
- * Se MIGRATIONS_SHEETS existir, usa o header definido lá.
+ * Erro canônico para schema não pronto.
+ */
+function _repoSchemaNotReady_(code, message, details) {
+  var e = new Error(message || "Schema não inicializado.");
+  e.code = code || "SCHEMA_NOT_READY";
+  e.details = details || {};
+  return e;
+}
+
+/**
+ * Abre a aba. Não cria. Não mexe em header.
+ * Falha se não existir.
  */
 function Repo_getSheet_(sheetName) {
   var db = Repo_getDb_();
   var sheet = db.getSheetByName(sheetName);
-  if (!sheet) sheet = db.insertSheet(sheetName);
 
-  // Garantir header (preferir migrations)
-  var expected = null;
-  try {
-    if (typeof MIGRATIONS_SHEETS !== "undefined" && MIGRATIONS_SHEETS && MIGRATIONS_SHEETS[sheetName]) {
-      expected = MIGRATIONS_SHEETS[sheetName];
-    }
-  } catch (_) {
-    expected = null;
-  }
-
-  if (expected && expected.length) {
-    _repoEnsureHeader_(sheet, expected);
-  } else {
-    // Se header estiver vazio, não cria automaticamente (para não inventar schema).
-    // Mantém comportamento existente.
+  if (!sheet) {
+    throw _repoSchemaNotReady_(
+      "SCHEMA_NOT_READY",
+      "Aba não encontrada: " + sheetName + ". Rode Meta_BootstrapDb / Migrations_bootstrap_.",
+      { sheetName: sheetName }
+    );
   }
 
   return sheet;
 }
 
-function _repoEnsureHeader_(sheet, headers) {
-  var lastCol = Math.max(1, headers.length);
-  var row1 = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-
-  var isBlank = true;
-  for (var i = 0; i < row1.length; i++) {
-    if (String(row1[i] || "").trim() !== "") { isBlank = false; break; }
-  }
-
-  if (isBlank) {
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    return;
-  }
-
-  // Se difere, atualiza linha 1 (idempotente)
-  var differs = false;
-  for (var c = 0; c < headers.length; c++) {
-    if (String(row1[c] || "") !== String(headers[c])) { differs = true; break; }
-  }
-  if (differs) {
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  }
-}
-
 function Repo_getHeader_(sheet) {
   var lastCol = sheet.getLastColumn();
   if (!lastCol || lastCol < 1) return [];
-  return sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) {
-    return String(h || "").trim();
-  }).filter(function (h) { return !!h; }); // evita colunas “fantasmas” vazias
+
+  // lê a linha 1 inteira até lastCol
+  var raw = sheet.getRange(1, 1, 1, lastCol).getValues()[0] || [];
+
+  // normaliza: trim + remove vazios
+  var header = raw.map(function (h) { return String(h || "").trim(); })
+    .filter(function (h) { return !!h; });
+
+  return header;
+}
+
+function _repoRequireHeader_(sheetName, header) {
+  if (header && header.length) return true;
+  throw _repoSchemaNotReady_(
+    "SCHEMA_NOT_READY",
+    "Header vazio na aba " + sheetName + ". Rode Meta_BootstrapDb / Migrations_bootstrap_.",
+    { sheetName: sheetName }
+  );
 }
 
 // ======================
 // Cache helpers (best-effort)
 // ======================
-
 function _repoCacheKey_(sheetName, idField) {
   return _REPO_CACHE_PREFIX + String(sheetName || "") + "|" + String(idField || "");
 }
@@ -159,7 +135,11 @@ function _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue) {
   // acha coluna de ID
   var idxId = header.indexOf(String(idField));
   if (idxId < 0) {
-    throw new Error("Repo: campo ID não encontrado no header: " + idField + " (sheet=" + sheetName + ")");
+    throw _repoSchemaNotReady_(
+      "SCHEMA_MISMATCH",
+      "Repo: campo ID não encontrado no header: " + idField + " (sheet=" + sheetName + ")",
+      { sheetName: sheetName, idField: idField, header: header }
+    );
   }
 
   // 1) tenta cache de mapa (id->rowIndex)
@@ -167,17 +147,13 @@ function _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue) {
   if (cached && cached[target]) {
     var ri = parseInt(cached[target], 10);
     if (isFinite(ri) && ri >= 2 && ri <= sheet.getLastRow()) {
-      // ✅ ATUALIZAÇÃO: valida se a linha ainda corresponde ao ID (evita cache obsoleto)
+      // valida se a linha ainda corresponde ao ID (evita cache obsoleto)
       try {
         var cellVal = sheet.getRange(ri, idxId + 1, 1, 1).getValues()[0][0];
-        if (String(cellVal) === target) {
-          return ri;
-        }
-      } catch (_) {
-        // ignora e faz scan abaixo
-      }
+        if (String(cellVal) === target) return ri;
+      } catch (_) {}
     }
-    // cache ruim/obsoleto
+    // cache ruim/obsoleto -> segue para scan
   }
 
   // 2) scan da coluna do ID
@@ -194,7 +170,7 @@ function _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue) {
     }
   }
 
-  // 3) reconstroi cache (best-effort) só quando precisa (scan já leu ids)
+  // 3) reconstrói cache (best-effort)
   try {
     var mapObj = {};
     for (var j = 0; j < ids.length; j++) {
@@ -211,13 +187,12 @@ function _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue) {
 // ======================
 // CRUD
 // ======================
-
 function Repo_list_(sheetName) {
   var sheet = Repo_getSheet_(sheetName);
-  var lastRow = sheet.getLastRow();
   var header = Repo_getHeader_(sheet);
-  if (!header.length) return [];
+  _repoRequireHeader_(sheetName, header);
 
+  var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
 
   var values = sheet.getRange(2, 1, lastRow - 1, header.length).getValues();
@@ -237,7 +212,7 @@ function Repo_list_(sheetName) {
 function Repo_getById_(sheetName, idField, idValue) {
   var sheet = Repo_getSheet_(sheetName);
   var header = Repo_getHeader_(sheet);
-  if (!header.length) return null;
+  _repoRequireHeader_(sheetName, header);
 
   var rowIndex = _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue);
   if (!rowIndex) return null;
@@ -252,10 +227,7 @@ function Repo_insert_(sheetName, obj) {
   obj = obj || {};
   var sheet = Repo_getSheet_(sheetName);
   var header = Repo_getHeader_(sheet);
-
-  if (!header.length) {
-    throw new Error("Repo_insert_: header vazio na aba " + sheetName + ". Rode Meta_BootstrapDb/Migrations_bootstrap_.");
-  }
+  _repoRequireHeader_(sheetName, header);
 
   var row = new Array(header.length);
   for (var c = 0; c < header.length; c++) {
@@ -263,12 +235,11 @@ function Repo_insert_(sheetName, obj) {
     row[c] = _repoCell_(obj[k]);
   }
 
-  // ✅ mais previsível que appendRow em alguns casos (filtros/linhas vazias)
+  // mais previsível que appendRow em alguns casos (filtros/linhas vazias)
   var newRow = sheet.getLastRow() + 1;
   sheet.getRange(newRow, 1, 1, header.length).setValues([row]);
 
-  // Não sabemos idField aqui; cache é por (sheetName+idField).
-  // TTL curto cobre inserts; updates invalidam quando conhecem idField.
+  // não sabemos idField aqui; cache é por (sheetName+idField).
   return obj;
 }
 
@@ -276,7 +247,7 @@ function Repo_update_(sheetName, idField, idValue, patch) {
   patch = patch || {};
   var sheet = Repo_getSheet_(sheetName);
   var header = Repo_getHeader_(sheet);
-  if (!header.length) return false;
+  _repoRequireHeader_(sheetName, header);
 
   var rowIndex = _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue);
   if (!rowIndex) return false;
@@ -294,12 +265,12 @@ function Repo_update_(sheetName, idField, idValue, patch) {
     }
   }
 
-  if (!changed) return true; // nada a fazer, mas "ok"
+  if (!changed) return true;
 
   // escreve apenas a linha alterada
   sheet.getRange(rowIndex, 1, 1, header.length).setValues([row]);
 
-  // ✅ PASSO 2: invalida cache do índice dessa entidade para evitar cache fantasma
+  // invalida cache do índice dessa entidade para evitar cache fantasma
   _repoCacheInvalidate_(sheetName, idField);
 
   return true;
@@ -310,11 +281,14 @@ function Repo_update_(sheetName, idField, idValue, patch) {
  */
 function Repo_softDelete_(sheetName, idField, idValue) {
   var patch = {};
-  // padrões comuns
   patch.ativo = false;
   patch.status = "INATIVO";
   return Repo_update_(sheetName, idField, idValue, patch);
 }
+
+// ======================
+// Debug helpers
+// ======================
 function DEBUG_REPO_SHEETS() {
   var ss = null;
 
@@ -324,7 +298,6 @@ function DEBUG_REPO_SHEETS() {
     }
   } catch (_) {}
 
-  // fallback: tenta SpreadsheetApp padrão
   if (!ss) {
     try { ss = SpreadsheetApp.getActiveSpreadsheet(); } catch (e) {}
   }
@@ -345,6 +318,7 @@ function DEBUG_REPO_SHEETS() {
   Logger.log("AGENDA_ENTITY=" + (typeof AGENDA_ENTITY !== "undefined" ? AGENDA_ENTITY : "undefined"));
   Logger.log("ATENDIMENTO_ENTITY=" + (typeof ATENDIMENTO_ENTITY !== "undefined" ? ATENDIMENTO_ENTITY : "undefined"));
 }
+
 function DEBUG_SHEET_STATS_(sheetName) {
   var sh = Repo_getSheet_(sheetName);
   var header = Repo_getHeader_(sh);
@@ -354,7 +328,7 @@ function DEBUG_SHEET_STATS_(sheetName) {
   var sample = [];
   if (lastRow >= 2 && header.length > 0) {
     var n = Math.min(5, lastRow - 1);
-    sample = sh.getRange(2, 1, n, Math.min(header.length, 12)).getValues(); // amostra 5 linhas, até 12 colunas
+    sample = sh.getRange(2, 1, n, Math.min(header.length, 12)).getValues();
   }
 
   Logger.log(JSON.stringify({
@@ -370,5 +344,5 @@ function DEBUG_SHEET_STATS_(sheetName) {
 function DEBUG_AGENDA_ATENDIMENTO_STATS() {
   DEBUG_SHEET_STATS_("Agenda");
   DEBUG_SHEET_STATS_("Atendimento");
-  DEBUG_SHEET_STATS_("AgendaEventos"); // só pra conferir onde estão os dados
+  DEBUG_SHEET_STATS_("AgendaEventos");
 }

@@ -14,8 +14,11 @@
  * - Pode receber callbacks do controller/page para ações do usuário
  *
  * ✅ Padronização (2026):
- * - Nome do paciente no front: "nomeCompleto"
- * - Removido uso de "nome_paciente"
+ * - Backend Agenda NÃO envia nomeCompleto (proibido join com Pacientes).
+ * - View renderiza nome de forma segura:
+ *   - Bloqueio: "Horário bloqueado"
+ *   - Sem paciente: "(sem paciente)"
+ *   - Com paciente mas nome não resolvido ainda: "(nome não carregado)"
  */
 
 (function (global) {
@@ -56,8 +59,14 @@
 
   // ✅ helper local de exibição do nome (sem regra de negócio)
   function getNomeExibicao(ag) {
-    const n = ag && ag.nomeCompleto ? String(ag.nomeCompleto).trim() : "";
-    return n || "(sem nome)";
+    const isBloqueio = !!(ag && ag.bloqueio === true);
+    if (isBloqueio) return "Horário bloqueado";
+
+    const idPac = ag && (ag.ID_Paciente || ag.idPaciente) ? String(ag.ID_Paciente || ag.idPaciente).trim() : "";
+    const nome = ag && ag.nomeCompleto ? String(ag.nomeCompleto).trim() : "";
+
+    if (!idPac) return "(sem paciente)";
+    return nome || "(nome não carregado)";
   }
 
   function createAgendaView(opts) {
@@ -169,7 +178,6 @@
 
       const nome = doc.createElement("span");
       nome.className = "agendamento-nome";
-      // ✅ antes: ag.nome_paciente
       nome.textContent = getNomeExibicao(ag);
       nomeWrap.appendChild(nome);
 
@@ -397,7 +405,6 @@
       corner.textContent = "";
       headerRow.appendChild(corner);
 
-      // Mantém 6 colunas (seg..sab) como seu CSS atual
       dias.slice(0, 6).forEach((ds) => {
         const cell = doc.createElement("div");
         cell.className = "semana-cell semana-header-cell semana-sticky-cell";
@@ -438,7 +445,6 @@
                 item.classList.add("semana-bloqueio-item");
                 item.textContent = "Bloqueado";
               } else {
-                // ✅ antes: ag.nome_paciente
                 const partes = [getNomeExibicao(ag)];
                 if (ag.tipo) partes.push(ag.tipo);
                 if (ag.status) partes.push(ag.status);
@@ -483,7 +489,6 @@
     }
 
     return {
-      // refs úteis
       refs: {
         inputData,
         listaHorariosEl,
@@ -496,27 +501,21 @@
         modalPacientes
       },
 
-      // form helpers
       safeDisable,
       setFormMsg,
 
-      // day status
       clearDay,
       showDayLoading,
       hideDayLoading,
       showDayError,
 
-      // resumo
       setResumo,
 
-      // renders
       renderDaySlots,
       renderWeekGrid,
 
-      // view toggle
       setVisao,
 
-      // modals
       isModalVisible,
       openModal,
       closeModal

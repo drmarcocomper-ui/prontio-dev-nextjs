@@ -29,10 +29,11 @@ function _agendaParseDate_(v) {
 
 function _agendaBuildDateTime_(dateStr, hhmm) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr || ""))) {
-    _agendaThrow_("VALIDATION_ERROR", "data inválida (esperado YYYY-MM-DD).", { value: dateStr });
+    _agendaThrow_("VALIDATION_ERROR", 'data inválida (esperado YYYY-MM-DD).', { field: "data", value: dateStr });
   }
   if (!/^\d{2}:\d{2}$/.test(String(hhmm || ""))) {
-    _agendaThrow_("VALIDATION_ERROR", "hora_inicio inválida (esperado HH:MM).", { value: hhmm });
+    // ✅ canônico: horaInicio
+    _agendaThrow_("VALIDATION_ERROR", 'horaInicio inválida (esperado HH:MM).', { field: "horaInicio", value: hhmm });
   }
 
   var p = String(dateStr).split("-");

@@ -1,3 +1,4 @@
+// frontend/assets/js/main.js
 (function (global, document) {
   "use strict";
 
@@ -29,16 +30,29 @@
 
     atendimento: { js: ["assets/js/pages/page-atendimento.js"], css: ["assets/css/pages/page-atendimento.css"] },
 
-    // ✅ Agenda (Etapa 2A - modular)
-    // Ordem importa: state -> prefs -> typeahead -> day -> modal -> index -> page bootstrap
+    // ✅ Agenda (Split modular — 2026-01)
+    // Ordem importa: formatters/view/api/state -> módulos -> controller/events/entry -> page bootstrap
     agenda: {
       js: [
-        "assets/js/agenda/state.js",
-        "assets/js/agenda/prefs.js",
-        "assets/js/agenda/patients-typeahead.js",
-        "assets/js/agenda/day.js",
-        "assets/js/agenda/modals-new.js",
-        "assets/js/agenda/index.js",
+        // base da feature
+        "assets/js/features/agenda/agenda.formatters.js",
+        "assets/js/features/agenda/agenda.view.js",
+        "assets/js/features/agenda/agenda.api.js",
+        "assets/js/features/agenda/agenda.state.js",
+
+        // módulos split
+        "assets/js/features/agenda/agenda.pacientesCache.js",
+        "assets/js/features/agenda/agenda.filtros.js",
+        "assets/js/features/agenda/agenda.loaders.js",
+        "assets/js/features/agenda/agenda.uiActions.js",
+        "assets/js/features/agenda/agenda.editActions.js",
+
+        // controller + events + entry (registra init)
+        "assets/js/features/agenda/agenda.controller.js",
+        "assets/js/features/agenda/agenda.events.js",
+        "assets/js/features/agenda/agenda.entry.js",
+
+        // page bootstrap (chama entry.init)
         "assets/js/pages/page-agenda.js"
       ],
       css: ["assets/css/pages/page-agenda.css"]

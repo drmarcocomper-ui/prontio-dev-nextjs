@@ -16,8 +16,8 @@
  * - Pode ser usado por widgets/features
  *
  * ✅ Padronização (2026):
- * - Nome do paciente no front: "nomeCompleto"
- * - Removido: "nome_paciente"
+ * - Backend Agenda NÃO envia nomeCompleto (proibido join com Pacientes).
+ * - Front pode preencher nomeCompleto via cache (controller).
  */
 
 (function (global) {
@@ -209,13 +209,9 @@
   /**
    * DTO (backend) -> UI shape mínimo que a página usa hoje.
    *
-   * ✅ Padronização:
-   * - Campo de nome no front: nomeCompleto
-   * - Se for bloqueio: nomeCompleto = "Bloqueio"
-   *
-   * Observação:
-   * - Se o backend ainda não enviar nomeCompleto, mantém fallback "(sem nome)".
-   * - Não usa `titulo` como nome do paciente.
+   * Regras:
+   * - Backend não envia nomeCompleto (salvo bloqueio, que é derivável do tipo).
+   * - Front (controller) pode preencher nomeCompleto via cache de pacientes.
    */
   function dtoToUi(dto) {
     const inicioIso = dto && dto.inicio ? String(dto.inicio) : "";
@@ -224,22 +220,23 @@
     const tipo = String(dto && dto.tipo ? dto.tipo : "");
     const isBloqueio = tipo.toUpperCase() === "BLOQUEIO";
 
-    const nomeCompleto = isBloqueio
-      ? "Bloqueio"
-      : (dto && dto.nomeCompleto ? String(dto.nomeCompleto).trim() : "");
+    // ✅ Não inventa "(sem nome)" aqui; controller decide como apresentar/filtros
+    const nomeCompleto = isBloqueio ? "Bloqueio" : "";
 
     return {
       ID_Agenda: dto && dto.idAgenda ? String(dto.idAgenda) : "",
       ID_Paciente: dto && dto.idPaciente ? String(dto.idPaciente) : "",
+      idProfissional: dto && dto.idProfissional ? String(dto.idProfissional) : "",
+      idClinica: dto && dto.idClinica ? String(dto.idClinica) : "",
+
       data: ymdFromIso(inicioIso),
       hora_inicio: hhmmFromIso(inicioIso),
       hora_fim: hhmmFromIso(fimIso),
       duracao_minutos: diffMinutes(inicioIso, fimIso),
 
-      // ✅ novo padrão
-      nomeCompleto: nomeCompleto || "(sem nome)",
+      nomeCompleto,
 
-      // campos auxiliares (mantidos para compat com outras telas/fluxos)
+      // campos auxiliares (mantidos para compat com telas antigas)
       telefone_paciente: "",
       documento_paciente: "",
       motivo: dto && dto.notas ? String(dto.notas) : "",
@@ -248,7 +245,9 @@
       status: dto && dto.status ? String(dto.status) : "",
       tipo: tipo,
       bloqueio: isBloqueio,
-      permite_encaixe: false
+
+      // ✅ preferir o valor do DTO quando existir
+      permite_encaixe: (dto && dto.permitirEncaixe === true) ? true : false
     };
   }
 

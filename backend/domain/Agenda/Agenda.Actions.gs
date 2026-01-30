@@ -1,3 +1,15 @@
+// backend/domain/Agenda/Agenda.Actions.gs
+// ============================================================
+// PRONTIO — Agenda Actions (Back)
+// Ajustes (2026-01):
+// - Remove acoplamento com Pacientes (sem _agendaAttachNomeCompleto_)
+// - Lista/Criar/Atualizar/Cancelar retornam DTO puro (Agenda) + idPaciente
+// - Atualizar: permitirEncaixe deriva do estado final (existing + patch)
+// - Mantém lock por idProfissional + data (regra canônica)
+// - ✅ NOVO: Agenda_Action_ListarEventosDiaParaValidacao_ (payload { idProfissional, data })
+// - ✅ NOVO: Agenda_Action_BloquearHorario_ / Agenda_Action_DesbloquearHorario_ (canônicas)
+// ============================================================
+
 function Agenda_Action_ListarPorPeriodo_(ctx, payload) {
   payload = payload || {};
 
@@ -11,7 +23,6 @@ function Agenda_Action_ListarPorPeriodo_(ctx, payload) {
   var incluirCancelados = payload.incluirCancelados === true;
   var idPaciente = payload.idPaciente ? String(payload.idPaciente) : null;
 
-  // Opcional: permitir filtro por profissional também (útil com "conflito por profissional")
   var idProfissional = payload.idProfissional ? String(payload.idProfissional) : null;
 
   var all = Repo_list_(AGENDA_ENTITY);
@@ -34,7 +45,7 @@ function Agenda_Action_ListarPorPeriodo_(ctx, payload) {
 
     if (evIni.getTime() > fim.getTime() || evFim.getTime() < ini.getTime()) continue;
 
-    out.push(_agendaAttachNomeCompleto_(e));
+    out.push(e);
   }
 
   out.sort(function (a, b) {
@@ -58,8 +69,6 @@ function Agenda_Action_Criar_(ctx, payload) {
   }
 
   var norm = _agendaNormalizeCreateInput_(payload, params);
-
-  // garante presença no DTO final (mesmo se normalize não mexer nisso)
   norm.idProfissional = idProfissional;
 
   if (norm.tipo === AGENDA_TIPO.BLOQUEIO) {
@@ -72,7 +81,6 @@ function Agenda_Action_Criar_(ctx, payload) {
   var createdDto = null;
 
   Locks_withLock_(lockKey, function () {
-
     _agendaAssertSemConflitos_(ctx, {
       inicio: norm.inicio,
       fim: norm.fim,
@@ -108,7 +116,7 @@ function Agenda_Action_Criar_(ctx, payload) {
 
   return {
     success: true,
-    data: { item: _agendaAttachNomeCompleto_(createdDto) },
+    data: { item: _agendaNormalizeRowToDto_(createdDto) },
     errors: []
   };
 }
@@ -125,11 +133,8 @@ function Agenda_Action_Atualizar_(ctx, payload) {
 
   existing = _agendaNormalizeRowToDto_(existing);
 
-  // idProfissional é essencial para conflito por profissional.
-  // Preferência: usar o do registro existente; permitir patch se você suportar troca (geralmente não).
   var idProfissional = String(existing.idProfissional || "");
   if (!idProfissional) {
-    // fallback: aceitar do payload para registros legados sem idProfissional preenchido
     idProfissional = payload.idProfissional ? String(payload.idProfissional) : "";
   }
   if (!idProfissional) {
@@ -150,23 +155,29 @@ function Agenda_Action_Atualizar_(ctx, payload) {
   if (!newInicio || !newFim) _agendaThrow_("VALIDATION_ERROR", "Datas inválidas em atualização.", { idAgenda: idAgenda });
   if (newFim.getTime() < newInicio.getTime()) _agendaThrow_("VALIDATION_ERROR", '"fim" não pode ser menor que "inicio".', {});
 
-  // lock por profissional + data do novo início
+  var finalPermitirEncaixe = false;
+  if (mergedPatch.permitirEncaixe !== undefined) {
+    finalPermitirEncaixe = (mergedPatch.permitirEncaixe === true);
+  } else if (existing.permitirEncaixe !== undefined) {
+    finalPermitirEncaixe = (existing.permitirEncaixe === true);
+  } else {
+    finalPermitirEncaixe = false;
+  }
+
   var lockKey = "agenda:" + idProfissional + ":" + _agendaFormatYYYYMMDD_(newInicio);
 
   Locks_withLock_(lockKey, function () {
-
     _agendaAssertSemConflitos_(ctx, {
       inicio: newInicio,
       fim: newFim,
       idProfissional: idProfissional,
-      permitirEncaixe: payload.permitirEncaixe === true,
+      permitirEncaixe: finalPermitirEncaixe,
       modoBloqueio: mergedPatch.tipo === AGENDA_TIPO.BLOQUEIO,
       ignoreIdAgenda: idAgenda
     }, params);
 
     mergedPatch.atualizadoEm = new Date().toISOString();
 
-    // garante não perder idProfissional em registros legados
     if (!existing.idProfissional && mergedPatch.idProfissional === undefined) {
       mergedPatch.idProfissional = idProfissional;
     }
@@ -179,7 +190,7 @@ function Agenda_Action_Atualizar_(ctx, payload) {
 
   return {
     success: true,
-    data: { item: _agendaAttachNomeCompleto_(after) },
+    data: { item: _agendaNormalizeRowToDto_(after) },
     errors: []
   };
 }
@@ -222,7 +233,7 @@ function Agenda_Action_Cancelar_(ctx, payload) {
 
   return {
     success: true,
-    data: { item: _agendaAttachNomeCompleto_(after) },
+    data: { item: _agendaNormalizeRowToDto_(after) },
     errors: []
   };
 }
@@ -287,4 +298,145 @@ function Agenda_Action_ValidarConflito_(ctx, payload) {
       }]
     };
   }
+}
+
+function Agenda_Action_ListarEventosDiaParaValidacao_(ctx, payload) {
+  payload = payload || {};
+
+  var idProfissional = payload.idProfissional ? String(payload.idProfissional) : "";
+  if (!idProfissional) {
+    _agendaThrow_("VALIDATION_ERROR", '"idProfissional" é obrigatório.', { field: "idProfissional" });
+  }
+
+  var dataStr = payload.data ? String(payload.data).trim() : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
+    _agendaThrow_("VALIDATION_ERROR", '"data" inválida (YYYY-MM-DD).', { field: "data", value: dataStr });
+  }
+
+  var ini = new Date(Number(dataStr.slice(0, 4)), Number(dataStr.slice(5, 7)) - 1, Number(dataStr.slice(8, 10)), 0, 0, 0, 0);
+  var fim = new Date(Number(dataStr.slice(0, 4)), Number(dataStr.slice(5, 7)) - 1, Number(dataStr.slice(8, 10)), 23, 59, 59, 999);
+
+  var res = Agenda_Action_ListarPorPeriodo_(ctx, {
+    inicio: ini,
+    fim: fim,
+    incluirCancelados: false,
+    idProfissional: idProfissional
+  });
+
+  var items = (res && res.data && res.data.items) ? res.data.items : [];
+
+  var out = [];
+  for (var i = 0; i < items.length; i++) {
+    var dto = _agendaNormalizeRowToDto_(items[i]);
+
+    var st = _agendaNormalizeStatus_(dto.status);
+    if (st === AGENDA_STATUS.CANCELADO) continue;
+
+    var dtIni = _agendaParseDate_(dto.inicio);
+    var dtFim = _agendaParseDate_(dto.fim);
+    if (!dtIni || !dtFim) continue;
+
+    if (_agendaFormatDate_(dtIni) !== dataStr) continue;
+
+    var durMin = Math.max(1, Math.round((dtFim.getTime() - dtIni.getTime()) / 60000));
+    var tipo = _agendaNormalizeTipo_(dto.tipo);
+
+    out.push({
+      idAgenda: String(dto.idAgenda || ""),
+      idProfissional: idProfissional,
+      data: dataStr,
+      inicio: dto.inicio,
+      fim: dto.fim,
+      horaInicio: _agendaFormatHHMM_(dtIni),
+      horaFim: _agendaFormatHHMM_(dtFim),
+      duracaoMin: durMin,
+      tipo: String(tipo || ""),
+      bloqueio: (tipo === AGENDA_TIPO.BLOQUEIO)
+    });
+  }
+
+  return {
+    success: true,
+    data: { items: out, count: out.length },
+    errors: []
+  };
+}
+
+/**
+ * ============================================================
+ * ✅ NOVO: Agenda.BloquearHorario (canônico)
+ * ------------------------------------------------------------
+ * Payload:
+ * - idProfissional (obrigatório)
+ * - data (YYYY-MM-DD) (obrigatório)
+ * - horaInicio (HH:MM) (obrigatório)
+ * - duracaoMin (number) (obrigatório)
+ *
+ * Implementação:
+ * - Delegar para Agenda_Action_Criar_ com tipo=BLOQUEIO
+ * ============================================================
+ */
+function Agenda_Action_BloquearHorario_(ctx, payload) {
+  payload = payload || {};
+
+  var idProfissional = payload.idProfissional ? String(payload.idProfissional) : "";
+  if (!idProfissional) {
+    _agendaThrow_("VALIDATION_ERROR", '"idProfissional" é obrigatório.', { field: "idProfissional" });
+  }
+
+  var dataStr = payload.data ? String(payload.data).trim() : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
+    _agendaThrow_("VALIDATION_ERROR", '"data" inválida (YYYY-MM-DD).', { field: "data", value: dataStr });
+  }
+
+  var horaInicio = payload.horaInicio ? String(payload.horaInicio).trim() : "";
+  if (!/^\d{2}:\d{2}$/.test(horaInicio)) {
+    _agendaThrow_("VALIDATION_ERROR", '"horaInicio" inválida (HH:MM).', { field: "horaInicio", value: horaInicio });
+  }
+
+  var dur = Number(payload.duracaoMin || 0);
+  if (!dur || isNaN(dur) || dur <= 0) {
+    _agendaThrow_("VALIDATION_ERROR", '"duracaoMin" inválida.', { field: "duracaoMin", value: payload.duracaoMin });
+  }
+
+  // Delegação canônica para criação (lock + conflito já tratados lá)
+  return Agenda_Action_Criar_(ctx, {
+    idProfissional: idProfissional,
+    data: dataStr,
+    horaInicio: horaInicio,
+    duracaoMin: dur,
+    tipo: AGENDA_TIPO.BLOQUEIO,
+    titulo: "BLOQUEIO",
+    origem: AGENDA_ORIGEM.SISTEMA,
+    notas: payload.notas ? String(payload.notas) : ""
+  });
+}
+
+/**
+ * ============================================================
+ * ✅ NOVO: Agenda.DesbloquearHorario (canônico)
+ * ------------------------------------------------------------
+ * Payload:
+ * - idAgenda (obrigatório)
+ * - idProfissional (opcional; será derivado do registro quando possível)
+ * - motivo (opcional)
+ *
+ * Implementação:
+ * - Delegar para Agenda_Action_Cancelar_ (cancelar != apagar)
+ * ============================================================
+ */
+function Agenda_Action_DesbloquearHorario_(ctx, payload) {
+  payload = payload || {};
+
+  var idAgenda = payload.idAgenda ? String(payload.idAgenda).trim() : "";
+  if (!idAgenda) {
+    _agendaThrow_("VALIDATION_ERROR", '"idAgenda" é obrigatório.', { field: "idAgenda" });
+  }
+
+  // Cancelar canônico (lockKey será calculado pelo registro existente se idProfissional faltar)
+  return Agenda_Action_Cancelar_(ctx, {
+    idAgenda: idAgenda,
+    idProfissional: payload.idProfissional ? String(payload.idProfissional) : "",
+    motivo: payload.motivo ? String(payload.motivo).slice(0, 500) : "Remover bloqueio"
+  });
 }

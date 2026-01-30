@@ -1,4 +1,3 @@
-// frontend/assets/js/pages/page-agenda.js
 (function (global, document) {
   "use strict";
 
@@ -13,6 +12,30 @@
       typeof PRONTIO.features.agenda.entry.init === "function"
       ? PRONTIO.features.agenda.entry.init
       : null;
+  }
+
+  function dumpLoadedScripts_() {
+    try {
+      return Array.from(document.querySelectorAll("script[src]")).map(function (s) {
+        return s.getAttribute("src");
+      });
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function dumpAgendaState_() {
+    try {
+      return {
+        hasFeatures: !!PRONTIO.features,
+        hasAgenda: !!(PRONTIO.features && PRONTIO.features.agenda),
+        agendaKeys: PRONTIO.features && PRONTIO.features.agenda
+          ? Object.keys(PRONTIO.features.agenda)
+          : []
+      };
+    } catch (_) {
+      return {};
+    }
   }
 
   function initAgendaPage() {
@@ -30,14 +53,15 @@
         try {
           initFn({ document: document, window: global });
         } catch (e) {
-          console.error("[PRONTIO][Agenda] Erro ao inicializar agenda.entry:", e);
+          console.error("[PRONTIO][Agenda] Erro ao executar agenda.entry.init:", e);
         }
         return;
       }
 
       if (attempt >= maxAttempts) {
-        console.error("[PRONTIO][Agenda] agenda.entry.init não encontrado. Scripts carregados:", (PRONTIO._debug && PRONTIO._debug.loaded) || []);
-        console.error("[PRONTIO][Agenda] Scripts que falharam:", (PRONTIO._debug && PRONTIO._debug.failed) || []);
+        console.error("[PRONTIO][Agenda] agenda.entry.init NÃO encontrado após tentativas.");
+        console.error("[PRONTIO][Agenda] Estado PRONTIO.features.agenda:", dumpAgendaState_());
+        console.error("[PRONTIO][Agenda] Scripts carregados no DOM:", dumpLoadedScripts_());
         return;
       }
 

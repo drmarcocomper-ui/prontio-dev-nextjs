@@ -1,53 +1,57 @@
+// backend/data/registry/Registry.Agenda.gs
 /**
  * Registry.Agenda.gs
  * Locks dinâmicos por profissional + data:
  *   agenda:{idProfissional}:{YYYY-MM-DD}
  *
- * Observação: para Atualizar/Cancelar, se payload não trouxer idProfissional/data,
- * buscamos o registro existente (por idAgenda) para calcular a chave do lock.
+ * Ajustes (2026-01):
+ * - LockKey fail-fast (sem fallback global).
+ * - Payload canônico camelCase.
+ * - ✅ Actions canônicas apontam DIRETO para Agenda_Action_* (sem handlers ocultos).
+ * - ✅ Adiciona action canônica: Agenda.ListarEventosDiaParaValidacao (payload { idProfissional, data })
  */
+
+function _Registry_agendaThrowValidation_(message, details) {
+  try {
+    if (typeof _Registry_throw_ === "function") {
+      _Registry_throw_("VALIDATION_ERROR", message, details || {});
+      return;
+    }
+  } catch (_) {}
+
+  var e = new Error(message || "Validation error");
+  e.code = "VALIDATION_ERROR";
+  e.details = details || {};
+  throw e;
+}
 
 /** @returns {string} YYYY-MM-DD */
 function _Registry_agendaFormatYMD_(d) {
   try {
-    // Usa utilitário se existir
     if (typeof _agendaFormatYYYYMMDD_ === "function") return _agendaFormatYYYYMMDD_(d);
   } catch (_) {}
 
-  // Fallback: ISO (UTC) -> pega só data
   var iso = d.toISOString();
   return String(iso).slice(0, 10);
 }
 
-/**
- * Tenta obter { idProfissional, ymd } do payload.
- * Aceita variações comuns (compat):
- * - idProfissional / id_profissional
- * - data / inicio (ISO) / inicioEm
- */
 function _Registry_agendaExtractProfAndDateFromPayload_(payload) {
   payload = payload || {};
 
-  var idProf =
-    payload.idProfissional ? String(payload.idProfissional) :
-    (payload.id_profissional ? String(payload.id_profissional) : "");
-
+  var idProf = payload.idProfissional ? String(payload.idProfissional) : "";
   var ymd = "";
 
-  // data explícita no payload (preferível)
   if (payload.data) {
     var ds = String(payload.data).trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) ymd = ds;
   }
 
-  // início ISO
   if (!ymd && payload.inicio) {
     var dt = null;
     try { dt = new Date(String(payload.inicio)); } catch (_) {}
     if (dt && !isNaN(dt.getTime())) ymd = _Registry_agendaFormatYMD_(dt);
   }
 
-  // variações
   if (!ymd && payload.inicioEm) {
     var dt2 = null;
     try { dt2 = new Date(String(payload.inicioEm)); } catch (_) {}
@@ -57,10 +61,6 @@ function _Registry_agendaExtractProfAndDateFromPayload_(payload) {
   return { idProfissional: idProf, ymd: ymd };
 }
 
-/**
- * Busca o evento existente para derivar idProfissional + data (por idAgenda).
- * Retorna { idProfissional, ymd } ou { "", "" } se não conseguir.
- */
 function _Registry_agendaExtractFromExistingByIdAgenda_(idAgenda) {
   try {
     if (!idAgenda) return { idProfissional: "", ymd: "" };
@@ -69,7 +69,6 @@ function _Registry_agendaExtractFromExistingByIdAgenda_(idAgenda) {
     var row = Repo_getById_(AGENDA_ENTITY, AGENDA_ID_FIELD, String(idAgenda));
     if (!row) return { idProfissional: "", ymd: "" };
 
-    // Normaliza se o helper existir
     var dto = row;
     try {
       if (typeof _agendaNormalizeRowToDto_ === "function") dto = _agendaNormalizeRowToDto_(row);
@@ -90,12 +89,6 @@ function _Registry_agendaExtractFromExistingByIdAgenda_(idAgenda) {
   }
 }
 
-/**
- * Calcula lockKey canônica para Agenda.
- * - Tenta payload
- * - Se necessário, tenta buscar registro existente (Atualizar/Cancelar)
- * - Fallback final: "AGENDA" (não ideal, mas não quebra)
- */
 function _Registry_agendaLockKey_(ctx, payload) {
   payload = payload || {};
 
@@ -103,15 +96,18 @@ function _Registry_agendaLockKey_(ctx, payload) {
   var idProf = ex.idProfissional;
   var ymd = ex.ymd;
 
-  // Se não veio no payload, tenta por idAgenda (fluxos de update/cancel)
   if ((!idProf || !ymd) && payload.idAgenda) {
     var ex2 = _Registry_agendaExtractFromExistingByIdAgenda_(payload.idAgenda);
     if (!idProf) idProf = ex2.idProfissional;
     if (!ymd) ymd = ex2.ymd;
   }
 
-  // Ainda não tem? fallback
-  if (!idProf || !ymd) return "AGENDA";
+  if (!idProf || !ymd) {
+    _Registry_agendaThrowValidation_(
+      'Não foi possível calcular lock da Agenda. Envie "idProfissional" e "data" (YYYY-MM-DD) ou "inicio" (ISO), ou informe "idAgenda" válido.',
+      { missing: { idProfissional: !idProf, ymd: !ymd }, payload: payload }
+    );
+  }
 
   return "agenda:" + idProf + ":" + ymd;
 }
@@ -175,9 +171,12 @@ function Registry_RegisterAgenda_(map) {
     lockKey: _Registry_agendaLockKey_
   };
 
+  // ✅ Agora aponta direto para Actions canônicas
   map["Agenda.BloquearHorario"] = {
     action: "Agenda.BloquearHorario",
-    handler: _Registry_agendaBloquearHandler_(),
+    handler: (typeof Agenda_Action_BloquearHorario_ === "function")
+      ? Agenda_Action_BloquearHorario_
+      : _Registry_missingHandler_("Agenda_Action_BloquearHorario_"),
     requiresAuth: true,
     roles: [],
     validations: [],
@@ -187,7 +186,9 @@ function Registry_RegisterAgenda_(map) {
 
   map["Agenda.DesbloquearHorario"] = {
     action: "Agenda.DesbloquearHorario",
-    handler: _Registry_agendaDesbloquearHandler_(),
+    handler: (typeof Agenda_Action_DesbloquearHorario_ === "function")
+      ? Agenda_Action_DesbloquearHorario_
+      : _Registry_missingHandler_("Agenda_Action_DesbloquearHorario_"),
     requiresAuth: true,
     roles: [],
     validations: [],
@@ -195,7 +196,19 @@ function Registry_RegisterAgenda_(map) {
     lockKey: _Registry_agendaLockKey_
   };
 
-  // Aliases legacy (mantém lock dinâmico também)
+  map["Agenda.ListarEventosDiaParaValidacao"] = {
+    action: "Agenda.ListarEventosDiaParaValidacao",
+    handler: (typeof Agenda_Action_ListarEventosDiaParaValidacao_ === "function")
+      ? Agenda_Action_ListarEventosDiaParaValidacao_
+      : _Registry_missingHandler_("Agenda_Action_ListarEventosDiaParaValidacao_"),
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  // Aliases legacy — compat temporário
   map["Agenda_Criar"] = {
     action: "Agenda_Criar",
     handler: map["Agenda.Criar"].handler,
@@ -216,15 +229,12 @@ function Registry_RegisterAgenda_(map) {
     lockKey: _Registry_agendaLockKey_
   };
 
+  // Mantém por compat (mas recomenda-se migrar para Agenda.ListarEventosDiaParaValidacao)
   map["Agenda_ListarEventosDiaParaValidacao"] = {
     action: "Agenda_ListarEventosDiaParaValidacao",
-    handler: (typeof Agenda_ListarEventosDiaParaValidacao_ === "function")
-      ? function (ctx, payload) {
-          payload = payload || {};
-          var dataStr = payload.data ? String(payload.data) : "";
-          return { items: Agenda_ListarEventosDiaParaValidacao_(dataStr) };
-        }
-      : _Registry_missingHandler_("Agenda_ListarEventosDiaParaValidacao_"),
+    handler: (typeof Agenda_Action_ListarEventosDiaParaValidacao_ === "function")
+      ? function (ctx, payload) { return Agenda_Action_ListarEventosDiaParaValidacao_(ctx, payload || {}); }
+      : _Registry_missingHandler_("Agenda_Action_ListarEventosDiaParaValidacao_"),
     requiresAuth: true,
     roles: [],
     validations: [],
@@ -328,7 +338,6 @@ function Registry_RegisterAgenda_(map) {
       roles: [],
       validations: [],
       requiresLock: true,
-      // mantém lock legado separado (não mexi aqui para não alterar sem necessidade)
       lockKey: "AGENDA_LEGACY"
     };
   }

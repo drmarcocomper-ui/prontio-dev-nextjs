@@ -1,4 +1,16 @@
 // frontend/assets/js/features/agenda/agenda.entry.js
+/**
+ * PRONTIO — Agenda Entry (Front)
+ * ------------------------------------------------------------
+ * Ajuste (2026-01):
+ * - Valida dependências dos módulos split antes de iniciar.
+ * - Mantém init blindado e não quebra a página se faltar script.
+ *
+ * Regras:
+ * - Não chama API diretamente
+ * - Apenas monta DOM, cria controller e faz bind de eventos
+ */
+
 (function (global) {
   "use strict";
 
@@ -6,8 +18,7 @@
   PRONTIO.features = PRONTIO.features || {};
   PRONTIO.features.agenda = PRONTIO.features.agenda || {};
 
-  // ✅ GARANTIA: registra o entry SEMPRE (mesmo se algo falhar depois)
-  // Isso evita exatamente o cenário: "script carregou, mas entry.init não existe".
+  // ✅ GARANTIA: entry sempre existe
   PRONTIO.features.agenda.entry = PRONTIO.features.agenda.entry || {};
 
   function getEl(doc, id) {
@@ -28,13 +39,8 @@
       btnDiaAnterior: getEl(doc, "btn-dia-anterior"),
       btnDiaPosterior: getEl(doc, "btn-dia-posterior"),
 
-      secDia: doc.querySelector(".agenda-dia"),
-      secSemana: getEl(doc, "agenda-semana"),
-      semanaGridEl: getEl(doc, "agenda-semana-grid"),
       btnVisaoDia: getEl(doc, "btn-visao-dia"),
       btnVisaoSemana: getEl(doc, "btn-visao-semana"),
-
-      listaHorariosEl: getEl(doc, "agenda-lista-horarios"),
 
       inputFiltroNome: getEl(doc, "filtro-nome"),
       selectFiltroStatus: getEl(doc, "filtro-status"),
@@ -101,7 +107,30 @@
     };
   }
 
-  // ✅ init BLINDADO: se qualquer dependência faltar, loga e não quebra o registro do entry
+  function assertAgendaDeps_() {
+    const miss = [];
+    const a = PRONTIO.features && PRONTIO.features.agenda ? PRONTIO.features.agenda : {};
+
+    // base
+    if (!a.formatters) miss.push("agenda.formatters.js");
+    if (!a.view || typeof a.view.createAgendaView !== "function") miss.push("agenda.view.js");
+    if (!a.api || typeof a.api.createAgendaApi !== "function") miss.push("agenda.api.js");
+    if (!a.controller || typeof a.controller.createAgendaController !== "function") miss.push("agenda.controller.js");
+    if (!a.events || typeof a.events.bindAgendaEvents !== "function") miss.push("agenda.events.js");
+
+    // split modules (obrigatórios para o novo controller)
+    if (!a.loaders || typeof a.loaders.createAgendaLoaders !== "function") miss.push("agenda.loaders.js");
+    if (!a.uiActions || typeof a.uiActions.createAgendaUiActions !== "function") miss.push("agenda.uiActions.js");
+    if (!a.editActions || typeof a.editActions.createAgendaEditActions !== "function") miss.push("agenda.editActions.js");
+    if (!a.pacientesCache || typeof a.pacientesCache.createAgendaPacientesCache !== "function") miss.push("agenda.pacientesCache.js");
+    if (!a.filtros || typeof a.filtros.createAgendaFiltros !== "function") miss.push("agenda.filtros.js");
+
+    // state
+    if (!a.state || typeof a.state.createAgendaState !== "function") miss.push("agenda.state.js");
+
+    return miss;
+  }
+
   function init(env) {
     env = env || {};
     const doc = env.document || global.document;
@@ -113,47 +142,27 @@
         return;
       }
 
-      const factory =
-        PRONTIO.features &&
-        PRONTIO.features.agenda &&
-        PRONTIO.features.agenda.controller &&
-        typeof PRONTIO.features.agenda.controller.createAgendaController === "function"
-          ? PRONTIO.features.agenda.controller.createAgendaController
-          : null;
-
-      if (!factory) {
-        console.error("[PRONTIO][Agenda] createAgendaController não encontrado. (assets/js/features/agenda/agenda.controller.js)");
+      const missing = assertAgendaDeps_();
+      if (missing.length) {
+        console.error("[PRONTIO][Agenda] Dependências faltando (scripts):", missing);
         return;
       }
 
-      const controller = factory({ document: doc });
-
+      const controller = PRONTIO.features.agenda.controller.createAgendaController({ document: doc });
       if (!controller || !controller.actions || typeof controller.actions.init !== "function") {
-        console.error("[PRONTIO][Agenda] controller.actions.init não disponível. Controller=", controller);
+        console.error("[PRONTIO][Agenda] controller inválido:", controller);
         return;
       }
 
       controller.actions.init(dom);
 
-      const binder =
-        PRONTIO.features &&
-        PRONTIO.features.agenda &&
-        PRONTIO.features.agenda.events &&
-        typeof PRONTIO.features.agenda.events.bindAgendaEvents === "function"
-          ? PRONTIO.features.agenda.events.bindAgendaEvents
-          : null;
-
-      if (binder) {
-        binder({ document: doc, dom, controller });
-      } else {
-        console.warn("[PRONTIO][Agenda] bindAgendaEvents não encontrado (agenda.events.js).");
-      }
+      const binder = PRONTIO.features.agenda.events.bindAgendaEvents;
+      binder({ document: doc, dom, controller });
     } catch (e) {
       console.error("[PRONTIO][Agenda] Falha dentro de agenda.entry.init:", e);
     }
   }
 
-  // ✅ agora sim: expõe init SEMPRE
   PRONTIO.features.agenda.entry.init = init;
 
 })(window);

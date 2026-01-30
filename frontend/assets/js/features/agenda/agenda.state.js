@@ -29,6 +29,10 @@
     const filtrosSalvos = storage ? safeJsonParse(storage.getItem(KEY_FILTERS), null) : null;
 
     return {
+      // ===== Infra runtime (injetado pelo controller) =====
+      dom: null,
+      pacientesPicker: null,
+
       // ===== Persistidos =====
       modoVisao,
       filtros: {
@@ -50,14 +54,20 @@
       },
       configCarregada: false,
 
-      // dados (DTO e UI)
-      agendamentosPeriodo: [], // DTO canônico (se quiser guardar bruto)
-      agendamentosDiaUi: [], // UI simplificado (dia)
+      // dados
+      agendamentosamentos: null, // (compat opcional; pode remover depois)
+      agendamentosPeriodo: [], // DTO canônico bruto
+      agendamentosDiaUi: [],   // UI do dia
+      agendamentosSemanaUi: [],// UI da semana (opcional, mas útil)
 
       // seleção
       pacienteNovo: null,
       pacienteEditar: null,
       agendamentoEmEdicao: null,
+
+      // cache local de pacientes (Agenda não faz join no backend)
+      pacienteNomeById: {}, // { [idPaciente]: "Nome..." }
+      pacienteMiniById: {}, // { [idPaciente]: { idPaciente, nomeCompleto, telefone, documento } }
 
       // concorrência (runtime)
       reqSeqDia: 0,

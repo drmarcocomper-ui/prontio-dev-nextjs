@@ -8,15 +8,12 @@
  * - Normalizar a resposta (envelope vs data direto).
  * - Padronizar erros.
  *
- * ✅ Ajuste de compatibilidade (com o backend atual mostrado em Agenda.gs):
- * - Backend expõe:
- *   - Agenda.ListarPorPeriodo
- *   - Agenda.Criar
- *   - Agenda.Atualizar
- *   - Agenda.Cancelar
- *   - Agenda_ValidarConflito (legacy)
- *   - Agenda_BloquearHorario (legacy)
- *   - Agenda_RemoverBloqueio (legacy)
+ * ✅ Ajuste aplicado (canônico):
+ * - Envia idProfissional (obrigatório) em TODOS os fluxos da Agenda.
+ * - Usa actions canônicas com ponto (Agenda.*) sempre que existirem no Registry.
+ * - Aceita input legacy (hora_inicio/duracao_minutos) mas NORMALIZA para camelCase no payload enviado.
+ * - Evita ID_Agenda / snake_case no payload enviado ao backend.
+ * - ✅ NOVO: Agenda.ListarEventosDiaParaValidacao (payload { idProfissional, data })
  *
  * Observação:
  * - Pacientes NÃO fica mais aqui.
@@ -50,6 +47,35 @@
   }
 
   // ------------------------------------------------------------
+  // Helpers: sessão (idProfissional / idClinica)
+  // ------------------------------------------------------------
+  function getSessionUser_(PRONTIORef) {
+    try {
+      const s = PRONTIORef && PRONTIORef.core && PRONTIORef.core.session;
+      if (s && typeof s.getUser === "function") return s.getUser();
+    } catch (_) {}
+    return null;
+  }
+
+  function requireIdProfissional_(PRONTIORef) {
+    const u = getSessionUser_(PRONTIORef);
+    const idProf = u && u.idProfissional ? String(u.idProfissional).trim() : "";
+    if (!idProf) {
+      const err = new Error('"idProfissional" não encontrado na sessão. Faça login como profissional ou selecione um profissional.');
+      err.code = "AUTH_CONTEXT_MISSING";
+      err.details = { field: "idProfissional" };
+      throw err;
+    }
+    return idProf;
+  }
+
+  function getIdClinica_(PRONTIORef) {
+    const u = getSessionUser_(PRONTIORef);
+    const idClinica = u && u.idClinica ? String(u.idClinica).trim() : "";
+    return idClinica || "";
+  }
+
+  // ------------------------------------------------------------
   // Helpers: normalização de resposta e erro
   // ------------------------------------------------------------
   function isEnvelope(obj) {
@@ -75,20 +101,17 @@
   }
 
   function unwrapData(result) {
-    // Alguns callApiData retornam envelope inteiro; outros retornam somente envelope.data; outros retornam data puro.
     if (isEnvelope(result)) {
       if (result.success) return result.data;
       throw buildApiErrorFromEnvelope(result);
     }
 
-    // Se vier algo como {envelope:{success:true,data:{...}}}
     if (result && typeof result === "object" && isEnvelope(result.envelope)) {
       const env = result.envelope;
       if (env.success) return env.data;
       throw buildApiErrorFromEnvelope(env);
     }
 
-    // Caso comum no seu projeto: callApiData retorna direto "data"
     return result;
   }
 
@@ -116,8 +139,7 @@
     const y = parseInt(s.slice(0, 4), 10);
     const m = parseInt(s.slice(5, 7), 10) - 1;
     const d = parseInt(s.slice(8, 10), 10);
-    const dt = new Date(y, m, d, 0, 0, 0, 0);
-    return dt;
+    return new Date(y, m, d, 0, 0, 0, 0);
   }
 
   function ymdToLocalEnd_(ymd) {
@@ -125,8 +147,32 @@
     const y = parseInt(s.slice(0, 4), 10);
     const m = parseInt(s.slice(5, 7), 10) - 1;
     const d = parseInt(s.slice(8, 10), 10);
-    const dt = new Date(y, m, d, 23, 59, 59, 999);
-    return dt;
+    return new Date(y, m, d, 23, 59, 59, 999);
+  }
+
+  // ------------------------------------------------------------
+  // Helpers: normalização de payload legacy -> camelCase
+  // ------------------------------------------------------------
+  function pick_(obj, keys) {
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== undefined) return obj[k];
+    }
+    return undefined;
+  }
+
+  function toBool_(v) {
+    return v === true;
+  }
+
+  function normalizeHoraInicio_(p0) {
+    const v = pick_(p0, ["horaInicio", "hora_inicio"]);
+    return v !== undefined ? String(v) : "";
+  }
+
+  function normalizeDuracaoMin_(p0) {
+    const v = pick_(p0, ["duracaoMin", "duracao_minutos", "duracaoMinutos"]);
+    return v !== undefined ? Number(v) : 0;
   }
 
   // ------------------------------------------------------------
@@ -144,36 +190,48 @@
       },
 
       async configSalvar(payload) {
-        // payload: conforme contrato do AgendaConfig.gs
         return await callAction(callApiData, "AgendaConfig.Salvar", payload || {});
       },
 
       // -----------------------
-      // Agenda (compat backend atual)
+      // Agenda (canônico)
       // -----------------------
       async listar(params) {
-        // params: { periodo:{inicio,fim}, filtros?, recursos? }
         const p = params || {};
         const periodo = p.periodo || {};
         const inicioYmd = assertYmd(periodo.inicio, "periodo.inicio");
         const fimYmd = assertYmd(periodo.fim, "periodo.fim");
 
-        // ✅ Backend atual: Agenda.ListarPorPeriodo recebe inicio/fim (Date/ISO/ymd)
-        // Mas para não "perder" eventos do dia, enviamos Date local com fim 23:59:59.999.
         const inicio = ymdToLocalStart_(inicioYmd);
         const fim = ymdToLocalEnd_(fimYmd);
 
-        return await callAction(callApiData, "Agenda.ListarPorPeriodo", {
-          inicio: inicio,
-          fim: fim,
+        const idProfissional = requireIdProfissional_(PRONTIORef);
+        const idClinica = getIdClinica_(PRONTIORef);
+
+        const payload = {
+          inicio: inicio.toISOString(),
+          fim: fim.toISOString(),
+          idProfissional,
           incluirCancelados: !!(p.filtros && p.filtros.incluirCancelados === true),
           idPaciente: (p.filtros && p.filtros.idPaciente) ? String(p.filtros.idPaciente) : null
-        });
+        };
+
+        if (idClinica) payload.idClinica = idClinica;
+
+        return await callAction(callApiData, "Agenda.ListarPorPeriodo", payload);
       },
 
       async criar(payload) {
-        // payload: {data, hora_inicio, duracao_minutos, idPaciente?, titulo?, notas?, tipo?, origem?, status?, permitirEncaixe?}
-        return await callAction(callApiData, "Agenda.Criar", payload || {});
+        const idProfissional = requireIdProfissional_(PRONTIORef);
+        const idClinica = getIdClinica_(PRONTIORef);
+
+        const p0 = payload || {};
+        const p = Object.assign({}, p0);
+
+        p.idProfissional = idProfissional;
+        if (idClinica && p.idClinica === undefined) p.idClinica = idClinica;
+
+        return await callAction(callApiData, "Agenda.Criar", p);
       },
 
       async atualizar(idAgenda, patch) {
@@ -190,7 +248,15 @@
           err.details = { field: "patch" };
           throw err;
         }
-        return await callAction(callApiData, "Agenda.Atualizar", { idAgenda: id, patch });
+
+        const idProfissional = requireIdProfissional_(PRONTIORef);
+        const idClinica = getIdClinica_(PRONTIORef);
+
+        const payload = { idAgenda: id, patch: Object.assign({}, patch) };
+        payload.idProfissional = idProfissional;
+        if (idClinica) payload.idClinica = idClinica;
+
+        return await callAction(callApiData, "Agenda.Atualizar", payload);
       },
 
       async cancelar(idAgenda, motivo) {
@@ -201,26 +267,78 @@
           err.details = { field: "idAgenda" };
           throw err;
         }
-        return await callAction(callApiData, "Agenda.Cancelar", {
+
+        const idProfissional = requireIdProfissional_(PRONTIORef);
+        const idClinica = getIdClinica_(PRONTIORef);
+
+        const payload = {
           idAgenda: id,
-          motivo: motivo ? String(motivo).slice(0, 500) : ""
-        });
+          motivo: motivo ? String(motivo).slice(0, 500) : "",
+          idProfissional
+        };
+        if (idClinica) payload.idClinica = idClinica;
+
+        return await callAction(callApiData, "Agenda.Cancelar", payload);
       },
 
       async validarConflito(payload) {
-        // ✅ Backend atual expõe: "Agenda_ValidarConflito"
-        // payload: {data, hora_inicio, duracao_minutos, ignoreIdAgenda?, permitirEncaixe?, tipo?}
-        return await callAction(callApiData, "Agenda_ValidarConflito", payload || {});
+        const idProfissional = requireIdProfissional_(PRONTIORef);
+        const idClinica = getIdClinica_(PRONTIORef);
+
+        const p0 = payload || {};
+        const data = p0.data ? String(p0.data) : "";
+        const horaInicio = normalizeHoraInicio_(p0);
+        const duracaoMin = normalizeDuracaoMin_(p0);
+
+        const p = {
+          idProfissional,
+          data,
+          horaInicio,
+          duracaoMin,
+          ignoreIdAgenda: pick_(p0, ["ignoreIdAgenda", "ignore_id_agenda", "ignoreId"]) || null,
+          permitirEncaixe: toBool_(pick_(p0, ["permitirEncaixe", "permiteEncaixe"]))
+        };
+
+        if (idClinica) p.idClinica = idClinica;
+
+        return await callAction(callApiData, "Agenda.ValidarConflito", p);
+      },
+
+      // ✅ NOVO: usado por UI para pré-carregar eventos do dia (slots)
+      async listarEventosDiaParaValidacao(payload) {
+        const idProfissional = requireIdProfissional_(PRONTIORef);
+        const idClinica = getIdClinica_(PRONTIORef);
+
+        const p0 = payload || {};
+        const data = assertYmd(p0.data, "data");
+
+        const p = { idProfissional, data };
+        if (idClinica) p.idClinica = idClinica;
+
+        return await callAction(callApiData, "Agenda.ListarEventosDiaParaValidacao", p);
       },
 
       async bloquearHorario(payload) {
-        // ✅ Backend atual expõe: "Agenda_BloquearHorario" (legacy)
-        // payload: {data, hora_inicio, duracao_minutos, titulo?, notas?, origem?}
-        return await callAction(callApiData, "Agenda_BloquearHorario", payload || {});
+        const idProfissional = requireIdProfissional_(PRONTIORef);
+        const idClinica = getIdClinica_(PRONTIORef);
+
+        const p0 = payload || {};
+        const p = {
+          idProfissional,
+          data: p0.data ? String(p0.data) : "",
+          horaInicio: normalizeHoraInicio_(p0),
+          duracaoMin: normalizeDuracaoMin_(p0),
+          titulo: p0.titulo ? String(p0.titulo) : "",
+          notas: p0.notas ? String(p0.notas) : "",
+          origem: p0.origem ? String(p0.origem) : "SISTEMA"
+        };
+
+        if (idClinica) p.idClinica = idClinica;
+
+        return await callAction(callApiData, "Agenda.BloquearHorario", p);
       },
 
       async desbloquearHorario(idAgenda, motivo) {
-        // ✅ Backend atual expõe: "Agenda_RemoverBloqueio" (legacy)
         const id = String(idAgenda || "").trim();
         if (!id) {
           const err = new Error('"idAgenda" é obrigatório.');
@@ -228,10 +346,18 @@
           err.details = { field: "idAgenda" };
           throw err;
         }
-        return await callAction(callApiData, "Agenda_RemoverBloqueio", {
-          ID_Agenda: id,
-          motivo: motivo ? String(motivo).slice(0, 500) : ""
-        });
+
+        const idProfissional = requireIdProfissional_(PRONTIORef);
+        const idClinica = getIdClinica_(PRONTIORef);
+
+        const payload = {
+          idAgenda: id,
+          motivo: motivo ? String(motivo).slice(0, 500) : "",
+          idProfissional
+        };
+        if (idClinica) payload.idClinica = idClinica;
+
+        return await callAction(callApiData, "Agenda.DesbloquearHorario", payload);
       }
     };
   }
