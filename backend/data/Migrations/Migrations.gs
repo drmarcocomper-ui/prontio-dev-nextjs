@@ -15,12 +15,12 @@
  * - Não sobrescreve cabeçalho existente automaticamente (evita “trocar colunas do nada”).
  * - Mantém criação de header apenas quando a aba está vazia.
  *
- * ✅ ALINHAMENTO PROFISSIONAL:
- * - Agenda/Atendimento passam a carregar idProfissional no header (base para conflito/lock por profissional).
+ * ✅ PADRÃO IDEAL (2026-01):
+ * - Agenda canônica: AgendaEventos (não cria mais a aba "Agenda" legado).
+ * - AgendaConfig em camelCase: chave/valor.
  *
  * ⚠️ Nota:
- * - A aba "Agenda" aqui representa o MODELO LEGADO (idAgenda/inicio/fim...).
- * - O modelo novo de agenda está em "AgendaEventos".
+ * - Se você precisar do legado futuramente, reintroduza "Agenda" via migration controlada.
  */
 
 var MIGRATIONS_LATEST_VERSION = 3;
@@ -37,34 +37,12 @@ var MIGRATIONS_META_HEADERS = ["key", "value", "updatedAt"];
  * - Ajuste de headers aqui NÃO quebra o front (front não conhece Sheets).
  *
  * Estratégia:
- * - "Pacientes" passa a ser v2 (uma aba só).
- * - "Agenda" (LEGADO) e "Atendimento" incluem idProfissional (por profissional).
- * - "AgendaEventos" (NOVO) já inclui idProfissional e idClinica.
+ * - "Pacientes" v2 (aba única)
+ * - Agenda canônica: "AgendaEventos"
+ * - "AgendaDisponibilidade", "AgendaExcecoes", "AgendaAcl" mantidas
  */
 var MIGRATIONS_SHEETS = {
   "__meta": MIGRATIONS_META_HEADERS,
-
-  // =========================
-  // AGENDA (LEGADO) - POR PROFISSIONAL
-  // =========================
-  "Agenda": [
-    "idAgenda",
-    "idProfissional",
-    // (opcional) se quiser multi-clínica no legado, descomente:
-    // "idClinica",
-    "idPaciente",
-    "inicio",
-    "fim",
-    "titulo",
-    "notas",
-    "tipo",
-    "status",
-    "origem",
-    "criadoEm",
-    "atualizadoEm",
-    "canceladoEm",
-    "canceladoMotivo"
-  ],
 
   // =========================
   // ATENDIMENTO - POR PROFISSIONAL
@@ -73,7 +51,7 @@ var MIGRATIONS_SHEETS = {
     "idAtendimento",
     "idAgenda",
     "idProfissional",
-    // (opcional) se quiser multi-clínica, descomente:
+    // opcional:
     // "idClinica",
     "idPaciente",
     "dataRef",
@@ -138,7 +116,9 @@ var MIGRATIONS_SHEETS = {
     "ativo"
   ],
 
-  // Preparado para uso futuro (Audit.gs poderá persistir aqui)
+  // =========================
+  // AUDIT (futuro)
+  // =========================
   "Audit": [
     "ts",
     "requestId",
@@ -188,6 +168,8 @@ var MIGRATIONS_SHEETS = {
     "atualizadoEm"
   ],
 
+  // ⚠️ Observação: "Usuarios" está com headers legados + campos novos ao final.
+  // Mantido assim para não quebrar seu auth atual.
   "Usuarios": [
     "ID_Usuario",
     "Nome",
@@ -199,12 +181,14 @@ var MIGRATIONS_SHEETS = {
     "CriadoEm",
     "AtualizadoEm",
     "UltimoLoginEm",
-
     "idClinica",
     "idProfissional",
     "permissoesCustomizadas"
   ],
 
+  // =========================
+  // AGENDA CANÔNICA
+  // =========================
   "AgendaDisponibilidade": [
     "idDisponibilidade",
     "idClinica",
@@ -264,7 +248,7 @@ var MIGRATIONS_SHEETS = {
   ],
 
   // =========================
-  // CONFIG / AUTH (SEM QUEBRAR)
+  // CONFIG / AUTH
   // =========================
   "AuthSessions": [
     "Token",
@@ -274,9 +258,10 @@ var MIGRATIONS_SHEETS = {
     "UserId"
   ],
 
+  // ✅ PADRÃO IDEAL: camelCase
   "AgendaConfig": [
-    "Chave",
-    "Valor"
+    "chave",
+    "valor"
   ],
 
   // =========================
@@ -296,26 +281,20 @@ var MIGRATIONS_SHEETS = {
   ]
 };
 
-/**
- * ============================================================
- * ✅ Handler esperado pelo Registry (Meta_BootstrapDb)
- * ============================================================
- */
+// ============================================================
+// ✅ Handlers esperados pelo Registry
+// ============================================================
 function Meta_BootstrapDb(ctx, payload) {
   return Migrations_bootstrap_();
 }
 
-/**
- * ✅ FIX (SEM QUEBRAR):
- * Wrapper esperado no Registry: Meta_DbStatus
- */
 function Meta_DbStatus(ctx, payload) {
   return Migrations_getDbStatus_();
 }
 
-/**
- * Retorna o status do banco, sem alterar nada.
- */
+// ============================================================
+// Status do banco
+// ============================================================
 function Migrations_getDbStatus_() {
   var db = _migGetDb_();
   var existingSheets = db.getSheets().map(function (s) { return s.getName(); });
@@ -346,9 +325,9 @@ function Migrations_getDbStatus_() {
   };
 }
 
-/**
- * Executa bootstrap/migrations até a última versão.
- */
+// ============================================================
+// Bootstrap/migrations
+// ============================================================
 function Migrations_bootstrap_() {
   var db = _migGetDb_();
 
@@ -384,9 +363,9 @@ function _migApplyVersion_(version) {
   _migSetMeta_("lastMigrationAt", new Date().toISOString());
 }
 
-/**
- * Leitura segura do meta.
- */
+// ============================================================
+// Meta helpers
+// ============================================================
 function _migTryReadMeta_() {
   var db = _migGetDb_();
   var sheet = db.getSheetByName(MIGRATIONS_META_SHEET);
@@ -437,11 +416,9 @@ function _migSetMeta_(key, value) {
   return true;
 }
 
-/**
- * Garante aba com cabeçalho correto.
- * ✅ Profissional: só escreve header se a aba estiver sem header.
- * ❌ Não sobrescreve headers existentes (evita mudanças “mágicas”).
- */
+// ============================================================
+// Sheet/header helpers
+// ============================================================
 function _migEnsureSheetWithHeader_(db, sheetName, headers) {
   var sheet = db.getSheetByName(sheetName);
   if (!sheet) sheet = db.insertSheet(sheetName);

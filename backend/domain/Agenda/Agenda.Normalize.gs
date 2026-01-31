@@ -1,20 +1,23 @@
 // backend/domain/Agenda/Agenda.Normalize.gs
 // ============================================================
 // PRONTIO — Agenda Normalize (Back)
-// Ajustes (2026-01):
-// - DTO 100% camelCase (sem ID_* / hora_inicio / duracao_minutos no core)
-// - Remove "nomeCompleto" do DTO (proibido: Agenda não acessa Pacientes)
-// - NormalizeCreateInput aceita:
-//   - inicio/fim (ISO/Date) OU
+// ============================================================
+// ✅ Padrão ideal (2026-01):
+// - Entidade canônica: AgendaEventos
+// - DTO camelCase
+// - Agenda NÃO faz join com Pacientes (sem nomeCompleto)
+// - CreateInput aceita:
+//   - inicioDateTime/fimDateTime (ISO/Date) OU
 //   - data (YYYY-MM-DD) + horaInicio (HH:MM) + duracaoMin (number)
 // - UpdatePatch aceita patch camelCase e (compat) top-level legado,
-//   mas converte para core (inicio/fim ISO, idPaciente etc.)
+//   mas converte para core (inicioDateTime/fimDateTime ISO)
 // ============================================================
 
 function _agendaNormalizeStatus_(status) {
   var s = String(status || "").trim().toUpperCase();
   if (!s) return AGENDA_STATUS.MARCADO;
 
+  // legados
   if (s === "AGENDADO") return AGENDA_STATUS.MARCADO;
   if (s === "CHEGOU") return AGENDA_STATUS.AGUARDANDO;
   if (s === "CHAMADO") return AGENDA_STATUS.AGUARDANDO;
@@ -66,29 +69,62 @@ function _agendaNormalizeOrigem_(origem) {
   return AGENDA_ORIGEM.RECEPCAO;
 }
 
+/**
+ * Normaliza row (Repo) -> DTO canônico (AgendaEventos).
+ * ✅ Lê campos novos e (compat) campos legados.
+ */
 function _agendaNormalizeRowToDto_(rowObj) {
   rowObj = rowObj || {};
+
+  // IDs
+  var idEvento = rowObj.idEvento || rowObj.ID_Evento || rowObj.ID_EVENTO || "";
+  // compat legado
+  if (!idEvento) idEvento = rowObj.idAgenda || rowObj.ID_Agenda || "";
+
+  // Datas: novo
+  var ini = rowObj.inicioDateTime || rowObj.inicio_datetime || "";
+  var fim = rowObj.fimDateTime || rowObj.fim_datetime || "";
+
+  // compat legado
+  if (!ini) ini = rowObj.inicio || "";
+  if (!fim) fim = rowObj.fim || "";
+
   return {
-    idAgenda: rowObj.idAgenda || rowObj.ID_Agenda || "",
+    idEvento: idEvento,
+
     idProfissional: rowObj.idProfissional || rowObj.ID_Profissional || rowObj.ID_PROFISSIONAL || "",
     idClinica: rowObj.idClinica || rowObj.ID_Clinica || rowObj.ID_CLINICA || "",
     idPaciente: rowObj.idPaciente || rowObj.ID_Paciente || "",
-    inicio: rowObj.inicio || "",
-    fim: rowObj.fim || "",
+
+    inicioDateTime: ini,
+    fimDateTime: fim,
+
     titulo: rowObj.titulo || "",
     notas: rowObj.notas || "",
+
     tipo: rowObj.tipo || AGENDA_TIPO.CONSULTA,
     status: rowObj.status || AGENDA_STATUS.MARCADO,
     origem: rowObj.origem || AGENDA_ORIGEM.RECEPCAO,
-    criadoEm: rowObj.criadoEm || "",
-    atualizadoEm: rowObj.atualizadoEm || "",
+
+    permiteEncaixe: (rowObj.permiteEncaixe === true) || (rowObj.permite_encaixe === true) || (rowObj.permitirEncaixe === true),
+
     canceladoEm: rowObj.canceladoEm || "",
     canceladoMotivo: rowObj.canceladoMotivo || "",
-    // ✅ sem "nomeCompleto" (proibido no módulo Agenda)
-    permitirEncaixe: (rowObj.permitirEncaixe === true) || (rowObj.permite_encaixe === true)
+
+    criadoEm: rowObj.criadoEm || "",
+    atualizadoEm: rowObj.atualizadoEm || "",
+
+    // novo modelo tem ativo
+    ativo: (rowObj.ativo === undefined || rowObj.ativo === null) ? true : (rowObj.ativo === true)
   };
 }
 
+/**
+ * NormalizeCreateInput (payload front) -> { inicioDateTime:Date, fimDateTime:Date, ... }
+ * ✅ aceita:
+ * - inicioDateTime/fimDateTime (ISO/Date)
+ * - ou data + horaInicio + duracaoMin
+ */
 function _agendaNormalizeCreateInput_(payload, params) {
   params = params || {};
   payload = payload || {};
@@ -103,32 +139,34 @@ function _agendaNormalizeCreateInput_(payload, params) {
   var status = payload.status ? String(payload.status) : AGENDA_STATUS.MARCADO;
   status = _agendaNormalizeStatus_(status);
 
-  var permitirEncaixe = payload.permitirEncaixe === true || payload.permite_encaixe === true;
+  var permiteEncaixe = payload.permiteEncaixe === true || payload.permitirEncaixe === true || payload.permite_encaixe === true;
 
-  // 1) Forma canônica: inicio/fim
-  if (payload.inicio && payload.fim) {
-    var ini = _agendaParseDateRequired_(payload.inicio, "inicio");
-    var fim = _agendaParseDateRequired_(payload.fim, "fim");
+  // 1) Forma canônica: inicioDateTime/fimDateTime
+  var pIni = payload.inicioDateTime || payload.inicio;
+  var pFim = payload.fimDateTime || payload.fim;
+
+  if (pIni && pFim) {
+    var ini = _agendaParseDateRequired_(pIni, "inicioDateTime");
+    var fim = _agendaParseDateRequired_(pFim, "fimDateTime");
     return {
       idPaciente: idPaciente,
-      inicio: ini,
-      fim: fim,
+      inicioDateTime: ini,
+      fimDateTime: fim,
       titulo: String(titulo || ""),
       notas: String(notas || ""),
       tipo: _agendaNormalizeTipo_(tipo),
       status: status,
       origem: _agendaNormalizeOrigem_(origem),
-      permitirEncaixe: permitirEncaixe
+      permiteEncaixe: (permiteEncaixe === true)
     };
   }
 
-  // 2) Forma canônica (recomendada no front): data + horaInicio + duracaoMin
+  // 2) Forma recomendada no front: data + horaInicio + duracaoMin
   var dataStr = payload.data ? String(payload.data) : null;
 
-  // aceita legacy e canônico
-  var horaInicio = (payload.horaInicio !== undefined)
-    ? String(payload.horaInicio)
-    : (payload.hora_inicio !== undefined ? String(payload.hora_inicio) : null);
+  var horaInicio =
+    (payload.horaInicio !== undefined) ? String(payload.horaInicio) :
+    (payload.hora_inicio !== undefined ? String(payload.hora_inicio) : null);
 
   if (!dataStr) _agendaThrow_("VALIDATION_ERROR", 'Campo "data" é obrigatório.', { field: "data" });
   if (!horaInicio) _agendaThrow_("VALIDATION_ERROR", 'Campo "horaInicio" é obrigatório.', { field: "horaInicio" });
@@ -145,26 +183,34 @@ function _agendaNormalizeCreateInput_(payload, params) {
 
   return {
     idPaciente: idPaciente,
-    inicio: ini2,
-    fim: fim2,
+    inicioDateTime: ini2,
+    fimDateTime: fim2,
     titulo: String(titulo || ""),
     notas: String(notas || ""),
     tipo: _agendaNormalizeTipo_(tipo),
     status: status,
     origem: _agendaNormalizeOrigem_(origem),
-    permitirEncaixe: permitirEncaixe
+    permiteEncaixe: (permiteEncaixe === true)
   };
 }
 
+/**
+ * BuildUpdatePatch:
+ * - out usa campos de AgendaEventos (inicioDateTime/fimDateTime)
+ * - aceita patch camelCase e compat top-level (data/horaInicio/duracaoMin)
+ */
 function _agendaBuildUpdatePatch_(existing, patch, topCompat, params) {
   patch = patch || {};
   topCompat = topCompat || {};
   params = params || {};
 
+  // existing pode vir legado; normalize
+  existing = _agendaNormalizeRowToDto_(existing || {});
+
   var out = {};
 
   // campos permitidos (patch)
-  var fields = ["idPaciente", "titulo", "notas", "tipo", "status", "origem", "canceladoMotivo", "permitirEncaixe"];
+  var fields = ["idPaciente", "titulo", "notas", "tipo", "status", "origem", "canceladoMotivo", "permiteEncaixe", "ativo"];
   for (var i = 0; i < fields.length; i++) {
     var f = fields[i];
     if (patch[f] !== undefined) out[f] = patch[f];
@@ -177,18 +223,23 @@ function _agendaBuildUpdatePatch_(existing, patch, topCompat, params) {
   if (out.status !== undefined) out.status = _agendaNormalizeStatus_(out.status);
   if (out.origem !== undefined) out.origem = _agendaNormalizeOrigem_(out.origem);
 
-  // normaliza permitirEncaixe
-  if (out.permitirEncaixe !== undefined) out.permitirEncaixe = (out.permitirEncaixe === true);
+  if (out.permiteEncaixe !== undefined) out.permiteEncaixe = (out.permiteEncaixe === true);
 
   // 1) Update por datas diretas (canônico)
-  var hasNewDates = (patch.inicio !== undefined) || (patch.fim !== undefined);
+  var hasNewDates =
+    (patch.inicioDateTime !== undefined) || (patch.fimDateTime !== undefined) ||
+    (patch.inicio !== undefined) || (patch.fim !== undefined);
+
   if (hasNewDates) {
-    if (patch.inicio !== undefined) out.inicio = _agendaParseDateRequired_(patch.inicio, "inicio").toISOString();
-    if (patch.fim !== undefined) out.fim = _agendaParseDateRequired_(patch.fim, "fim").toISOString();
+    var pIni = (patch.inicioDateTime !== undefined) ? patch.inicioDateTime : patch.inicio;
+    var pFim = (patch.fimDateTime !== undefined) ? patch.fimDateTime : patch.fim;
+
+    if (pIni !== undefined) out.inicioDateTime = _agendaParseDateRequired_(pIni, "inicioDateTime").toISOString();
+    if (pFim !== undefined) out.fimDateTime = _agendaParseDateRequired_(pFim, "fimDateTime").toISOString();
     return out;
   }
 
-  // 2) Compat/top-level: data + horaInicio + duracaoMin (camelCase) OU legado (hora_inicio/duracao_minutos)
+  // 2) Compat/top-level: data + horaInicio + duracaoMin
   var dataStr = (topCompat.data !== undefined) ? String(topCompat.data) : null;
 
   var horaInicio =
@@ -199,14 +250,14 @@ function _agendaBuildUpdatePatch_(existing, patch, topCompat, params) {
     (topCompat.duracaoMin !== undefined) ? Number(topCompat.duracaoMin) :
     ((topCompat.duracao_minutos !== undefined) ? Number(topCompat.duracao_minutos) : null);
 
-  // se o patch mandar horaInicio/duracaoMin diretamente no patch, também aceita:
+  // também aceita no patch (por segurança)
   if (dataStr === null && patch.data !== undefined) dataStr = String(patch.data);
   if (horaInicio === null && patch.horaInicio !== undefined) horaInicio = String(patch.horaInicio);
   if (duracao === null && patch.duracaoMin !== undefined) duracao = Number(patch.duracaoMin);
 
   if (dataStr || horaInicio || duracao !== null) {
-    var exIni = _agendaParseDate_(existing.inicio);
-    var exFim = _agendaParseDate_(existing.fim);
+    var exIni = _agendaParseDate_(existing.inicioDateTime);
+    var exFim = _agendaParseDate_(existing.fimDateTime);
 
     var baseData = dataStr || (exIni ? _agendaFormatDate_(exIni) : null);
     var baseHora = horaInicio || (exIni ? _agendaFormatHHMM_(exIni) : null);
@@ -223,8 +274,8 @@ function _agendaBuildUpdatePatch_(existing, patch, topCompat, params) {
     var ini = _agendaBuildDateTime_(baseData, baseHora);
     var fim = new Date(ini.getTime() + durMin * 60000);
 
-    out.inicio = ini.toISOString();
-    out.fim = fim.toISOString();
+    out.inicioDateTime = ini.toISOString();
+    out.fimDateTime = fim.toISOString();
   }
 
   return out;

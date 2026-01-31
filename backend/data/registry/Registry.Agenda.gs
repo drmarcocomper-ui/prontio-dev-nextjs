@@ -7,8 +7,8 @@
  * Ajustes (2026-01):
  * - LockKey fail-fast (sem fallback global).
  * - Payload canônico camelCase.
- * - ✅ Actions canônicas apontam DIRETO para Agenda_Action_* (sem handlers ocultos).
- * - ✅ Adiciona action canônica: Agenda.ListarEventosDiaParaValidacao (payload { idProfissional, data })
+ * - Actions canônicas apontam DIRETO para Agenda_Action_*.
+ * - ✅ Compat com AgendaEventos: aceita idEvento e inicioDateTime.
  */
 
 function _Registry_agendaThrowValidation_(message, details) {
@@ -35,6 +35,14 @@ function _Registry_agendaFormatYMD_(d) {
   return String(iso).slice(0, 10);
 }
 
+/**
+ * Tenta obter { idProfissional, ymd } do payload.
+ * Aceita:
+ * - data (YYYY-MM-DD)
+ * - inicio (ISO) (compat)
+ * - inicioDateTime (ISO) (novo)
+ * - inicioEm (ISO) (compat)
+ */
 function _Registry_agendaExtractProfAndDateFromPayload_(payload) {
   payload = payload || {};
 
@@ -46,12 +54,21 @@ function _Registry_agendaExtractProfAndDateFromPayload_(payload) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) ymd = ds;
   }
 
+  // inicioDateTime (novo)
+  if (!ymd && payload.inicioDateTime) {
+    var dt0 = null;
+    try { dt0 = new Date(String(payload.inicioDateTime)); } catch (_) {}
+    if (dt0 && !isNaN(dt0.getTime())) ymd = _Registry_agendaFormatYMD_(dt0);
+  }
+
+  // inicio (compat)
   if (!ymd && payload.inicio) {
     var dt = null;
     try { dt = new Date(String(payload.inicio)); } catch (_) {}
     if (dt && !isNaN(dt.getTime())) ymd = _Registry_agendaFormatYMD_(dt);
   }
 
+  // inicioEm (compat)
   if (!ymd && payload.inicioEm) {
     var dt2 = null;
     try { dt2 = new Date(String(payload.inicioEm)); } catch (_) {}
@@ -61,12 +78,16 @@ function _Registry_agendaExtractProfAndDateFromPayload_(payload) {
   return { idProfissional: idProf, ymd: ymd };
 }
 
-function _Registry_agendaExtractFromExistingByIdAgenda_(idAgenda) {
+/**
+ * Busca o evento existente para derivar idProfissional + data (por idEvento/idAgenda).
+ */
+function _Registry_agendaExtractFromExistingByIdEvento_(idEventoOrAgenda) {
   try {
-    if (!idAgenda) return { idProfissional: "", ymd: "" };
+    var id = String(idEventoOrAgenda || "").trim();
+    if (!id) return { idProfissional: "", ymd: "" };
     if (typeof Repo_getById_ !== "function") return { idProfissional: "", ymd: "" };
 
-    var row = Repo_getById_(AGENDA_ENTITY, AGENDA_ID_FIELD, String(idAgenda));
+    var row = Repo_getById_(AGENDA_ENTITY, AGENDA_ID_FIELD, id);
     if (!row) return { idProfissional: "", ymd: "" };
 
     var dto = row;
@@ -77,9 +98,10 @@ function _Registry_agendaExtractFromExistingByIdAgenda_(idAgenda) {
     var idProf = dto && dto.idProfissional ? String(dto.idProfissional) : "";
     var ymd = "";
 
-    if (dto && dto.inicio) {
+    var iniIso = (dto && (dto.inicioDateTime || dto.inicio)) ? String(dto.inicioDateTime || dto.inicio) : "";
+    if (iniIso) {
       var dt = null;
-      try { dt = new Date(String(dto.inicio)); } catch (_) {}
+      try { dt = new Date(iniIso); } catch (_) {}
       if (dt && !isNaN(dt.getTime())) ymd = _Registry_agendaFormatYMD_(dt);
     }
 
@@ -96,15 +118,20 @@ function _Registry_agendaLockKey_(ctx, payload) {
   var idProf = ex.idProfissional;
   var ymd = ex.ymd;
 
-  if ((!idProf || !ymd) && payload.idAgenda) {
-    var ex2 = _Registry_agendaExtractFromExistingByIdAgenda_(payload.idAgenda);
+  // Se não veio no payload, tenta por idEvento ou idAgenda
+  var idRef =
+    (payload.idEvento ? String(payload.idEvento) :
+      (payload.idAgenda ? String(payload.idAgenda) : ""));
+
+  if ((!idProf || !ymd) && idRef) {
+    var ex2 = _Registry_agendaExtractFromExistingByIdEvento_(idRef);
     if (!idProf) idProf = ex2.idProfissional;
     if (!ymd) ymd = ex2.ymd;
   }
 
   if (!idProf || !ymd) {
     _Registry_agendaThrowValidation_(
-      'Não foi possível calcular lock da Agenda. Envie "idProfissional" e "data" (YYYY-MM-DD) ou "inicio" (ISO), ou informe "idAgenda" válido.',
+      'Não foi possível calcular lock da Agenda. Envie "idProfissional" e "data" (YYYY-MM-DD) ou "inicioDateTime" (ISO), ou informe "idEvento/idAgenda" válido.',
       { missing: { idProfissional: !idProf, ymd: !ymd }, payload: payload }
     );
   }
@@ -118,16 +145,6 @@ function Registry_RegisterAgenda_(map) {
     handler: (typeof Agenda_Action_ListarPorPeriodo_ === "function")
       ? Agenda_Action_ListarPorPeriodo_
       : _Registry_missingHandler_("Agenda_Action_ListarPorPeriodo_"),
-    requiresAuth: true,
-    roles: [],
-    validations: [],
-    requiresLock: false,
-    lockKey: null
-  };
-
-  map["Agenda.Listar"] = {
-    action: "Agenda.Listar",
-    handler: _Registry_agendaListarHandler_(),
     requiresAuth: true,
     roles: [],
     validations: [],
@@ -171,7 +188,18 @@ function Registry_RegisterAgenda_(map) {
     lockKey: _Registry_agendaLockKey_
   };
 
-  // ✅ Agora aponta direto para Actions canônicas
+  map["Agenda.ValidarConflito"] = {
+    action: "Agenda.ValidarConflito",
+    handler: (typeof Agenda_Action_ValidarConflito_ === "function")
+      ? Agenda_Action_ValidarConflito_
+      : _Registry_missingHandler_("Agenda_Action_ValidarConflito_"),
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
   map["Agenda.BloquearHorario"] = {
     action: "Agenda.BloquearHorario",
     handler: (typeof Agenda_Action_BloquearHorario_ === "function")
@@ -208,7 +236,7 @@ function Registry_RegisterAgenda_(map) {
     lockKey: null
   };
 
-  // Aliases legacy — compat temporário
+  // aliases compat (temporário)
   map["Agenda_Criar"] = {
     action: "Agenda_Criar",
     handler: map["Agenda.Criar"].handler,
@@ -229,74 +257,9 @@ function Registry_RegisterAgenda_(map) {
     lockKey: _Registry_agendaLockKey_
   };
 
-  // Mantém por compat (mas recomenda-se migrar para Agenda.ListarEventosDiaParaValidacao)
-  map["Agenda_ListarEventosDiaParaValidacao"] = {
-    action: "Agenda_ListarEventosDiaParaValidacao",
-    handler: (typeof Agenda_Action_ListarEventosDiaParaValidacao_ === "function")
-      ? function (ctx, payload) { return Agenda_Action_ListarEventosDiaParaValidacao_(ctx, payload || {}); }
-      : _Registry_missingHandler_("Agenda_Action_ListarEventosDiaParaValidacao_"),
-    requiresAuth: true,
-    roles: [],
-    validations: [],
-    requiresLock: false,
-    lockKey: null
-  };
-
-  // AgendaConfig (call-time)
-  map["AgendaConfig_Obter"] = {
-    action: "AgendaConfig_Obter",
-    handler: function (ctx, payload) {
-      if (typeof handleAgendaConfigAction !== "function") {
-        return _Registry_missingHandler_("handleAgendaConfigAction")(ctx, payload);
-      }
-      return handleAgendaConfigAction("AgendaConfig_Obter", payload || {});
-    },
-    requiresAuth: true,
-    roles: [],
-    validations: [],
-    requiresLock: false,
-    lockKey: null
-  };
-
-  map["AgendaConfig_Salvar"] = {
-    action: "AgendaConfig_Salvar",
-    handler: function (ctx, payload) {
-      if (typeof handleAgendaConfigAction !== "function") {
-        return _Registry_missingHandler_("handleAgendaConfigAction")(ctx, payload);
-      }
-      return handleAgendaConfigAction("AgendaConfig_Salvar", payload || {});
-    },
-    requiresAuth: true,
-    roles: [],
-    validations: [],
-    requiresLock: true,
-    lockKey: "AGENDA_CONFIG"
-  };
-
-  map["AgendaConfig.Obter"] = {
-    action: "AgendaConfig.Obter",
-    handler: map["AgendaConfig_Obter"].handler,
-    requiresAuth: true,
-    roles: [],
-    validations: [],
-    requiresLock: false,
-    lockKey: null
-  };
-
-  map["AgendaConfig.Salvar"] = {
-    action: "AgendaConfig.Salvar",
-    handler: map["AgendaConfig_Salvar"].handler,
-    requiresAuth: true,
-    roles: [],
-    validations: [],
-    requiresLock: true,
-    lockKey: "AGENDA_CONFIG"
-  };
-
-  // ValidarConflito (canônico + alias)
   map["Agenda_ValidarConflito"] = {
     action: "Agenda_ValidarConflito",
-    handler: _Registry_agendaValidarConflitoHandler_(),
+    handler: map["Agenda.ValidarConflito"].handler,
     requiresAuth: true,
     roles: [],
     validations: [],
@@ -304,41 +267,13 @@ function Registry_RegisterAgenda_(map) {
     lockKey: null
   };
 
-  map["Agenda.ValidarConflito"] = {
-    action: "Agenda.ValidarConflito",
-    handler: map["Agenda_ValidarConflito"].handler,
+  map["Agenda_ListarEventosDiaParaValidacao"] = {
+    action: "Agenda_ListarEventosDiaParaValidacao",
+    handler: map["Agenda.ListarEventosDiaParaValidacao"].handler,
     requiresAuth: true,
     roles: [],
     validations: [],
     requiresLock: false,
     lockKey: null
   };
-
-  // Legados / compat
-  var agendaLegacyMap = [
-    ["Agenda_ListarDia", "Agenda_Legacy_ListarDia_"],
-    ["Agenda_ListarSemana", "Agenda_Legacy_ListarSemana_"],
-    ["Agenda_MudarStatus", "Agenda_Legacy_MudarStatus_"],
-    ["Agenda_RemoverBloqueio", "Agenda_Legacy_RemoverBloqueio_"],
-    ["Agenda_BloquearHorario", "Agenda_Legacy_BloquearHorario_"],
-    ["Agenda_ListarAFuturo", ""],
-    ["Agenda.ListarAFuturo", ""]
-  ];
-
-  for (var i = 0; i < agendaLegacyMap.length; i++) {
-    var legacyAction = agendaLegacyMap[i][0];
-    var modernFn = agendaLegacyMap[i][1];
-
-    map[legacyAction] = {
-      action: legacyAction,
-      handler: modernFn
-        ? _Registry_tryModernElseLegacy_(modernFn, legacyAction)
-        : _Registry_legacyHandler_(legacyAction),
-      requiresAuth: true,
-      roles: [],
-      validations: [],
-      requiresLock: true,
-      lockKey: "AGENDA_LEGACY"
-    };
-  }
 }
