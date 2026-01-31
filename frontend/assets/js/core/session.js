@@ -13,8 +13,8 @@
 // - Dispara eventos "prontio:session-changed" quando user muda/limpa.
 //
 // ✅ DEV fallback (2026-01):
-// - Quando PRONTIO_ENV === "dev" (ou host github.io) e user==null,
-//   retorna um usuário DEV com idProfissional/idClinica para destravar Agenda/Atendimento.
+// - Quando PRONTIO_ENV === "dev" (ou host github.io) e user==null OU user sem idProfissional,
+//   injeta um usuário DEV com idProfissional/idClinica para destravar Agenda/Atendimento.
 // - NÃO afeta PROD (só roda em dev).
 
 (function (global) {
@@ -60,7 +60,7 @@
   }
 
   function getDevUser_() {
-    // permite override via localStorage (útil quando tiver mais de um profissional)
+    // permite override via localStorage
     try {
       const raw = global.localStorage.getItem(DEV_USER_STORAGE_KEY);
       const obj = safeJsonParse_(raw, null);
@@ -82,6 +82,14 @@
 
       ativo: true
     };
+  }
+
+  function hasIdProfissional_(user) {
+    try {
+      return !!(user && user.idProfissional && String(user.idProfissional).trim());
+    } catch (_) {
+      return false;
+    }
   }
 
   function loadFromStorage() {
@@ -150,12 +158,15 @@
       loadFromStorage();
       this._setupActivityListeners();
 
-      // ✅ DEV: se não existe user salvo, injeta um user DEV para destravar módulos
+      // ✅ DEV: se user não existe OU user sem idProfissional, injeta devUser
       try {
-        if (!memoryState.user && isDevEnv_()) {
-          memoryState.user = getDevUser_();
-          saveToStorage();
-          dispatchSessionChanged_({ type: "setUser(dev)", user: memoryState.user });
+        if (isDevEnv_()) {
+          const u = memoryState.user;
+          if (!hasIdProfissional_(u)) {
+            memoryState.user = getDevUser_();
+            saveToStorage();
+            dispatchSessionChanged_({ type: "setUser(dev)", user: memoryState.user });
+          }
         }
       } catch (_) {}
     },
@@ -172,20 +183,22 @@
 
     /**
      * Retorna usuário logado (objeto ou null)
-     * ✅ DEV fallback: retorna usuário DEV se user estiver null
+     * ✅ DEV fallback: retorna usuário DEV se user estiver null OU sem idProfissional
      */
     getUser() {
-      if (memoryState.user) return memoryState.user;
+      const u = memoryState.user;
 
       if (isDevEnv_()) {
-        const u = getDevUser_();
-        // mantém estável entre refresh
-        memoryState.user = u;
-        saveToStorage();
+        if (!hasIdProfissional_(u)) {
+          const devUser = getDevUser_();
+          memoryState.user = devUser;
+          saveToStorage();
+          return devUser;
+        }
         return u;
       }
 
-      return null;
+      return u || null;
     },
 
     /**
