@@ -8,12 +8,14 @@
 // continuam no backend (Apps Script). Aqui é apenas estado de interface.
 //
 // ✅ Opção 2 (produto): mantém controle de inatividade, SEM logoff automático.
-// - startIdleTimer NÃO chama mais callbacks que executem logout por padrão.
-// - Ao estourar o timeout, dispara um evento "prontio:idle-timeout" (hook futuro).
-//
 // ✅ PASSO 2 (padronização global - front):
 // - Adiciona ensureAuthenticated(): bloqueio local + validação server-side via PRONTIO.auth.me()
 // - Dispara eventos "prontio:session-changed" quando user muda/limpa.
+//
+// ✅ DEV fallback (2026-01):
+// - Quando PRONTIO_ENV === "dev" (ou host github.io) e user==null,
+//   retorna um usuário DEV com idProfissional/idClinica para destravar Agenda/Atendimento.
+// - NÃO afeta PROD (só roda em dev).
 
 (function (global) {
   "use strict";
@@ -22,6 +24,7 @@
   PRONTIO.core = PRONTIO.core || {};
 
   const STORAGE_KEY = "prontio.session.v1";
+  const DEV_USER_STORAGE_KEY = "prontio.dev.user.v1";
 
   let memoryState = {
     user: null,
@@ -31,6 +34,55 @@
   };
 
   let idleTimer = null;
+
+  function isDevEnv_() {
+    try {
+      if (typeof global.PRONTIO_ENV !== "undefined" && String(global.PRONTIO_ENV).toLowerCase() === "dev") return true;
+    } catch (_) {}
+
+    try {
+      const h = String(global.location && global.location.hostname ? global.location.hostname : "").toLowerCase();
+      if (h.endsWith("github.io")) return true;
+      if (h.includes("localhost") || h === "127.0.0.1") return true;
+    } catch (_) {}
+
+    return false;
+  }
+
+  function safeJsonParse_(raw, fallback) {
+    try {
+      if (!raw) return fallback;
+      const obj = JSON.parse(raw);
+      return obj && typeof obj === "object" ? obj : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function getDevUser_() {
+    // permite override via localStorage (útil quando tiver mais de um profissional)
+    try {
+      const raw = global.localStorage.getItem(DEV_USER_STORAGE_KEY);
+      const obj = safeJsonParse_(raw, null);
+      if (obj && obj.idProfissional) return obj;
+    } catch (_) {}
+
+    // default DEV
+    return {
+      idUsuario: "DEV_USER",
+      login: "dev",
+      nomeCompleto: "DEV - Dr. Marco Antônio",
+      perfil: "admin",
+
+      // ✅ obrigatório para Agenda
+      idProfissional: "PROF_0001",
+
+      // opcional (mas útil)
+      idClinica: "CLINICA_0001",
+
+      ativo: true
+    };
+  }
 
   function loadFromStorage() {
     try {
@@ -97,6 +149,15 @@
     init() {
       loadFromStorage();
       this._setupActivityListeners();
+
+      // ✅ DEV: se não existe user salvo, injeta um user DEV para destravar módulos
+      try {
+        if (!memoryState.user && isDevEnv_()) {
+          memoryState.user = getDevUser_();
+          saveToStorage();
+          dispatchSessionChanged_({ type: "setUser(dev)", user: memoryState.user });
+        }
+      } catch (_) {}
     },
 
     /**
@@ -111,9 +172,20 @@
 
     /**
      * Retorna usuário logado (objeto ou null)
+     * ✅ DEV fallback: retorna usuário DEV se user estiver null
      */
     getUser() {
-      return memoryState.user;
+      if (memoryState.user) return memoryState.user;
+
+      if (isDevEnv_()) {
+        const u = getDevUser_();
+        // mantém estável entre refresh
+        memoryState.user = u;
+        saveToStorage();
+        return u;
+      }
+
+      return null;
     },
 
     /**
@@ -141,7 +213,6 @@
     },
 
     setLastAgendaDate(dateStr) {
-      // string no formato YYYY-MM-DD (quem define é o backend)
       memoryState.lastAgendaDate = dateStr || null;
       touchActivity();
       dispatchSessionChanged_({ type: "setLastAgendaDate", lastAgendaDate: memoryState.lastAgendaDate });
@@ -152,13 +223,7 @@
     },
 
     /**
-     * ✅ PASSO 2: guard oficial (UI-first) para garantir sessão válida
-     * - Bloqueia localmente se não houver token (requireAuth).
-     * - Valida no backend via auth.me() (que já trata AUTH_* e pode redirecionar).
-     *
-     * @param {Object} opts
-     * @param {boolean} [opts.redirect=true] - permite redirecionar para /login.html
-     * @returns {Promise<boolean>} true se ok, false se redirecionou/negou
+     * Guard oficial (UI-first) para garantir sessão válida
      */
     async ensureAuthenticated(opts) {
       opts = opts || {};
@@ -167,22 +232,18 @@
       const auth = getAuth_();
       if (!auth || typeof auth.requireAuth !== "function") {
         console.warn("[Session] ensureAuthenticated: PRONTIO.auth.requireAuth não disponível.");
-        return true; // não bloqueia para não quebrar páginas offline/dev
+        return true;
       }
 
-      // 1) Bloqueio local imediato
       const okLocal = auth.requireAuth({ redirect: redirect });
       if (!okLocal) return false;
 
-      // 2) Validação server-side (canônica)
       if (typeof auth.me === "function") {
         try {
           const res = await auth.me();
-          // auth.me já chama session.setUser internamente (via auth.js), mas garantimos se vier user aqui:
           if (res && res.user) this.setUser(res.user);
           return true;
         } catch (e) {
-          // auth.me já costuma redirecionar em AUTH_*; se não redirecionou, aplica fallback
           if (redirect && auth.forceLogoutLocal && e && e.code) {
             try { auth.forceLogoutLocal(String(e.code), { redirect: true, clearChat: true }); } catch (_) {}
             return false;
@@ -194,23 +255,8 @@
       return true;
     },
 
-    /**
-     * Inicia controle de inatividade no front.
-     *
-     * ✅ IMPORTANTE (Opção 2):
-     * - NÃO faz logoff automático.
-     * - Ao estourar, apenas:
-     *    1) dispara evento global "prontio:idle-timeout"
-     *    2) (opcional) chama onTimeout APENAS se explicitamente permitido
-     *
-     * @param {Object} options
-     * @param {number} options.timeoutMs - tempo em ms (ex.: 30 * 60 * 1000)
-     * @param {Function} [options.onTimeout] - callback (não recomendado para logout)
-     * @param {boolean} [options.allowOnTimeout=false] - se true, permite chamar onTimeout
-     */
     startIdleTimer(options) {
       const timeoutMs = (options && options.timeoutMs) || 30 * 60 * 1000;
-
       const onTimeout = (options && options.onTimeout) || function () {};
       const allowOnTimeout = !!(options && options.allowOnTimeout === true);
 
