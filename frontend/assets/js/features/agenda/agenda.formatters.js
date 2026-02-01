@@ -214,8 +214,8 @@
    * - Front (controller) pode preencher nomeCompleto via cache de pacientes.
    */
   function dtoToUi(dto) {
-    const inicioIso = dto && dto.inicio ? String(dto.inicio) : "";
-    const fimIso = dto && dto.fim ? String(dto.fim) : "";
+    const inicioIso = dto && (dto.inicioDateTime || dto.inicio) ? String(dto.inicioDateTime || dto.inicio) : "";
+const fimIso = dto && (dto.fimDateTime || dto.fim) ? String(dto.fimDateTime || dto.fim) : "";
 
     const tipo = String(dto && dto.tipo ? dto.tipo : "");
     const isBloqueio = tipo.toUpperCase() === "BLOQUEIO";
