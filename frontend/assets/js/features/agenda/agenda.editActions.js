@@ -1,20 +1,4 @@
 // frontend/assets/js/features/agenda/agenda.editActions.js
-/**
- * PRONTIO — Agenda Edit Actions (Front)
- * ------------------------------------------------------------
- * Responsável por:
- * - Submit Novo / Editar / Bloqueio
- * - Mudar status
- * - Desbloquear
- * - Abrir prontuário (navegação)
- *
- * Regras:
- * - Não acessa sheets
- * - Sem regra clínica: validação via API (Agenda.ValidarConflito)
- * - Usa sempre state.dom (injetado pelo controller)
- * - Payloads canônicos: horaInicio / duracaoMin
- */
-
 (function (global) {
   "use strict";
 
@@ -43,6 +27,43 @@
       }
     }
 
+    function _getSelectedPacienteId_(p) {
+      try {
+        if (!p) return "";
+        const id = p.idPaciente ? String(p.idPaciente).trim() : "";
+        return id;
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function _assertPacienteSelecionado_(mode) {
+      // mode: "novo" | "editar"
+      const dom = state.dom;
+      if (!dom) return { ok: true };
+
+      const inputEl = (mode === "editar") ? dom.editNomePaciente : dom.novoNomePaciente;
+      const selected = (mode === "editar") ? state.pacienteEditar : state.pacienteNovo;
+
+      const typed = inputEl ? String(inputEl.value || "").trim() : "";
+      const idSel = _getSelectedPacienteId_(selected);
+
+      // Se não digitou nada, ok (agenda pode existir sem paciente)
+      if (!typed) return { ok: true };
+
+      // Se digitou algo, mas não selecionou da lista/picker => não temos idPaciente
+      if (!idSel) {
+        return {
+          ok: false,
+          message:
+            'Para vincular o paciente, selecione-o pela lista (autocomplete) ou clique em "Selecionar". ' +
+            "Somente digitar o nome não vincula ao cadastro."
+        };
+      }
+
+      return { ok: true };
+    }
+
     // =========================================================
     // NOVO (submit)
     // =========================================================
@@ -58,6 +79,14 @@
 
       if (!dataStr || !horaStr || !duracao) {
         view.setFormMsg && view.setFormMsg(dom.msgNovo, "Preencha data, hora inicial e duração.", "erro");
+        view.safeDisable && view.safeDisable(dom.btnSubmitNovo, false);
+        return;
+      }
+
+      // ✅ Se digitou nome, exige seleção para vincular (idPaciente)
+      const chkP = _assertPacienteSelecionado_("novo");
+      if (!chkP.ok) {
+        view.setFormMsg && view.setFormMsg(dom.msgNovo, chkP.message, "erro");
         view.safeDisable && view.safeDisable(dom.btnSubmitNovo, false);
         return;
       }
@@ -80,13 +109,13 @@
         return;
       }
 
-      const idPaciente = state.pacienteNovo && state.pacienteNovo.idPaciente ? String(state.pacienteNovo.idPaciente) : "";
+      const idPaciente = _getSelectedPacienteId_(state.pacienteNovo);
 
       const payload = {
         data: dataStr,
         horaInicio: horaStr,
         duracaoMin: duracao,
-        idPaciente: idPaciente,
+        idPaciente: idPaciente, // vazio => sem vínculo (intencional)
         titulo: dom.novoMotivo ? String(dom.novoMotivo.value || "") : "",
         notas: "",
         tipo: dom.novoTipo ? String(dom.novoTipo.value || "CONSULTA") : "CONSULTA",
@@ -102,7 +131,6 @@
 
         await loaders.carregarDia();
 
-        // fecha modal
         setTimeout(function () {
           if (view.closeModal) view.closeModal(dom.modalNovo);
           if (dom.formNovo && typeof dom.formNovo.reset === "function") dom.formNovo.reset();
@@ -136,7 +164,6 @@
         return;
       }
 
-      // validar conflito como bloqueio (backend já impede se houver agendamento)
       view.setFormMsg && view.setFormMsg(dom.msgBloqueio, "Validando horário...", "info");
       const v = await validarConflito_({
         data: dataStr,
@@ -191,7 +218,7 @@
 
       state.agendamentoEmEdicao = ag || null;
 
-      if (dom.editIdAgenda) dom.editIdAgenda.value = ag?.ID_Agenda || "";
+      if (dom.editIdAgenda) dom.editIdAgenda.value = ag?.ID_Agenda || ag?.idAgenda || ag?.idEvento || "";
       if (dom.editData) dom.editData.value = ag?.data || dom.inputData?.value || "";
       if (dom.editHoraInicio) dom.editHoraInicio.value = ag?.hora_inicio || "";
       if (dom.editDuracao) dom.editDuracao.value = ag?.duracao_minutos || 15;
@@ -246,6 +273,14 @@
         return;
       }
 
+      // ✅ Se digitou nome, exige seleção para vincular (idPaciente)
+      const chkP = _assertPacienteSelecionado_("editar");
+      if (!chkP.ok) {
+        view.setFormMsg && view.setFormMsg(dom.msgEditar, chkP.message, "erro");
+        view.safeDisable && view.safeDisable(dom.btnSubmitEditar, false);
+        return;
+      }
+
       const permitirEncaixe = dom.editPermiteEncaixe ? dom.editPermiteEncaixe.checked === true : false;
 
       view.setFormMsg && view.setFormMsg(dom.msgEditar, "Validando horário...", "info");
@@ -264,7 +299,7 @@
         return;
       }
 
-      const idPaciente = state.pacienteEditar && state.pacienteEditar.idPaciente ? String(state.pacienteEditar.idPaciente) : "";
+      const idPaciente = _getSelectedPacienteId_(state.pacienteEditar);
 
       const patch = {
         data: dataStr,
@@ -294,7 +329,7 @@
     }
 
     // =========================================================
-    // STATUS / DESBLOQUEIO
+    // STATUS / DESBLOQUEIO / PRONTUÁRIO (mantidos)
     // =========================================================
     async function mudarStatus(idAgenda, labelUi, cardEl) {
       if (!idAgenda) return;
@@ -342,9 +377,6 @@
       }
     }
 
-    // =========================================================
-    // PRONTUÁRIO
-    // =========================================================
     function abrirProntuario(ag) {
       if (!ag || !ag.ID_Paciente) {
         alert("Este agendamento não está vinculado a um paciente cadastrado.\n\nSelecione um paciente no agendamento para vincular ao prontuário.");
@@ -368,20 +400,13 @@
     }
 
     return {
-      // novo/bloqueio
       submitNovo,
+      submitEditar,
       submitBloqueio,
-
-      // editar
       abrirModalEditar,
       fecharModalEditar,
-      submitEditar,
-
-      // status/bloqueio
       mudarStatus,
       desbloquear,
-
-      // prontuário
       abrirProntuario
     };
   }
