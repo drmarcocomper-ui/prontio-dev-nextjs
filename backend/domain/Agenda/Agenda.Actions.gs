@@ -12,6 +12,9 @@
 // ✅ Compat temporário (para o front atual não quebrar):
 // - Aceita payload.idAgenda como alias de idEvento
 // - Respostas incluem idAgenda + inicio + fim como aliases
+//
+// ✅ Ajuste crítico (Locks):
+// - Locks_withLock_ assinatura é (ctx, key, fn)
 // ============================================================
 
 function _agendaResolveIdEvento_(payload) {
@@ -125,15 +128,15 @@ function Agenda_Action_Criar_(ctx, payload) {
 
   var createdDto = null;
 
-  Locks_withLock_(lockKey, function () {
+  // ✅ Locks_withLock_(ctx, key, fn)
+  Locks_withLock_(ctx, lockKey, function () {
     _agendaAssertSemConflitos_(ctx, {
-      // conflitos ainda trabalham com Date
       inicio: norm.inicioDateTime,
       fim: norm.fimDateTime,
       idProfissional: idProfissional,
       permitirEncaixe: norm.permiteEncaixe === true,
       modoBloqueio: norm.tipo === AGENDA_TIPO.BLOQUEIO,
-      ignoreIdAgenda: null // compat: ignoreIdAgenda (seu core usa esse nome)
+      ignoreIdAgenda: null
     }, params);
 
     var idEvento = Ids_nextId_("AGENDA_EVENTO");
@@ -222,14 +225,15 @@ function Agenda_Action_Atualizar_(ctx, payload) {
 
   var lockKey = "agenda:" + idProfissional + ":" + _agendaFormatYYYYMMDD_(newInicio);
 
-  Locks_withLock_(lockKey, function () {
+  // ✅ Locks_withLock_(ctx, key, fn)
+  Locks_withLock_(ctx, lockKey, function () {
     _agendaAssertSemConflitos_(ctx, {
       inicio: newInicio,
       fim: newFim,
       idProfissional: idProfissional,
       permitirEncaixe: finalPermiteEncaixe,
       modoBloqueio: (mergedPatch.tipo === AGENDA_TIPO.BLOQUEIO) || (existing.tipo === AGENDA_TIPO.BLOQUEIO),
-      ignoreIdAgenda: idEvento // compat: ignoreIdAgenda (core antigo)
+      ignoreIdAgenda: idEvento
     }, params);
 
     mergedPatch.atualizadoEm = new Date().toISOString();
@@ -284,7 +288,8 @@ function Agenda_Action_Cancelar_(ctx, payload) {
 
   var lockKey = "agenda:" + idProfissional + ":" + _agendaFormatYYYYMMDD_(dtIni);
 
-  Locks_withLock_(lockKey, function () {
+  // ✅ Locks_withLock_(ctx, key, fn)
+  Locks_withLock_(ctx, lockKey, function () {
     var nowIso = new Date().toISOString();
     var ok = Repo_update_(AGENDA_ENTITY, AGENDA_ID_FIELD, idEvento, {
       status: AGENDA_STATUS.CANCELADO,

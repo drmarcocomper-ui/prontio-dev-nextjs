@@ -1,3 +1,14 @@
+/**
+ * backend/domain/Agenda/Agenda.Utils.gs (ou arquivo utilitário equivalente)
+ * ------------------------------------------------------------
+ * Helpers de data/hora + throw padrão.
+ *
+ * ✅ Atualização:
+ * - Inclui _agendaFormatYYYYMMDD_ (necessário para locks: agenda:{idProfissional}:{YYYY-MM-DD})
+ * - _agendaBuildDateTime_ valida campo canônico horaInicio
+ * - Mantém compat com inputs Date/number/ISO/ymd
+ */
+
 function _agendaParseDateRequired_(v, fieldName) {
   var d = _agendaParseDate_(v);
   if (!d) _agendaThrow_("VALIDATION_ERROR", "Data inválida: " + String(fieldName || ""), { field: fieldName, value: v });
@@ -13,14 +24,19 @@ function _agendaParseDate_(v) {
   }
 
   if (typeof v === "string") {
-    var dStr = new Date(v);
+    var s = String(v);
+
+    // ISO / Date parse nativo
+    var dStr = new Date(s);
     if (!isNaN(dStr.getTime())) return dStr;
 
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-      var parts = v.split("-");
+    // YYYY-MM-DD local
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      var parts = s.split("-");
       var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
       return isNaN(d.getTime()) ? null : d;
     }
+
     return null;
   }
 
@@ -61,6 +77,15 @@ function _agendaFormatHHMM_(d) {
   var h = ("0" + d.getHours()).slice(-2);
   var m = ("0" + d.getMinutes()).slice(-2);
   return h + ":" + m;
+}
+
+/**
+ * ✅ Necessário para locks e Registry:
+ * agenda:{idProfissional}:{YYYY-MM-DD}
+ */
+function _agendaFormatYYYYMMDD_(d) {
+  if (!(d instanceof Date) || isNaN(d.getTime())) return "";
+  return _agendaFormatDate_(d);
 }
 
 function _agendaThrow_(code, message, details) {

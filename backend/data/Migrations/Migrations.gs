@@ -471,3 +471,14 @@ function _migTryGetDbId_() {
     return null;
   }
 }
+function DEV_Test_AgendaCriar() {
+  var res = Agenda_Action_Criar_(null, {
+    idProfissional: "PROF_0001",
+    data: "2026-02-01",
+    horaInicio: "09:00",
+    duracaoMin: 30,
+    tipo: "CONSULTA",
+    origem: "SISTEMA"
+  });
+  Logger.log(JSON.stringify(res, null, 2));
+}
