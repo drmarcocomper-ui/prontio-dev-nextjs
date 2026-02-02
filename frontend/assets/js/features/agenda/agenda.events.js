@@ -32,7 +32,7 @@
     if (dom.btnVisaoDia && typeof actions.setVisao === "function") dom.btnVisaoDia.addEventListener("click", () => actions.setVisao("dia"));
     if (dom.btnVisaoSemana && typeof actions.setVisao === "function") dom.btnVisaoSemana.addEventListener("click", () => actions.setVisao("semana"));
 
-    // Filtros (debounce simples)
+    // Filtros (debounce 300ms para evitar requisições excessivas)
     let filtroDebounce = null;
     function scheduleFiltros() {
       if (filtroDebounce) clearTimeout(filtroDebounce);
@@ -42,7 +42,7 @@
           dom.inputFiltroNome ? dom.inputFiltroNome.value : "",
           dom.selectFiltroStatus ? dom.selectFiltroStatus.value : ""
         );
-      }, 120);
+      }, 300);
     }
 
     if (dom.inputFiltroNome) {

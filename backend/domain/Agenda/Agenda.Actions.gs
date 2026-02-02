@@ -110,8 +110,11 @@ function Agenda_Action_Criar_(ctx, payload) {
   payload = payload || {};
   var params = Config_getAgendaParams_();
 
-  var idProfissional = payload.idProfissional ? String(payload.idProfissional) : "";
-  if (!idProfissional) {
+  var idProfissional = (payload.idProfissional && String(payload.idProfissional).trim())
+    ? String(payload.idProfissional).trim()
+    : "";
+  // Validação robusta: evita valores inválidos como "null", "undefined", "false"
+  if (!idProfissional || idProfissional === "null" || idProfissional === "undefined" || idProfissional === "false") {
     _agendaThrow_("VALIDATION_ERROR", '"idProfissional" é obrigatório.', { field: "idProfissional" });
   }
 
@@ -238,9 +241,13 @@ function Agenda_Action_Atualizar_(ctx, payload) {
 
     mergedPatch.atualizadoEm = new Date().toISOString();
 
-    // garante idProfissional
-    if (!existing.idProfissional && mergedPatch.idProfissional === undefined) {
-      mergedPatch.idProfissional = idProfissional;
+    // garante idProfissional - sempre usa o valor do registro existente se não especificado no patch
+    // NUNCA permite trocar o profissional de um agendamento existente (segurança)
+    if (mergedPatch.idProfissional === undefined || !mergedPatch.idProfissional) {
+      mergedPatch.idProfissional = existing.idProfissional || idProfissional;
+    } else if (existing.idProfissional && mergedPatch.idProfissional !== existing.idProfissional) {
+      // Bloqueia tentativa de trocar o profissional
+      mergedPatch.idProfissional = existing.idProfissional;
     }
 
     // grava no modelo novo

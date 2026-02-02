@@ -61,8 +61,29 @@ function _agendaBuildDateTime_(dateStr, hhmm) {
   var H = Number(t[0]);
   var M = Number(t[1]);
 
+  // Validação de limites para evitar normalização automática de horários inválidos
+  if (H < 0 || H > 23) {
+    _agendaThrow_("VALIDATION_ERROR", "Hora inválida (deve ser 0-23).", { field: "horaInicio", value: hhmm });
+  }
+  if (M < 0 || M > 59) {
+    _agendaThrow_("VALIDATION_ERROR", "Minuto inválido (deve ser 0-59).", { field: "horaInicio", value: hhmm });
+  }
+  // Validação de data válida
+  if (m < 0 || m > 11) {
+    _agendaThrow_("VALIDATION_ERROR", "Mês inválido (deve ser 1-12).", { field: "data", value: dateStr });
+  }
+  if (d < 1 || d > 31) {
+    _agendaThrow_("VALIDATION_ERROR", "Dia inválido (deve ser 1-31).", { field: "data", value: dateStr });
+  }
+
   var dt = new Date(y, m, d, H, M, 0, 0);
   if (isNaN(dt.getTime())) _agendaThrow_("VALIDATION_ERROR", "data/hora inválida.", { dateStr: dateStr, hhmm: hhmm });
+
+  // Verifica se a data foi normalizada (ex: 31/02 vira 03/03)
+  if (dt.getFullYear() !== y || dt.getMonth() !== m || dt.getDate() !== d) {
+    _agendaThrow_("VALIDATION_ERROR", "Data inválida (dia não existe no mês).", { field: "data", value: dateStr });
+  }
+
   return dt;
 }
 

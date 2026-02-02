@@ -1,17 +1,14 @@
-// frontend/assets/js/features/agenda/agenda.controller.js
+// frontend/assets/js/features/agenda/agenda.loaders.js
 /**
- * PRONTIO — Agenda Controller (Front)
+ * PRONTIO — Agenda Loaders (Front)
  * ------------------------------------------------------------
- * Controller FINO (orquestrador)
- *
- * ✅ Compat robusta:
- * - Suporta editActions antigo (ctx com dom/agendaApi/pacientesCache/validarConflito/carregarDia/carregarSemana)
- * - Suporta editActions novo  (ctx com api/state/view/loaders)
- *
- * ✅ Também:
- * - Injeta pacientesCache no state (se existir)
- * - Injeta pacientesPicker (se existir)
- * - Dispara LOAD inicial (dia/semana) no init
+ * Responsabilidades:
+ * - Carregar agendamentos da API (dia/semana)
+ * - Formatar DTOs para UI usando formatters
+ * - Enriquecer com cache de pacientes
+ * - Aplicar filtros
+ * - Atualizar view com estados (loading/erro/sucesso)
+ * - Gerenciar concorrência (reqSeq)
  */
 
 (function (global) {
@@ -21,224 +18,359 @@
   PRONTIO.features = PRONTIO.features || {};
   PRONTIO.features.agenda = PRONTIO.features.agenda || {};
 
-  const createAgendaApi = PRONTIO.features.agenda.api?.createAgendaApi;
-  const createAgendaView = PRONTIO.features.agenda.view?.createAgendaView;
-  const createAgendaState = PRONTIO.features.agenda.state?.createAgendaState;
+  const FX = () => PRONTIO.features.agenda.formatters || {};
+  const FILTROS = () => PRONTIO.features.agenda.filtros || {};
 
-  const createAgendaLoaders = PRONTIO.features.agenda.loaders?.createAgendaLoaders;
-  const createAgendaUiActions = PRONTIO.features.agenda.uiActions?.createAgendaUiActions;
+  function createAgendaLoaders(ctx) {
+    const { api, state, view } = ctx || {};
 
-  // editActions (pode estar em formatos diferentes no repo)
-  const createAgendaEditActions = PRONTIO.features.agenda.editActions?.createAgendaEditActions || null;
-
-  // cache de pacientes (front)
-  const createPacientesCache = PRONTIO.features.agenda.pacientesCache?.createPacientesCache || null;
-
-  // picker de pacientes
-  const createPacientesApi = PRONTIO.features?.pacientes?.api?.createPacientesApi || null;
-  const createPacientesPicker = PRONTIO.features?.pacientes?.picker?.createPacientesPicker || null;
-
-  function createAgendaController(env) {
-    env = env || {};
-    const document = env.document || global.document;
-    const storage = global.localStorage || null;
-
-    if (!createAgendaApi || !createAgendaView || !createAgendaState) {
-      console.error("[AgendaController] Dependências básicas não carregadas (api/view/state).");
+    if (!api || !state || !view) {
+      console.error("[AgendaLoaders] Dependências não fornecidas (api/state/view).");
       return null;
     }
 
-    const api = createAgendaApi(PRONTIO);
-    const view = createAgendaView({ document });
-    const state = createAgendaState(storage);
+    let dom = null;
 
-    // pacientesCache (se existir)
-    state.pacientesCache =
-      (createPacientesCache && typeof createPacientesCache === "function")
-        ? createPacientesCache(storage, state)
-        : null;
+    // ========================================
+    // Helpers
+    // ========================================
 
-    const loaders = (createAgendaLoaders && typeof createAgendaLoaders === "function")
-      ? createAgendaLoaders({ api, state, view })
-      : null;
-
-    const uiActions = (createAgendaUiActions && typeof createAgendaUiActions === "function")
-      ? createAgendaUiActions({ state, view, loaders })
-      : null;
-
-    if (!loaders || !uiActions) {
-      console.error("[AgendaController] Módulos loaders/uiActions não carregados.");
-      return null;
+    function getFormatters() {
+      return FX();
     }
 
-    // Pacientes API para picker
-    const pacientesApi = (createPacientesApi && typeof createPacientesApi === "function")
-      ? createPacientesApi(PRONTIO)
-      : null;
-
-    function _nomePaciente_(p) {
-      return String(p?.nomeCompleto || p?.nome || "").trim();
-    }
-    function _telPaciente_(p) {
-      return String(p?.telefone || p?.telefonePrincipal || "").trim();
+    function getFiltros() {
+      return FILTROS();
     }
 
-    function tryInitPacientesPicker_(dom) {
-      state.pacientesPicker = null;
+    function generateSlots(horaInicio, horaFim, intervalo) {
+      const fx = getFormatters();
+      const slots = [];
+      const startMin = fx.timeToMinutes ? fx.timeToMinutes(horaInicio) : 480;
+      const endMin = fx.timeToMinutes ? fx.timeToMinutes(horaFim) : 1080;
+      const step = intervalo || 15;
 
-      if (!pacientesApi || typeof pacientesApi.buscarSimples !== "function") return;
-      if (!createPacientesPicker) return;
+      for (let m = startMin; m < endMin; m += step) {
+        slots.push(fx.minutesToTime ? fx.minutesToTime(m) : "00:00");
+      }
+      return slots;
+    }
 
-      if (!dom || !dom.modalPacientes || !dom.buscaPacienteTermo || !dom.listaPacientesEl || !dom.msgPacientesEl) return;
+    function enrichWithPacientesCache(uiList) {
+      if (!state.pacientesCache || typeof state.pacientesCache.enrichUiList !== "function") {
+        return uiList;
+      }
+      return state.pacientesCache.enrichUiList(uiList);
+    }
+
+    function applyFilters(uiList) {
+      const filtros = getFiltros();
+      if (!filtros.normalizeFilters || !filtros.matchesAgendamento) {
+        return uiList;
+      }
+
+      const normalized = filtros.normalizeFilters(state.filtros || {});
+      if (!normalized.termo && !normalized.statusFiltro) {
+        return uiList;
+      }
+
+      const resolveNome = (ag) => {
+        if (state.pacientesCache && typeof state.pacientesCache.resolveNomeFromId === "function") {
+          return state.pacientesCache.resolveNomeFromId(ag.ID_Paciente);
+        }
+        return ag.nomeCompleto || "";
+      };
+
+      return uiList.filter((ag) =>
+        filtros.matchesAgendamento(ag, normalized.termo, normalized.statusFiltro, resolveNome)
+      );
+    }
+
+    function buildDayMap(uiList, slots) {
+      const map = new Map();
+      slots.forEach((s) => map.set(s, []));
+
+      uiList.forEach((ag) => {
+        const h = ag.hora_inicio || "";
+        if (map.has(h)) {
+          map.get(h).push(ag);
+        } else {
+          // slot não existe na grade, adiciona mesmo assim
+          map.set(h, [ag]);
+        }
+      });
+
+      return map;
+    }
+
+    function buildWeekMap(uiList, dias) {
+      // { [ymd]: { [hhmm]: ag[] } }
+      const byDayHour = {};
+      dias.forEach((d) => {
+        byDayHour[d] = {};
+      });
+
+      uiList.forEach((ag) => {
+        const d = ag.data || "";
+        const h = ag.hora_inicio || "";
+        if (!byDayHour[d]) byDayHour[d] = {};
+        if (!byDayHour[d][h]) byDayHour[d][h] = [];
+        byDayHour[d][h].push(ag);
+      });
+
+      return byDayHour;
+    }
+
+    function getNowInfo() {
+      const now = new Date();
+      const fx = getFormatters();
+      const dataStr = fx.formatDateToInput ? fx.formatDateToInput(now) : "";
+      const hhmm = fx.minutesToTime
+        ? fx.minutesToTime(now.getHours() * 60 + now.getMinutes())
+        : "00:00";
+      return { dataStr, hhmm };
+    }
+
+    // ========================================
+    // Carregar Dia
+    // ========================================
+
+    async function carregarDia() {
+      const fx = getFormatters();
+      const ymd = state.dataSelecionada || (fx.formatDateToInput ? fx.formatDateToInput(new Date()) : "");
+
+      if (!ymd) {
+        console.warn("[AgendaLoaders] dataSelecionada vazia.");
+        return;
+      }
+
+      const mySeq = ++state.reqSeqDia;
+
+      if (view.showDayLoading) view.showDayLoading();
 
       try {
-        const picker = createPacientesPicker({
-          document,
-          modalEl: dom.modalPacientes,
-          inputTermoEl: dom.buscaPacienteTermo,
-          listEl: dom.listaPacientesEl,
-          msgEl: dom.msgPacientesEl,
-          closeBtnEl: dom.btnFecharModalPacientes,
-          view: view,
-          searchFn: async (termo, limite) => {
-            const data = await pacientesApi.buscarSimples(termo, limite || 30);
-            return (data && data.pacientes) ? data.pacientes : [];
-          },
-          onSelect: (p, ctx2) => {
-            // cacheia paciente para exibição futura
-            try { state.pacientesCache?.cachePaciente?.(p); } catch (_) {}
-
-            const mode = (ctx2 && ctx2.mode) ? String(ctx2.mode) : "novo";
-            if (mode === "editar") {
-              state.pacienteEditar = p;
-              if (dom.editNomePaciente) dom.editNomePaciente.value = _nomePaciente_(p);
-            } else {
-              state.pacienteNovo = p;
-              if (dom.novoNomePaciente) dom.novoNomePaciente.value = _nomePaciente_(p);
-              if (dom.novoTelefone && !String(dom.novoTelefone.value || "").trim()) {
-                dom.novoTelefone.value = _telPaciente_(p);
-              }
-            }
-          }
+        const raw = await api.listar({
+          periodo: { inicio: ymd, fim: ymd },
+          filtros: { incluirCancelados: false }
         });
 
-        if (picker && typeof picker.bind === "function") picker.bind();
-        state.pacientesPicker = picker || null;
-      } catch (e) {
-        console.warn("[AgendaController] Falha ao inicializar pacientesPicker:", e);
-        state.pacientesPicker = null;
-      }
-    }
-
-    // cria editActions de forma compatível (após dom existir)
-    function buildEditActions_(dom) {
-      if (!createAgendaEditActions || typeof createAgendaEditActions !== "function") return null;
-
-      // FORMATO NOVO (ctx { api, state, view, loaders })
-      try {
-        const maybe = createAgendaEditActions({ api, state, view, loaders });
-        if (maybe && (typeof maybe.submitNovo === "function" || typeof maybe.submitEditar === "function")) {
-          return maybe;
+        // Concorrência: se outra requisição mais nova chegou, ignora esta
+        if (mySeq !== state.reqSeqDia) {
+          console.log("[AgendaLoaders] Requisição de dia obsoleta, ignorando.");
+          return;
         }
-      } catch (_) {}
 
-      // FORMATO ANTIGO (ctx { dom, view, state, agendaApi, pacientesCache, validarConflito, carregarDia, carregarSemana })
-      try {
-        const validarConflito = async (payload) => {
-          try {
-            await api.validarConflito(payload || {});
-            return { ok: true, conflitos: [] };
-          } catch (e) {
-            return {
-              ok: false,
-              erro: (e && e.message) ? String(e.message) : "Conflito de horário.",
-              conflitos: [],
-              code: (e && e.code) ? String(e.code) : "CONFLICT"
-            };
+        state.agendamentosPeriodo = raw || [];
+
+        // Converte DTO -> UI
+        let uiList = state.agendamentosPeriodo.map((dto) =>
+          fx.dtoToUi ? fx.dtoToUi(dto) : dto
+        );
+
+        // Enriquece com cache de pacientes
+        uiList = enrichWithPacientesCache(uiList);
+
+        // Aplica filtros
+        uiList = applyFilters(uiList);
+
+        state.agendamentosDiaUi = uiList;
+
+        // Gera slots
+        const slots = generateSlots(
+          state.config?.hora_inicio_padrao || "08:00",
+          state.config?.hora_fim_padrao || "18:00",
+          state.config?.duracao_grade_minutos || 15
+        );
+
+        // Monta mapa hora -> agendamentos
+        const map = buildDayMap(uiList, slots);
+
+        // Info de "agora"
+        const now = getNowInfo();
+        const isHoje = now.dataStr === ymd;
+
+        // Callbacks para a view
+        const callbacks = {
+          onNovo: (hora) => {
+            if (state.controllerActions?.abrirModalNovo) {
+              state.controllerActions.abrirModalNovo(hora);
+            }
+          },
+          onBloquear: (hora) => {
+            if (state.controllerActions?.abrirModalBloqueio) {
+              state.controllerActions.abrirModalBloqueio(hora);
+            }
+          },
+          onChangeStatus: (idAgenda, novoStatus, cardEl) => {
+            if (state.controllerActions?.mudarStatus) {
+              state.controllerActions.mudarStatus(idAgenda, novoStatus, cardEl);
+            }
+          },
+          onEditar: (ag) => {
+            if (state.controllerActions?.abrirModalEditar) {
+              state.controllerActions.abrirModalEditar(ag);
+            }
+          },
+          onAtender: (ag) => {
+            if (state.controllerActions?.abrirProntuario) {
+              state.controllerActions.abrirProntuario(ag);
+            }
+          },
+          onDesbloquear: (idAgenda, cardEl) => {
+            if (state.controllerActions?.desbloquear) {
+              state.controllerActions.desbloquear(idAgenda, cardEl);
+            }
           }
         };
 
-        const maybe2 = createAgendaEditActions({
-          dom,
-          view,
-          state,
-          agendaApi: api,
-          pacientesCache: state.pacientesCache,
-          validarConflito,
-          carregarDia: loaders.carregarDia,
-          carregarSemana: loaders.carregarSemana
-        });
-
-        if (maybe2 && (typeof maybe2.submitNovo === "function" || typeof maybe2.submitEditar === "function")) {
-          return maybe2;
+        // Renderiza
+        if (view.renderDaySlots) {
+          view.renderDaySlots({
+            slots,
+            map,
+            now,
+            isHoje,
+            horaFoco: state.horaFocoDia || null,
+            callbacks
+          });
         }
-      } catch (e) {
-        console.error("[AgendaController] Falha ao criar editActions (ambos formatos).", e);
-      }
 
-      return null;
+        // Resumo
+        if (view.setResumo && fx.computeResumoDia) {
+          view.setResumo(fx.computeResumoDia(uiList));
+        }
+
+        if (view.hideDayLoading) view.hideDayLoading();
+
+      } catch (err) {
+        if (mySeq !== state.reqSeqDia) return;
+
+        console.error("[AgendaLoaders] Erro ao carregar dia:", err);
+        if (view.hideDayLoading) view.hideDayLoading();
+        if (view.showDayError) {
+          view.showDayError(err?.message || "Erro ao carregar agendamentos.");
+        }
+      }
     }
 
-    // actions públicas (contrato com agenda.entry.js)
-    const actions = {
-      init(dom) {
-        state.dom = dom;
+    // ========================================
+    // Carregar Semana
+    // ========================================
 
-        tryInitPacientesPicker_(dom);
+    async function carregarSemana() {
+      const fx = getFormatters();
+      const refYmd = state.dataSelecionada || (fx.formatDateToInput ? fx.formatDateToInput(new Date()) : "");
 
-        uiActions.init(dom);
-        loaders.init(dom);
+      if (!refYmd) {
+        console.warn("[AgendaLoaders] dataSelecionada vazia.");
+        return;
+      }
 
-        // editActions compat
-        state._editActions = buildEditActions_(dom);
+      const mySeq = ++state.reqSeqSemana;
 
-        // LOAD inicial
-        Promise.resolve()
-          .then(() => uiActions.setVisao(state.modoVisao || "dia"))
-          .catch(() => loaders.carregarDia());
-      },
+      if (view.showWeekLoading) view.showWeekLoading();
 
-      // navegação / visão
-      setVisao: uiActions.setVisao,
-      onChangeData: uiActions.onChangeData,
-      onHoje: uiActions.onHoje,
-      onAgora: uiActions.onAgora,
-      onNav: uiActions.onNav,
+      try {
+        // Calcula período da semana (seg-dom)
+        const week = fx.weekPeriodFrom ? fx.weekPeriodFrom(refYmd) : { inicio: refYmd, fim: refYmd, dias: [refYmd] };
 
-      // filtros
-      onFiltrosChanged: uiActions.onFiltrosChanged,
-      limparFiltros: uiActions.limparFiltros,
+        const raw = await api.listar({
+          periodo: { inicio: week.inicio, fim: week.fim },
+          filtros: { incluirCancelados: false }
+        });
 
-      // pacientes
-      openPacientePicker: uiActions.openPacientePicker,
-      closePacientePicker: uiActions.closePacientePicker,
-      isPacientePickerOpen: uiActions.isPacientePickerOpen,
-      clearPaciente: uiActions.clearPaciente,
+        // Concorrência
+        if (mySeq !== state.reqSeqSemana) {
+          console.log("[AgendaLoaders] Requisição de semana obsoleta, ignorando.");
+          return;
+        }
 
-      // modais (novo/bloqueio) — sempre do uiActions
-      abrirModalNovo: uiActions.abrirModalNovo,
-      fecharModalNovo: uiActions.fecharModalNovo,
-      abrirModalBloqueio: uiActions.abrirModalBloqueio,
-      fecharModalBloqueio: uiActions.fecharModalBloqueio,
+        state.agendamentosPeriodo = raw || [];
 
-      // editar/prontuário — delega para editActions se existir
-      abrirModalEditar: (ag) => state._editActions?.abrirModalEditar?.(ag),
-      fecharModalEditar: () => state._editActions?.fecharModalEditar?.(),
-      abrirProntuario: (ag) => state._editActions?.abrirProntuario?.(ag),
+        // Converte DTO -> UI
+        let uiList = state.agendamentosPeriodo.map((dto) =>
+          fx.dtoToUi ? fx.dtoToUi(dto) : dto
+        );
 
-      // submits/mutações — delega para editActions se existir
-      submitNovo: () => state._editActions?.submitNovo?.(),
-      submitEditar: () => state._editActions?.submitEditar?.(),
-      submitBloqueio: () => state._editActions?.submitBloqueio?.(),
-      mudarStatus: (id, label, el) => state._editActions?.mudarStatus?.(id, label, el),
-      desbloquear: (id, el) => state._editActions?.desbloquear?.(id, el)
+        // Enriquece com cache
+        uiList = enrichWithPacientesCache(uiList);
+
+        // Aplica filtros
+        uiList = applyFilters(uiList);
+
+        state.agendamentosSemanaUi = uiList;
+
+        // Gera slots
+        const slots = generateSlots(
+          state.config?.hora_inicio_padrao || "08:00",
+          state.config?.hora_fim_padrao || "18:00",
+          state.config?.duracao_grade_minutos || 15
+        );
+
+        // Monta mapa dia/hora -> agendamentos
+        const byDayHour = buildWeekMap(uiList, week.dias);
+
+        // Info de "agora"
+        const now = getNowInfo();
+
+        // Callbacks
+        const callbacks = {
+          onIrParaDia: (data, hora) => {
+            state.dataSelecionada = data;
+            state.horaFocoDia = hora || null;
+            if (state.controllerActions?.setVisao) {
+              state.controllerActions.setVisao("dia");
+            }
+          },
+          onDblClickNovo: (data, hora) => {
+            state.dataSelecionada = data;
+            if (dom?.inputData) {
+              dom.inputData.value = data;
+            }
+            if (state.controllerActions?.abrirModalNovo) {
+              state.controllerActions.abrirModalNovo(hora);
+            }
+          }
+        };
+
+        // Renderiza
+        if (view.renderWeekGrid) {
+          view.renderWeekGrid({
+            dias: week.dias,
+            slots,
+            byDayHour,
+            now,
+            callbacks
+          });
+        }
+
+        if (view.hideWeekLoading) view.hideWeekLoading();
+
+      } catch (err) {
+        if (mySeq !== state.reqSeqSemana) return;
+
+        console.error("[AgendaLoaders] Erro ao carregar semana:", err);
+        if (view.hideWeekLoading) view.hideWeekLoading();
+        if (view.showWeekError) {
+          view.showWeekError(err?.message || "Erro ao carregar agendamentos.");
+        }
+      }
+    }
+
+    // ========================================
+    // Init
+    // ========================================
+
+    function init(domRefs) {
+      dom = domRefs || null;
+    }
+
+    return {
+      init,
+      carregarDia,
+      carregarSemana
     };
-
-    // útil para loaders (callbacks)
-    state.controllerActions = actions;
-
-    return { state, actions, view };
   }
 
-  PRONTIO.features.agenda.controller = { createAgendaController };
+  PRONTIO.features.agenda.loaders = { createAgendaLoaders };
 })(window);

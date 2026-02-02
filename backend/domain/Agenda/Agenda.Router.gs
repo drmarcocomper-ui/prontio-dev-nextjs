@@ -105,7 +105,7 @@ function handleAgendaAction_(action, payload) {
     case "Agenda_ValidarConflito":
       return (typeof Agenda_Action_ValidarConflito_ === "function")
         ? Agenda_Action_ValidarConflito_(ctx, payload)
-        : _Registry_agendaValidarConflitoHandler_()(ctx, payload);
+        : Agenda_Legacy_ValidarConflito_(ctx, payload);
 
     // Legacy bloqueio/remover bloqueio permanecem apenas para clientes antigos
     case "Agenda_BloquearHorario":

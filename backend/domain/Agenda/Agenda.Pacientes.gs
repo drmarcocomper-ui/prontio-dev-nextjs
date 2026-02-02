@@ -1,12 +1,25 @@
 // ✅ NomeCompleto (resolução por idPaciente) — usado pelas actions NOVAS e LEGACY
 var _agendaPacienteCache_ = null;
+var _AGENDA_PACIENTE_CACHE_MAX_SIZE_ = 500; // Limite de tamanho do cache
 
 function _agendaTryGetPacienteById_(idPaciente) {
   var id = String(idPaciente || "").trim();
   if (!id) return null;
 
   if (!_agendaPacienteCache_) _agendaPacienteCache_ = {};
+
+  // Verifica se já está no cache
   if (Object.prototype.hasOwnProperty.call(_agendaPacienteCache_, id)) return _agendaPacienteCache_[id];
+
+  // Limita o tamanho do cache para evitar memory leak
+  var keys = Object.keys(_agendaPacienteCache_);
+  if (keys.length >= _AGENDA_PACIENTE_CACHE_MAX_SIZE_) {
+    // Remove as primeiras entradas (FIFO) para manter o cache no limite
+    var toRemove = keys.slice(0, Math.floor(_AGENDA_PACIENTE_CACHE_MAX_SIZE_ / 4));
+    for (var i = 0; i < toRemove.length; i++) {
+      delete _agendaPacienteCache_[toRemove[i]];
+    }
+  }
 
   var p = null;
   try {

@@ -49,7 +49,19 @@ function _agendaAssertSemConflitos_(ctx, args, params) {
 
     // ativo + status
     var evStatus = _agendaNormalizeStatus_(e.status || AGENDA_STATUS.MARCADO);
-    var evAtivo = (e.ativo === undefined || e.ativo === null) ? true : (e.ativo === true);
+    // Validação robusta do campo ativo: trata strings "true"/"false", booleanos e números
+    var evAtivo = true;
+    if (e.ativo !== undefined && e.ativo !== null) {
+      if (typeof e.ativo === "boolean") {
+        evAtivo = e.ativo;
+      } else if (typeof e.ativo === "string") {
+        evAtivo = (e.ativo.toLowerCase() !== "false" && e.ativo !== "0" && e.ativo !== "");
+      } else if (typeof e.ativo === "number") {
+        evAtivo = (e.ativo !== 0);
+      } else {
+        evAtivo = Boolean(e.ativo);
+      }
+    }
 
     if (!evAtivo) continue;
     if (evStatus === AGENDA_STATUS.CANCELADO) continue;

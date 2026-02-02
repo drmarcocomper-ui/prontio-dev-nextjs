@@ -6,7 +6,8 @@
   PRONTIO.features = PRONTIO.features || {};
   PRONTIO.features.agenda = PRONTIO.features.agenda || {};
 
-  const FX = PRONTIO.features.agenda.formatters;
+  // Getter para formatters - evita erro se ainda não carregou
+  const getFX = () => PRONTIO.features.agenda.formatters || {};
 
   function createAgendaEditActions({ api, state, view, loaders }) {
     if (!api || !state || !view || !loaders) {
@@ -115,7 +116,7 @@
         data: dataStr,
         horaInicio: horaStr,
         duracaoMin: duracao,
-        idPaciente: idPaciente, // vazio => sem vínculo (intencional)
+        idPaciente: idPaciente || null, // null => sem vínculo (evita string vazia)
         titulo: dom.novoMotivo ? String(dom.novoMotivo.value || "") : "",
         notas: "",
         tipo: dom.novoTipo ? String(dom.novoTipo.value || "CONSULTA") : "CONSULTA",
@@ -135,7 +136,9 @@
           if (view.closeModal) view.closeModal(dom.modalNovo);
           if (dom.formNovo && typeof dom.formNovo.reset === "function") dom.formNovo.reset();
           if (dom.novoDuracao) dom.novoDuracao.value = 15;
+          // Limpa estado e campo do paciente
           state.pacienteNovo = null;
+          if (dom.novoNomePaciente) dom.novoNomePaciente.value = "";
           view.setFormMsg && view.setFormMsg(dom.msgNovo, "", "");
           view.safeDisable && view.safeDisable(dom.btnSubmitNovo, false);
         }, 600);
@@ -339,6 +342,11 @@
       cardEl && cardEl.classList.add("agendamento-atualizando");
 
       try {
+        const FX = getFX();
+        if (!FX.mapStatusToBackend) {
+          console.error("[AgendaEditActions] formatters.mapStatusToBackend não carregado");
+          return;
+        }
         const statusCanon = FX.mapStatusToBackend(labelUi);
         if (statusCanon === "CANCELADO") await api.cancelar(idAgenda, "Cancelado pela agenda");
         else await api.atualizar(idAgenda, { status: statusCanon });
@@ -378,12 +386,13 @@
     }
 
     function abrirProntuario(ag) {
-      if (!ag || !ag.ID_Paciente) {
+      // Normaliza: aceita ID_Paciente, idPaciente ou id_paciente
+      const idPaciente = String(ag?.ID_Paciente || ag?.idPaciente || ag?.id_paciente || "").trim();
+
+      if (!ag || !idPaciente) {
         alert("Este agendamento não está vinculado a um paciente cadastrado.\n\nSelecione um paciente no agendamento para vincular ao prontuário.");
         return;
       }
-
-      const idPaciente = String(ag.ID_Paciente || "").trim();
 
       try {
         localStorage.setItem("prontio.pacienteSelecionado", JSON.stringify({

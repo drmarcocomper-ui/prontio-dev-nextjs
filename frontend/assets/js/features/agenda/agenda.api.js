@@ -128,6 +128,17 @@
       err.details = { field: fieldName, value: v };
       throw err;
     }
+
+    // Validação de data real (não só formato)
+    const [y, m, d] = s.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) {
+      const err = new Error(`Campo "${fieldName}" contém data inválida (dia não existe).`);
+      err.code = "VALIDATION_ERROR";
+      err.details = { field: fieldName, value: v };
+      throw err;
+    }
+
     return s;
   }
 

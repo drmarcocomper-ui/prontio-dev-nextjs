@@ -324,8 +324,8 @@ function Agenda_Legacy_ValidarConflito_(ctx, payload) {
       if (arr && arr.length) {
         for (var i = 0; i < arr.length; i++) {
           var c = arr[i];
-          var ci = _agendaParseDate_(c.inicio);
-          var cf = _agendaParseDate_(c.fim);
+          var ci = _agendaParseDate_(c.inicioDateTime || c.inicio);
+          var cf = _agendaParseDate_(c.fimDateTime || c.fim);
           conflitos.push({
             ID_Agenda: c.idAgenda || "",
             bloqueio: String(c.tipo || "").toUpperCase().indexOf("BLOQ") >= 0,
@@ -428,8 +428,8 @@ function _agendaLegacyDtoToFront_(dto) {
   var status = _agendaNormalizeStatus_(dto.status);
   var origem = _agendaNormalizeOrigem_(dto.origem);
 
-  var dtIni = _agendaParseDate_(dto.inicio);
-  var dtFim = _agendaParseDate_(dto.fim);
+  var dtIni = _agendaParseDate_(dto.inicioDateTime || dto.inicio);
+  var dtFim = _agendaParseDate_(dto.fimDateTime || dto.fim);
 
   var dataStr = dtIni ? _agendaFormatDate_(dtIni) : "";
   var hIni = dtIni ? _agendaFormatHHMM_(dtIni) : "";
