@@ -276,4 +276,59 @@ function Registry_RegisterAgenda_(map) {
     requiresLock: false,
     lockKey: null
   };
+
+  // ===================== AGENDA CONFIG ========================
+
+  function _agendaConfigHandler_(actionName) {
+    return function (ctx, payload) {
+      if (typeof handleAgendaConfigAction !== "function") {
+        var e = new Error("handleAgendaConfigAction não disponível.");
+        e.code = "INTERNAL_ERROR";
+        e.details = { action: actionName };
+        throw e;
+      }
+      return handleAgendaConfigAction(actionName, payload || {});
+    };
+  }
+
+  map["AgendaConfig_Obter"] = {
+    action: "AgendaConfig_Obter",
+    handler: _agendaConfigHandler_("AgendaConfig_Obter"),
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  map["AgendaConfig_Salvar"] = {
+    action: "AgendaConfig_Salvar",
+    handler: _agendaConfigHandler_("AgendaConfig_Salvar"),
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "AGENDA_CONFIG"
+  };
+
+  // aliases canônicos (dot notation)
+  map["AgendaConfig.Obter"] = {
+    action: "AgendaConfig.Obter",
+    handler: map["AgendaConfig_Obter"].handler,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: false,
+    lockKey: null
+  };
+
+  map["AgendaConfig.Salvar"] = {
+    action: "AgendaConfig.Salvar",
+    handler: map["AgendaConfig_Salvar"].handler,
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "AGENDA_CONFIG"
+  };
 }
