@@ -313,6 +313,22 @@
     return wrap;
   }
 
+  function getRowStatusClass_(status) {
+    const s = String(status || "").toUpperCase().replace(/_/g, "-").toLowerCase();
+    // Mapeia status para classe CSS: EM_ATENDIMENTO -> em-atendimento
+    const MAP = {
+      "marcado": "table-row-marcado",
+      "confirmado": "table-row-confirmado",
+      "aguardando": "table-row-aguardando",
+      "em-atendimento": "table-row-em-atendimento",
+      "atendido": "table-row-atendido",
+      "faltou": "table-row-faltou",
+      "cancelado": "table-row-cancelado",
+      "remarcado": "table-row-remarcado"
+    };
+    return MAP[s] || "";
+  }
+
   function renderizarLinhas(rows) {
     limparTabela();
     setSelected_(null);
@@ -332,6 +348,10 @@
 
     rows.forEach((row) => {
       const tr = document.createElement("tr");
+
+      // Aplica classe CSS baseada no status
+      const statusClass = getRowStatusClass_(row.status);
+      if (statusClass) tr.classList.add(statusClass);
 
       const tdData = document.createElement("td");
       tdData.classList.add("col-data");

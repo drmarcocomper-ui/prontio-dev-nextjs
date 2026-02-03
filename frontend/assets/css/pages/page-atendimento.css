@@ -81,12 +81,16 @@
   font-weight: 600;
 }
 
-/* Status por texto (fallback) */
-.status-chegou {
+/* Status por texto (canônicos) */
+.status-marcado {
+  color: var(--cor-texto-secundario);
+}
+
+.status-confirmado {
   color: var(--cor-sucesso);
 }
 
-.status-chamando {
+.status-aguardando {
   color: var(--cor-primaria);
 }
 
@@ -94,12 +98,20 @@
   color: #935f00;
 }
 
-.status-concluido {
+.status-atendido {
   color: var(--cor-texto-suave);
+}
+
+.status-faltou {
+  color: var(--cor-perigo);
 }
 
 .status-cancelado {
   color: var(--cor-perigo);
+}
+
+.status-remarcado {
+  color: var(--cor-texto-secundario);
 }
 
 /* ==============================
@@ -182,31 +194,43 @@
 }
 
 /* ==============================
-   CHEGOU
-   - paciente presente, aguardando
+   MARCADO
+   - agendado, ainda não confirmou
    ============================== */
-.table-row-chegou {
-  background-color: rgba(42, 157, 143, 0.06);
+.table-row-marcado {
+  background-color: transparent;
 }
 
-.table-row-chegou .col-status {
+.table-row-marcado .col-status {
+  color: var(--cor-texto-secundario);
+}
+
+/* ==============================
+   CONFIRMADO
+   - paciente confirmou presença
+   ============================== */
+.table-row-confirmado {
+  background-color: rgba(42, 157, 143, 0.04);
+}
+
+.table-row-confirmado .col-status {
   color: var(--cor-sucesso);
 }
 
 /* ==============================
-   CHAMANDO
-   - prioridade visual máxima
+   AGUARDANDO
+   - paciente presente, aguardando chamada
    ============================== */
-.table-row-chamando {
-  background-color: rgba(0, 102, 204, 0.12);
+.table-row-aguardando {
+  background-color: rgba(0, 102, 204, 0.08);
 }
 
-.table-row-chamando .col-paciente {
+.table-row-aguardando .col-paciente {
   color: var(--cor-primaria);
-  font-weight: 800;
+  font-weight: 700;
 }
 
-.table-row-chamando .col-status {
+.table-row-aguardando .col-status {
   color: var(--cor-primaria);
 }
 
@@ -223,15 +247,28 @@
 }
 
 /* ==============================
-   CONCLUÍDO
+   ATENDIDO
    - despriorizado visualmente
    ============================== */
-.table-row-concluido {
+.table-row-atendido {
   opacity: 0.65;
 }
 
-.table-row-concluido .col-status {
+.table-row-atendido .col-status {
   color: var(--cor-texto-suave);
+}
+
+/* ==============================
+   FALTOU
+   - paciente não compareceu
+   ============================== */
+.table-row-faltou {
+  background-color: rgba(230, 57, 70, 0.06);
+  opacity: 0.7;
+}
+
+.table-row-faltou .col-status {
+  color: var(--cor-perigo);
 }
 
 /* ==============================
@@ -247,13 +284,28 @@
 }
 
 /* ==============================
+   REMARCADO
+   - reagendado para outra data
+   ============================== */
+.table-row-remarcado {
+  opacity: 0.6;
+}
+
+.table-row-remarcado .col-status {
+  color: var(--cor-texto-secundario);
+}
+
+/* ==============================
    HOVER NÃO SOBRESCREVE ESTADO
    ============================== */
-.tabela-atendimento tbody tr.table-row-chegou:hover,
-.tabela-atendimento tbody tr.table-row-chamando:hover,
+.tabela-atendimento tbody tr.table-row-marcado:hover,
+.tabela-atendimento tbody tr.table-row-confirmado:hover,
+.tabela-atendimento tbody tr.table-row-aguardando:hover,
 .tabela-atendimento tbody tr.table-row-em-atendimento:hover,
-.tabela-atendimento tbody tr.table-row-concluido:hover,
-.tabela-atendimento tbody tr.table-row-cancelado:hover {
+.tabela-atendimento tbody tr.table-row-atendido:hover,
+.tabela-atendimento tbody tr.table-row-faltou:hover,
+.tabela-atendimento tbody tr.table-row-cancelado:hover,
+.tabela-atendimento tbody tr.table-row-remarcado:hover {
   background-color: inherit;
 }
 
@@ -261,7 +313,7 @@
    MOBILE
    ============================== */
 @media (max-width: 900px) {
-  .table-row-concluido {
+  .table-row-atendido {
     opacity: 0.55;
   }
 }
@@ -287,7 +339,7 @@
    Feedback de hover por linha
    (não sobrescreve estados clínicos)
    ============================== */
-.tabela-atendimento tbody tr:not(.table-row-chamando):hover {
+.tabela-atendimento tbody tr:not(.table-row-aguardando):hover {
   box-shadow: inset 0 0 0 1px rgba(0,0,0,.04);
 }
 
@@ -303,14 +355,19 @@
    Microfeedback por estado
    ============================== */
 
-/* CHAMANDO: pulso visual MUITO sutil (sem animação contínua) */
-.table-row-chamando {
-  box-shadow: inset 3px 0 0 0 var(--cor-primaria);
+/* MARCADO: sem destaque */
+.table-row-marcado {
+  box-shadow: none;
 }
 
-/* CHEGOU: indica prontidão */
-.table-row-chegou {
+/* CONFIRMADO: indica confirmação */
+.table-row-confirmado {
   box-shadow: inset 3px 0 0 0 var(--cor-sucesso);
+}
+
+/* AGUARDANDO: paciente presente, prioridade visual */
+.table-row-aguardando {
+  box-shadow: inset 3px 0 0 0 var(--cor-primaria);
 }
 
 /* EM ATENDIMENTO: foco, sem urgência */
@@ -318,13 +375,23 @@
   box-shadow: inset 3px 0 0 0 #935f00;
 }
 
+/* ATENDIDO: despriorizado */
+.table-row-atendido {
+  box-shadow: none;
+}
+
+/* FALTOU: exceção */
+.table-row-faltou {
+  box-shadow: inset 3px 0 0 0 var(--cor-perigo);
+}
+
 /* CANCELADO: exceção clara, sem chamar ação */
 .table-row-cancelado {
   box-shadow: inset 3px 0 0 0 var(--cor-perigo);
 }
 
-/* CONCLUÍDO: despriorizado */
-.table-row-concluido {
+/* REMARCADO: despriorizado */
+.table-row-remarcado {
   box-shadow: none;
 }
 
@@ -386,7 +453,7 @@
 ===================================== */
 
 /* Status com contraste seguro */
-.status-chegou {
+.status-aguardando {
   color: var(--status-sucesso);
 }
 
@@ -394,16 +461,18 @@
   color: var(--status-atencao);
 }
 
-.status-cancelado {
+.status-cancelado,
+.status-faltou {
   color: var(--status-perigo);
 }
 
 /* Linha selecionada sempre legível */
-.table-row-selected {
+.table-row-selected,
+.is-selected {
   background-color: rgba(0, 102, 204, 0.12);
 }
 
 /* Texto nunca perde contraste */
-.table-row-concluido {
+.table-row-atendido {
   opacity: 0.7;
 }
