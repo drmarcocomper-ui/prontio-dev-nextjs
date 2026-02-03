@@ -92,6 +92,24 @@
       validations: [],
       requiresLock: true,
       lockKey: "ATENDIMENTO"
+    },
+    "Atendimento.MarcarFalta": {
+      action: "Atendimento.MarcarFalta",
+      handler: Atendimento_Action_MarcarFalta_,
+      requiresAuth: true,
+      roles: [],
+      validations: [],
+      requiresLock: true,
+      lockKey: "ATENDIMENTO"
+    },
+    "Atendimento.Remarcar": {
+      action: "Atendimento.Remarcar",
+      handler: Atendimento_Action_Remarcar_,
+      requiresAuth: true,
+      roles: [],
+      validations: [],
+      requiresLock: true,
+      lockKey: "ATENDIMENTO"
     }
   };
 

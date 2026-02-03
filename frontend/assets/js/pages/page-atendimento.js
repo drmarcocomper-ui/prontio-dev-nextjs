@@ -240,6 +240,12 @@
     // "Concluir" - concluir quando está em atendimento
     if (action === "concluir") return (s === "EM_ATENDIMENTO");
 
+    // "Faltou" - marcar falta quando paciente não compareceu (MARCADO, CONFIRMADO ou AGUARDANDO)
+    if (action === "faltou") return (s === "MARCADO" || s === "CONFIRMADO" || s === "AGUARDANDO");
+
+    // "Remarcar" - remarcar quando ainda não foi atendido
+    if (action === "remarcar") return !(s === "ATENDIDO" || s === "CANCELADO" || s === "FALTOU" || s === "REMARCADO");
+
     // "Cancelar" - cancelar qualquer status exceto já concluído ou cancelado
     if (action === "cancelar") return !(s === "ATENDIDO" || s === "CANCELADO" || s === "FALTOU" || s === "REMARCADO");
 
@@ -302,16 +308,28 @@
       await acaoCancelar_(row);
     });
 
+    const btnFaltou = _makeBtn_("Faltou", "btn btn-secondary", async () => {
+      await acaoMarcarFalta_(row);
+    });
+
+    const btnRemarcar = _makeBtn_("Remarcar", "btn btn-secondary", async () => {
+      await acaoRemarcar_(row);
+    });
+
     btnChegou.disabled = !canDo_(row, "chegou");
     btnChamar.disabled = !canDo_(row, "chamar");
     btnIniciar.disabled = !canDo_(row, "iniciar");
     btnConcluir.disabled = !canDo_(row, "concluir");
+    btnFaltou.disabled = !canDo_(row, "faltou");
+    btnRemarcar.disabled = !canDo_(row, "remarcar");
     btnCancelar.disabled = !canDo_(row, "cancelar");
 
     wrap.appendChild(btnChegou);
     wrap.appendChild(btnChamar);
     wrap.appendChild(btnIniciar);
     wrap.appendChild(btnConcluir);
+    wrap.appendChild(btnFaltou);
+    wrap.appendChild(btnRemarcar);
     wrap.appendChild(btnCancelar);
 
     return wrap;
@@ -558,6 +576,34 @@
 
     if (row.idAtendimento) await callApiData({ action: "Atendimento.Cancelar", payload: { idAtendimento: row.idAtendimento, dataRef: dataRef, motivo: "Cancelado pela fila" } });
     else if (row.idAgenda) await callApiData({ action: "Atendimento.Cancelar", payload: { idAgenda: row.idAgenda, dataRef: dataRef, motivo: "Cancelado pela fila" } });
+
+    await carregarListaAtendimento();
+  }
+
+  async function acaoMarcarFalta_(row) {
+    if (!row) return;
+    const ok = confirm("Marcar como falta? O paciente não compareceu ao atendimento.");
+    if (!ok) return;
+
+    const raw = row._raw || {};
+    const dataRef = row.data || raw.dataRef || "";
+
+    if (row.idAtendimento) await callApiData({ action: "Atendimento.MarcarFalta", payload: { idAtendimento: row.idAtendimento, dataRef: dataRef } });
+    else if (row.idAgenda) await callApiData({ action: "Atendimento.MarcarFalta", payload: { idAgenda: row.idAgenda, dataRef: dataRef } });
+
+    await carregarListaAtendimento();
+  }
+
+  async function acaoRemarcar_(row) {
+    if (!row) return;
+    const ok = confirm("Remarcar este atendimento? Ele será marcado para reagendamento.");
+    if (!ok) return;
+
+    const raw = row._raw || {};
+    const dataRef = row.data || raw.dataRef || "";
+
+    if (row.idAtendimento) await callApiData({ action: "Atendimento.Remarcar", payload: { idAtendimento: row.idAtendimento, dataRef: dataRef, motivo: "Remarcado pela fila" } });
+    else if (row.idAgenda) await callApiData({ action: "Atendimento.Remarcar", payload: { idAgenda: row.idAgenda, dataRef: dataRef, motivo: "Remarcado pela fila" } });
 
     await carregarListaAtendimento();
   }

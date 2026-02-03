@@ -355,6 +355,70 @@ function Atendimento_Action_Cancelar_(ctx, payload) {
 }
 
 /**
+ * Atendimento.MarcarFalta
+ * Marca que o paciente não compareceu ao atendimento
+ */
+function Atendimento_Action_MarcarFalta_(ctx, payload) {
+  payload = payload || {};
+  var nowIso = new Date().toISOString();
+
+  var a = _atdResolveTarget_(payload);
+  if (!a) _atdThrow_("NOT_FOUND", "Atendimento não encontrado.", { payload: payload });
+
+  var st = _atdNormalizeStatus_(a.status);
+
+  // Não pode marcar falta se já foi atendido, cancelado ou remarcado
+  if (st === ATENDIMENTO_STATUS.ATENDIDO) _atdThrow_("VALIDATION_ERROR", "Atendimento já foi concluído.", { idAtendimento: a.idAtendimento });
+  if (st === ATENDIMENTO_STATUS.CANCELADO) _atdThrow_("VALIDATION_ERROR", "Atendimento já foi cancelado.", { idAtendimento: a.idAtendimento });
+  if (st === ATENDIMENTO_STATUS.REMARCADO) _atdThrow_("VALIDATION_ERROR", "Atendimento já foi remarcado.", { idAtendimento: a.idAtendimento });
+  if (st === ATENDIMENTO_STATUS.FALTOU) return { item: a }; // Já está marcado como falta
+
+  var patch = {
+    status: ATENDIMENTO_STATUS.FALTOU,
+    faltouEm: a.faltouEm || nowIso,
+    atualizadoEm: nowIso
+  };
+
+  if (payload.observacoes !== undefined) patch.observacoes = String(payload.observacoes || "");
+
+  Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento, patch);
+  var after = Repo_getById_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento);
+  return { item: _atdNormalizeRowToDto_(after) };
+}
+
+/**
+ * Atendimento.Remarcar
+ * Marca o atendimento como remarcado (será reagendado para outra data)
+ */
+function Atendimento_Action_Remarcar_(ctx, payload) {
+  payload = payload || {};
+  var nowIso = new Date().toISOString();
+
+  var a = _atdResolveTarget_(payload);
+  if (!a) _atdThrow_("NOT_FOUND", "Atendimento não encontrado.", { payload: payload });
+
+  var st = _atdNormalizeStatus_(a.status);
+
+  // Não pode remarcar se já foi atendido ou cancelado
+  if (st === ATENDIMENTO_STATUS.ATENDIDO) _atdThrow_("VALIDATION_ERROR", "Atendimento já foi concluído.", { idAtendimento: a.idAtendimento });
+  if (st === ATENDIMENTO_STATUS.CANCELADO) _atdThrow_("VALIDATION_ERROR", "Atendimento já foi cancelado.", { idAtendimento: a.idAtendimento });
+  if (st === ATENDIMENTO_STATUS.REMARCADO) return { item: a }; // Já está remarcado
+
+  var patch = {
+    status: ATENDIMENTO_STATUS.REMARCADO,
+    remarcadoEm: a.remarcadoEm || nowIso,
+    atualizadoEm: nowIso
+  };
+
+  if (payload.motivo !== undefined) patch.observacoes = String(payload.motivo || "");
+  if (payload.observacoes !== undefined) patch.observacoes = String(payload.observacoes || "");
+
+  Repo_update_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento, patch);
+  var after = Repo_getById_(ATENDIMENTO_ENTITY, ATENDIMENTO_ID_FIELD, a.idAtendimento);
+  return { item: _atdNormalizeRowToDto_(after) };
+}
+
+/**
  * Atendimento.SyncAPartirDeHoje
  */
 function Atendimento_Action_SyncAPartirDeHoje_(ctx, payload) {
