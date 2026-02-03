@@ -142,7 +142,8 @@
   // ===========================
   // Status (UI <-> canônico)
   // ===========================
-  const STATUS_OPTIONS_UI = ["Agendado", "Confirmado", "Em atendimento", "Concluído", "Faltou", "Cancelado"];
+  // ✅ Alinhado com backend: MARCADO, CONFIRMADO, AGUARDANDO, EM_ATENDIMENTO, ATENDIDO, FALTOU, CANCELADO, REMARCADO
+  const STATUS_OPTIONS_UI = ["Agendado", "Confirmado", "Aguardando", "Em atendimento", "Concluído", "Faltou", "Cancelado", "Remarcado"];
 
   function normalizeStatusLabel(uiOrCanon) {
     const v = stripAccents(String(uiOrCanon || "")).trim().toLowerCase();
@@ -150,32 +151,36 @@
 
     if (v.includes("concl") || v.includes("atendid")) return "Concluído";
     if (v.includes("em_atend") || v.includes("em atend") || (v.includes("atend") && !v.includes("atendid"))) return "Em atendimento";
-    if (v.includes("aguard")) return "Confirmado";
+    if (v.includes("aguard")) return "Aguardando";
     if (v.includes("confirm")) return "Confirmado";
     if (v.includes("falt")) return "Faltou";
     if (v.includes("cancel")) return "Cancelado";
-    if (v.includes("marc") || v.includes("agend") || v.includes("remarc")) return "Agendado";
+    if (v.includes("remarc")) return "Remarcado";
+    if (v.includes("marc") || v.includes("agend")) return "Agendado";
 
     return "Agendado";
   }
 
   function mapStatusToBackend(labelUi) {
     const v = stripAccents(String(labelUi || "")).toLowerCase();
+    if (v.includes("aguard")) return "AGUARDANDO";
     if (v.includes("confirm")) return "CONFIRMADO";
     if (v.includes("em atend") || v.includes("em_atend")) return "EM_ATENDIMENTO";
     if (v.includes("concl")) return "ATENDIDO";
     if (v.includes("falt")) return "FALTOU";
     if (v.includes("cancel")) return "CANCELADO";
+    if (v.includes("remarc")) return "REMARCADO";
     return "MARCADO";
   }
 
   function getStatusClass(statusCanonOrUi) {
     const s = stripAccents(String(statusCanonOrUi || "")).toLowerCase();
+    if (s.includes("aguard")) return "status-aguardando";
     if (s.includes("confirm")) return "status-confirmado";
-    if (s.includes("aguard")) return "status-confirmado";
     if (s.includes("em_atend") || s.includes("em atend") || (s.includes("atend") && !s.includes("atendid"))) return "status-em-atendimento";
     if (s.includes("falt")) return "status-falta";
     if (s.includes("cancel")) return "status-cancelado";
+    if (s.includes("remarc")) return "status-remarcado";
     if (s.includes("concl") || s.includes("atendid")) return "status-concluido";
     return "status-agendado";
   }
@@ -184,8 +189,10 @@
     const resumo = {
       total: 0,
       confirmados: 0,
+      aguardando: 0,
       faltas: 0,
       cancelados: 0,
+      remarcados: 0,
       concluidos: 0,
       em_atendimento: 0
     };
@@ -198,9 +205,11 @@
 
       if (s.includes("falt")) return void resumo.faltas++;
       if (s.includes("cancel")) return void resumo.cancelados++;
+      if (s.includes("remarc")) return void resumo.remarcados++;
       if (s.includes("concl") || s.includes("atendid")) return void resumo.concluidos++;
       if (s.includes("em_atend") || s.includes("em atend") || (s.includes("atend") && !s.includes("atendid"))) return void resumo.em_atendimento++;
-      if (s.includes("confirm") || s.includes("aguard")) return void resumo.confirmados++;
+      if (s.includes("aguard")) return void resumo.aguardando++;
+      if (s.includes("confirm")) return void resumo.confirmados++;
     });
 
     return resumo;
@@ -246,8 +255,8 @@ const fimIso = dto && (dto.fimDateTime || dto.fim) ? String(dto.fimDateTime || d
       tipo: tipo,
       bloqueio: isBloqueio,
 
-      // ✅ preferir o valor do DTO quando existir
-      permite_encaixe: (dto && dto.permitirEncaixe === true) ? true : false
+      // ✅ Backend usa permiteEncaixe (sem "ir")
+      permite_encaixe: (dto && dto.permiteEncaixe === true) ? true : false
     };
   }
 

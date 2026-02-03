@@ -83,8 +83,10 @@
     // ====== Resumo ======
     const resumoTotalEl = getEl(doc, "resumo-total");
     const resumoConfirmadosEl = getEl(doc, "resumo-confirmados");
+    const resumoAguardandoEl = getEl(doc, "resumo-aguardando");
     const resumoFaltasEl = getEl(doc, "resumo-faltas");
     const resumoCanceladosEl = getEl(doc, "resumo-cancelados");
+    const resumoRemarcadosEl = getEl(doc, "resumo-remarcados");
     const resumoConcluidosEl = getEl(doc, "resumo-concluidos");
     const resumoEmAtendimentoEl = getEl(doc, "resumo-em-atendimento");
 
@@ -157,8 +159,10 @@
       const r = resumo || {};
       if (resumoTotalEl) resumoTotalEl.textContent = String(r.total ?? 0);
       if (resumoConfirmadosEl) resumoConfirmadosEl.textContent = String(r.confirmados ?? 0);
+      if (resumoAguardandoEl) resumoAguardandoEl.textContent = String(r.aguardando ?? 0);
       if (resumoFaltasEl) resumoFaltasEl.textContent = String(r.faltas ?? 0);
       if (resumoCanceladosEl) resumoCanceladosEl.textContent = String(r.cancelados ?? 0);
+      if (resumoRemarcadosEl) resumoRemarcadosEl.textContent = String(r.remarcados ?? 0);
       if (resumoConcluidosEl) resumoConcluidosEl.textContent = String(r.concluidos ?? 0);
       if (resumoEmAtendimentoEl) resumoEmAtendimentoEl.textContent = String(r.em_atendimento ?? 0);
     }

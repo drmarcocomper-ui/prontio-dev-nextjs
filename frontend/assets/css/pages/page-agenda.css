@@ -140,7 +140,7 @@
 
 .resumo-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
@@ -165,8 +165,10 @@
 }
 
 .resumo-confirmados { color: #16a34a; }
+.resumo-aguardando { color: #f59e0b; }
 .resumo-faltas { color: #b91c1c; }
 .resumo-cancelados { color: #ea580c; }
+.resumo-remarcados { color: #8b5cf6; }
 .resumo-concluidos { color: #059669; }
 .resumo-em-atendimento { color: #0ea5e9; }
 
@@ -344,13 +346,16 @@
 
 /* =========================================================
    CORES POR STATUS (borda esquerda do card)
+   Alinhado com canônicos: MARCADO, CONFIRMADO, AGUARDANDO, EM_ATENDIMENTO, ATENDIDO, FALTOU, CANCELADO, REMARCADO
    ========================================================= */
 
 .status-agendado { border-left-color: #64748b; }
 .status-confirmado { border-left-color: #16a34a; }
+.status-aguardando { border-left-color: #f59e0b; }
 .status-em-atendimento { border-left-color: #0ea5e9; }
 .status-falta { border-left-color: #b91c1c; }
 .status-cancelado { border-left-color: #ea580c; }
+.status-remarcado { border-left-color: #8b5cf6; }
 .status-concluido { border-left-color: #059669; }
 
 /* =========================================================
@@ -517,7 +522,7 @@
   }
 
   .resumo-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .agenda-lista-horarios {
