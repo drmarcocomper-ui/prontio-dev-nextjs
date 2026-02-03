@@ -179,24 +179,40 @@
     }
 
     const s = String(status).toUpperCase();
-    span.textContent = status;
+
+    // Status canônicos: MARCADO, CONFIRMADO, AGUARDANDO, EM_ATENDIMENTO, ATENDIDO, FALTOU, CANCELADO, REMARCADO
+    const LABELS = {
+      "MARCADO": "Marcado",
+      "CONFIRMADO": "Confirmado",
+      "AGUARDANDO": "Aguardando",
+      "EM_ATENDIMENTO": "Em Atendimento",
+      "ATENDIDO": "Atendido",
+      "FALTOU": "Faltou",
+      "CANCELADO": "Cancelado",
+      "REMARCADO": "Remarcado"
+    };
+
+    span.textContent = LABELS[s] || status;
 
     if (fonte === "atendimento") {
-      if (s === "AGUARDANDO") span.classList.add("badge-outro");
-      else if (s === "CHEGOU") span.classList.add("badge-confirmado");
-      else if (s === "CHAMADO") span.classList.add("badge-agendado");
+      if (s === "MARCADO") span.classList.add("badge-outro");
+      else if (s === "CONFIRMADO") span.classList.add("badge-confirmado");
+      else if (s === "AGUARDANDO") span.classList.add("badge-agendado");
       else if (s === "EM_ATENDIMENTO") span.classList.add("badge-agendado");
-      else if (s === "CONCLUIDO") span.classList.add("badge-confirmado");
+      else if (s === "ATENDIDO") span.classList.add("badge-confirmado");
+      else if (s === "FALTOU") span.classList.add("badge-faltou");
       else if (s === "CANCELADO") span.classList.add("badge-cancelado");
+      else if (s === "REMARCADO") span.classList.add("badge-outro");
       else span.classList.add("badge-outro");
       return span;
     }
 
-    if (s === "AGENDADO") span.classList.add("badge-agendado");
+    // Fallback para fonte "agenda"
+    if (s === "AGENDADO" || s === "MARCADO") span.classList.add("badge-agendado");
     else if (s === "CONFIRMADO") span.classList.add("badge-confirmado");
     else if (s === "CANCELADO") span.classList.add("badge-cancelado");
     else if (s === "FALTOU") span.classList.add("badge-faltou");
-    else if (s === "CONCLUIDO") span.classList.add("badge-confirmado");
+    else if (s === "ATENDIDO") span.classList.add("badge-confirmado");
     else span.classList.add("badge-outro");
 
     return span;
@@ -206,12 +222,26 @@
     if (!row || row.fonte !== "atendimento") return false;
 
     const s = String(row.status || "").toUpperCase();
+    const raw = row._raw || {};
+    const temChegada = !!(raw.chegadaEm);
+    const temChamado = !!(raw.chamadoEm);
 
-    if (action === "chegou") return (s === "AGUARDANDO");
-    if (action === "chamar") return (s === "CHEGOU" || s === "AGUARDANDO");
-    if (action === "iniciar") return (s === "CHAMADO" || s === "CHEGOU");
+    // Status canônicos: MARCADO, CONFIRMADO, AGUARDANDO, EM_ATENDIMENTO, ATENDIDO, FALTOU, CANCELADO, REMARCADO
+
+    // "Chegou" - marcar chegada quando ainda não chegou (MARCADO ou CONFIRMADO)
+    if (action === "chegou") return (s === "MARCADO" || s === "CONFIRMADO" || (s === "AGUARDANDO" && !temChegada));
+
+    // "Chamar" - chamar quando já chegou (AGUARDANDO com chegadaEm)
+    if (action === "chamar") return (s === "AGUARDANDO" && temChegada && !temChamado);
+
+    // "Iniciar" - iniciar quando foi chamado ou está aguardando
+    if (action === "iniciar") return (s === "AGUARDANDO" && (temChamado || temChegada));
+
+    // "Concluir" - concluir quando está em atendimento
     if (action === "concluir") return (s === "EM_ATENDIMENTO");
-    if (action === "cancelar") return !(s === "CONCLUIDO" || s === "CANCELADO");
+
+    // "Cancelar" - cancelar qualquer status exceto já concluído ou cancelado
+    if (action === "cancelar") return !(s === "ATENDIDO" || s === "CANCELADO" || s === "FALTOU" || s === "REMARCADO");
 
     return false;
   }

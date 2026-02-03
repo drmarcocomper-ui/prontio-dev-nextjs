@@ -12,9 +12,36 @@
 
 (function () {
   var ACTIONS = {
+    "Atendimento.SyncHoje": {
+      action: "Atendimento.SyncHoje",
+      handler: Atendimento_Action_SyncHoje_,
+      requiresAuth: true,
+      roles: [],
+      validations: [],
+      requiresLock: true,
+      lockKey: "ATENDIMENTO"
+    },
+    "Atendimento.SyncAPartirDeHoje": {
+      action: "Atendimento.SyncAPartirDeHoje",
+      handler: Atendimento_Action_SyncAPartirDeHoje_,
+      requiresAuth: true,
+      roles: [],
+      validations: [],
+      requiresLock: true,
+      lockKey: "ATENDIMENTO"
+    },
     "Atendimento.ListarFilaHoje": {
       action: "Atendimento.ListarFilaHoje",
       handler: Atendimento_Action_ListarFilaHoje_,
+      requiresAuth: true,
+      roles: [],
+      validations: [],
+      requiresLock: false,
+      lockKey: null
+    },
+    "Atendimento.ListarFilaAPartirDeHoje": {
+      action: "Atendimento.ListarFilaAPartirDeHoje",
+      handler: Atendimento_Action_ListarFilaAPartirDeHoje_,
       requiresAuth: true,
       roles: [],
       validations: [],
