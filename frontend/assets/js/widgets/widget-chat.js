@@ -109,11 +109,13 @@
     const users = await fetchUsersFromBackend_();
 
     if (!users || users.length === 0) {
-      const nome = global.prompt("Nenhum usuário cadastrado. Informe um nome para usar no chat:");
+      // ✅ Usa usuário da sessão em vez de prompt
+      const sessionUser = (PRONTIO.core && PRONTIO.core.session) ? PRONTIO.core.session.getUser() : null;
+      const nome = sessionUser?.nomeCompleto || sessionUser?.nome || "Usuário";
       return {
-        idUsuario: "LOCAL-" + Date.now(),
-        nome: nome || "Usuário",
-        tipo: "LOCAL"
+        idUsuario: sessionUser?.idUsuario || "LOCAL-" + Date.now(),
+        nome: nome,
+        tipo: sessionUser?.perfil || "LOCAL"
       };
     }
 
