@@ -7,7 +7,7 @@
   // ============================================================
   // Versão global do front (cache-busting)
   // ============================================================
-  PRONTIO.APP_VERSION = PRONTIO.APP_VERSION || "1.2.9.0";
+  PRONTIO.APP_VERSION = PRONTIO.APP_VERSION || "1.3.0.0";
 
   // ============================================================
   // PAGE MANIFEST
@@ -77,8 +77,18 @@
       css: ["assets/css/pages/page-laudo.css"]
     },
 
+    // =========================
+    // PACIENTES (modular)
+    // =========================
     pacientes: {
-      js: ["assets/js/pages/page-pacientes.js"],
+      js: [
+        "assets/js/features/pacientes/pacientes.api.js",
+        "assets/js/features/pacientes/pacientes.state.js",
+        "assets/js/features/pacientes/pacientes.view.js",
+        "assets/js/features/pacientes/pacientes.actions.js",
+        "assets/js/features/pacientes/pacientes.events.js",
+        "assets/js/features/pacientes/pacientes.entry.js"
+      ],
       css: ["assets/css/pages/page-pacientes.css"]
     },
 
