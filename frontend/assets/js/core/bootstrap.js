@@ -100,22 +100,27 @@
   async function ensureWidgets_() {
     const loader = PRONTIO.loader;
 
-    await loader.loadOnce("assets/js/widgets/widget-sidebar.js");
-    await loader.loadOnce("assets/js/ui/sidebar-loader.js");
+    // Carrega scripts em paralelo
+    await Promise.all([
+      loader.loadOnce("assets/js/widgets/widget-sidebar.js"),
+      loader.loadOnce("assets/js/ui/sidebar-loader.js"),
+      isChatStandalone_() ? Promise.resolve() : loader.loadOnce("assets/js/widgets/widget-topbar.js")
+    ]);
 
-    try {
-      if (PRONTIO.ui?.sidebarLoader?.load) {
-        await PRONTIO.ui.sidebarLoader.load();
-      }
-    } catch (_) {}
+    // Inicializa sidebar e topbar em paralelo
+    const initPromises = [];
+
+    if (PRONTIO.ui?.sidebarLoader?.load) {
+      initPromises.push(PRONTIO.ui.sidebarLoader.load().catch(() => {}));
+    }
+
+    if (!isChatStandalone_() && PRONTIO.widgets?.topbar?.init) {
+      initPromises.push(PRONTIO.widgets.topbar.init().catch(() => {}));
+    }
+
+    await Promise.all(initPromises);
 
     if (!isChatStandalone_()) {
-      await loader.loadOnce("assets/js/widgets/widget-topbar.js");
-      try {
-        if (PRONTIO.widgets?.topbar?.init) {
-          await PRONTIO.widgets.topbar.init();
-        }
-      } catch (_) {}
 
       // tema + modais
       try {
