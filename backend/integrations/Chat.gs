@@ -381,3 +381,64 @@ function Chat_Action_SendByPaciente_(ctx, payload) {
     message: text
   });
 }
+
+/**
+ * ============================================================
+ * handleChatAction - Handler unificado para delegação
+ * ============================================================
+ * Usado por Prontuario.Delegadores.gs via _prontuarioDelegarChat_
+ *
+ * Actions suportadas:
+ * - Chat.SendMessage / chat.sendMessage
+ * - Chat.ListMessages / chat.listMessages
+ * - Chat.ListMessagesSince / chat.listMessagesSince
+ * - Chat.MarkAsRead / chat.markAsRead
+ * - Chat.GetUnreadSummary / chat.getUnreadSummary
+ * - Chat.ListByPaciente / chat.listByPaciente
+ * - Chat.SendByPaciente / chat.sendByPaciente
+ */
+function handleChatAction(action, payload) {
+  action = String(action || "").trim();
+  payload = payload || {};
+
+  // Contexto vazio (delegação não passa ctx)
+  var ctx = {};
+
+  // Normaliza action para lowercase sem prefixo
+  var normalized = action.toLowerCase().replace(/^chat\./, "");
+
+  switch (normalized) {
+    case "sendmessage":
+      return Chat_Action_SendMessage_(ctx, payload);
+
+    case "listmessages":
+      return Chat_Action_ListMessages_(ctx, payload);
+
+    case "listmessagessince":
+      return Chat_Action_ListMessagesSince_(ctx, payload);
+
+    case "markasread":
+      return Chat_Action_MarkAsRead_(ctx, payload);
+
+    case "getunreadsummary":
+      return Chat_Action_GetUnreadSummary_(ctx, payload);
+
+    case "listbypaciente":
+      return Chat_Action_ListByPaciente_(ctx, payload);
+
+    case "sendbypaciente":
+      return Chat_Action_SendByPaciente_(ctx, payload);
+
+    default:
+      _chatThrow_("UNKNOWN_ACTION", "Action de chat desconhecida: " + action, { action: action });
+  }
+}
+
+/**
+ * handleChatCompatAction - Fallback para compatibilidade
+ * Usado quando handleChatAction não estiver disponível
+ */
+function handleChatCompatAction(action, payload) {
+  // Delega para o handler principal
+  return handleChatAction(action, payload);
+}
