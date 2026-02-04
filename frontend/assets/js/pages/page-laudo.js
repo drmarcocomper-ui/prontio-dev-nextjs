@@ -205,9 +205,8 @@
         const td = document.createElement("td");
         td.colSpan = 5;
         td.textContent = "Nenhum laudo registrado para este paciente.";
-        td.style.textAlign = "center";
-        td.style.fontSize = "12px";
-        td.style.color = "#777";
+        // ✅ P4: Usa classe CSS em vez de inline styles
+        td.className = "tabela-laudos-vazio";
         tr.appendChild(td);
         tbody.appendChild(tr);
         return;
@@ -248,7 +247,8 @@
         btnPdf.addEventListener("click", async () => {
           const idLaudo = laudo.idLaudo;
           if (!idLaudo) {
-            alert("ID do laudo não encontrado.");
+            // ✅ P1: Usa mostrarMensagemLaudo em vez de alert()
+            mostrarMensagemLaudo("ID do laudo não encontrado.", "erro");
             return;
           }
           await gerarPdfLaudo(idLaudo);
@@ -310,7 +310,8 @@
 
       const win = global.open("", "_blank");
       if (!win) {
-        alert("Não foi possível abrir a nova aba. Verifique se o bloqueador de pop-up está ativo.");
+        // ✅ P1: Usa mostrarMensagemLaudo em vez de alert()
+        mostrarMensagemLaudo("Não foi possível abrir a nova aba. Verifique se o bloqueador de pop-up está ativo.", "erro");
         return;
       }
 

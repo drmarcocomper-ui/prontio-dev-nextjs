@@ -1,11 +1,12 @@
 /* ===========================================
    PRONTIO - CSS específico da página Laudo
+   ✅ P3: Usa variáveis CSS para dark theme
 =========================================== */
 
 /* Subtítulo do topo com paciente */
 .topbar-paciente {
   font-size: 13px;
-  color: #666;
+  color: var(--cor-texto-secundario, #666);
 }
 
 /* Mensagem geral da tela de laudo (usa estilos globais de .mensagem) */
@@ -32,7 +33,7 @@
   font-weight: bold;
   margin-bottom: 4px;
   font-size: 13px;
-  color: #444;
+  color: var(--cor-texto-secundario, #444);
 }
 
 .campo-form input,
@@ -41,9 +42,19 @@
   padding: 6px 8px;
   font-size: 14px;
   border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--cor-borda-suave, #ccc);
+  background: var(--cor-fundo-card, #fff);
+  color: var(--cor-texto-principal, #333);
   font-family: inherit;
   box-sizing: border-box;
+}
+
+.campo-form input:focus,
+.campo-form select:focus,
+.campo-form textarea:focus {
+  outline: none;
+  border-color: var(--cor-primaria, #2563eb);
+  box-shadow: 0 0 0 1px var(--cor-primaria-clara, rgba(37, 99, 235, 0.2));
 }
 
 .campo-form textarea {
@@ -54,7 +65,7 @@
 /* Texto de ajuda abaixo dos campos */
 .campo-ajuda {
   font-size: 11px;
-  color: #777;
+  color: var(--cor-texto-suave, #777);
   margin-top: 2px;
 }
 
@@ -76,11 +87,11 @@
 
 .info-paciente-label {
   font-weight: bold;
-  color: #555;
+  color: var(--cor-texto-secundario, #555);
 }
 
 .info-paciente-valor {
-  color: #111;
+  color: var(--cor-texto-principal, #111);
 }
 
 /* Tabela de laudos anteriores */
@@ -93,22 +104,35 @@
   border-collapse: collapse;
   font-size: 13px;
   min-width: 650px;
+  color: var(--cor-texto-principal, #333);
 }
 
 .tabela-laudos th,
 .tabela-laudos td {
-  border: 1px solid #dde3ea;
+  border: 1px solid var(--cor-borda-suave, #dde3ea);
   padding: 6px 8px;
   text-align: left;
   vertical-align: top;
 }
 
 .tabela-laudos thead {
-  background: #f1f4f8;
+  background: var(--cor-fundo-card-alt, #f1f4f8);
+}
+
+.tabela-laudos thead th {
+  color: var(--cor-texto-principal, #333);
 }
 
 .tabela-laudos tbody tr:nth-child(even) {
-  background: #fafbfc;
+  background: var(--cor-fundo-suave, #fafbfc);
+}
+
+/* ✅ P4: Classe para célula vazia (substitui inline styles) */
+.tabela-laudos-vazio {
+  text-align: center;
+  font-size: 12px;
+  color: var(--cor-texto-suave, #777);
+  padding: 12px;
 }
 
 .col-laudo-data {
@@ -156,4 +180,44 @@
   .form-laudo-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* =========================================
+   ✅ P3: Dark Theme Overrides
+========================================= */
+[data-theme="dark"] .campo-form input,
+[data-theme="dark"] .campo-form select,
+[data-theme="dark"] .campo-form textarea {
+  background: var(--cor-fundo-card-alt, #1e293b);
+  border-color: var(--cor-borda-suave, #334155);
+  color: var(--cor-texto-principal, #e2e8f0);
+}
+
+[data-theme="dark"] .campo-form input:focus,
+[data-theme="dark"] .campo-form select:focus,
+[data-theme="dark"] .campo-form textarea:focus {
+  border-color: var(--cor-primaria, #3b82f6);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .tabela-laudos-wrapper {
+  background: var(--cor-fundo-card-alt, #1e293b);
+  border-color: var(--cor-borda-suave, #334155);
+}
+
+[data-theme="dark"] .tabela-laudos thead {
+  background: var(--cor-primaria-escura, #1e40af);
+}
+
+[data-theme="dark"] .tabela-laudos thead th {
+  color: #fff;
+}
+
+[data-theme="dark"] .tabela-laudos th,
+[data-theme="dark"] .tabela-laudos td {
+  border-color: var(--cor-borda-suave, #334155);
+}
+
+[data-theme="dark"] .tabela-laudos tbody tr:nth-child(even) {
+  background: var(--cor-fundo-card-alt, #1e293b);
 }
