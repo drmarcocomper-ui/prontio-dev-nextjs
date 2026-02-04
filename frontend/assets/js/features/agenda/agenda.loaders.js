@@ -373,6 +373,11 @@
           if (state.controllerActions?.mudarStatus) {
             state.controllerActions.mudarStatus(ag.ID_Agenda, "Cancelado", null);
           }
+        },
+        onTelemedicina: (ag) => {
+          if (state.controllerActions?.abrirTelemedicina) {
+            state.controllerActions.abrirTelemedicina(ag);
+          }
         }
       };
 

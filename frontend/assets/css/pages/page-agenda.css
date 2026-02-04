@@ -524,6 +524,10 @@
   color: var(--cor-aviso, #f59e0b);
 }
 
+.agenda-table__action-btn--telemedicina:hover {
+  color: var(--cor-info, #0ea5e9);
+}
+
 /* ✅ P3: Cores de status na linha (borda esquerda) usando variáveis */
 .agenda-table__row.status-agendado { border-left: 3px solid var(--cor-status-agendado, #64748b); }
 .agenda-table__row.status-confirmado { border-left: 3px solid var(--cor-status-confirmado, #16a34a); }
@@ -1151,6 +1155,10 @@ input[readonly].input-readonly {
   color: #fbbf24;
 }
 
+[data-theme="dark"] .agenda-table__action-btn--telemedicina:hover {
+  color: #38bdf8;
+}
+
 /* Status das linhas - cores mais vibrantes no dark */
 [data-theme="dark"] .agenda-table__row.status-agendado { border-left-color: #94a3b8; }
 [data-theme="dark"] .agenda-table__row.status-confirmado { border-left-color: #4ade80; }
@@ -1183,4 +1191,119 @@ input[readonly].input-readonly {
 /* Lista de pacientes no modal */
 [data-theme="dark"] .paciente-lista-item:hover {
   border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* =========================================================
+   TELEMEDICINA MODAL
+   ========================================================= */
+
+.telemedicina-info {
+  background: var(--cor-fundo-card-alt);
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.telemedicina-info__label {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+  margin-bottom: 0.25rem;
+}
+
+.telemedicina-info__value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--cor-texto-principal);
+}
+
+.telemedicina-link-box {
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.telemedicina-link-box__label {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.telemedicina-link-box__url {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.telemedicina-link-box__input {
+  flex: 1;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--radius-sm);
+  background: var(--cor-fundo-card-alt);
+  color: var(--cor-texto-principal);
+  font-family: monospace;
+}
+
+.telemedicina-link-box__input:focus {
+  outline: 2px solid var(--cor-primaria-clara, rgba(14, 165, 233, 0.3));
+  outline-offset: 1px;
+}
+
+.telemedicina-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.telemedicina-actions .btn {
+  flex: 1;
+  min-width: 140px;
+}
+
+.btn-telemedicina-copy {
+  background: var(--cor-primaria, #3b82f6);
+  color: white;
+  border: none;
+}
+
+.btn-telemedicina-copy:hover {
+  filter: brightness(1.1);
+}
+
+.btn-telemedicina-whatsapp {
+  background: #25d366;
+  color: white;
+  border: none;
+}
+
+.btn-telemedicina-whatsapp:hover {
+  filter: brightness(1.1);
+}
+
+.btn-telemedicina-abrir {
+  background: var(--cor-info, #0ea5e9);
+  color: white;
+  border: none;
+}
+
+.btn-telemedicina-abrir:hover {
+  filter: brightness(1.1);
+}
+
+.telemedicina-hint {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+/* Dark mode */
+[data-theme="dark"] .telemedicina-link-box__input {
+  background: var(--cor-fundo-card);
 }

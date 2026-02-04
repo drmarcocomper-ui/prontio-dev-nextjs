@@ -101,7 +101,17 @@
       buscaPacienteTermo: getEl(doc, "busca-paciente-termo"),
       listaPacientesEl: getEl(doc, "lista-pacientes"),
       msgPacientesEl: getEl(doc, "pacientes-resultado-msg"),
-      btnFecharModalPacientes: getEl(doc, "btn-fechar-modal-pacientes")
+      btnFecharModalPacientes: getEl(doc, "btn-fechar-modal-pacientes"),
+
+      // modal telemedicina
+      modalTelemedicina: getEl(doc, "modal-telemedicina"),
+      btnFecharTelemedicina: getEl(doc, "btn-fechar-modal-telemedicina"),
+      btnCancelarTelemedicina: getEl(doc, "btn-cancelar-telemedicina"),
+      telemedicinaPaciente: getEl(doc, "telemedicina-paciente"),
+      telemedicinLinkInput: getEl(doc, "telemedicina-link"),
+      btnTelemedicinaCopiar: getEl(doc, "btn-telemedicina-copiar"),
+      btnTelemedicinWhatsApp: getEl(doc, "btn-telemedicina-whatsapp"),
+      btnTelemedicinAbrir: getEl(doc, "btn-telemedicina-abrir")
     };
   }
 

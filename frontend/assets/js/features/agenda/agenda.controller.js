@@ -193,7 +193,14 @@
       submitEditar: editActions.submitEditar,
       submitBloqueio: editActions.submitBloqueio,
       mudarStatus: editActions.mudarStatus,
-      desbloquear: editActions.desbloquear
+      desbloquear: editActions.desbloquear,
+
+      // telemedicina
+      abrirTelemedicina: uiActions.abrirTelemedicina,
+      fecharTelemedicina: uiActions.fecharTelemedicina,
+      copiarLinkTelemedicina: uiActions.copiarLinkTelemedicina,
+      enviarWhatsAppTelemedicina: uiActions.enviarWhatsAppTelemedicina,
+      abrirSalaTelemedicina: uiActions.abrirSalaTelemedicina
     };
 
     // útil para loaders (callbacks)

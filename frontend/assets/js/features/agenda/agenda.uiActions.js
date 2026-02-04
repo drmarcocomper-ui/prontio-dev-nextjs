@@ -253,6 +253,119 @@
       }
     }
 
+    // -------------------------
+    // Telemedicina
+    // -------------------------
+    function gerarLinkTelemedicina_(agendamentoId) {
+      // Gera um ID único para a sala baseado no agendamento
+      const roomId = "prontio-" + (agendamentoId || Date.now()) + "-" + Math.random().toString(36).substring(2, 8);
+      return "https://meet.jit.si/" + roomId;
+    }
+
+    function abrirTelemedicina(agendamento) {
+      if (!agendamento) return;
+
+      const nomePaciente = agendamento.nomeCompleto || agendamento.nomePaciente || agendamento.nome_paciente || "Paciente";
+      const telefonePaciente = agendamento.telefone || agendamento.telefone_paciente || "";
+      const agendamentoId = agendamento.id_agenda || agendamento.idAgenda || agendamento.id || "";
+
+      // Gera o link
+      const link = gerarLinkTelemedicina_(agendamentoId);
+
+      // Armazena dados no state para uso nos botões
+      state.telemedicina = {
+        link: link,
+        nomePaciente: nomePaciente,
+        telefone: telefonePaciente
+      };
+
+      // Preenche o modal
+      if (state.dom?.telemedicinaPaciente) {
+        state.dom.telemedicinaPaciente.textContent = nomePaciente;
+      }
+      if (state.dom?.telemedicinLinkInput) {
+        state.dom.telemedicinLinkInput.value = link;
+      }
+
+      // Abre o modal
+      view.openModal?.(state.dom?.modalTelemedicina, state.dom?.telemedicinLinkInput);
+    }
+
+    function fecharTelemedicina() {
+      view.closeModal?.(state.dom?.modalTelemedicina);
+      state.telemedicina = null;
+    }
+
+    function copiarLinkTelemedicina() {
+      if (!state.telemedicina?.link) return;
+
+      const toast = PRONTIO.widgets?.toast;
+      const toastEl = global.document.getElementById("toast-agenda") || global.document.getElementById("mensagem");
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(state.telemedicina.link).then(() => {
+          if (toast && toastEl) {
+            toast.show({ target: toastEl, text: "Link copiado!", type: "sucesso", autoHide: true, autoHideDelay: 2500 });
+          }
+        }).catch(() => {
+          fallbackCopy_();
+        });
+      } else {
+        fallbackCopy_();
+      }
+
+      function fallbackCopy_() {
+        const input = state.dom?.telemedicinLinkInput;
+        if (input) {
+          input.select();
+          input.setSelectionRange(0, 99999);
+          try {
+            global.document.execCommand("copy");
+            if (toast && toastEl) {
+              toast.show({ target: toastEl, text: "Link copiado!", type: "sucesso", autoHide: true, autoHideDelay: 2500 });
+            }
+          } catch (_) {
+            if (toast && toastEl) {
+              toast.show({ target: toastEl, text: "Erro ao copiar. Selecione e copie manualmente.", type: "erro", autoHide: true, autoHideDelay: 3500 });
+            }
+          }
+        }
+      }
+    }
+
+    function enviarWhatsAppTelemedicina() {
+      if (!state.telemedicina) return;
+
+      const { link, nomePaciente, telefone } = state.telemedicina;
+
+      if (!telefone) {
+        const toast = PRONTIO.widgets?.toast;
+        const toastEl = global.document.getElementById("toast-agenda") || global.document.getElementById("mensagem");
+        if (toast && toastEl) {
+          toast.show({ target: toastEl, text: "Paciente sem telefone cadastrado.", type: "aviso", autoHide: true, autoHideDelay: 3500 });
+        }
+        return;
+      }
+
+      // Normaliza o telefone (adiciona código do Brasil se necessário)
+      let tel = String(telefone).replace(/\D/g, "");
+      if (tel.length <= 11 && !tel.startsWith("55")) {
+        tel = "55" + tel;
+      }
+
+      const mensagem = encodeURIComponent(
+        `Olá, ${nomePaciente}!\n\nSua consulta por telemedicina está disponível.\n\nAcesse o link abaixo para iniciar a videochamada:\n${link}\n\nAguardo você!`
+      );
+
+      const url = `https://wa.me/${tel}?text=${mensagem}`;
+      global.open(url, "_blank");
+    }
+
+    function abrirSalaTelemedicina() {
+      if (!state.telemedicina?.link) return;
+      global.open(state.telemedicina.link, "_blank");
+    }
+
     return {
       init,
       setVisao,
@@ -269,7 +382,13 @@
       openPacientePicker,
       closePacientePicker,
       isPacientePickerOpen,
-      clearPaciente
+      clearPaciente,
+      // Telemedicina
+      abrirTelemedicina,
+      fecharTelemedicina,
+      copiarLinkTelemedicina,
+      enviarWhatsAppTelemedicina,
+      abrirSalaTelemedicina
     };
   }
 

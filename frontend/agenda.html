@@ -576,6 +576,46 @@
     </div>
   </div>
 
+  <!-- Modal: Telemedicina -->
+  <div id="modal-telemedicina" class="modal-overlay hidden" aria-hidden="true" data-modal="telemedicina">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-telemedicina-titulo">
+      <div class="modal-header">
+        <h2 id="modal-telemedicina-titulo">Telemedicina</h2>
+        <button type="button" class="icon-button modal-close" id="btn-fechar-modal-telemedicina" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="telemedicina-info">
+          <div class="telemedicina-info__label">Paciente</div>
+          <div class="telemedicina-info__value" id="telemedicina-paciente">—</div>
+        </div>
+
+        <div class="telemedicina-link-box">
+          <label class="telemedicina-link-box__label" for="telemedicina-link">Link da videochamada (Jitsi Meet)</label>
+          <div class="telemedicina-link-box__url">
+            <input type="text" id="telemedicina-link" class="telemedicina-link-box__input" readonly />
+          </div>
+        </div>
+
+        <div class="telemedicina-actions">
+          <button type="button" class="btn btn-telemedicina-copy" id="btn-telemedicina-copiar">
+            Copiar link
+          </button>
+          <button type="button" class="btn btn-telemedicina-whatsapp" id="btn-telemedicina-whatsapp">
+            Enviar WhatsApp
+          </button>
+          <button type="button" class="btn btn-telemedicina-abrir" id="btn-telemedicina-abrir">
+            Abrir sala
+          </button>
+        </div>
+
+        <p class="telemedicina-hint">O link utiliza Jitsi Meet (gratuito, sem cadastro). Compartilhe com o paciente para iniciar a consulta.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btn-cancelar-telemedicina">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: SOBRE -->
   <div id="modalSobreSistema" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalSobreSistemaTitulo">
     <div class="modal modal--lg">

@@ -130,6 +130,28 @@
       dom.btnEditLimparPaciente.addEventListener("click", () => actions.clearPaciente("editar"));
     }
 
+    // Modal Telemedicina
+    if (dom.btnFecharTelemedicina && typeof actions.fecharTelemedicina === "function") {
+      dom.btnFecharTelemedicina.addEventListener("click", () => actions.fecharTelemedicina());
+    }
+    if (dom.btnCancelarTelemedicina && typeof actions.fecharTelemedicina === "function") {
+      dom.btnCancelarTelemedicina.addEventListener("click", () => actions.fecharTelemedicina());
+    }
+    if (dom.modalTelemedicina && typeof actions.fecharTelemedicina === "function") {
+      dom.modalTelemedicina.addEventListener("click", (event) => {
+        if (event.target === dom.modalTelemedicina) actions.fecharTelemedicina();
+      });
+    }
+    if (dom.btnTelemedicinaCopiar && typeof actions.copiarLinkTelemedicina === "function") {
+      dom.btnTelemedicinaCopiar.addEventListener("click", () => actions.copiarLinkTelemedicina());
+    }
+    if (dom.btnTelemedicinWhatsApp && typeof actions.enviarWhatsAppTelemedicina === "function") {
+      dom.btnTelemedicinWhatsApp.addEventListener("click", () => actions.enviarWhatsAppTelemedicina());
+    }
+    if (dom.btnTelemedicinAbrir && typeof actions.abrirSalaTelemedicina === "function") {
+      dom.btnTelemedicinAbrir.addEventListener("click", () => actions.abrirSalaTelemedicina());
+    }
+
     // ESC fecha modais (usando actions quando possível)
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
@@ -140,6 +162,7 @@
         return;
       }
 
+      if (typeof actions.fecharTelemedicina === "function" && view && view.isModalVisible && view.isModalVisible(dom.modalTelemedicina)) return actions.fecharTelemedicina();
       if (typeof actions.fecharModalBloqueio === "function" && view && view.isModalVisible && view.isModalVisible(dom.modalBloqueio)) return actions.fecharModalBloqueio();
       if (typeof actions.fecharModalEditar === "function" && view && view.isModalVisible && view.isModalVisible(dom.modalEdit)) return actions.fecharModalEditar();
       if (typeof actions.fecharModalNovo === "function" && view && view.isModalVisible && view.isModalVisible(dom.modalNovo)) return actions.fecharModalNovo();

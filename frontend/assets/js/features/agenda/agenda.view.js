@@ -255,9 +255,18 @@
       btnCancelar.dataset.action = "cancelar"; // ✅ Marca para delegation
       btnCancelar.innerHTML = '<span aria-hidden="true">&#10006;</span>';
 
+      // Telemedicina (videochamada)
+      const btnTelemedicina = doc.createElement("button");
+      btnTelemedicina.type = "button";
+      btnTelemedicina.className = "agenda-table__action-btn agenda-table__action-btn--telemedicina";
+      btnTelemedicina.title = "Iniciar telemedicina (videochamada)";
+      btnTelemedicina.dataset.action = "telemedicina";
+      btnTelemedicina.innerHTML = '<span aria-hidden="true">&#128249;</span>';
+
       acoesWrap.appendChild(btnEditar);
       acoesWrap.appendChild(btnAtender);
       acoesWrap.appendChild(btnCancelar);
+      acoesWrap.appendChild(btnTelemedicina);
       tdAcoes.appendChild(acoesWrap);
       tr.appendChild(tdAcoes);
 
@@ -469,6 +478,12 @@
           } else if (action === "desbloquear" && idAgenda) {
             e.stopPropagation();
             if (typeof cb.onDesbloquear === "function") cb.onDesbloquear(idAgenda, tr);
+          } else if (action === "telemedicina" && tr.dataset.agData) {
+            e.stopPropagation();
+            try {
+              const ag = JSON.parse(tr.dataset.agData);
+              if (typeof cb.onTelemedicina === "function") cb.onTelemedicina(ag);
+            } catch (_) {}
           }
         }
       });
