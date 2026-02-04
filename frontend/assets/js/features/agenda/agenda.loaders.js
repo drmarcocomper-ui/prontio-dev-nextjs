@@ -160,7 +160,8 @@
           return;
         }
 
-        state.agendamentosPeriodo = raw || [];
+        // API retorna { items: [...], count: N } ou array direto
+        state.agendamentosPeriodo = (raw && Array.isArray(raw.items)) ? raw.items : (Array.isArray(raw) ? raw : []);
 
         // Converte DTO -> UI
         let uiList = state.agendamentosPeriodo.map((dto) =>
@@ -285,7 +286,8 @@
           return;
         }
 
-        state.agendamentosPeriodo = raw || [];
+        // API retorna { items: [...], count: N } ou array direto
+        state.agendamentosPeriodo = (raw && Array.isArray(raw.items)) ? raw.items : (Array.isArray(raw) ? raw : []);
 
         // Converte DTO -> UI
         let uiList = state.agendamentosPeriodo.map((dto) =>
