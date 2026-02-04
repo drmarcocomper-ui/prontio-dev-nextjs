@@ -311,12 +311,15 @@
       return tr;
     }
 
-    // ✅ Refatorado para usar event delegation
+    // ✅ Refatorado para usar event delegation + visual melhorado
     function createTableRowEmpty(slot) {
       const tr = doc.createElement("tr");
       tr.className = "agenda-table__row agenda-table__row--empty";
       tr.dataset.hora = slot;
       tr.dataset.action = "novo"; // ✅ Marca para delegation (clique na linha)
+      tr.setAttribute("role", "button");
+      tr.setAttribute("tabindex", "0");
+      tr.setAttribute("aria-label", `Agendar às ${slot}`);
 
       // Horário
       const tdHorario = doc.createElement("td");
@@ -324,20 +327,25 @@
       tdHorario.textContent = slot;
       tr.appendChild(tdHorario);
 
-      // Paciente (+ Horário livre)
-      const tdPaciente = doc.createElement("td");
-      tdPaciente.className = "agenda-table__cell agenda-table__cell--paciente";
-      tdPaciente.innerHTML = '<span class="agenda-table__empty-label">+ Horário livre</span>';
-      tr.appendChild(tdPaciente);
+      // ✅ Célula de ação "Novo agendamento" - ocupa todas as colunas restantes
+      const tdNovo = doc.createElement("td");
+      tdNovo.className = "agenda-table__cell agenda-table__cell--empty-action";
+      tdNovo.setAttribute("colspan", "6");
+      tdNovo.innerHTML = `
+        <div class="agenda-table__empty-content">
+          <span class="agenda-table__empty-icon" aria-hidden="true">+</span>
+          <span class="agenda-table__empty-text">Clique para agendar</span>
+        </div>
+      `;
+      tr.appendChild(tdNovo);
 
-      // Tipo, Status, Telefone, Motivo, Ações (vazios)
-      for (let i = 0; i < 5; i++) {
-        const td = doc.createElement("td");
-        td.className = "agenda-table__cell";
-        tr.appendChild(td);
-      }
-
-      // ✅ Sem listeners individuais - delegation no container
+      // ✅ Suporte a teclado (Enter/Space)
+      tr.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          tr.click();
+        }
+      });
 
       return tr;
     }

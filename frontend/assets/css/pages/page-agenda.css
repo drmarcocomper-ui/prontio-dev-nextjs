@@ -322,13 +322,78 @@
   outline-offset: -2px;
 }
 
+/* =========================================================
+   LINHA VAZIA - Clicável para novo agendamento
+   ========================================================= */
+
 .agenda-table__row--empty {
   cursor: pointer;
   color: var(--cor-texto-suave);
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(16, 185, 129, 0.03) 10px,
+    rgba(16, 185, 129, 0.03) 20px
+  );
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .agenda-table__row--empty:hover {
-  background: rgba(16, 185, 129, 0.06);
+  background: rgba(16, 185, 129, 0.1);
+  border-left-color: var(--cor-sucesso, #10b981);
+}
+
+.agenda-table__row--empty:focus {
+  outline: 2px solid var(--cor-sucesso, #10b981);
+  outline-offset: -2px;
+}
+
+.agenda-table__row--empty:active {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+/* Conteúdo da célula vazia */
+.agenda-table__cell--empty-action {
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.agenda-table__empty-content {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  justify-content: flex-start;
+}
+
+.agenda-table__empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--cor-sucesso, #10b981);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.agenda-table__row--empty:hover .agenda-table__empty-icon {
+  transform: scale(1.1);
+}
+
+.agenda-table__empty-text {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  transition: color 0.2s ease;
+}
+
+.agenda-table__row--empty:hover .agenda-table__empty-text {
+  color: var(--cor-sucesso, #10b981);
+  font-weight: 500;
 }
 
 .agenda-table__row--bloqueio {
