@@ -30,6 +30,11 @@
 // ✅ Ajuste (logout):
 //  - NÃO executa mais logout aqui (evita duplicação com core/auth.js).
 //  - Apenas fecha o drawer no mobile ao clicar em "Sair".
+//
+// ✅ Melhorias:
+//  - Tooltips no modo compacto (data-tooltip)
+//  - Keyboard navigation (setas)
+//  - Accessibility (aria-label dinâmico)
 // =====================================
 
 (function (global, document) {
@@ -40,6 +45,7 @@
   const STORAGE_KEY_COMPACT = "prontio.sidebar.compact";
   const MOBILE_MEDIA = "(max-width: 900px)";
   const DOC_FLAG_DELEGATION_BOUND = "prontioSidebarDelegationBound";
+  const DOC_FLAG_KEYBOARD_BOUND = "prontioSidebarKeyboardBound";
 
   function getSidebarElement() {
     return document.getElementById("sidebar");
@@ -60,6 +66,9 @@
     } else {
       body.classList.remove("sidebar-compact");
     }
+
+    // Atualiza aria-label dos links quando muda modo compacto
+    updateAriaLabels_();
   }
 
   function isCompact() {
@@ -71,6 +80,7 @@
   function syncToggleButtonAria(btn, isCompactFlag) {
     if (!btn) return;
     btn.setAttribute("aria-pressed", isCompactFlag ? "true" : "false");
+    btn.setAttribute("aria-label", isCompactFlag ? "Expandir menu" : "Recolher menu");
   }
 
   function loadCompactFromStorage() {
@@ -249,18 +259,151 @@
     } catch (_) {}
   }
 
+  /* -------- tooltips para modo compacto -------- */
+
+  function setupTooltips_(sidebar) {
+    if (!sidebar) return;
+
+    // Links da navegação principal
+    var navLinks = sidebar.querySelectorAll(".sidebar-nav .nav-link");
+    navLinks.forEach(function (link) {
+      var label = link.querySelector(".label");
+      if (label && label.textContent) {
+        link.setAttribute("data-tooltip", label.textContent.trim());
+      }
+    });
+
+    // Links do grupo Sistema (exceto Sair que mostra label)
+    var groupLinks = sidebar.querySelectorAll(".sidebar-group .nav-link-sub");
+    groupLinks.forEach(function (link) {
+      var label = link.querySelector(".label");
+      if (label && label.textContent) {
+        link.setAttribute("data-tooltip", label.textContent.trim());
+      }
+    });
+  }
+
+  /* -------- aria-labels dinâmicos -------- */
+
+  function updateAriaLabels_() {
+    var sidebar = getSidebarElement();
+    if (!sidebar) return;
+
+    var compact = isCompact();
+
+    // Links da navegação principal
+    var navLinks = sidebar.querySelectorAll(".sidebar-nav .nav-link, .sidebar-group .nav-link-sub");
+    navLinks.forEach(function (link) {
+      var label = link.querySelector(".label");
+      if (!label) return;
+
+      var text = label.textContent.trim();
+      if (!text) return;
+
+      if (compact) {
+        // Em modo compacto, adiciona aria-label para leitores de tela
+        link.setAttribute("aria-label", text);
+      } else {
+        // Em modo expandido, remove aria-label (texto já visível)
+        link.removeAttribute("aria-label");
+      }
+    });
+  }
+
+  /* -------- keyboard navigation -------- */
+
+  function setupKeyboardNavigation_(sidebar) {
+    if (!sidebar) return;
+
+    // Idempotência
+    if (document.documentElement.dataset[DOC_FLAG_KEYBOARD_BOUND] === "1") return;
+    document.documentElement.dataset[DOC_FLAG_KEYBOARD_BOUND] = "1";
+
+    sidebar.addEventListener("keydown", function (ev) {
+      var target = ev.target;
+      if (!target) return;
+
+      // Só processa se o foco estiver em um link/botão da sidebar
+      var isNavItem = target.matches(".nav-link, .nav-link-sub, .nav-link-action");
+      if (!isNavItem) return;
+
+      var key = ev.key;
+      var handled = false;
+
+      // Coleta todos os itens navegáveis (visíveis)
+      var allItems = Array.from(
+        sidebar.querySelectorAll(".nav-link:not([style*='display: none']), .nav-link-sub, .nav-link-action")
+      ).filter(function (el) {
+        // Filtra elementos ocultos
+        return el.offsetParent !== null;
+      });
+
+      var currentIndex = allItems.indexOf(target);
+      if (currentIndex === -1) return;
+
+      switch (key) {
+        case "ArrowDown":
+        case "Down":
+          // Próximo item
+          if (currentIndex < allItems.length - 1) {
+            allItems[currentIndex + 1].focus();
+            handled = true;
+          }
+          break;
+
+        case "ArrowUp":
+        case "Up":
+          // Item anterior
+          if (currentIndex > 0) {
+            allItems[currentIndex - 1].focus();
+            handled = true;
+          }
+          break;
+
+        case "Home":
+          // Primeiro item
+          if (allItems.length > 0) {
+            allItems[0].focus();
+            handled = true;
+          }
+          break;
+
+        case "End":
+          // Último item
+          if (allItems.length > 0) {
+            allItems[allItems.length - 1].focus();
+            handled = true;
+          }
+          break;
+
+        case "Escape":
+          // Fecha drawer em mobile
+          if (isMobile_()) {
+            closeDrawer();
+            handled = true;
+          }
+          break;
+      }
+
+      if (handled) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    });
+  }
+
   // -----------------------------------------------------
   // Inicializador público (idempotente)
   // -----------------------------------------------------
 
   function initSidebar() {
-    const sidebar = getSidebarElement();
+    var sidebar = getSidebarElement();
     if (!sidebar) {
       console.warn("PRONTIO.sidebar: #sidebar não encontrado.");
       return;
     }
 
-    const body = document.body;
+    var body = document.body;
     if (!body) {
       console.warn("PRONTIO.sidebar: document.body não disponível.");
       return;
@@ -275,6 +418,7 @@
       updateProntuarioVisibility(sidebar);
       applyAppVersion_(sidebar);
       applyCurrentYear_(sidebar);
+      updateAriaLabels_();
       return;
     }
     sidebar.dataset.sidebarInited = "true";
@@ -283,11 +427,11 @@
     body.classList.remove("sidebar-open");
 
     // Estado compacto padrão: restaurado do storage
-    const initialCompact = loadCompactFromStorage();
+    var initialCompact = loadCompactFromStorage();
     setCompact(initialCompact);
 
     // Botão de modo compacto (desktop) / toggle drawer (mobile)
-    const btnCompact = sidebar.querySelector(".js-toggle-compact");
+    var btnCompact = sidebar.querySelector(".js-toggle-compact");
     if (btnCompact) {
       syncToggleButtonAria(btnCompact, initialCompact);
 
@@ -297,7 +441,7 @@
           return;
         }
 
-        const next = !isCompact();
+        var next = !isCompact();
         setCompact(next);
         syncToggleButtonAria(btnCompact, next);
         saveCompactToStorage(next);
@@ -305,7 +449,7 @@
     }
 
     // Backdrop do drawer (fecha ao clicar)
-    const backdrop = document.querySelector("[data-sidebar-backdrop]");
+    var backdrop = document.querySelector("[data-sidebar-backdrop]");
     if (backdrop) {
       if (!(backdrop.dataset && backdrop.dataset.sidebarBackdropBound === "true")) {
         backdrop.dataset.sidebarBackdropBound = "true";
@@ -316,12 +460,12 @@
     }
 
     // Ao clicar em qualquer item de menu, fecha o drawer em mobile
-    const navLinks = sidebar.querySelectorAll(".nav-link");
+    var navLinks = sidebar.querySelectorAll(".nav-link");
     navLinks.forEach(function (link) {
       link.addEventListener("click", function () {
         if (!isMobile_()) return;
 
-        const isDisabled =
+        var isDisabled =
           link.getAttribute("aria-disabled") === "true" ||
           link.getAttribute("data-soon") === "true";
 
@@ -339,6 +483,15 @@
 
     // ✅ ano atual no footer
     applyCurrentYear_(sidebar);
+
+    // ✅ tooltips para modo compacto
+    setupTooltips_(sidebar);
+
+    // ✅ aria-labels dinâmicos
+    updateAriaLabels_();
+
+    // ✅ keyboard navigation
+    setupKeyboardNavigation_(sidebar);
   }
 
   PRONTIO.widgets.sidebar = {
