@@ -122,7 +122,7 @@
     if (!a.loaders || typeof a.loaders.createAgendaLoaders !== "function") miss.push("agenda.loaders.js");
     if (!a.uiActions || typeof a.uiActions.createAgendaUiActions !== "function") miss.push("agenda.uiActions.js");
     if (!a.editActions || typeof a.editActions.createAgendaEditActions !== "function") miss.push("agenda.editActions.js");
-    if (!a.pacientesCache || typeof a.pacientesCache.createAgendaPacientesCache !== "function") miss.push("agenda.pacientesCache.js");
+    if (!a.pacientesCache || typeof a.pacientesCache.createPacientesCache !== "function") miss.push("agenda.pacientesCache.js");
     if (!a.filtros || typeof a.filtros.createAgendaFiltros !== "function") miss.push("agenda.filtros.js");
 
     // state
