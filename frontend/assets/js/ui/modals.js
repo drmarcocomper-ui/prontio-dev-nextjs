@@ -79,6 +79,16 @@
     return null;
   }
 
+  // ✅ P1: Pilha de modais abertos para ESC fechar o mais recente
+  const openModalsStack = [];
+
+  function handleEscKey(event) {
+    if (event.key === "Escape" && openModalsStack.length > 0) {
+      const topModal = openModalsStack[openModalsStack.length - 1];
+      closeInternal(topModal);
+    }
+  }
+
   /**
    * Abre um modal.
    * @param {string|HTMLElement} modalIdOrEl - id (sem #), seletor ou elemento
@@ -87,7 +97,17 @@
     const el = getModalElement(modalIdOrEl);
     if (!el) return;
     show(el);
-    // Futuro: foco inicial, trap de foco, ESC etc.
+    // ✅ P0 FIX: .modal-backdrop usa .is-open para display:flex
+    if (el.classList.contains("modal-backdrop")) {
+      el.classList.add("is-open");
+    }
+    // ✅ P1: ESC para fechar
+    if (!openModalsStack.includes(el)) {
+      openModalsStack.push(el);
+    }
+    if (openModalsStack.length === 1) {
+      document.addEventListener("keydown", handleEscKey);
+    }
   }
 
   /**
@@ -98,6 +118,18 @@
     const el = getModalElement(modalIdOrEl);
     if (!el) return;
     hide(el);
+    // ✅ P0 FIX: .modal-backdrop usa .is-open
+    if (el.classList.contains("modal-backdrop")) {
+      el.classList.remove("is-open");
+    }
+    // ✅ P1: Remover da pilha ESC
+    const idx = openModalsStack.indexOf(el);
+    if (idx !== -1) {
+      openModalsStack.splice(idx, 1);
+    }
+    if (openModalsStack.length === 0) {
+      document.removeEventListener("keydown", handleEscKey);
+    }
   }
 
   /**
@@ -176,6 +208,19 @@
       btn.addEventListener("click", function (event) {
         event.preventDefault();
         closeInternal(target);
+      });
+    });
+
+    // ✅ P1: Fechar ao clicar no backdrop (fora do modal interno)
+    const backdrops = root.querySelectorAll(".modal-backdrop");
+    backdrops.forEach(function (backdrop) {
+      if (backdrop.dataset.boundBackdropClose === "1") return;
+      backdrop.dataset.boundBackdropClose = "1";
+      backdrop.addEventListener("click", function (event) {
+        // Fecha apenas se clicou diretamente no backdrop (não no conteúdo)
+        if (event.target === backdrop) {
+          closeInternal(backdrop);
+        }
       });
     });
   }
