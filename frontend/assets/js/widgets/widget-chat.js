@@ -160,11 +160,17 @@
       overlay.classList.add("is-open");
       panel.setAttribute("aria-hidden", "false");
       overlay.setAttribute("aria-hidden", "false");
+      panel.removeAttribute("inert");
     } else {
+      // ✅ Remove foco antes de ocultar para evitar warning de acessibilidade
+      if (document.activeElement && panel.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
       panel.classList.remove("is-open");
       overlay.classList.remove("is-open");
       panel.setAttribute("aria-hidden", "true");
       overlay.setAttribute("aria-hidden", "true");
+      panel.setAttribute("inert", ""); // ✅ Previne foco em elementos ocultos
     }
   }
 
