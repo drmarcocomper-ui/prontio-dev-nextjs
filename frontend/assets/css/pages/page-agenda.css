@@ -200,10 +200,66 @@
   margin-top: 0.5rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--cor-borda-suave);
-  max-height: calc(100vh - 270px);
-  overflow-y: auto;
   overflow-x: auto;
   background: var(--cor-fundo-card-alt);
+}
+
+/* =========================================================
+   SEÇÕES COLAPSÁVEIS (Filtros e Resumo)
+   ========================================================= */
+
+.agenda-collapsible {
+  margin-bottom: 0.75rem;
+}
+
+.agenda-collapsible__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cor-texto-principal);
+  transition: background-color 0.15s ease;
+}
+
+.agenda-collapsible__toggle:hover {
+  background: var(--cor-fundo-card-alt);
+}
+
+.agenda-collapsible__toggle-icon {
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+}
+
+.agenda-collapsible.is-open .agenda-collapsible__toggle-icon {
+  transform: rotate(180deg);
+}
+
+.agenda-collapsible__content {
+  display: none;
+  padding-top: 0.5rem;
+}
+
+.agenda-collapsible.is-open .agenda-collapsible__content {
+  display: block;
+}
+
+.agenda-collapsible.is-open .agenda-collapsible__toggle {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: none;
+}
+
+.agenda-collapsible.is-open .agenda-collapsible__content > .card {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-bottom: 0;
 }
 
 /* =========================================================
@@ -714,10 +770,6 @@
 
   .resumo-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .agenda-lista-horarios {
-    max-height: calc(100vh - 280px);
   }
 
   .agenda-semana-grid {

@@ -217,102 +217,99 @@
             </div>
           </section>
 
-          <!-- FILTROS -->
-          <section class="card agenda-filtros">
-            <div class="card-header card-header-tight">
-              <div>
-                <h2>Filtros</h2>
-                <span class="card-subtitle">Refinar por paciente e status</span>
-              </div>
+          <!-- FILTROS (colapsável) -->
+          <div class="agenda-collapsible" id="collapsible-filtros">
+            <button type="button" class="agenda-collapsible__toggle" aria-expanded="false" aria-controls="filtros-content">
+              <span>Filtros</span>
+              <span class="agenda-collapsible__toggle-icon" aria-hidden="true">&#9660;</span>
+            </button>
+            <div class="agenda-collapsible__content" id="filtros-content">
+              <section class="card agenda-filtros">
+                <div class="card-body card-body-compact">
+                  <div class="filtros-row">
+                    <div class="filtro-item">
+                      <label for="filtro-nome">Filtrar por paciente</label>
+                      <input
+                        type="text"
+                        id="filtro-nome"
+                        placeholder="Digite parte do nome do paciente..."
+                        autocomplete="off"
+                        aria-label="Filtrar por paciente"
+                      />
+                    </div>
+
+                    <div class="filtro-item">
+                      <label for="filtro-status">Status</label>
+                      <select id="filtro-status" aria-label="Filtrar por status">
+                        <option value="">Todos</option>
+                        <option value="agendado">Agendado</option>
+                        <option value="confirmado">Confirmado</option>
+                        <option value="aguardando">Aguardando</option>
+                        <option value="em atendimento">Em atendimento</option>
+                        <option value="concluído">Concluído</option>
+                        <option value="faltou">Faltou</option>
+                        <option value="cancelado">Cancelado</option>
+                        <option value="remarcado">Remarcado</option>
+                      </select>
+                    </div>
+
+                    <div class="filtro-item filtro-item--compact">
+                      <label>&nbsp;</label>
+                      <button id="btn-limpar-filtros" class="btn btn-outline btn-sm" type="button">Limpar filtros</button>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
+          </div>
 
-            <div class="card-body card-body-compact">
-              <div class="filtros-row">
-                <div class="filtro-item">
-                  <label for="filtro-nome">Filtrar por paciente</label>
-                  <input
-                    type="text"
-                    id="filtro-nome"
-                    placeholder="Digite parte do nome do paciente..."
-                    autocomplete="off"
-                    aria-label="Filtrar por paciente"
-                  />
+          <!-- RESUMO DO DIA (colapsável) -->
+          <div class="agenda-collapsible" id="collapsible-resumo">
+            <button type="button" class="agenda-collapsible__toggle" aria-expanded="false" aria-controls="resumo-content">
+              <span>Resumo do dia</span>
+              <span class="agenda-collapsible__toggle-icon" aria-hidden="true">&#9660;</span>
+            </button>
+            <div class="agenda-collapsible__content" id="resumo-content">
+              <section class="card agenda-resumo" id="agenda-resumo">
+                <div class="card-body card-body-compact">
+                  <div class="resumo-grid">
+                    <div class="resumo-item">
+                      <span class="resumo-label">Total</span>
+                      <span class="resumo-value" id="resumo-total">0</span>
+                    </div>
+                    <div class="resumo-item">
+                      <span class="resumo-label">Confirmados</span>
+                      <span class="resumo-value resumo-confirmados" id="resumo-confirmados">0</span>
+                    </div>
+                    <div class="resumo-item">
+                      <span class="resumo-label">Aguardando</span>
+                      <span class="resumo-value resumo-aguardando" id="resumo-aguardando">0</span>
+                    </div>
+                    <div class="resumo-item">
+                      <span class="resumo-label">Em atendimento</span>
+                      <span class="resumo-value resumo-em-atendimento" id="resumo-em-atendimento">0</span>
+                    </div>
+                    <div class="resumo-item">
+                      <span class="resumo-label">Concluídos</span>
+                      <span class="resumo-value resumo-concluidos" id="resumo-concluidos">0</span>
+                    </div>
+                    <div class="resumo-item">
+                      <span class="resumo-label">Faltas</span>
+                      <span class="resumo-value resumo-faltas" id="resumo-faltas">0</span>
+                    </div>
+                    <div class="resumo-item">
+                      <span class="resumo-label">Cancelados</span>
+                      <span class="resumo-value resumo-cancelados" id="resumo-cancelados">0</span>
+                    </div>
+                    <div class="resumo-item">
+                      <span class="resumo-label">Remarcados</span>
+                      <span class="resumo-value resumo-remarcados" id="resumo-remarcados">0</span>
+                    </div>
+                  </div>
                 </div>
-
-                <div class="filtro-item">
-                  <label for="filtro-status">Status</label>
-                  <select id="filtro-status" aria-label="Filtrar por status">
-                    <option value="">Todos</option>
-                    <option value="agendado">Agendado</option>
-                    <option value="confirmado">Confirmado</option>
-                    <option value="aguardando">Aguardando</option>
-                    <option value="em atendimento">Em atendimento</option>
-                    <option value="concluído">Concluído</option>
-                    <option value="faltou">Faltou</option>
-                    <option value="cancelado">Cancelado</option>
-                    <option value="remarcado">Remarcado</option>
-                  </select>
-                </div>
-
-                <div class="filtro-item filtro-item--compact">
-                  <label>&nbsp;</label>
-                  <button id="btn-limpar-filtros" class="btn btn-outline btn-sm" type="button">Limpar filtros</button>
-                </div>
-              </div>
+              </section>
             </div>
-          </section>
-
-          <!-- RESUMO DO DIA -->
-          <section class="card agenda-resumo" id="agenda-resumo">
-            <div class="card-header card-header-tight">
-              <div>
-                <h2>Resumo do dia</h2>
-                <span class="card-subtitle">Indicadores rápidos</span>
-              </div>
-            </div>
-
-            <div class="card-body card-body-compact">
-              <div class="resumo-grid">
-                <div class="resumo-item">
-                  <span class="resumo-label">Total</span>
-                  <span class="resumo-value" id="resumo-total">0</span>
-                </div>
-                <div class="resumo-item">
-                  <span class="resumo-label">Confirmados</span>
-                  <span class="resumo-value resumo-confirmados" id="resumo-confirmados">0</span>
-                </div>
-                <div class="resumo-item">
-                  <span class="resumo-label">Aguardando</span>
-                  <span class="resumo-value resumo-aguardando" id="resumo-aguardando">0</span>
-                </div>
-                <div class="resumo-item">
-                  <span class="resumo-label">Em atendimento</span>
-                  <span class="resumo-value resumo-em-atendimento" id="resumo-em-atendimento">0</span>
-                </div>
-                <div class="resumo-item">
-                  <span class="resumo-label">Concluídos</span>
-                  <span class="resumo-value resumo-concluidos" id="resumo-concluidos">0</span>
-                </div>
-                <div class="resumo-item">
-                  <span class="resumo-label">Faltas</span>
-                  <span class="resumo-value resumo-faltas" id="resumo-faltas">0</span>
-                </div>
-                <div class="resumo-item">
-                  <span class="resumo-label">Cancelados</span>
-                  <span class="resumo-value resumo-cancelados" id="resumo-cancelados">0</span>
-                </div>
-                <div class="resumo-item">
-                  <span class="resumo-label">Remarcados</span>
-                  <span class="resumo-value resumo-remarcados" id="resumo-remarcados">0</span>
-                </div>
-              </div>
-
-              <div class="agenda-hints">
-                <span class="agenda-hint">Dica: duplo clique em um horário livre cria um agendamento.</span>
-                <span class="agenda-hint">Dica: clique em um item na semana para abrir o dia já focando no horário.</span>
-              </div>
-            </div>
-          </section>
+          </div>
 
           <!-- VISÃO DIA -->
           <section class="card agenda-dia">
