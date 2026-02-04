@@ -7,7 +7,7 @@
   // ============================================================
   // Versão global do front (cache-busting)
   // ============================================================
-  PRONTIO.APP_VERSION = PRONTIO.APP_VERSION || "1.1.0.9";
+  PRONTIO.APP_VERSION = PRONTIO.APP_VERSION || "1.1.1.0";
 
   // ============================================================
   // PAGE MANIFEST
