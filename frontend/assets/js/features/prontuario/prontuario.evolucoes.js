@@ -10,14 +10,9 @@
   let idEvolucaoEmEdicao = null;
   let historicoCompletoCarregado = false;
 
-  let evoPaging = {
-    btnMais: null,
-    cursor: null,
-    hasMore: false,
-    loading: false,
-    lista: [],
-    lastLimit: 10,
-  };
+  // ✅ P4: Usa factory de utils para estado de paginação
+  const { createPagingState_ } = PRONTIO.features.prontuario.utils;
+  let evoPaging = createPagingState_();
 
   // ✅ P2: Usa função genérica de utils
   function setMensagemEvolucao(obj) {
@@ -76,7 +71,7 @@
           ${autor ? `<span class="evo-autor">${escapeHtml_(autor)}</span>` : ""}
           ${origem ? `<span class="evo-origem badge">${escapeHtml_(origem)}</span>` : ""}
         </div>
-        <div class="evo-texto">${String(ev.texto || "").replace(/\n/g, "<br>")}</div>
+        <div class="evo-texto">${escapeHtml_(ev.texto || "").replace(/\n/g, "<br>")}</div>
         ${botoesHTML}
       `;
 

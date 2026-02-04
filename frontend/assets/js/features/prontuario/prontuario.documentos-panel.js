@@ -40,6 +40,7 @@
     return /^[A-Z]\d{2}(\.\d{1,2})?$/.test(up) || /^[A-Z]\d{1,2}(\.\d{1,2})?$/.test(up);
   }
 
+  // ✅ P4: Usa classes CSS ao invés de estilos inline
   function ensureSuggestSlot_(wrapEl, className) {
     if (!wrapEl) return null;
     let slot = wrapEl.querySelector("." + className);
@@ -47,12 +48,6 @@
 
     slot = document.createElement("div");
     slot.className = className;
-    slot.style.marginTop = "6px";
-    slot.style.border = "1px solid var(--cor-borda-suave, #e5e7eb)";
-    slot.style.borderRadius = "10px";
-    slot.style.overflow = "hidden";
-    slot.style.display = "none";
-    slot.style.background = "var(--cor-fundo, #fff)";
     wrapEl.appendChild(slot);
     return slot;
   }
@@ -60,34 +55,26 @@
   function hideSuggestSlot_(slot) {
     if (!slot) return;
     slot.innerHTML = "";
-    slot.style.display = "none";
+    slot.classList.remove("is-visible");
   }
 
   function renderSuggestList_(slot, items, renderItemHtml, onPick) {
     if (!slot) return;
     slot.innerHTML = "";
     if (!items || !items.length) {
-      slot.style.display = "none";
+      slot.classList.remove("is-visible");
       return;
     }
 
     const ul = document.createElement("ul");
-    ul.style.listStyle = "none";
-    ul.style.margin = "0";
-    ul.style.padding = "0";
+    ul.className = "doc-suggest-list";
 
     items.slice(0, 12).forEach((it) => {
       const li = document.createElement("li");
-      li.style.borderTop = "1px solid var(--cor-borda-suave, #e5e7eb)";
 
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.style.width = "100%";
-      btn.style.textAlign = "left";
-      btn.style.padding = "10px 12px";
-      btn.style.border = "0";
-      btn.style.background = "transparent";
-      btn.style.cursor = "pointer";
+      btn.className = "doc-suggest-btn";
 
       btn.innerHTML = renderItemHtml(it);
       btn.addEventListener("click", () => onPick(it));
@@ -96,9 +83,8 @@
       ul.appendChild(li);
     });
 
-    if (ul.firstChild) ul.firstChild.style.borderTop = "0";
     slot.appendChild(ul);
-    slot.style.display = "block";
+    slot.classList.add("is-visible");
   }
 
   async function buscarCid_(q) {
@@ -142,13 +128,14 @@
         let items = [];
         try { items = await buscarCid_(q); } catch (_) { items = []; }
 
+        // ✅ P4: Usa classes CSS ao invés de estilos inline
         renderSuggestList_(
           slot,
           items,
           (it) => {
             const cid = escapeHtml_(it.cid || "");
             const desc = escapeHtml_(it.descricao || "");
-            return `<div style="font-weight:700;font-size:13px;">${cid}</div><div style="font-size:12px;color:#6b7280;margin-top:2px;">${desc}</div>`;
+            return `<div class="doc-suggest-title">${cid}</div><div class="doc-suggest-sub">${desc}</div>`;
           },
           (picked) => {
             hideSuggestSlot_(slot);
@@ -190,6 +177,7 @@
         let items = [];
         try { items = await buscarEncaminhamento_(q); } catch (_) { items = []; }
 
+        // ✅ P4: Usa classes CSS ao invés de estilos inline
         renderSuggestList_(
           slot,
           items,
@@ -198,8 +186,8 @@
             const nome = escapeHtml_(it.nomeProfissional || "");
             const tel = escapeHtml_(it.telefone || "");
             const line2 = [nome, tel].filter(Boolean).join(" • ");
-            return `<div style="font-weight:700;font-size:13px;">${enc || "(sem título)"}</div>${
-              line2 ? `<div style="font-size:12px;color:#6b7280;margin-top:2px;">${line2}</div>` : ""
+            return `<div class="doc-suggest-title">${enc || "(sem título)"}</div>${
+              line2 ? `<div class="doc-suggest-sub">${line2}</div>` : ""
             }`;
           },
           (picked) => {

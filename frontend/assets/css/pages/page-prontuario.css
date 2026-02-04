@@ -634,3 +634,73 @@ body[data-theme="dark"][data-page-id="prontuario"] .slide-panel-backdrop {
 body[data-theme="dark"][data-page-id="prontuario"] .slide-panel {
   box-shadow: -18px 0 40px rgba(0, 0, 0, 0.5);
 }
+
+/* =========================================
+   ✅ P4: DOCUMENTOS — Autocomplete Suggest Slot
+   (substitui estilos inline em JS)
+========================================= */
+
+body[data-page-id="prontuario"] .doc-suggest-slot {
+  margin-top: 6px;
+  border: 1px solid var(--cor-borda-suave, #e5e7eb);
+  border-radius: 10px;
+  overflow: hidden;
+  display: none;
+  background: var(--cor-fundo-card, #ffffff);
+}
+
+body[data-page-id="prontuario"] .doc-suggest-slot.is-visible {
+  display: block;
+}
+
+body[data-page-id="prontuario"] .doc-suggest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+body[data-page-id="prontuario"] .doc-suggest-list li {
+  border-top: 1px solid var(--cor-borda-suave, #e5e7eb);
+}
+
+body[data-page-id="prontuario"] .doc-suggest-list li:first-child {
+  border-top: 0;
+}
+
+body[data-page-id="prontuario"] .doc-suggest-btn {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+body[data-page-id="prontuario"] .doc-suggest-btn:hover {
+  background: var(--surface-soft-hover, #f3f4f6);
+}
+
+body[data-page-id="prontuario"] .doc-suggest-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--cor-texto-principal, #111827);
+}
+
+body[data-page-id="prontuario"] .doc-suggest-sub {
+  font-size: 12px;
+  color: var(--cor-texto-suave, #6b7280);
+  margin-top: 2px;
+}
+
+/* Dark theme para suggest slot */
+[data-theme="dark"] body[data-page-id="prontuario"] .doc-suggest-slot,
+body[data-theme="dark"][data-page-id="prontuario"] .doc-suggest-slot {
+  background: var(--cor-fundo-card-alt);
+  border-color: var(--cor-borda-suave);
+}
+
+[data-theme="dark"] body[data-page-id="prontuario"] .doc-suggest-btn:hover,
+body[data-theme="dark"][data-page-id="prontuario"] .doc-suggest-btn:hover {
+  background: var(--cor-fundo-suave);
+}

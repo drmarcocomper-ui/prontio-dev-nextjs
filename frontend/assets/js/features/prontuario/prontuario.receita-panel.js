@@ -3,7 +3,7 @@
   PRONTIO.features = PRONTIO.features || {};
   PRONTIO.features.prontuario = PRONTIO.features.prontuario || {};
 
-  const { qs, qsa, setBtnMais_, parseDataHora, formatIsoDateToBR_, formatTipoReceitaLabel_, escapeHtml_, sortByDateDesc_, formatDataHoraCompleta_ } =
+  const { qs, qsa, setBtnMais_, parseDataHora, formatIsoDateToBR_, formatTipoReceitaLabel_, escapeHtml_, sortByDateDesc_, formatDataHoraCompleta_, createPagingState_ } =
     PRONTIO.features.prontuario.utils;
   const { callApiData, callApiDataTry_ } = PRONTIO.features.prontuario.api;
 
@@ -33,13 +33,8 @@
     });
   }
 
-  let recPaging = {
-    btnMais: null,
-    cursor: null,
-    hasMore: false,
-    loading: false,
-    lista: [],
-  };
+  // ✅ P4: Usa factory de utils para estado de paginação
+  let recPaging = createPagingState_();
 
   function fecharReceitaPanel_() {
     if (!receitaPanel) return;
