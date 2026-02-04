@@ -281,8 +281,35 @@
       if (logoutBtn.getAttribute("data-sidebar-logout-bound") === "1") return;
       logoutBtn.setAttribute("data-sidebar-logout-bound", "1");
 
-      logoutBtn.addEventListener("click", function () {
+      logoutBtn.addEventListener("click", function (e) {
+        e.preventDefault();
         if (isMobile_()) closeDrawer();
+
+        // ✅ Implementa logout completo
+        try {
+          // 1. Limpa sessão
+          if (PRONTIO.core && PRONTIO.core.session && typeof PRONTIO.core.session.clear === "function") {
+            PRONTIO.core.session.clear();
+          }
+
+          // 2. Limpa auth (se existir)
+          if (PRONTIO.auth && typeof PRONTIO.auth.forceLogoutLocal === "function") {
+            PRONTIO.auth.forceLogoutLocal("USER_LOGOUT", { redirect: false, clearChat: true });
+          }
+
+          // 3. Limpa localStorage relacionado à sessão
+          try {
+            localStorage.removeItem("prontio.session.v1");
+            localStorage.removeItem("prontio.auth.token");
+            localStorage.removeItem("prontio.user");
+          } catch (_) {}
+
+        } catch (err) {
+          console.warn("[Sidebar] Erro ao fazer logout:", err);
+        }
+
+        // 4. Redireciona para página de login
+        window.location.href = "index.html";
       });
     }
   }
