@@ -92,7 +92,7 @@
    ========================================================= */
 
 .agenda-filtros {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 
 .filtros-row {
@@ -135,7 +135,7 @@
    ========================================================= */
 
 .agenda-resumo {
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 
 .resumo-grid {
@@ -209,7 +209,16 @@
    ========================================================= */
 
 .agenda-collapsible {
-  margin-bottom: 0.75rem;
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+
+.agenda-collapsible + .agenda-collapsible {
+  margin-top: 0.5rem;
+}
+
+.agenda-collapsible + .card {
+  margin-top: 1rem;
 }
 
 .agenda-collapsible__toggle {

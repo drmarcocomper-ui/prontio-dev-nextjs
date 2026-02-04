@@ -131,9 +131,30 @@
     return miss;
   }
 
+  // Bind colapsáveis (independente do controller)
+  function bindCollapsibles(doc) {
+    const toggles = doc.querySelectorAll(".agenda-collapsible__toggle");
+    toggles.forEach((toggle) => {
+      if (toggle.dataset.bound === "1") return;
+      toggle.dataset.bound = "1";
+
+      toggle.addEventListener("click", function () {
+        const parent = this.closest(".agenda-collapsible");
+        if (!parent) return;
+
+        const isOpen = parent.classList.contains("is-open");
+        parent.classList.toggle("is-open", !isOpen);
+        this.setAttribute("aria-expanded", !isOpen ? "true" : "false");
+      });
+    });
+  }
+
   function init(env) {
     env = env || {};
     const doc = env.document || global.document;
+
+    // Bind colapsáveis sempre (não depende do controller)
+    bindCollapsibles(doc);
 
     try {
       const dom = collectDom(doc);

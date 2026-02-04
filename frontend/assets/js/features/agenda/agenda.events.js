@@ -145,18 +145,6 @@
       if (typeof actions.fecharModalNovo === "function" && view && view.isModalVisible && view.isModalVisible(dom.modalNovo)) return actions.fecharModalNovo();
     });
 
-    // Seções colapsáveis (Filtros e Resumo)
-    const collapsibles = document.querySelectorAll(".agenda-collapsible__toggle");
-    collapsibles.forEach((toggle) => {
-      toggle.addEventListener("click", () => {
-        const parent = toggle.closest(".agenda-collapsible");
-        if (!parent) return;
-
-        const isOpen = parent.classList.contains("is-open");
-        parent.classList.toggle("is-open", !isOpen);
-        toggle.setAttribute("aria-expanded", !isOpen ? "true" : "false");
-      });
-    });
   }
 
   PRONTIO.features.agenda.events = { bindAgendaEvents };
