@@ -98,10 +98,6 @@
       return String(p?.nomeCompleto || p?.nome || "").trim();
     }
 
-    function _telPaciente_(p) {
-      return String(p?.telefone || p?.telefonePrincipal || "").trim();
-    }
-
     function tryInitPacientesPicker_(dom) {
       state.pacientesPicker = null;
 
@@ -134,9 +130,6 @@
             } else {
               state.pacienteNovo = p;
               if (dom.novoNomePaciente) dom.novoNomePaciente.value = _nomePaciente_(p);
-              if (dom.novoTelefone && !String(dom.novoTelefone.value || "").trim()) {
-                dom.novoTelefone.value = _telPaciente_(p);
-              }
             }
           }
         });

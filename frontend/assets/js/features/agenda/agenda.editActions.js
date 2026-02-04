@@ -138,9 +138,10 @@
 
       view.safeDisable && view.safeDisable(dom.btnSubmitNovo, true);
 
-      const dataStr = dom.inputData && dom.inputData.value ? String(dom.inputData.value) : "";
+      // Usa o campo de data do modal (readonly) ou fallback para inputData da página
+      const dataStr = (dom.novoData && dom.novoData.value) || (dom.inputData && dom.inputData.value) || "";
       const horaStr = dom.novoHoraInicio && dom.novoHoraInicio.value ? String(dom.novoHoraInicio.value) : "";
-      const duracao = parseInt(String(dom.novoDuracao ? dom.novoDuracao.value : "0"), 10);
+      const duracao = parseInt(String(dom.novoDuracao ? dom.novoDuracao.value : "30"), 10);
 
       if (!dataStr || !horaStr) {
         view.setFormMsg && view.setFormMsg(dom.msgNovo, "Preencha data e hora inicial.", "erro");
@@ -214,7 +215,7 @@
         setTimeout(function () {
           if (view.closeModal) view.closeModal(dom.modalNovo);
           if (dom.formNovo && typeof dom.formNovo.reset === "function") dom.formNovo.reset();
-          if (dom.novoDuracao) dom.novoDuracao.value = 15;
+          if (dom.novoDuracao) dom.novoDuracao.value = 30;
           // Limpa estado e campo do paciente
           state.pacienteNovo = null;
           if (dom.novoNomePaciente) dom.novoNomePaciente.value = "";
@@ -317,10 +318,9 @@
 
       if (dom.editNomePaciente) dom.editNomePaciente.value = String(ag?.nomeCompleto || "").trim();
 
-      if (dom.editTipo) dom.editTipo.value = ag?.tipo || "";
-      if (dom.editMotivo) dom.editMotivo.value = ag?.motivo || "";
+      if (dom.editTipo) dom.editTipo.value = ag?.tipo || "Consulta";
       if (dom.editOrigem) dom.editOrigem.value = ag?.origem || "";
-      if (dom.editCanal) dom.editCanal.value = ag?.canal || "";
+      if (dom.editMotivo) dom.editMotivo.value = ag?.motivo || "";
       if (dom.editPermiteEncaixe) dom.editPermiteEncaixe.checked = ag && ag.permite_encaixe === true;
 
       view.setFormMsg && view.setFormMsg(dom.msgEditar, "", "");

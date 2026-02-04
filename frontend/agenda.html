@@ -356,6 +356,12 @@
           <div id="novo-agendamento-mensagem" class="form-message"></div>
 
           <div class="form-grid">
+            <!-- Data e Hora -->
+            <div class="form-group">
+              <label for="novo-data">Data</label>
+              <input type="date" id="novo-data" readonly tabindex="-1" class="input-readonly" />
+            </div>
+
             <div class="form-group">
               <label for="novo-hora-inicio">Hora início</label>
               <input type="time" id="novo-hora-inicio" required />
@@ -363,9 +369,10 @@
 
             <div class="form-group">
               <label for="novo-duracao">Duração (min)</label>
-              <input type="number" id="novo-duracao" min="5" step="5" value="15" />
+              <input type="number" id="novo-duracao" min="5" max="480" step="5" value="30" />
             </div>
 
+            <!-- Paciente -->
             <div class="form-group form-group--full">
               <label for="novo-nome-paciente">Paciente</label>
               <div class="input-with-actions">
@@ -377,37 +384,44 @@
               </div>
             </div>
 
+            <!-- Tipo e Origem -->
+            <div class="form-group">
+              <label for="novo-tipo">Tipo</label>
+              <select id="novo-tipo">
+                <option value="Consulta" selected>Consulta</option>
+                <option value="Retorno">Retorno</option>
+                <option value="Exame">Exame</option>
+                <option value="Procedimento">Procedimento</option>
+                <option value="Avaliação">Avaliação</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="novo-origem">Origem</label>
+              <select id="novo-origem">
+                <option value="" selected>Não informado</option>
+                <option value="Indicação">Indicação</option>
+                <option value="Convênio">Convênio</option>
+                <option value="Site">Site</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="Telefone">Telefone</option>
+                <option value="Presencial">Presencial</option>
+              </select>
+            </div>
+
+            <!-- Motivo -->
+            <div class="form-group form-group--full">
+              <label for="novo-motivo">Motivo</label>
+              <textarea id="novo-motivo" rows="2" placeholder="Motivo do agendamento (opcional)"></textarea>
+            </div>
+
+            <!-- Encaixe -->
             <div class="form-group form-group--full">
               <label class="checkbox-row" for="novo-permite-encaixe">
                 <input type="checkbox" id="novo-permite-encaixe" />
                 <span>Permitir encaixe (pode sobrepor consultas)</span>
               </label>
               <small class="hint-text">Bloqueios de horário continuam impedindo agendamentos.</small>
-            </div>
-
-            <div class="form-group">
-              <label for="novo-telefone">Telefone</label>
-              <input type="tel" id="novo-telefone" placeholder="(99) 99999-9999" autocomplete="off" />
-            </div>
-
-            <div class="form-group">
-              <label for="novo-tipo">Tipo</label>
-              <input type="text" id="novo-tipo" placeholder="Consulta, retorno, etc." autocomplete="off" />
-            </div>
-
-            <div class="form-group form-group--full">
-              <label for="novo-motivo">Motivo</label>
-              <textarea id="novo-motivo" rows="2" placeholder="Motivo do agendamento"></textarea>
-            </div>
-
-            <div class="form-group">
-              <label for="novo-origem">Origem</label>
-              <input type="text" id="novo-origem" placeholder="Indicação, convênio, etc." autocomplete="off" />
-            </div>
-
-            <div class="form-group">
-              <label for="novo-canal">Canal</label>
-              <input type="text" id="novo-canal" placeholder="Telefone, WhatsApp, etc." autocomplete="off" />
             </div>
           </div>
 
@@ -433,6 +447,7 @@
           <div id="editar-agendamento-mensagem" class="form-message"></div>
 
           <div class="form-grid">
+            <!-- Data e Hora -->
             <div class="form-group">
               <label for="edit-data">Data</label>
               <input type="date" id="edit-data" required />
@@ -445,9 +460,10 @@
 
             <div class="form-group">
               <label for="edit-duracao">Duração (min)</label>
-              <input type="number" id="edit-duracao" min="5" step="5" value="15" />
+              <input type="number" id="edit-duracao" min="5" max="480" step="5" value="30" />
             </div>
 
+            <!-- Paciente -->
             <div class="form-group form-group--full">
               <label for="edit-nome-paciente">Paciente</label>
               <div class="input-with-actions">
@@ -459,32 +475,44 @@
               </div>
             </div>
 
+            <!-- Tipo e Origem -->
+            <div class="form-group">
+              <label for="edit-tipo">Tipo</label>
+              <select id="edit-tipo">
+                <option value="Consulta">Consulta</option>
+                <option value="Retorno">Retorno</option>
+                <option value="Exame">Exame</option>
+                <option value="Procedimento">Procedimento</option>
+                <option value="Avaliação">Avaliação</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="edit-origem">Origem</label>
+              <select id="edit-origem">
+                <option value="">Não informado</option>
+                <option value="Indicação">Indicação</option>
+                <option value="Convênio">Convênio</option>
+                <option value="Site">Site</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="Telefone">Telefone</option>
+                <option value="Presencial">Presencial</option>
+              </select>
+            </div>
+
+            <!-- Motivo -->
+            <div class="form-group form-group--full">
+              <label for="edit-motivo">Motivo</label>
+              <textarea id="edit-motivo" rows="2" placeholder="Motivo do agendamento (opcional)"></textarea>
+            </div>
+
+            <!-- Encaixe -->
             <div class="form-group form-group--full">
               <label class="checkbox-row" for="edit-permite-encaixe">
                 <input type="checkbox" id="edit-permite-encaixe" />
                 <span>Permitir encaixe (pode sobrepor consultas)</span>
               </label>
               <small class="hint-text">Bloqueios de horário continuam impedindo agendamentos.</small>
-            </div>
-
-            <div class="form-group">
-              <label for="edit-tipo">Tipo</label>
-              <input type="text" id="edit-tipo" autocomplete="off" />
-            </div>
-
-            <div class="form-group form-group--full">
-              <label for="edit-motivo">Motivo</label>
-              <textarea id="edit-motivo" rows="2"></textarea>
-            </div>
-
-            <div class="form-group">
-              <label for="edit-origem">Origem</label>
-              <input type="text" id="edit-origem" autocomplete="off" />
-            </div>
-
-            <div class="form-group">
-              <label for="edit-canal">Canal</label>
-              <input type="text" id="edit-canal" autocomplete="off" />
             </div>
           </div>
 

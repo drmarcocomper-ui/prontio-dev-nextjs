@@ -184,6 +184,10 @@
     // Modais (UI pura): Novo + Bloqueio
     // -------------------------
     function abrirModalNovo(horaPre) {
+      // Preenche a data do modal com a data selecionada na página
+      if (state.dom?.novoData && state.dom?.inputData) {
+        state.dom.novoData.value = state.dom.inputData.value || FX().formatDateToInput(new Date());
+      }
       if (horaPre && state.dom?.novoHoraInicio) state.dom.novoHoraInicio.value = horaPre;
       view.openModal?.(state.dom?.modalNovo, state.dom?.novoHoraInicio || state.dom?.novoNomePaciente);
       view.setFormMsg?.(state.dom?.msgNovo, "", "");
@@ -238,7 +242,6 @@
       } else {
         state.pacienteNovo = null;
         if (state.dom?.novoNomePaciente) state.dom.novoNomePaciente.value = "";
-        if (state.dom?.novoTelefone) state.dom.novoTelefone.value = "";
       }
     }
 

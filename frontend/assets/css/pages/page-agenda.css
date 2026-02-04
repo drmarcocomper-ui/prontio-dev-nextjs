@@ -1071,3 +1071,22 @@
     transform: rotate(360deg);
   }
 }
+
+/* =========================================================
+   INPUT READONLY (campo de data no modal)
+   ========================================================= */
+
+.input-readonly,
+input[readonly].input-readonly {
+  background-color: var(--cor-fundo-suave, #f5f5f5);
+  color: var(--cor-texto-suave, #6b7280);
+  cursor: not-allowed;
+  border-color: var(--cor-borda-suave, #e5e7eb);
+  opacity: 0.8;
+}
+
+[data-theme="dark"] .input-readonly,
+[data-theme="dark"] input[readonly].input-readonly {
+  background-color: var(--cor-fundo-card-alt, #1f2937);
+  color: var(--cor-texto-suave, #9ca3af);
+}
