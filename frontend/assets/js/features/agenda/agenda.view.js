@@ -432,12 +432,18 @@
       // ✅ EVENT DELEGATION: Um único listener para todos os eventos
       tbody.addEventListener("click", (e) => {
         const target = e.target;
-        const btn = target.closest("[data-action]");
         const tr = target.closest("tr");
 
         if (!tr) return;
 
-        // Ação em botão
+        // ✅ Clique em linha vazia (novo agendamento) - verifica primeiro
+        if (tr.dataset.action === "novo" && tr.dataset.hora) {
+          if (typeof cb.onNovo === "function") cb.onNovo(tr.dataset.hora);
+          return;
+        }
+
+        // Ação em botão (não em TR)
+        const btn = target.closest("button[data-action], select[data-action]");
         if (btn) {
           const action = btn.dataset.action;
           const idAgenda = tr.dataset.idAgenda || "";
@@ -464,12 +470,6 @@
             e.stopPropagation();
             if (typeof cb.onDesbloquear === "function") cb.onDesbloquear(idAgenda, tr);
           }
-          return;
-        }
-
-        // Clique em linha vazia (novo agendamento)
-        if (tr.dataset.action === "novo" && tr.dataset.hora) {
-          if (typeof cb.onNovo === "function") cb.onNovo(tr.dataset.hora);
         }
       });
 
