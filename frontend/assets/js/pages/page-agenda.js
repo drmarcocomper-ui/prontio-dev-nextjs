@@ -1,3 +1,8 @@
+/**
+ * PRONTIO - page-agenda.js - OTIMIZADO
+ * ✅ Sem polling (execução direta após bootstrap)
+ * ✅ Mais rápido e eficiente
+ */
 (function (global, document) {
   "use strict";
 
@@ -14,61 +19,25 @@
       : null;
   }
 
-  function dumpLoadedScripts_() {
-    try {
-      return Array.from(document.querySelectorAll("script[src]")).map(function (s) {
-        return s.getAttribute("src");
-      });
-    } catch (_) {
-      return [];
-    }
-  }
-
-  function dumpAgendaState_() {
-    try {
-      return {
-        hasFeatures: !!PRONTIO.features,
-        hasAgenda: !!(PRONTIO.features && PRONTIO.features.agenda),
-        agendaKeys: PRONTIO.features && PRONTIO.features.agenda
-          ? Object.keys(PRONTIO.features.agenda)
-          : []
-      };
-    } catch (_) {
-      return {};
-    }
-  }
-
+  /**
+   * ✅ Inicializa agenda DIRETAMENTE (sem polling)
+   * Chamado pelo bootstrap após carregar todos os scripts
+   */
   function initAgendaPage() {
     if (PRONTIO._pageInited.agenda === true) return;
     PRONTIO._pageInited.agenda = true;
 
-    let attempt = 0;
-    const maxAttempts = 25; // ~2.5s
+    const initFn = getEntryInit_();
 
-    function tick() {
-      attempt += 1;
-      const initFn = getEntryInit_();
-
-      if (initFn) {
-        try {
-          initFn({ document: document, window: global });
-        } catch (e) {
-          console.error("[PRONTIO][Agenda] Erro ao executar agenda.entry.init:", e);
-        }
-        return;
+    if (initFn) {
+      try {
+        initFn({ document: document, window: global });
+      } catch (e) {
+        console.error("[PRONTIO][Agenda] Erro ao executar agenda.entry.init:", e);
       }
-
-      if (attempt >= maxAttempts) {
-        console.error("[PRONTIO][Agenda] agenda.entry.init NÃO encontrado após tentativas.");
-        console.error("[PRONTIO][Agenda] Estado PRONTIO.features.agenda:", dumpAgendaState_());
-        console.error("[PRONTIO][Agenda] Scripts carregados no DOM:", dumpLoadedScripts_());
-        return;
-      }
-
-      setTimeout(tick, 100);
+    } else {
+      console.error("[PRONTIO][Agenda] agenda.entry.init não encontrado. Verifique se bootstrap.load() foi chamado.");
     }
-
-    tick();
   }
 
   PRONTIO.pages.agenda = PRONTIO.pages.agenda || {};
@@ -80,9 +49,7 @@
     }
   } catch (_) {}
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initAgendaPage);
-  } else {
-    initAgendaPage();
-  }
+  // ✅ NÃO auto-inicializa aqui - deixa o bootstrap.js controlar
+  // O bootstrap.load() carrega os scripts e depois chama page.init()
+
 })(window, document);

@@ -1,19 +1,14 @@
 // frontend/assets/js/features/agenda/agenda.bootstrap.js
 /**
- * PRONTIO — Agenda Bootstrap Loader (Front)
+ * PRONTIO — Agenda Bootstrap Loader (Front) - OTIMIZADO
  * ------------------------------------------------------------
- * Responsabilidade:
- * - Carregar scripts da Agenda (split) em ordem determinística.
+ * ✅ Carregamento PARALELO por grupos (muito mais rápido)
+ * ✅ Mantém ordem de dependências
  *
- * Regras:
- * - Não chama API
- * - Não inicializa a página automaticamente
- * - Apenas garante que os módulos estejam carregados antes do entry/controller rodarem
- *
- * Uso sugerido:
- * - Incluir este arquivo cedo (antes de page-agenda.js), e chamar:
- *   PRONTIO.features.agenda.bootstrap.load().then(() => { ... })
- * - Ou chamar dentro do seu main.js / loader central quando detectar page "agenda".
+ * Grupos de carregamento:
+ * 1. Core (paralelo): formatters, view, api, state
+ * 2. Módulos (paralelo): pacientesCache, filtros, loaders, uiActions, editActions
+ * 3. Entry (sequencial): controller → events → entry
  */
 
 (function (global, document) {
@@ -28,7 +23,6 @@
     return new Promise((resolve, reject) => {
       const s = document.createElement("script");
       s.src = src;
-      s.async = false; // mantém ordem
       s.onload = () => resolve(src);
       s.onerror = () => reject(new Error("Falha ao carregar: " + src));
       document.head.appendChild(s);
@@ -60,7 +54,7 @@
   }
 
   /**
-   * Carrega scripts da Agenda em ordem.
+   * Carrega scripts da Agenda em PARALELO por grupos.
    * @param {Object} opts
    * @param {string} [opts.base="/frontend/assets/js/"] base path
    * @returns {Promise<{loaded:string[], skipped:boolean}>}
@@ -72,31 +66,38 @@
     // Se já estiver tudo carregado, não faz nada.
     if (isLoaded_()) return { loaded: [], skipped: true };
 
-    const files = [
-      // core da feature
+    const loaded = [];
+
+    // ✅ GRUPO 1: Core (paralelo) - não têm dependências entre si
+    const coreFiles = [
       "features/agenda/agenda.formatters.js",
       "features/agenda/agenda.view.js",
       "features/agenda/agenda.api.js",
-      "features/agenda/agenda.state.js",
+      "features/agenda/agenda.state.js"
+    ];
+    await Promise.all(coreFiles.map(f => loadScript_(base + f)));
+    loaded.push(...coreFiles);
 
-      // split modules
+    // ✅ GRUPO 2: Módulos (paralelo) - dependem do core mas não entre si
+    const moduleFiles = [
       "features/agenda/agenda.pacientesCache.js",
       "features/agenda/agenda.filtros.js",
       "features/agenda/agenda.loaders.js",
       "features/agenda/agenda.uiActions.js",
-      "features/agenda/agenda.editActions.js",
+      "features/agenda/agenda.editActions.js"
+    ];
+    await Promise.all(moduleFiles.map(f => loadScript_(base + f)));
+    loaded.push(...moduleFiles);
 
-      // controller + events + entry
+    // ✅ GRUPO 3: Entry points (sequencial) - dependem de tudo acima
+    const entryFiles = [
       "features/agenda/agenda.controller.js",
       "features/agenda/agenda.events.js",
       "features/agenda/agenda.entry.js"
     ];
-
-    const loaded = [];
-    for (let i = 0; i < files.length; i++) {
-      const src = base + files[i];
-      await loadScript_(src);
-      loaded.push(src);
+    for (const f of entryFiles) {
+      await loadScript_(base + f);
+      loaded.push(f);
     }
 
     return { loaded, skipped: false };
