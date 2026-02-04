@@ -341,20 +341,26 @@
     openModalById_("modalUsuario");
   }
 
+  // ✅ P0: Adicionado try-catch para evitar erros não tratados
   function openEdit_(u) {
-    showMsg_("modalUsuarioMsg", "", "info");
-    if ($("modalUsuarioTitle")) $("modalUsuarioTitle").textContent = "Editar usuário";
+    try {
+      showMsg_("modalUsuarioMsg", "", "info");
+      if ($("modalUsuarioTitle")) $("modalUsuarioTitle").textContent = "Editar usuário";
 
-    if ($("usuarioId")) $("usuarioId").value = u.id || "";
-    if ($("usuarioNome")) $("usuarioNome").value = u.nome || u.nomeCompleto || "";
-    if ($("usuarioLogin")) $("usuarioLogin").value = u.login || "";
-    if ($("usuarioEmail")) $("usuarioEmail").value = u.email || "";
-    if ($("usuarioPerfil")) $("usuarioPerfil").value = u.perfil || "secretaria";
-    if ($("usuarioAtivo")) $("usuarioAtivo").value = u.ativo ? "true" : "false";
-    if ($("usuarioSenha")) $("usuarioSenha").value = "";
+      if ($("usuarioId")) $("usuarioId").value = u.id || "";
+      if ($("usuarioNome")) $("usuarioNome").value = u.nome || u.nomeCompleto || "";
+      if ($("usuarioLogin")) $("usuarioLogin").value = u.login || "";
+      if ($("usuarioEmail")) $("usuarioEmail").value = u.email || "";
+      if ($("usuarioPerfil")) $("usuarioPerfil").value = u.perfil || "secretaria";
+      if ($("usuarioAtivo")) $("usuarioAtivo").value = u.ativo ? "true" : "false";
+      if ($("usuarioSenha")) $("usuarioSenha").value = "";
 
-    setSenhaMode_(false);
-    openModalById_("modalUsuario");
+      setSenhaMode_(false);
+      openModalById_("modalUsuario");
+    } catch (err) {
+      console.error("[Usuarios] Erro ao abrir modal de edição:", err);
+      showMsg_("usuariosMsg", "Erro ao abrir formulário de edição.", "error");
+    }
   }
 
   async function saveUser_() {
@@ -410,17 +416,27 @@
   }
 
   // ---------- modal: reset senha ----------
+  // ✅ P0: Adicionado try-catch para evitar erros não tratados
+  // ✅ P4: Dados do usuário escapados para segurança
   function openReset_(u) {
-    showMsg_("modalResetMsg", "", "info");
+    try {
+      showMsg_("modalResetMsg", "", "info");
 
-    if ($("resetUserId")) $("resetUserId").value = u.id || "";
-    if ($("resetUserLabel")) $("resetUserLabel").textContent =
-      `${u.nome || u.nomeCompleto || "Usuário"} (${u.login || u.email || u.id})`;
+      if ($("resetUserId")) $("resetUserId").value = u.id || "";
 
-    if ($("resetNovaSenha")) $("resetNovaSenha").value = "";
-    if ($("resetAtivar")) $("resetAtivar").checked = true;
+      // ✅ P4: Escapa dados do usuário antes de exibir
+      const displayName = escHtml_(u.nome || u.nomeCompleto || "Usuário");
+      const displayId = escHtml_(u.login || u.email || u.id || "");
+      if ($("resetUserLabel")) $("resetUserLabel").textContent = `${displayName} (${displayId})`;
 
-    openModalById_("modalResetSenha");
+      if ($("resetNovaSenha")) $("resetNovaSenha").value = "";
+      if ($("resetAtivar")) $("resetAtivar").checked = true;
+
+      openModalById_("modalResetSenha");
+    } catch (err) {
+      console.error("[Usuarios] Erro ao abrir modal de reset:", err);
+      showMsg_("usuariosMsg", "Erro ao abrir formulário de reset de senha.", "error");
+    }
   }
 
   async function confirmReset_() {
@@ -457,13 +473,28 @@
   }
 
   // ---------- actions ----------
+  // ✅ P0: try-catch envolvendo confirm() e operações
+  // ✅ P4: Dados do usuário escapados no confirm
   async function toggleAtivo_(u) {
     if (IN_FLIGHT) return;
 
     showMsg_("usuariosMsg", "", "info");
 
     const novoAtivo = !u.ativo;
-    const ok = global.confirm(`Confirma ${novoAtivo ? "ATIVAR" : "DESATIVAR"} o usuário "${u.nome || u.nomeCompleto || u.id}"?`);
+
+    // ✅ P4: Escapa dados do usuário antes de usar no confirm
+    const displayName = escHtml_(u.nome || u.nomeCompleto || u.id || "usuário");
+
+    // ✅ P0: Envolve confirm em try-catch
+    let ok = false;
+    try {
+      ok = global.confirm(`Confirma ${novoAtivo ? "ATIVAR" : "DESATIVAR"} o usuário "${displayName}"?`);
+    } catch (err) {
+      console.error("[Usuarios] Erro no diálogo de confirmação:", err);
+      showMsg_("usuariosMsg", "Erro ao exibir confirmação.", "error");
+      return;
+    }
+
     if (!ok) return;
 
     setInFlight_(true);
@@ -480,10 +511,12 @@
       showMsg_("usuariosMsg", `Usuário ${novoAtivo ? "ativado" : "desativado"} com sucesso.`, "success");
       await refresh_();
     } catch (e) {
+      // ✅ P1: Mensagem de erro mais detalhada
+      const errorContext = novoAtivo ? "ativar" : "desativar";
       if (isAuthOrPermissionError_(e)) {
         showMsg_("usuariosMsg", e.message || "Sem permissão para esta ação.", "warning");
       } else {
-        showMsg_("usuariosMsg", e && e.message ? e.message : "Falha ao atualizar status.", "error");
+        showMsg_("usuariosMsg", e && e.message ? e.message : `Falha ao ${errorContext} usuário.`, "error");
       }
     } finally {
       setInFlight_(false);
@@ -507,12 +540,17 @@
     const busca = $("usuariosBusca");
     const filtroAtivo = $("usuariosFiltroAtivo");
 
+    // ✅ P0: Corrige race condition com guard de versão
     if (busca) {
       let t = null;
+      let searchVersion = 0; // Guard para evitar renders com estado stale
       busca.addEventListener("input", (ev) => {
         const v = String(ev.target.value || "");
         if (t) clearTimeout(t);
+        const myVersion = ++searchVersion;
         t = setTimeout(() => {
+          // ✅ P0: Só renderiza se esta é a versão mais recente
+          if (myVersion !== searchVersion) return;
           FILTER_TEXT = v;
           render_();
         }, 120);
