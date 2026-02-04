@@ -10,7 +10,7 @@
     if (pageId && pageId !== "prontuario") return;
   } catch (_) {}
 
-  const { qs, trapFocusInPanel_ } = PRONTIO.features.prontuario.utils;
+  const { qs, trapFocusInPanel_, showToast_ } = PRONTIO.features.prontuario.utils;
   const { carregarContextoProntuario } = PRONTIO.features.prontuario.context;
   const { carregarResumoPaciente_ } = PRONTIO.features.prontuario.paciente;
 
@@ -26,7 +26,8 @@
       if (ctx.idAgenda) base.searchParams.set("agendaId", ctx.idAgenda);
       global.location.href = base.toString();
     } catch (e) {
-      global.alert("Não foi possível abrir Exames.");
+      // ✅ P1: Usa toast em vez de alert()
+      showToast_("Não foi possível abrir Exames.");
     }
   }
 

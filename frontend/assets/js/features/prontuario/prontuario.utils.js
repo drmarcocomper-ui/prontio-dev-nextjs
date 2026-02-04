@@ -119,6 +119,52 @@
     };
   }
 
+  // ============================================================
+  // ✅ P1: Helper para exibir toast (substitui alert())
+  // ============================================================
+  function showToast_(message, type) {
+    // Usa widget-toast se disponível
+    if (PRONTIO.widgets && typeof PRONTIO.widgets.showToast === "function") {
+      PRONTIO.widgets.showToast(message, type || "error");
+      return;
+    }
+    // Fallback: usa setMensagem_ se houver elemento de mensagem visível
+    const msgSelectors = ["#mensagemEvolucao", "#mensagemDocumentos", "#mensagemReceita"];
+    for (const sel of msgSelectors) {
+      const el = qs(sel);
+      if (el) {
+        setMensagem_(sel, { tipo: type === "success" ? "sucesso" : "erro", texto: message });
+        return;
+      }
+    }
+    // Fallback final: toast inline
+    const existingToast = document.getElementById("prontuario-fallback-toast");
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement("div");
+    toast.id = "prontuario-fallback-toast";
+    toast.className = "prontuario-fallback-toast prontuario-fallback-toast--" + (type || "error");
+    toast.textContent = message;
+    toast.setAttribute("role", "alert");
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add("prontuario-fallback-toast--fade");
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  // ✅ P1: Helper para extrair mensagem de erro
+  function extractErrorMessage_(error, fallback) {
+    if (!error) return fallback || "Erro desconhecido.";
+    if (typeof error === "string") return error;
+    if (error.message && typeof error.message === "string") {
+      return error.message;
+    }
+    return fallback || String(error);
+  }
+
   PRONTIO.features.prontuario.utils = {
     qs,
     qsa,
@@ -132,5 +178,7 @@
     setMensagem_,
     formatDataHoraCompleta_,
     createPagingState_,
+    showToast_,
+    extractErrorMessage_,
   };
 })(window, document);

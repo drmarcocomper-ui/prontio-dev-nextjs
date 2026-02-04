@@ -3,7 +3,7 @@
   PRONTIO.features = PRONTIO.features || {};
   PRONTIO.features.prontuario = PRONTIO.features.prontuario || {};
 
-  const { qs, qsa, escapeHtml_, setMensagem_ } = PRONTIO.features.prontuario.utils;
+  const { qs, qsa, escapeHtml_, setMensagem_, showToast_ } = PRONTIO.features.prontuario.utils;
   const { callApiDataTry_ } = PRONTIO.features.prontuario.api;
 
   let documentosPanel = null;
@@ -254,7 +254,8 @@
   function abrirDocumentosPanel_() {
     documentosPanel = documentosPanel || qs("#documentosPanel");
     if (!documentosPanel) {
-      global.alert("Painel de documentos não encontrado no HTML (#documentosPanel).");
+      // ✅ P1: Usa toast em vez de alert()
+      showToast_("Painel de documentos não encontrado no HTML.");
       return;
     }
 

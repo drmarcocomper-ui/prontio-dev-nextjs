@@ -3,7 +3,7 @@
   PRONTIO.features = PRONTIO.features || {};
   PRONTIO.features.prontuario = PRONTIO.features.prontuario || {};
 
-  const { qs, qsa, setBtnMais_, parseDataHora, formatIsoDateToBR_, formatTipoReceitaLabel_, escapeHtml_, sortByDateDesc_, formatDataHoraCompleta_, createPagingState_ } =
+  const { qs, qsa, setBtnMais_, parseDataHora, formatIsoDateToBR_, formatTipoReceitaLabel_, escapeHtml_, sortByDateDesc_, formatDataHoraCompleta_, createPagingState_, showToast_, extractErrorMessage_ } =
     PRONTIO.features.prontuario.utils;
   const { callApiData, callApiDataTry_ } = PRONTIO.features.prontuario.api;
 
@@ -54,7 +54,8 @@
   function abrirReceitaPanel_() {
     receitaPanel = receitaPanel || qs("#receitaPanel");
     if (!receitaPanel) {
-      global.alert("Painel de receita não encontrado no HTML (#receitaPanel).");
+      // ✅ P1: Usa toast em vez de alert()
+      showToast_("Painel de receita não encontrado no HTML.");
       return;
     }
 
@@ -427,10 +428,18 @@
     ev.preventDefault();
 
     const idPaciente = String(ctx.idPaciente || ctx.ID_Paciente || "").trim();
-    if (!idPaciente) return global.alert("Paciente não identificado.");
+    if (!idPaciente) {
+      // ✅ P1: Usa toast em vez de alert()
+      showToast_("Paciente não identificado.");
+      return;
+    }
 
     const itens = collectItensFromCards_();
-    if (!itens.length) return global.alert("Informe ao menos um medicamento.");
+    if (!itens.length) {
+      // ✅ P1: Usa toast em vez de alert()
+      showToast_("Informe ao menos um medicamento.");
+      return;
+    }
 
     const payload = {
       idPaciente: idPaciente,
@@ -451,7 +460,8 @@
       resp = await callApiData({ action: acao, payload: payload });
     } catch (err) {
       console.error("[PRONTIO] Erro ao salvar receita:", err);
-      global.alert("Erro ao salvar receita: " + (err && err.message ? err.message : String(err || "Erro desconhecido")));
+      // ✅ P1: Usa toast em vez de alert()
+      showToast_("Erro ao salvar receita: " + extractErrorMessage_(err));
       return; // ✅ Não limpa formulário se falhou
     }
 
@@ -465,7 +475,8 @@
         const pdf = await callApiData({ action: "Receita.GerarPdf", payload: { idReceita } });
         const win = global.open("", "_blank");
         if (!win) {
-          global.alert("Pop-up bloqueado. Libere para imprimir a receita.");
+          // ✅ P1: Usa toast em vez de alert()
+          showToast_("Pop-up bloqueado. Libere para imprimir a receita.", "warning");
         } else {
           win.document.open();
           win.document.write(pdf && pdf.html ? pdf.html : "");
@@ -473,7 +484,8 @@
         }
       } catch (pdfErr) {
         console.warn("[PRONTIO] Erro ao gerar PDF da receita:", pdfErr);
-        global.alert("Receita salva, mas ocorreu um erro ao gerar o PDF.");
+        // ✅ P1: Usa toast em vez de alert()
+        showToast_("Receita salva, mas ocorreu um erro ao gerar o PDF.", "warning");
       }
     }
 
@@ -532,7 +544,8 @@
 
   async function abrirPdfReceita(idReceita) {
     if (!idReceita) {
-      global.alert("ID da receita não encontrado.");
+      // ✅ P1: Usa toast em vez de alert()
+      showToast_("ID da receita não encontrado.");
       return;
     }
 
@@ -547,7 +560,8 @@
 
       const win = global.open("", "_blank");
       if (!win) {
-        global.alert("Não foi possível abrir a janela de impressão (pop-up bloqueado?).");
+        // ✅ P1: Usa toast em vez de alert()
+        showToast_("Não foi possível abrir a janela de impressão (pop-up bloqueado?).", "warning");
         return;
       }
 
@@ -556,7 +570,8 @@
       win.document.close();
       win.focus();
     } catch (err) {
-      global.alert("Erro ao abrir o PDF da receita:\n\n" + (err && err.message ? err.message : String(err || "")));
+      // ✅ P1: Usa toast em vez de alert()
+      showToast_("Erro ao abrir o PDF da receita: " + extractErrorMessage_(err));
     }
   }
 
