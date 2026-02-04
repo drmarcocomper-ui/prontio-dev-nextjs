@@ -19,9 +19,10 @@
   async function handleSubmit(ev) {
     ev.preventDefault();
 
-    const senhaAtual = (qs("senhaAtual") && qs("senhaAtual").value) ? qs("senhaAtual").value : "";
-    const novaSenha = (qs("novaSenha") && qs("novaSenha").value) ? qs("novaSenha").value : "";
-    const novaSenha2 = (qs("novaSenha2") && qs("novaSenha2").value) ? qs("novaSenha2").value : "";
+    // ✅ P4: Simplificado - evita chamadas repetidas a qs()
+    const senhaAtual = qs("senhaAtual")?.value || "";
+    const novaSenha = qs("novaSenha")?.value || "";
+    const novaSenha2 = qs("novaSenha2")?.value || "";
 
     if (!senhaAtual || !novaSenha) {
       showMessage("Informe a senha atual e a nova senha.", "erro");

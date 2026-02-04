@@ -153,7 +153,8 @@
 #loginCapsLockHint {
   margin-top: 4px;
   font-size: 12px;
-  color: #f59e0b;
+  /* ✅ P3: Usa variável CSS em vez de cor hardcoded */
+  color: var(--cor-aviso, #f59e0b);
 }
 
 /* =====================================
@@ -199,4 +200,53 @@
   .login-links {
     justify-content: flex-start;
   }
+}
+
+/* =====================================
+   ✅ P3: Dark Theme Overrides
+===================================== */
+[data-theme="dark"] .login-page {
+  background: var(--cor-fundo-pagina, #0f172a);
+}
+
+[data-theme="dark"] .login-card {
+  background: var(--cor-fundo-card, #1e293b);
+  border-color: var(--cor-borda-suave, #334155);
+}
+
+[data-theme="dark"] .login-title {
+  color: var(--cor-texto-principal, #e2e8f0);
+}
+
+[data-theme="dark"] .login-subtitle {
+  color: var(--cor-texto-secundario, #94a3b8);
+}
+
+[data-theme="dark"] .login-form label {
+  color: var(--cor-texto-secundario, #94a3b8);
+}
+
+[data-theme="dark"] .login-form input[type="text"],
+[data-theme="dark"] .login-form input[type="password"],
+[data-theme="dark"] .login-form input[type="email"],
+[data-theme="dark"] .login-form input[type="search"] {
+  background: var(--cor-fundo-card-alt, #0f172a);
+  border-color: var(--cor-borda-suave, #334155);
+  color: var(--cor-texto-principal, #e2e8f0);
+}
+
+[data-theme="dark"] .login-form input::placeholder {
+  color: var(--cor-texto-suave, #64748b);
+}
+
+[data-theme="dark"] .login-links .link-muted {
+  color: var(--cor-texto-secundario, #94a3b8);
+}
+
+[data-theme="dark"] .password-field .btn.btn-link {
+  color: var(--cor-texto-secundario, #94a3b8);
+}
+
+[data-theme="dark"] .password-field .btn.btn-link:hover {
+  background: rgba(255, 255, 255, 0.08);
 }

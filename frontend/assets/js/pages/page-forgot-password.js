@@ -159,6 +159,16 @@
 
     setBusy_(true, "Enviando...");
 
+    // ✅ P2: Lógica de cooldown extraída para evitar duplicação
+    function applyCooldownAndShowSuccess_() {
+      showMsg_(
+        "Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.",
+        "success"
+      );
+      const newUntil = nowMs_() + UX.COOLDOWN_SECONDS * 1000;
+      setCooldownUntil_(newUntil);
+    }
+
     try {
       assertApi_();
 
@@ -168,26 +178,11 @@
       });
 
       // mensagem genérica (não vaza existência)
-      showMsg_(
-        "Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.",
-        "success"
-      );
-
-      // cooldown anti-spam
-      const newUntil = nowMs_() + UX.COOLDOWN_SECONDS * 1000;
-      setCooldownUntil_(newUntil);
-      startCooldownUI_();
+      applyCooldownAndShowSuccess_();
 
     } catch (e) {
-      // Mesmo no erro, mantém mensagem genérica
-      showMsg_(
-        "Se existir uma conta válida, você receberá um e-mail com instruções em alguns minutos.",
-        "success"
-      );
-
-      const newUntil = nowMs_() + UX.COOLDOWN_SECONDS * 1000;
-      setCooldownUntil_(newUntil);
-      startCooldownUI_();
+      // Mesmo no erro, mantém mensagem genérica (não vaza existência)
+      applyCooldownAndShowSuccess_();
     } finally {
       const until2 = getCooldownUntil_();
       const inCooldown = until2 && until2 > nowMs_();
