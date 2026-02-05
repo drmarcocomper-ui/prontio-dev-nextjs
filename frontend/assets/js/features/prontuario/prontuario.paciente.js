@@ -41,8 +41,8 @@
       const plano = pac && (pac.planoSaude || pac.convenio || pac.PlanoSaude || pac.Convenio || pac.plano);
       const carteirinha = pac && (pac.carteirinha || pac.numeroCarteirinha || pac.NumeroCarteirinha || pac.Carteirinha);
 
-      // Telefone para WhatsApp
-      const telefone = pac && (pac.telefone1 || pac.telefone || pac.Telefone1 || pac.Telefone || pac.celular || pac.Celular);
+      // Telefone para WhatsApp (telefonePrincipal é o campo oficial do backend)
+      const telefone = pac && (pac.telefonePrincipal || pac.telefone1 || pac.telefone || pac.Telefone1 || pac.Telefone || pac.celular || pac.Celular);
       ctx.telefone = telefone ? String(telefone).trim() : "";
 
       ctx.nomeCompleto = String(nome || "").trim() || ctx.nomeCompleto || "—";
