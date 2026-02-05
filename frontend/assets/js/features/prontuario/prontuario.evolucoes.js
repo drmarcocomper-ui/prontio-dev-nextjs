@@ -310,20 +310,9 @@
 
         const templateNome = anamnese.nomeTemplate || (anamnese.dados && anamnese.dados.titulo) || "Anamnese";
 
-        let resumo = "";
-        // Formato simplificado (texto) ou legado (queixaPrincipal)
-        const textoResumo = anamnese.dados && (anamnese.dados.texto || anamnese.dados.queixaPrincipal);
-        if (textoResumo) {
-          resumo = String(textoResumo).substring(0, 80);
-          if (textoResumo.length > 80) resumo += "...";
-        }
-
         item.innerHTML = `
           <div class="anamnese-select-item__info">
-            <div class="anamnese-select-item__header">
-              <span class="anamnese-select-item__nome">${escapeHtml_(templateNome)}</span>
-            </div>
-            ${resumo ? `<div class="anamnese-select-item__resumo texto-menor">${escapeHtml_(resumo)}</div>` : ""}
+            <span class="anamnese-select-item__nome">${escapeHtml_(templateNome)}</span>
           </div>
           <button type="button" class="btn btn-primary btn-sm">Inserir</button>
         `;
