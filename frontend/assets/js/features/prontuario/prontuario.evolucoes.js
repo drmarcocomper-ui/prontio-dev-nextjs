@@ -364,9 +364,9 @@
     const dados = anamnese.dados || {};
     const titulo = anamnese.nomeTemplate || dados.titulo || "Anamnese";
 
-    // Formato simplificado (titulo + texto)
+    // Formato simplificado (titulo + texto) - insere apenas o texto
     if (dados.texto) {
-      return `ANAMNESE (${titulo})\n\n${dados.texto}`;
+      return dados.texto;
     }
 
     // Formato legado (campos estruturados) - mantido para compatibilidade
