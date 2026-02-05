@@ -338,13 +338,13 @@
         payload.pageSize = state.pageSizeAtual;
       }
 
-      // Stale-while-revalidate
+      // Stale-while-revalidate (otimizado - evita render duplo)
       const usandoFiltros = termo || somenteAtivos || state.usarPaginacao;
       const cachedItems = !usandoFiltros ? getPacientesFromCache() : null;
+      const temCache = cachedItems && cachedItems.length > 0;
 
-      if (cachedItems && cachedItems.length > 0) {
-        state.pacientesCache = cachedItems;
-        renderizarLista();
+      if (temCache) {
+        // Usa cache apenas para mostrar mensagem, renderiza só quando dados frescos chegarem
         view.mostrarMensagem("Carregando dados atualizados...", "info");
       } else {
         setLoading(true);
@@ -447,7 +447,7 @@
           view.abrirModalVisualizacao(paciente);
         }
       });
-      aplicarColunasVisiveis();
+      // Não precisa mais aplicar visibilidade após render - tabela já é renderizada só com colunas visíveis
     }
 
     async function alterarStatusPaciente(ativoDesejado) {
@@ -625,7 +625,7 @@
       }
     }
 
-    function aplicarColunasVisiveis() {
+    function aplicarColunasVisiveis(reRenderTabela) {
       const checkboxes = document.querySelectorAll(".chk-coluna");
       const cfg = {};
 
@@ -634,7 +634,13 @@
         cfg[col] = cb.checked;
       });
 
+      // Aplica no header
       view.aplicarVisibilidadeColunas(cfg);
+
+      // Re-renderiza tabela se solicitado (quando usuário muda colunas)
+      if (reRenderTabela && state.pacientesCache && state.pacientesCache.length > 0) {
+        renderizarLista();
+      }
 
       try {
         global.localStorage.setItem("prontio_pacientes_cols_visiveis", JSON.stringify(cfg));

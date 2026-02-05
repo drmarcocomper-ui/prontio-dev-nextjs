@@ -249,7 +249,8 @@
 
       checkboxesColunas.forEach(function (chk) {
         chk.addEventListener("change", function () {
-          actions.aplicarColunasVisiveis();
+          // Passa true para re-renderizar tabela com as novas colunas
+          actions.aplicarColunasVisiveis(true);
         });
       });
     }

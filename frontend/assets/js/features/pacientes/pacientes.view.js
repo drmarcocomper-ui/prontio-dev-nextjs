@@ -213,13 +213,95 @@
     }
 
     // ========================================
-    // Tabela
+    // Tabela (Otimizada)
     // ========================================
+
+    // Cache de colunas visíveis para evitar queries repetidas
+    let colunasVisiveisCache = null;
+    let pacientesIndexado = {};
+    let tabelaCallbacks = null;
+
+    // Definição de todas as colunas (ordem fixa)
+    const TODAS_COLUNAS = [
+      "nome", "dataCadastro", "dataNascimento", "sexo", "cpf", "rg",
+      "telefone1", "telefone2", "email", "enderecoBairro", "enderecoCidade",
+      "enderecoUf", "obsImportantes", "planoSaude", "numeroCarteirinha",
+      "ativo", "nomeSocial", "estadoCivil", "rgOrgaoEmissor", "cep",
+      "logradouro", "numero", "complemento", "observacoesClinicas",
+      "observacoesAdministrativas"
+    ];
+
+    function getColunasVisiveis() {
+      if (colunasVisiveisCache) return colunasVisiveisCache;
+
+      const cfg = {};
+      const checkboxes = document.querySelectorAll(".chk-coluna");
+      checkboxes.forEach(function (cb) {
+        cfg[cb.dataset.col] = cb.checked;
+      });
+      // Nome sempre visível
+      cfg.nome = true;
+      colunasVisiveisCache = cfg;
+      return cfg;
+    }
+
+    function invalidarCacheColunasVisiveis() {
+      colunasVisiveisCache = null;
+    }
+
+    function getValorColuna(p, col, ativoBool) {
+      switch (col) {
+        case "nome": return p.nomeCompleto || p.nome || "";
+        case "dataCadastro": return formatarDataParaBR(p.dataCadastro || p.criadoEm || p.CriadoEm || "");
+        case "dataNascimento": return formatarDataParaBR(p.dataNascimento || "");
+        case "sexo": return p.sexo || "";
+        case "cpf": return p.cpf || "";
+        case "rg": return p.rg || "";
+        case "telefone1": return p.telefone1 || p.telefone || "";
+        case "telefone2": return p.telefone2 || "";
+        case "email": return p.email || "";
+        case "enderecoBairro": return p.enderecoBairro || p.bairro || "";
+        case "enderecoCidade": return p.enderecoCidade || p.cidade || "";
+        case "enderecoUf": return p.enderecoUf || "";
+        case "obsImportantes": return p.obsImportantes || "";
+        case "planoSaude": return p.planoSaude || "";
+        case "numeroCarteirinha": return p.numeroCarteirinha || "";
+        case "ativo": return ativoBool ? "SIM" : "NAO";
+        case "nomeSocial": return p.nomeSocial || "";
+        case "estadoCivil": return p.estadoCivil || "";
+        case "rgOrgaoEmissor": return p.rgOrgaoEmissor || "";
+        case "cep": return p.cep || "";
+        case "logradouro": return p.logradouro || "";
+        case "numero": return p.numero || "";
+        case "complemento": return p.complemento || "";
+        case "observacoesClinicas": return p.observacoesClinicas || "";
+        case "observacoesAdministrativas": return p.observacoesAdministrativas || "";
+        default: return "";
+      }
+    }
+
     function renderizarTabela(pacientes, callbacks) {
       const tbody = document.getElementById("tabelaPacientesBody");
       if (!tbody) return;
 
-      tbody.innerHTML = "";
+      // Guarda callbacks para event delegation
+      tabelaCallbacks = callbacks;
+
+      // Indexa pacientes por ID para lookup rápido
+      pacientesIndexado = {};
+      pacientes.forEach(function (p) {
+        const id = String(p.idPaciente || p.ID_Paciente || p.id || "");
+        pacientesIndexado[id] = p;
+      });
+
+      // Pega apenas colunas visíveis
+      const colVisiveis = getColunasVisiveis();
+      const colunasParaRenderizar = TODAS_COLUNAS.filter(function (col) {
+        return colVisiveis[col] !== false;
+      });
+
+      // Usa DocumentFragment para batch insert
+      const fragment = document.createDocumentFragment();
 
       pacientes.forEach(function (p) {
         const id = String(p.idPaciente || p.ID_Paciente || p.id || "");
@@ -240,90 +322,87 @@
           tr.classList.add("linha-selecionada");
         }
 
-        const tdNome = document.createElement("td");
-        tdNome.textContent = nome;
-        tdNome.dataset.col = "nome";
-        tr.appendChild(tdNome);
-
-        const colDefs = [
-          ["dataCadastro", formatarDataParaBR(p.dataCadastro || p.criadoEm || p.CriadoEm || "")],
-          ["dataNascimento", formatarDataParaBR(p.dataNascimento || "")],
-          ["sexo", p.sexo || ""],
-          ["cpf", p.cpf || ""],
-          ["rg", p.rg || ""],
-          ["telefone1", p.telefone1 || p.telefone || ""],
-          ["telefone2", p.telefone2 || ""],
-          ["email", p.email || ""],
-          ["enderecoBairro", p.enderecoBairro || p.bairro || ""],
-          ["enderecoCidade", p.enderecoCidade || p.cidade || ""],
-          ["enderecoUf", p.enderecoUf || ""],
-          ["obsImportantes", p.obsImportantes || ""],
-          ["planoSaude", p.planoSaude || ""],
-          ["numeroCarteirinha", p.numeroCarteirinha || ""],
-          ["ativo", ativoBool ? "SIM" : "NAO"],
-          ["nomeSocial", p.nomeSocial || ""],
-          ["estadoCivil", p.estadoCivil || ""],
-          ["rgOrgaoEmissor", p.rgOrgaoEmissor || ""],
-          ["cep", p.cep || ""],
-          ["logradouro", p.logradouro || ""],
-          ["numero", p.numero || ""],
-          ["complemento", p.complemento || ""],
-          ["observacoesClinicas", p.observacoesClinicas || ""],
-          ["observacoesAdministrativas", p.observacoesAdministrativas || ""]
-        ];
-
-        colDefs.forEach(function (entry) {
-          const col = entry[0];
-          const valor = entry[1];
+        // Renderiza apenas colunas visíveis
+        colunasParaRenderizar.forEach(function (col) {
           const td = document.createElement("td");
-          td.textContent = valor;
+          td.textContent = getValorColuna(p, col, ativoBool);
           td.dataset.col = col;
           tr.appendChild(td);
         });
 
-        // Click seleciona
-        tr.addEventListener("click", function () {
-          if (callbacks && callbacks.onSelect) {
-            callbacks.onSelect(tr, id, nome, ativoBool);
-          }
-        });
-
-        // Double-click abre visualização
-        tr.addEventListener("dblclick", function () {
-          if (callbacks && callbacks.onDoubleClick) {
-            callbacks.onDoubleClick(p);
-          }
-        });
-
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
       });
+
+      // Limpa e insere tudo de uma vez
+      tbody.innerHTML = "";
+      tbody.appendChild(fragment);
     }
 
-    function marcarLinhaSelecionada(id) {
-      const linhas = document.querySelectorAll("#tabelaPacientesBody tr");
-      linhas.forEach(function (linha) {
-        linha.classList.remove("linha-selecionada");
-        if (linha.dataset.idPaciente === id) {
-          linha.classList.add("linha-selecionada");
+    // Event delegation - configurar uma vez
+    function setupTabelaEventDelegation() {
+      const tbody = document.getElementById("tabelaPacientesBody");
+      if (!tbody || tbody.dataset.delegationSetup === "1") return;
+
+      tbody.dataset.delegationSetup = "1";
+
+      tbody.addEventListener("click", function (e) {
+        const tr = e.target.closest("tr");
+        if (!tr || !tabelaCallbacks || !tabelaCallbacks.onSelect) return;
+
+        const id = tr.dataset.idPaciente;
+        const nome = tr.dataset.nomeCompleto;
+        const ativo = tr.dataset.ativo === "SIM";
+        tabelaCallbacks.onSelect(tr, id, nome, ativo);
+      });
+
+      tbody.addEventListener("dblclick", function (e) {
+        const tr = e.target.closest("tr");
+        if (!tr || !tabelaCallbacks || !tabelaCallbacks.onDoubleClick) return;
+
+        const id = tr.dataset.idPaciente;
+        const paciente = pacientesIndexado[id];
+        if (paciente) {
+          tabelaCallbacks.onDoubleClick(paciente);
         }
       });
     }
 
+    function marcarLinhaSelecionada(id) {
+      const tbody = document.getElementById("tabelaPacientesBody");
+      if (!tbody) return;
+
+      // Remove seleção anterior (apenas da linha que tem a classe)
+      const linhaSelecionada = tbody.querySelector("tr.linha-selecionada");
+      if (linhaSelecionada) {
+        linhaSelecionada.classList.remove("linha-selecionada");
+      }
+
+      // Adiciona à nova linha
+      if (id) {
+        const novaLinha = tbody.querySelector('tr[data-id-paciente="' + id + '"]');
+        if (novaLinha) {
+          novaLinha.classList.add("linha-selecionada");
+        }
+      }
+    }
+
     // ========================================
-    // Colunas
+    // Colunas (Otimizada)
     // ========================================
     function aplicarVisibilidadeColunas(cfg) {
-      const checkboxes = document.querySelectorAll(".chk-coluna");
+      // Invalida cache para próximo render usar novas configurações
+      invalidarCacheColunasVisiveis();
 
-      checkboxes.forEach(function (cb) {
-        const col = cb.dataset.col;
-        const visivel = cfg && Object.prototype.hasOwnProperty.call(cfg, col) ? cfg[col] : cb.checked;
+      // Aplica apenas no header (tbody será re-renderizado)
+      const thead = document.querySelector("#tabelaPacientes thead");
+      if (!thead) return;
 
-        const cells = document.querySelectorAll("th[data-col='" + col + "'], td[data-col='" + col + "']");
-        cells.forEach(function (cell) {
-          if (visivel) cell.classList.remove("oculto-col");
-          else cell.classList.add("oculto-col");
-        });
+      const headerCells = thead.querySelectorAll("th[data-col]");
+      headerCells.forEach(function (th) {
+        const col = th.dataset.col;
+        const visivel = cfg && Object.prototype.hasOwnProperty.call(cfg, col) ? cfg[col] : true;
+        if (visivel) th.classList.remove("oculto-col");
+        else th.classList.add("oculto-col");
       });
     }
 
@@ -541,7 +620,9 @@
       isModalVisualizacaoAberto,
       isModalConfirmacaoAberto,
       formatarDataParaBR,
-      escapeHtml
+      escapeHtml,
+      setupTabelaEventDelegation,
+      invalidarCacheColunasVisiveis
     };
   }
 

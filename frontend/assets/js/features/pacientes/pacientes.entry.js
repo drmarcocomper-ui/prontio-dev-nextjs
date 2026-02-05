@@ -78,6 +78,9 @@
         document: doc
       });
 
+      // Setup event delegation na tabela (antes de carregar dados)
+      view.setupTabelaEventDelegation();
+
       // Inicializar
       actions.carregarConfigColunas();
       actions.carregarPreferenciasPaginacao();
