@@ -159,10 +159,11 @@
         payload
       );
 
-      console.log("[PRONTIO] Evoluções carregadas, data:", data);
+      console.log("[PRONTIO] Evoluções carregadas, data:", JSON.stringify(data, null, 2));
 
       const itemsPaged = data && (data.items || data.evolucoes || data.lista);
       let lista = Array.isArray(itemsPaged) ? itemsPaged : Array.isArray(data) ? data : [];
+      console.log("[PRONTIO] Lista de evoluções:", lista.length, "itens");
       lista = ordenarEvolucoes(lista);
 
       const nextCursor =
