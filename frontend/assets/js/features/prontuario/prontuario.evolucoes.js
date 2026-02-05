@@ -308,12 +308,14 @@
         const item = document.createElement("div");
         item.className = "anamnese-select-item";
 
-        const templateNome = anamnese.nomeTemplate || "Anamnese";
+        const templateNome = anamnese.nomeTemplate || (anamnese.dados && anamnese.dados.titulo) || "Anamnese";
 
         let resumo = "";
-        if (anamnese.dados && anamnese.dados.queixaPrincipal) {
-          resumo = String(anamnese.dados.queixaPrincipal).substring(0, 80);
-          if (anamnese.dados.queixaPrincipal.length > 80) resumo += "...";
+        // Formato simplificado (texto) ou legado (queixaPrincipal)
+        const textoResumo = anamnese.dados && (anamnese.dados.texto || anamnese.dados.queixaPrincipal);
+        if (textoResumo) {
+          resumo = String(textoResumo).substring(0, 80);
+          if (textoResumo.length > 80) resumo += "...";
         }
 
         item.innerHTML = `
@@ -360,19 +362,24 @@
 
   function formatarAnamneseParaEvolucao_(anamnese) {
     const dados = anamnese.dados || {};
-    const linhas = [];
+    const titulo = anamnese.nomeTemplate || dados.titulo || "Anamnese";
 
-    linhas.push(`ANAMNESE (${anamnese.nomeTemplate || "Geral"})`);
+    // Formato simplificado (titulo + texto)
+    if (dados.texto) {
+      return `ANAMNESE (${titulo})\n\n${dados.texto}`;
+    }
+
+    // Formato legado (campos estruturados) - mantido para compatibilidade
+    const linhas = [];
+    linhas.push(`ANAMNESE (${titulo})`);
     linhas.push("");
 
-    // Queixa Principal
     if (dados.queixaPrincipal) {
       linhas.push("QUEIXA PRINCIPAL:");
       linhas.push(dados.queixaPrincipal);
       linhas.push("");
     }
 
-    // Historia da Doenca Atual
     if (dados.inicio || dados.evolucao || dados.fatoresAgravantes) {
       linhas.push("HISTORIA DA DOENCA ATUAL:");
       if (dados.inicio) linhas.push("- Inicio: " + dados.inicio);
@@ -381,7 +388,6 @@
       linhas.push("");
     }
 
-    // Antecedentes
     if (dados.pessoais || dados.pessoaisOutros || dados.familiares) {
       linhas.push("ANTECEDENTES:");
       if (dados.pessoais && Array.isArray(dados.pessoais) && dados.pessoais.length) {
@@ -392,7 +398,6 @@
       linhas.push("");
     }
 
-    // Medicamentos
     if (dados.medicamentos && Array.isArray(dados.medicamentos) && dados.medicamentos.length) {
       linhas.push("MEDICAMENTOS EM USO:");
       dados.medicamentos.forEach((med) => {
@@ -405,7 +410,6 @@
       linhas.push("");
     }
 
-    // Alergias
     if (dados.temAlergia || dados.alergias) {
       linhas.push("ALERGIAS:");
       if (dados.temAlergia) linhas.push("- Possui alergias: " + dados.temAlergia);
@@ -413,7 +417,6 @@
       linhas.push("");
     }
 
-    // Habitos
     if (dados.tabagismo || dados.etilismo || dados.atividadeFisica) {
       linhas.push("HABITOS DE VIDA:");
       if (dados.tabagismo) linhas.push("- Tabagismo: " + dados.tabagismo);
@@ -422,7 +425,6 @@
       linhas.push("");
     }
 
-    // Exame Fisico
     if (dados.pa || dados.fc || dados.temperatura || dados.peso || dados.altura || dados.observacoes) {
       linhas.push("EXAME FISICO:");
       const sinais = [];
