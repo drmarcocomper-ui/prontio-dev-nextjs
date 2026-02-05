@@ -14,6 +14,8 @@
   let anamnesePanelAside = null;
   let anamnesePanelLastFocus = null;
   let anamnesePaging = createPagingState_();
+  let anamneseEditando = null; // ID da anamnese sendo editada
+  let ctxAtual = null; // Contexto atual para recarregar lista
 
   // ============================================================
   // PANEL OPEN/CLOSE
@@ -33,6 +35,7 @@
     } catch (_) {}
 
     anamnesePanelLastFocus = null;
+    limparFormulario_();
   }
 
   function abrirAnamnesePanel_(ctx) {
@@ -42,6 +45,7 @@
       return;
     }
 
+    ctxAtual = ctx;
     anamnesePanelAside = anamnesePanelAside || anamnesePanel.querySelector(".slide-panel");
     anamnesePanelLastFocus = document.activeElement;
 
@@ -50,8 +54,7 @@
     anamnesePanel.removeAttribute("inert");
 
     // Limpa formulario
-    const form = qs("#formAnamnese");
-    if (form) form.reset();
+    limparFormulario_();
 
     // Carrega historico
     carregarHistoricoAnamneses_(ctx);
@@ -63,10 +66,25 @@
     }
   }
 
+  function limparFormulario_() {
+    anamneseEditando = null;
+    const form = qs("#formAnamnese");
+    if (form) form.reset();
+
+    // Atualiza texto do botao
+    const btnSubmit = qs("#formAnamnese button[type='submit']");
+    if (btnSubmit) btnSubmit.textContent = "Salvar Anamnese";
+
+    // Esconde botao cancelar edicao
+    const btnCancelarEdicao = qs("#btnCancelarEdicao");
+    if (btnCancelarEdicao) btnCancelarEdicao.style.display = "none";
+  }
+
   function setupAnamnesePanelEvents_(ctx) {
     anamnesePanel = qs("#anamnesePanel");
     if (!anamnesePanel) return;
 
+    ctxAtual = ctx;
     anamnesePanelAside = anamnesePanel.querySelector(".slide-panel");
 
     // Botoes de fechar
@@ -86,6 +104,12 @@
       formAnamnese.addEventListener("submit", (ev) => onSubmitAnamnese_(ev, ctx));
     }
 
+    // Botao cancelar edicao
+    const btnCancelarEdicao = qs("#btnCancelarEdicao");
+    if (btnCancelarEdicao) {
+      btnCancelarEdicao.addEventListener("click", () => limparFormulario_());
+    }
+
     // Botao carregar mais
     const btnMais = qs("#btnMaisAnamneses");
     if (btnMais) {
@@ -95,7 +119,7 @@
   }
 
   // ============================================================
-  // SUBMIT - SALVAR ANAMNESE (TITULO + TEXTO)
+  // SUBMIT - SALVAR/ATUALIZAR ANAMNESE
   // ============================================================
 
   async function onSubmitAnamnese_(ev, ctx) {
@@ -125,27 +149,39 @@
       return;
     }
 
-    const payload = {
-      idPaciente: idPaciente,
-      idProfissional: ctx.idProfissional || "",
-      nomeTemplate: titulo,
-      dados: {
-        titulo: titulo,
-        texto: texto
-      }
-    };
-
     const btnSubmit = ev.submitter || qs("#formAnamnese button[type='submit']");
     if (btnSubmit) btnSubmit.disabled = true;
 
     try {
-      await callApiData({ action: "Anamnese.Salvar", payload: payload });
-
-      showToast_("Anamnese salva com sucesso!", "success");
+      if (anamneseEditando) {
+        // Atualizar existente
+        const payload = {
+          idAnamnese: anamneseEditando,
+          nomeTemplate: titulo,
+          dados: {
+            titulo: titulo,
+            texto: texto
+          }
+        };
+        await callApiData({ action: "Anamnese.Atualizar", payload: payload });
+        showToast_("Anamnese atualizada com sucesso!", "success");
+      } else {
+        // Criar nova
+        const payload = {
+          idPaciente: idPaciente,
+          idProfissional: ctx.idProfissional || "",
+          nomeTemplate: titulo,
+          dados: {
+            titulo: titulo,
+            texto: texto
+          }
+        };
+        await callApiData({ action: "Anamnese.Salvar", payload: payload });
+        showToast_("Anamnese salva com sucesso!", "success");
+      }
 
       // Limpa formulario
-      const form = qs("#formAnamnese");
-      if (form) form.reset();
+      limparFormulario_();
 
       // Recarrega historico
       carregarHistoricoAnamneses_(ctx);
@@ -155,6 +191,73 @@
       showToast_("Erro ao salvar anamnese: " + extractErrorMessage_(err), "error");
     } finally {
       if (btnSubmit) btnSubmit.disabled = false;
+    }
+  }
+
+  // ============================================================
+  // EDITAR ANAMNESE
+  // ============================================================
+
+  function editarAnamnese_(anamnese) {
+    anamneseEditando = anamnese.idAnamnese;
+
+    const titulo = anamnese.nomeTemplate || (anamnese.dados && anamnese.dados.titulo) || "";
+    const texto = (anamnese.dados && anamnese.dados.texto) || "";
+
+    const tituloEl = qs("#anamnese-titulo");
+    const textoEl = qs("#anamnese-texto");
+
+    if (tituloEl) tituloEl.value = titulo;
+    if (textoEl) textoEl.value = texto;
+
+    // Atualiza texto do botao
+    const btnSubmit = qs("#formAnamnese button[type='submit']");
+    if (btnSubmit) btnSubmit.textContent = "Atualizar Anamnese";
+
+    // Mostra botao cancelar edicao
+    const btnCancelarEdicao = qs("#btnCancelarEdicao");
+    if (btnCancelarEdicao) btnCancelarEdicao.style.display = "inline-flex";
+
+    // Foco no titulo
+    if (tituloEl) tituloEl.focus();
+
+    // Scroll para o topo do formulario
+    const formAnamnese = qs("#formAnamnese");
+    if (formAnamnese) formAnamnese.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ============================================================
+  // EXCLUIR ANAMNESE
+  // ============================================================
+
+  async function excluirAnamnese_(anamnese) {
+    const titulo = anamnese.nomeTemplate || (anamnese.dados && anamnese.dados.titulo) || "esta anamnese";
+
+    if (!confirm(`Deseja realmente excluir "${titulo}"?`)) {
+      return;
+    }
+
+    try {
+      await callApiData({
+        action: "Anamnese.Excluir",
+        payload: { idAnamnese: anamnese.idAnamnese }
+      });
+
+      showToast_("Anamnese excluida com sucesso!", "success");
+
+      // Se estava editando esta anamnese, limpa o formulario
+      if (anamneseEditando === anamnese.idAnamnese) {
+        limparFormulario_();
+      }
+
+      // Recarrega historico
+      if (ctxAtual) {
+        carregarHistoricoAnamneses_(ctxAtual);
+      }
+
+    } catch (err) {
+      console.error("[PRONTIO] Erro ao excluir anamnese:", err);
+      showToast_("Erro ao excluir anamnese: " + extractErrorMessage_(err), "error");
     }
   }
 
@@ -270,15 +373,36 @@
         </div>
         ${resumo ? `<div class="anamnese-historico-item__resumo texto-menor">${escapeHtml_(resumo)}</div>` : ""}
         <div class="anamnese-historico-item__actions">
-          <button type="button" class="btn btn-secondary btn-sm js-anamnese-ver">Ver</button>
+          <button type="button" class="btn btn-secondary btn-sm js-anamnese-ver" title="Ver detalhes">Ver</button>
+          <button type="button" class="btn btn-secondary btn-sm js-anamnese-editar" title="Editar">Editar</button>
+          <button type="button" class="btn btn-danger btn-sm js-anamnese-excluir" title="Excluir">Excluir</button>
         </div>
       `;
 
+      // Botao Ver
       const btnVer = item.querySelector(".js-anamnese-ver");
       if (btnVer) {
         btnVer.addEventListener("click", (ev) => {
           ev.preventDefault();
           abrirDetalheAnamnese_(anamnese);
+        });
+      }
+
+      // Botao Editar
+      const btnEditar = item.querySelector(".js-anamnese-editar");
+      if (btnEditar) {
+        btnEditar.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          editarAnamnese_(anamnese);
+        });
+      }
+
+      // Botao Excluir
+      const btnExcluir = item.querySelector(".js-anamnese-excluir");
+      if (btnExcluir) {
+        btnExcluir.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          excluirAnamnese_(anamnese);
         });
       }
 

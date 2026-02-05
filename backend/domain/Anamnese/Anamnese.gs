@@ -55,6 +55,12 @@ function handleAnamneseAction(action, payload) {
     case "Anamnese.Salvar":
       return _anamneseSalvar_(payload);
 
+    case "Anamnese.Atualizar":
+      return _anamneseAtualizar_(payload);
+
+    case "Anamnese.Excluir":
+      return _anamneseExcluir_(payload);
+
     case "Anamnese.ListarPorPaciente":
       return _anamneseListarPorPaciente_(payload);
 
@@ -563,6 +569,81 @@ function _anamneseSalvar_(payload) {
     dataRetornoDevido: dataRetornoIso,
     success: true
   };
+}
+
+function _anamneseAtualizar_(payload) {
+  var idAnamnese = String(payload.idAnamnese || payload.ID_Anamnese || "").trim();
+  var nomeTemplate = String(payload.nomeTemplate || payload.NomeTemplate || "").trim();
+  var dados = payload.dados || payload.Dados || {};
+
+  if (!idAnamnese) {
+    _anamneseThrow_("ANAMNESE_MISSING_ID_ANAMNESE", "idAnamnese e obrigatorio.", null);
+  }
+
+  var sheet = _getAnamneseSheet_();
+  var headerMap = _getSheetHeaderMap_(sheet);
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+
+  if (lastRow < 2) {
+    _anamneseThrow_("ANAMNESE_NOT_FOUND", "Anamnese nao encontrada.", { idAnamnese: idAnamnese });
+  }
+
+  var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var idxId = headerMap["ID_Anamnese"];
+
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][idxId]) === idAnamnese) {
+      var rowNum = i + 2;
+      var row = values[i];
+      var now = new Date().toISOString();
+
+      if (headerMap["NomeTemplate"] != null) row[headerMap["NomeTemplate"]] = nomeTemplate;
+      if (headerMap["Dados"] != null) row[headerMap["Dados"]] = JSON.stringify(dados);
+      if (headerMap["AtualizadoEm"] != null) row[headerMap["AtualizadoEm"]] = now;
+
+      sheet.getRange(rowNum, 1, 1, lastCol).setValues([row]);
+
+      return { idAnamnese: idAnamnese, success: true };
+    }
+  }
+
+  _anamneseThrow_("ANAMNESE_NOT_FOUND", "Anamnese nao encontrada.", { idAnamnese: idAnamnese });
+}
+
+function _anamneseExcluir_(payload) {
+  var idAnamnese = String(payload.idAnamnese || payload.ID_Anamnese || "").trim();
+
+  if (!idAnamnese) {
+    _anamneseThrow_("ANAMNESE_MISSING_ID_ANAMNESE", "idAnamnese e obrigatorio.", null);
+  }
+
+  var sheet = _getAnamneseSheet_();
+  var headerMap = _getSheetHeaderMap_(sheet);
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+
+  if (lastRow < 2) {
+    _anamneseThrow_("ANAMNESE_NOT_FOUND", "Anamnese nao encontrada.", { idAnamnese: idAnamnese });
+  }
+
+  var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var idxId = headerMap["ID_Anamnese"];
+  var idxAtivo = headerMap["Ativo"];
+
+  for (var i = 0; i < values.length; i++) {
+    if (String(values[i][idxId]) === idAnamnese) {
+      var rowNum = i + 2;
+      values[i][idxAtivo] = false;
+      if (headerMap["AtualizadoEm"] != null) {
+        values[i][headerMap["AtualizadoEm"]] = new Date().toISOString();
+      }
+      sheet.getRange(rowNum, 1, 1, lastCol).setValues([values[i]]);
+      return { success: true };
+    }
+  }
+
+  _anamneseThrow_("ANAMNESE_NOT_FOUND", "Anamnese nao encontrada.", { idAnamnese: idAnamnese });
 }
 
 function _anamneseListarPorPaciente_(payload) {

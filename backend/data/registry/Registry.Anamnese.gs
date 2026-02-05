@@ -69,6 +69,26 @@ function Registry_RegisterAnamnese_(map) {
     lockKey: "ANAMNESE"
   };
 
+  map["Anamnese.Atualizar"] = {
+    action: "Anamnese.Atualizar",
+    handler: _anamneseHandler_("Anamnese.Atualizar"),
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "ANAMNESE"
+  };
+
+  map["Anamnese.Excluir"] = {
+    action: "Anamnese.Excluir",
+    handler: _anamneseHandler_("Anamnese.Excluir"),
+    requiresAuth: true,
+    roles: [],
+    validations: [],
+    requiresLock: true,
+    lockKey: "ANAMNESE"
+  };
+
   map["Anamnese.ListarPorPaciente"] = {
     action: "Anamnese.ListarPorPaciente",
     handler: _anamneseHandler_("Anamnese.ListarPorPaciente"),
