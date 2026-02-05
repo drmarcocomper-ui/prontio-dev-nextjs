@@ -2,7 +2,68 @@
 // CRUD repo-first
 // ---------------------------------------------------------------------------
 
-function readAllPacientes_() {
+// Cache config para lista de pacientes
+var PACIENTES_LIST_CACHE_KEY = "PRONTIO_PAC_LIST_V1";
+var PACIENTES_LIST_CACHE_TTL = 180; // 3 minutos
+
+function _pacientesCacheGet_() {
+  try {
+    var cache = CacheService.getScriptCache();
+    var raw = cache.get(PACIENTES_LIST_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+function _pacientesCacheSet_(list) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var json = JSON.stringify(list || []);
+    // CacheService tem limite de 100KB - se exceder, não cacheia
+    if (json.length > 90000) {
+      // Tenta cachear versão reduzida (só campos essenciais)
+      var reduced = (list || []).map(function(p) {
+        return {
+          idPaciente: p.idPaciente,
+          ID_Paciente: p.ID_Paciente,
+          nomeCompleto: p.nomeCompleto,
+          nomeSocial: p.nomeSocial,
+          cpf: p.cpf,
+          telefonePrincipal: p.telefonePrincipal,
+          telefone1: p.telefone1,
+          email: p.email,
+          ativo: p.ativo,
+          status: p.status,
+          dataNascimento: p.dataNascimento,
+          planoSaude: p.planoSaude,
+          criadoEm: p.criadoEm
+        };
+      });
+      json = JSON.stringify(reduced);
+      if (json.length > 90000) return; // ainda muito grande
+    }
+    cache.put(PACIENTES_LIST_CACHE_KEY, json, PACIENTES_LIST_CACHE_TTL);
+  } catch (_) {}
+}
+
+function _pacientesCacheInvalidate_() {
+  try {
+    var cache = CacheService.getScriptCache();
+    cache.remove(PACIENTES_LIST_CACHE_KEY);
+  } catch (_) {}
+}
+
+function readAllPacientes_(forceRefresh) {
+  // Tenta cache primeiro (se não for refresh forçado)
+  if (!forceRefresh) {
+    var cached = _pacientesCacheGet_();
+    if (cached && Array.isArray(cached) && cached.length > 0) {
+      return cached;
+    }
+  }
+
   // garante schema (best-effort)
   try { Pacientes_EnsureSchema_({}); } catch (_) {}
 
@@ -14,6 +75,9 @@ function readAllPacientes_() {
     if (!dto.idPaciente && !dto.nomeCompleto && !dto.nomeSocial) continue;
     list.push(dto);
   }
+
+  // Salva no cache
+  _pacientesCacheSet_(list);
 
   return list;
 }
@@ -298,6 +362,9 @@ function Pacientes_Criar(payload, ctx) {
 
   Pacientes_Repo_Insert_(dto);
 
+  // Invalida cache após criar
+  _pacientesCacheInvalidate_();
+
   _pacientesAudit_(
     ctx,
     "Pacientes_Criar",
@@ -403,6 +470,9 @@ function Pacientes_Atualizar(payload, ctx) {
   var ok = Pacientes_Repo_UpdateById_(id, patch);
   if (!ok) _pacientesThrow_('PACIENTES_NOT_FOUND', 'Paciente não encontrado para ID: ' + id, null);
 
+  // Invalida cache após atualizar
+  _pacientesCacheInvalidate_();
+
   var after = Pacientes_Repo_GetById_(id);
   var pacienteAtualizado = after ? pacienteRepoRowToObject_(after) : null;
 
@@ -463,6 +533,9 @@ function Pacientes_AlterarStatus(payload, ctx) {
   });
 
   if (!ok) _pacientesThrow_('PACIENTES_NOT_FOUND', 'Paciente não encontrado para ID: ' + id, null);
+
+  // Invalida cache após alterar status
+  _pacientesCacheInvalidate_();
 
   _pacientesAudit_(
     ctx,
