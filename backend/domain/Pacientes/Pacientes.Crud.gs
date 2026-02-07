@@ -4,7 +4,7 @@
 
 // Cache config para lista de pacientes
 var PACIENTES_LIST_CACHE_KEY = "PRONTIO_PAC_LIST_V1";
-var PACIENTES_LIST_CACHE_TTL = 180; // 3 minutos
+var PACIENTES_LIST_CACHE_TTL = 600; // 10 minutos (P1: aumentado de 3 para 10)
 
 function _pacientesCacheGet_() {
   try {
@@ -194,7 +194,12 @@ function Pacientes_BuscarSimples(payload) {
 }
 
 function Pacientes_Listar(payload) {
-  // mantém lógica atual (filtra/ordena/pagina) sobre readAllPacientes_
+  // ============================================================
+  // P0 Performance:
+  // - Usa paginação real (Repo_listPaged_) quando não há busca
+  // - Limite padrão de 50 registros por página
+  // - Cache é usado apenas para buscas com filtro
+  // ============================================================
   payload = payload || {};
   var termo = String(payload.termo || '').toLowerCase().trim();
   var somenteAtivos = !!payload.somenteAtivos;
@@ -208,14 +213,60 @@ function Pacientes_Listar(payload) {
   var pageSize = wantsPaging ? parseInt(payload.pageSize, 10) : null;
 
   if (!wantsPaging) {
-    page = null;
-    pageSize = null;
+    page = 1;
+    pageSize = 50; // limite padrão para evitar carregar tudo
   } else {
     if (!page || page < 1) page = 1;
     if (!pageSize || pageSize < 1) pageSize = 50;
     if (pageSize > 500) pageSize = 500;
   }
 
+  // Se não há termo de busca, usa paginação real do backend
+  if (!termo && typeof Pacientes_Repo_ListPaged_ === "function") {
+    var offset = (page - 1) * pageSize;
+    var result = Pacientes_Repo_ListPaged_({ limit: pageSize, offset: offset });
+
+    var items = [];
+    for (var i = 0; i < result.items.length; i++) {
+      var dto = pacienteRepoRowToObject_(result.items[i]);
+      if (!dto.idPaciente && !dto.nomeCompleto && !dto.nomeSocial) continue;
+      if (somenteAtivos && !dto.ativo) continue;
+      items.push(dto);
+    }
+
+    // Ordena os itens da página atual
+    items.sort(function (a, b) {
+      if (ordenacao === 'nomeAsc' || ordenacao === 'nomeDesc') {
+        var na = (a.nomeExibicao || a.nomeCompleto || '').toLowerCase();
+        var nb = (b.nomeExibicao || b.nomeCompleto || '').toLowerCase();
+        if (na < nb) return ordenacao === 'nomeAsc' ? -1 : 1;
+        if (na > nb) return ordenacao === 'nomeAsc' ? 1 : -1;
+        return 0;
+      }
+      var da = Date.parse(a.criadoEm || a.dataCadastro || '') || 0;
+      var db = Date.parse(b.criadoEm || b.dataCadastro || '') || 0;
+      if (da < db) return ordenacao === 'dataCadastroAsc' ? -1 : 1;
+      if (da > db) return ordenacao === 'dataCadastroAsc' ? 1 : -1;
+      return 0;
+    });
+
+    var totalPages = Math.max(1, Math.ceil(result.total / pageSize));
+
+    return {
+      pacientes: items,
+      paging: {
+        enabled: true,
+        page: page,
+        pageSize: pageSize,
+        total: result.total,
+        totalPages: totalPages,
+        hasPrev: page > 1,
+        hasNext: result.hasMore
+      }
+    };
+  }
+
+  // Fallback: usa cache para busca com filtro (necessário para busca textual)
   var todos = readAllPacientes_();
 
   var filtrados = todos.filter(function (p) {
@@ -246,8 +297,6 @@ function Pacientes_Listar(payload) {
     if (da > db) return ordenacao === 'dataCadastroAsc' ? 1 : -1;
     return 0;
   });
-
-  if (!wantsPaging) return { pacientes: filtrados };
 
   var total = filtrados.length;
   var start = (page - 1) * pageSize;

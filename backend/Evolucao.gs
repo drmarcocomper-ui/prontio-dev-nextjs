@@ -300,21 +300,47 @@ function evolucaoListarPorPaciente_(payload) {
   if (!idPaciente)
     return createApiResponse_(false, null, ["idPaciente é obrigatório."]);
 
+  // P2: Suporte a paginação com limite
+  var limit = payload.limit ? Number(payload.limit) : 0;
+  if (isNaN(limit) || limit < 0) limit = 0;
+  if (limit > 500) limit = 500;
+
+  var cursor = payload.cursor ? String(payload.cursor).trim() : "";
+
   var sheet = getEvolucaoSheet_();
-  var values = sheet.getDataRange().getValues();
+  var lastRow = sheet.getLastRow();
 
-  if (values.length <= 1)
-    return createApiResponse_(true, { evolucoes: [] }, []);
+  if (lastRow <= 1)
+    return createApiResponse_(true, { evolucoes: [], hasMore: false, nextCursor: null }, []);
 
-  var dados = values.slice(1);
+  // P2: Lê apenas as colunas necessárias para filtro inicial (ID_Paciente, Ativo)
+  var idPacienteCol = EV_COL.ID_Paciente + 1;
+  var ativoCol = EV_COL.Ativo + 1;
+  var numCols = sheet.getLastColumn();
+
+  var values = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
   var evolucoes = [];
 
-  for (var i = 0; i < dados.length; i++) {
-    var evoObj = buildEvolucaoFromRow_(dados[i]);
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    var rowIdPaciente = String(row[EV_COL.ID_Paciente] || "");
+    var rowAtivo = row[EV_COL.Ativo];
 
-    if (String(evoObj.idPaciente) === idPaciente && evoObj.ativo) {
-      evolucoes.push(evoObj);
+    // Filtro rápido antes de construir objeto
+    if (rowIdPaciente !== idPaciente) continue;
+
+    var isAtivo = true;
+    if (rowAtivo === false || String(rowAtivo).toUpperCase() === "FALSE" || String(rowAtivo).toUpperCase() === "N") {
+      isAtivo = false;
     }
+    if (!isAtivo) continue;
+
+    var evoObj = buildEvolucaoFromRow_(row);
+    evolucoes.push(evoObj);
+
+    // P2: Se temos limite e já coletamos 3x o limite, podemos parar de iterar
+    // (margem para ordenação e cursor)
+    if (limit > 0 && evolucoes.length >= limit * 3) break;
   }
 
   // Ordenar por DataEvolucao + DataHoraRegistro (mais recentes primeiro)
@@ -324,7 +350,36 @@ function evolucaoListarPorPaciente_(payload) {
     return keyA > keyB ? -1 : keyA < keyB ? 1 : 0;
   });
 
-  return createApiResponse_(true, { evolucoes: evolucoes }, []);
+  // P2: Aplica cursor se fornecido
+  if (cursor) {
+    var cursorIdx = -1;
+    for (var j = 0; j < evolucoes.length; j++) {
+      var evKey = (evolucoes[j].dataEvolucao || "") + (evolucoes[j].dataHoraRegistro || "");
+      if (evKey < cursor) {
+        cursorIdx = j;
+        break;
+      }
+    }
+    if (cursorIdx > 0) {
+      evolucoes = evolucoes.slice(cursorIdx);
+    } else if (cursorIdx === -1 && cursor) {
+      evolucoes = []; // cursor além do fim
+    }
+  }
+
+  // P2: Aplica limite
+  var hasMore = false;
+  var nextCursor = null;
+  if (limit > 0 && evolucoes.length > limit) {
+    hasMore = true;
+    evolucoes = evolucoes.slice(0, limit);
+    if (evolucoes.length > 0) {
+      var last = evolucoes[evolucoes.length - 1];
+      nextCursor = (last.dataEvolucao || "") + (last.dataHoraRegistro || "");
+    }
+  }
+
+  return createApiResponse_(true, { evolucoes: evolucoes, hasMore: hasMore, nextCursor: nextCursor }, []);
 }
 
 /**

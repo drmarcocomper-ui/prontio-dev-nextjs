@@ -17,7 +17,7 @@
   // Cache Local (stale-while-revalidate)
   // ========================================
   const CACHE_KEY = "prontio.pacientes.cache";
-  const CACHE_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutos
+  const CACHE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutos (P1: aumentado de 5 para 10)
 
   function getPacientesFromCache() {
     try {

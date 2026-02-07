@@ -13,7 +13,7 @@
  */
 
 var CACHE_PREFIX = "PRONTIO_CACHE_";
-var CACHE_DEFAULT_TTL_SECONDS = 60; // padrão curto (ajustável por uso)
+var CACHE_DEFAULT_TTL_SECONDS = 300; // 5 minutos (P1: aumentado de 1 para 5 minutos)
 var CACHE_MAX_TTL_SECONDS = 60 * 60 * 6; // 6h (limite prudente)
 
 /**

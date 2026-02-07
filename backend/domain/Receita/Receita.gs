@@ -261,21 +261,33 @@ function receitaListarPorPaciente_(payload) {
   var idPaciente = String(payload.idPaciente || payload.ID_Paciente || "").trim();
   if (!idPaciente) _receitaThrow_("RECEITA_MISSING_ID_PACIENTE", "idPaciente é obrigatório.", null);
 
+  // P2: Suporte a paginação com limite
+  var limit = payload.limit ? Number(payload.limit) : 0;
+  if (isNaN(limit) || limit < 0) limit = 0;
+  if (limit > 300) limit = 300;
+
+  var cursor = payload.cursor ? String(payload.cursor).trim() : "";
+  var cursorMs = cursor ? Date.parse(cursor) : null;
+  if (cursorMs && isNaN(cursorMs)) cursorMs = null;
+
   var sheet = getReceitaSheet_();
   var headerMap = getReceitaHeaderMap_();
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
-  if (lastRow < 2) return { receitas: [] };
+  if (lastRow < 2) return { receitas: [], hasMore: false, nextCursor: null };
 
   var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
   var idxIdPac = headerMap["ID_Paciente"];
-  if (idxIdPac == null) return { receitas: [] };
+  if (idxIdPac == null) return { receitas: [], hasMore: false, nextCursor: null };
 
   var receitas = [];
   for (var i = 0; i < values.length; i++) {
     var row = values[i];
     if (String(row[idxIdPac]) === String(idPaciente)) {
       receitas.push(buildReceitaFromRow_(row, headerMap));
+
+      // P2: Se temos limite e já coletamos 3x o limite, podemos parar
+      if (limit > 0 && receitas.length >= limit * 3) break;
     }
   }
 
@@ -285,7 +297,28 @@ function receitaListarPorPaciente_(payload) {
     return db - da;
   });
 
-  return { receitas: receitas };
+  // P2: Aplica cursor se fornecido
+  if (cursorMs) {
+    var filtered = [];
+    for (var j = 0; j < receitas.length; j++) {
+      var recMs = Date.parse(receitas[j].dataHoraCriacao || "") || 0;
+      if (recMs < cursorMs) filtered.push(receitas[j]);
+    }
+    receitas = filtered;
+  }
+
+  // P2: Aplica limite
+  var hasMore = false;
+  var nextCursor = null;
+  if (limit > 0 && receitas.length > limit) {
+    hasMore = true;
+    receitas = receitas.slice(0, limit);
+    if (receitas.length > 0) {
+      nextCursor = receitas[receitas.length - 1].dataHoraCriacao || null;
+    }
+  }
+
+  return { receitas: receitas, hasMore: hasMore, nextCursor: nextCursor };
 }
 
 /* ============================================================

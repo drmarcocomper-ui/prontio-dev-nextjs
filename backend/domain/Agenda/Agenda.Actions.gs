@@ -43,7 +43,12 @@ function _agendaGetInicioDate_(dto) {
 }
 
 // ============================================================
-// LISTAR POR PERÍODO
+// LISTAR POR PERÍODO (OTIMIZADO)
+// ============================================================
+// P0 Performance:
+// - Usa Repo_listByDateRange_ para filtrar por data no backend
+// - Limite padrão de 500 registros
+// - Cacheia timestamps antes do sort para evitar parse duplicado
 // ============================================================
 function Agenda_Action_ListarPorPeriodo_(ctx, payload) {
   payload = payload || {};
@@ -58,12 +63,25 @@ function Agenda_Action_ListarPorPeriodo_(ctx, payload) {
   var incluirCancelados = payload.incluirCancelados === true;
   var idPaciente = payload.idPaciente ? String(payload.idPaciente) : null;
   var idProfissional = payload.idProfissional ? String(payload.idProfissional) : null;
+  var limite = payload.limite ? Number(payload.limite) : 500;
+  if (isNaN(limite) || limite <= 0) limite = 500;
+  if (limite > 1000) limite = 1000; // máximo absoluto
 
-  var all = Repo_list_(AGENDA_ENTITY);
+  // Prepara filtros para o Repository
+  var repoFilters = {};
+  if (idProfissional) repoFilters.idProfissional = idProfissional;
+  if (idPaciente) repoFilters.idPaciente = idPaciente;
+
+  // Usa função otimizada do Repository (filtra por data diretamente)
+  var filtered = Repo_listByDateRange_(AGENDA_ENTITY, "inicioDateTime", ini, fim, {
+    limit: limite,
+    filters: repoFilters
+  });
+
   var out = [];
 
-  for (var i = 0; i < all.length; i++) {
-    var e = _agendaNormalizeRowToDto_(all[i]);
+  for (var i = 0; i < filtered.length; i++) {
+    var e = _agendaNormalizeRowToDto_(filtered[i]);
 
     // aliases p/ compat temporária
     _agendaAttachLegacyAliases_(e);
@@ -80,21 +98,26 @@ function Agenda_Action_ListarPorPeriodo_(ctx, payload) {
       if (!ativo) continue;
     }
 
-    if (idPaciente && String(e.idPaciente || "") !== idPaciente) continue;
-    if (idProfissional && String(e.idProfissional || "") !== idProfissional) continue;
-
-    var evIni = _agendaParseDate_(e.inicioDateTime || e.inicio);
+    // Verifica fim do evento também (já que filtramos só por inicio)
     var evFim = _agendaParseDate_(e.fimDateTime || e.fim);
-    if (!evIni || !evFim) continue;
+    if (evFim && evFim.getTime() < ini.getTime()) continue;
 
-    if (evIni.getTime() > fim.getTime() || evFim.getTime() < ini.getTime()) continue;
+    // Cacheia timestamp para sort (evita parse duplicado)
+    var evIni = _agendaParseDate_(e.inicioDateTime || e.inicio);
+    e._sortTs = evIni ? evIni.getTime() : 0;
 
-    out.push(_agendaAttachLegacyAliases_(e));
+    out.push(e);
   }
 
+  // Sort otimizado: usa timestamp cacheado
   out.sort(function (a, b) {
-    return _agendaParseDate_(a.inicioDateTime || a.inicio).getTime() - _agendaParseDate_(b.inicioDateTime || b.inicio).getTime();
+    return a._sortTs - b._sortTs;
   });
+
+  // Remove propriedade temporária de sort
+  for (var j = 0; j < out.length; j++) {
+    delete out[j]._sortTs;
+  }
 
   return {
     success: true,
@@ -174,6 +197,11 @@ function Agenda_Action_Criar_(ctx, payload) {
     Repo_insert_(AGENDA_ENTITY, dto);
     createdDto = dto;
   });
+
+  // P2: Invalida cache do dia afetado
+  if (typeof _agendaCacheInvalidateFromDto_ === "function") {
+    _agendaCacheInvalidateFromDto_(createdDto);
+  }
 
   return {
     success: true,
@@ -264,6 +292,12 @@ function Agenda_Action_Atualizar_(ctx, payload) {
 
   var after = Repo_getById_(AGENDA_ENTITY, AGENDA_ID_FIELD, idEvento);
 
+  // P2: Invalida cache do dia afetado (antes e depois da atualização)
+  if (typeof _agendaCacheInvalidateFromDto_ === "function") {
+    _agendaCacheInvalidateFromDto_(existing); // dia original
+    _agendaCacheInvalidateFromDto_(after);    // novo dia (se mudou)
+  }
+
   return {
     success: true,
     data: { item: _agendaAttachLegacyAliases_(_agendaNormalizeRowToDto_(after)) },
@@ -309,6 +343,11 @@ function Agenda_Action_Cancelar_(ctx, payload) {
   });
 
   var after = Repo_getById_(AGENDA_ENTITY, AGENDA_ID_FIELD, idEvento);
+
+  // P2: Invalida cache do dia afetado
+  if (typeof _agendaCacheInvalidateFromDto_ === "function") {
+    _agendaCacheInvalidateFromDto_(after);
+  }
 
   return {
     success: true,

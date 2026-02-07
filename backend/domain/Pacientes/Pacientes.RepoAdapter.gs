@@ -9,6 +9,28 @@ function Pacientes_Repo_List_() {
   return Repo_list_(PACIENTES_ENTITY) || [];
 }
 
+/**
+ * Lista pacientes com paginação real no backend.
+ * Evita carregar todos os registros na memória.
+ *
+ * @param {Object} options - Opções de paginação
+ * @param {number} options.limit - Limite de registros (padrão: 50)
+ * @param {number} options.offset - Offset (skip) de registros (padrão: 0)
+ * @returns {Object} { items: Array, total: number, hasMore: boolean }
+ */
+function Pacientes_Repo_ListPaged_(options) {
+  if (typeof Repo_listPaged_ !== "function") {
+    // Fallback para método antigo se Repo_listPaged_ não existir
+    var all = Pacientes_Repo_List_();
+    options = options || {};
+    var limit = options.limit || 50;
+    var offset = options.offset || 0;
+    var items = all.slice(offset, offset + limit);
+    return { items: items, total: all.length, hasMore: (offset + items.length) < all.length };
+  }
+  return Repo_listPaged_(PACIENTES_ENTITY, options);
+}
+
 function Pacientes_Repo_GetById_(idPaciente) {
   if (typeof Repo_getById_ !== "function") {
     _pacientesThrow_("INTERNAL_ERROR", "Repo_getById_ não disponível.", { missing: "Repo_getById_" });

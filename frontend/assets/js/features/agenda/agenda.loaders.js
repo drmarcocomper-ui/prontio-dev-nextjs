@@ -29,7 +29,7 @@
   // Cache Local (stale-while-revalidate)
   // ========================================
   const CACHE_KEY_PREFIX = "prontio.agenda.cache.";
-  const CACHE_MAX_AGE_MS = 2 * 60 * 1000; // ✅ 2 minutos (reduzido de 5)
+  const CACHE_MAX_AGE_MS = 10 * 60 * 1000; // ✅ 10 minutos (P1: aumentado de 2 para 10)
 
   function getCacheKey(tipo, data) {
     return CACHE_KEY_PREFIX + tipo + "." + data;
@@ -113,8 +113,8 @@
       // Ordena por timestamp (mais antigos primeiro)
       entries.sort((a, b) => a.timestamp - b.timestamp);
 
-      // Remove as entradas mais antigas, mantendo apenas as 5 mais recentes
-      const toRemove = entries.slice(0, Math.max(0, entries.length - 5));
+      // Remove as entradas mais antigas, mantendo apenas as 15 mais recentes (P1: aumentado de 5 para 15)
+      const toRemove = entries.slice(0, Math.max(0, entries.length - 15));
       toRemove.forEach((e) => localStorage.removeItem(e.key));
 
       if (toRemove.length > 0) {

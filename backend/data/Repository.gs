@@ -21,7 +21,7 @@
 // Config interno (cache)
 // ======================
 var _REPO_CACHE_PREFIX = typeof _REPO_CACHE_PREFIX !== "undefined" ? _REPO_CACHE_PREFIX : "PRONTIO_REPO_IDX_";
-var _REPO_CACHE_TTL_SEC = typeof _REPO_CACHE_TTL_SEC !== "undefined" ? _REPO_CACHE_TTL_SEC : 60 * 5; // 5 min
+var _REPO_CACHE_TTL_SEC = typeof _REPO_CACHE_TTL_SEC !== "undefined" ? _REPO_CACHE_TTL_SEC : 60 * 15; // 15 min (P1: aumentado de 5 para 15)
 
 function Repo_getDb_() {
   if (typeof PRONTIO_getDb_ !== "function") {
@@ -187,6 +187,116 @@ function _repoFindRowIndexById_(sheet, sheetName, idField, header, idValue) {
 // ======================
 // CRUD
 // ======================
+
+/**
+ * Lista registros filtrados por período de data (otimizado).
+ * Filtra diretamente no loop ao invés de carregar tudo e depois filtrar.
+ *
+ * @param {string} sheetName - Nome da aba
+ * @param {string} dateField - Nome do campo de data (ex: "inicioDateTime")
+ * @param {Date} startDate - Data inicial do período
+ * @param {Date} endDate - Data final do período
+ * @param {Object} options - Opções adicionais
+ * @param {number} options.limit - Limite de registros (padrão: 500)
+ * @param {Object} options.filters - Filtros adicionais {campo: valor}
+ * @returns {Array} Lista de objetos filtrados
+ */
+function Repo_listByDateRange_(sheetName, dateField, startDate, endDate, options) {
+  options = options || {};
+  var limit = options.limit || 500;
+  var filters = options.filters || {};
+
+  var sheet = Repo_getSheet_(sheetName);
+  var header = Repo_getHeader_(sheet);
+  _repoRequireHeader_(sheetName, header);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  // Encontra índice do campo de data
+  var dateIdx = header.indexOf(String(dateField));
+  if (dateIdx < 0) {
+    // Fallback: tenta campo alternativo
+    var altField = dateField === "inicioDateTime" ? "inicio" : null;
+    if (altField) dateIdx = header.indexOf(altField);
+    if (dateIdx < 0) {
+      throw _repoSchemaNotReady_(
+        "SCHEMA_MISMATCH",
+        "Campo de data não encontrado: " + dateField,
+        { sheetName: sheetName, dateField: dateField }
+      );
+    }
+  }
+
+  // Prepara índices dos filtros
+  var filterIdxs = {};
+  for (var fk in filters) {
+    if (filters.hasOwnProperty(fk)) {
+      var fIdx = header.indexOf(fk);
+      if (fIdx >= 0) {
+        filterIdxs[fk] = { idx: fIdx, val: String(filters[fk]) };
+      }
+    }
+  }
+
+  // Timestamps para comparação rápida
+  var startTs = startDate.getTime();
+  var endTs = endDate.getTime();
+
+  // Lê todas as linhas de uma vez (mais eficiente que linha a linha)
+  var values = sheet.getRange(2, 1, lastRow - 1, header.length).getValues();
+
+  var out = [];
+  for (var i = 0; i < values.length && out.length < limit; i++) {
+    var row = values[i];
+
+    // Filtra por data primeiro (operação mais seletiva)
+    var dateVal = row[dateIdx];
+    var rowDate = null;
+
+    if (dateVal instanceof Date) {
+      rowDate = dateVal;
+    } else if (dateVal) {
+      var s = String(dateVal);
+      rowDate = new Date(s);
+      if (isNaN(rowDate.getTime())) {
+        // Tenta parse YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+          var parts = s.split(/[-T]/);
+          rowDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        }
+      }
+    }
+
+    if (!rowDate || isNaN(rowDate.getTime())) continue;
+
+    var rowTs = rowDate.getTime();
+    if (rowTs < startTs || rowTs > endTs) continue;
+
+    // Aplica filtros adicionais
+    var passFilters = true;
+    for (var fk2 in filterIdxs) {
+      if (filterIdxs.hasOwnProperty(fk2)) {
+        var fi = filterIdxs[fk2];
+        if (String(row[fi.idx] || "") !== fi.val) {
+          passFilters = false;
+          break;
+        }
+      }
+    }
+    if (!passFilters) continue;
+
+    // Constrói objeto
+    var obj = {};
+    for (var c = 0; c < header.length; c++) {
+      obj[header[c]] = row[c];
+    }
+    out.push(obj);
+  }
+
+  return out;
+}
+
 function Repo_list_(sheetName) {
   var sheet = Repo_getSheet_(sheetName);
   var header = Repo_getHeader_(sheet);
@@ -207,6 +317,58 @@ function Repo_list_(sheetName) {
     out.push(obj);
   }
   return out;
+}
+
+/**
+ * Lista registros com limite e offset (paginação real no backend).
+ * Otimizado para não carregar todos os registros na memória.
+ *
+ * @param {string} sheetName - Nome da aba
+ * @param {Object} options - Opções de paginação
+ * @param {number} options.limit - Limite de registros (padrão: 50)
+ * @param {number} options.offset - Offset (skip) de registros (padrão: 0)
+ * @returns {Object} { items: Array, total: number, hasMore: boolean }
+ */
+function Repo_listPaged_(sheetName, options) {
+  options = options || {};
+  var limit = options.limit || 50;
+  var offset = options.offset || 0;
+
+  if (limit > 500) limit = 500; // máximo por requisição
+
+  var sheet = Repo_getSheet_(sheetName);
+  var header = Repo_getHeader_(sheet);
+  _repoRequireHeader_(sheetName, header);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { items: [], total: 0, hasMore: false };
+
+  var totalRows = lastRow - 1; // exclui header
+
+  // Calcula range real considerando offset
+  var startRow = 2 + offset; // +2 porque linha 1 é header e índice começa em 1
+  if (startRow > lastRow) return { items: [], total: totalRows, hasMore: false };
+
+  var rowsToRead = Math.min(limit, lastRow - startRow + 1);
+  if (rowsToRead <= 0) return { items: [], total: totalRows, hasMore: false };
+
+  var values = sheet.getRange(startRow, 1, rowsToRead, header.length).getValues();
+
+  var out = [];
+  for (var i = 0; i < values.length; i++) {
+    var row = values[i];
+    var obj = {};
+    for (var c = 0; c < header.length; c++) {
+      obj[header[c]] = row[c];
+    }
+    out.push(obj);
+  }
+
+  return {
+    items: out,
+    total: totalRows,
+    hasMore: (offset + out.length) < totalRows
+  };
 }
 
 function Repo_getById_(sheetName, idField, idValue) {
