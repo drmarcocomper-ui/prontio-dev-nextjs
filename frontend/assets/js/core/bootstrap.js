@@ -53,9 +53,18 @@
     // ✅ Carrega scripts base em paralelo (não têm dependências entre si)
     await Promise.all([
       loader.loadOnce("assets/js/core/config.js"),
+      loader.loadOnce("assets/js/core/supabase.js"),
       loader.loadOnce("assets/js/core/dom.js"),
       loader.loadOnce("assets/js/core/utils.js"),
       loader.loadOnce("assets/js/core/state.js")
+    ]);
+
+    // ✅ Carrega serviços Supabase em paralelo
+    await Promise.all([
+      loader.loadOnce("assets/js/services/supabase/auth.service.js"),
+      loader.loadOnce("assets/js/services/supabase/pacientes.service.js"),
+      loader.loadOnce("assets/js/services/supabase/agenda.service.js"),
+      loader.loadOnce("assets/js/services/supabase/profissionais.service.js")
     ]);
 
     // ✅ Carrega API (base para auth/session)
