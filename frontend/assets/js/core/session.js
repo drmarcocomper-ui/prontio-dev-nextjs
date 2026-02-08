@@ -158,17 +158,18 @@
       loadFromStorage();
       this._setupActivityListeners();
 
-      // ✅ DEV: se user não existe OU user sem idProfissional, injeta devUser
-      try {
-        if (isDevEnv_()) {
-          const u = memoryState.user;
-          if (!hasIdProfissional_(u)) {
-            memoryState.user = getDevUser_();
-            saveToStorage();
-            dispatchSessionChanged_({ type: "setUser(dev)", user: memoryState.user });
-          }
-        }
-      } catch (_) {}
+      // ✅ DEV fallback desabilitado - agora usamos Supabase para auth real
+      // O fallback DEV interferia com o fluxo de login do Supabase
+      // try {
+      //   if (isDevEnv_()) {
+      //     const u = memoryState.user;
+      //     if (!hasIdProfissional_(u)) {
+      //       memoryState.user = getDevUser_();
+      //       saveToStorage();
+      //       dispatchSessionChanged_({ type: "setUser(dev)", user: memoryState.user });
+      //     }
+      //   }
+      // } catch (_) {}
     },
 
     /**
@@ -183,22 +184,9 @@
 
     /**
      * Retorna usuário logado (objeto ou null)
-     * ✅ DEV fallback: retorna usuário DEV se user estiver null OU sem idProfissional
      */
     getUser() {
-      const u = memoryState.user;
-
-      if (isDevEnv_()) {
-        if (!hasIdProfissional_(u)) {
-          const devUser = getDevUser_();
-          memoryState.user = devUser;
-          saveToStorage();
-          return devUser;
-        }
-        return u;
-      }
-
-      return u || null;
+      return memoryState.user || null;
     },
 
     /**
