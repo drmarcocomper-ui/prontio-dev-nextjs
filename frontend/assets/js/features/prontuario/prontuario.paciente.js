@@ -5,9 +5,25 @@
 
   const { qs } = PRONTIO.features.prontuario.utils;
 
+  // ✅ Cache de pacientes (evita requisições repetidas)
+  const pacienteCache = new Map();
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
   // ✅ Usa Supabase service quando disponível
   function getPacientesService() {
     return PRONTIO.services && PRONTIO.services.pacientes ? PRONTIO.services.pacientes : null;
+  }
+
+  function getCachedPaciente(idPaciente) {
+    const cached = pacienteCache.get(idPaciente);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  function setCachedPaciente(idPaciente, data) {
+    pacienteCache.set(idPaciente, { data, timestamp: Date.now() });
   }
 
   function setTextOrDash_(selector, value) {
@@ -31,13 +47,26 @@
     try {
       let pac = null;
 
-      // ✅ Tenta Supabase primeiro
-      const supaService = getPacientesService();
-      if (supaService && typeof supaService.obterPorId === "function") {
-        const result = await supaService.obterPorId(ctx.idPaciente);
-        if (result.success && result.data) {
-          pac = result.data.paciente || result.data;
+      // ✅ Tenta cache primeiro
+      pac = getCachedPaciente(ctx.idPaciente);
+
+      if (!pac) {
+        console.time("[Prontuario] Carregar paciente");
+
+        // ✅ Busca via Supabase
+        const supaService = getPacientesService();
+        if (supaService && typeof supaService.obterPorId === "function") {
+          const result = await supaService.obterPorId(ctx.idPaciente);
+          if (result.success && result.data) {
+            pac = result.data.paciente || result.data;
+            // ✅ Salva no cache
+            setCachedPaciente(ctx.idPaciente, pac);
+          }
         }
+
+        console.timeEnd("[Prontuario] Carregar paciente");
+      } else {
+        console.log("[Prontuario] Paciente carregado do cache");
       }
 
       if (!pac) {
