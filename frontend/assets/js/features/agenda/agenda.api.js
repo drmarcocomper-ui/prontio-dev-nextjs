@@ -239,38 +239,25 @@
         const idProfissional = requireIdProfissional_(PRONTIORef);
         const idClinica = getIdClinica_(PRONTIORef);
 
-        // ✅ Tenta Supabase primeiro
+        // ✅ Usa Supabase (sem fallback para API legada)
         const supaService = getSupabaseService();
         if (supaService && typeof supaService.listarPorPeriodo === "function") {
-          try {
-            const result = await supaService.listarPorPeriodo({
-              inicio: inicio.toISOString(),
-              fim: fim.toISOString(),
-              idProfissional,
-              incluirCancelados: !!(p.filtros && p.filtros.incluirCancelados === true),
-              idPaciente: (p.filtros && p.filtros.idPaciente) ? String(p.filtros.idPaciente) : null
-            });
-            if (result.success) {
-              return result.data;
-            }
-          } catch (e) {
-            console.warn("[AgendaApi] Supabase listar falhou, usando fallback:", e);
+          const result = await supaService.listarPorPeriodo({
+            inicio: inicio.toISOString(),
+            fim: fim.toISOString(),
+            idProfissional,
+            incluirCancelados: !!(p.filtros && p.filtros.incluirCancelados === true),
+            idPaciente: (p.filtros && p.filtros.idPaciente) ? String(p.filtros.idPaciente) : null
+          });
+          if (result.success) {
+            return result.data;
           }
+          console.warn("[AgendaApi] Supabase listar retornou erro:", result.error);
+          return { items: [], count: 0 };
         }
 
-        // ✅ Fallback: Legacy API
-        const payload = {
-          inicio: inicio.toISOString(),
-          fim: fim.toISOString(),
-          idProfissional,
-          incluirCancelados: !!(p.filtros && p.filtros.incluirCancelados === true),
-          idPaciente: (p.filtros && p.filtros.idPaciente) ? String(p.filtros.idPaciente) : null
-        };
-
-        if (idClinica) payload.idClinica = idClinica;
-
-        // ✅ P0-1: Passa signal para permitir cancelamento
-        return await callAction(callApiData, "Agenda.ListarPorPeriodo", payload, p.signal);
+        console.warn("[AgendaApi] Supabase service não disponível para listar");
+        return { items: [], count: 0 };
       },
 
       async criar(payload) {
@@ -283,22 +270,17 @@
         p.idProfissional = idProfissional;
         if (idClinica && p.idClinica === undefined) p.idClinica = idClinica;
 
-        // ✅ Tenta Supabase primeiro
+        // ✅ Usa Supabase (sem fallback para API legada)
         const supaService = getSupabaseService();
         if (supaService && typeof supaService.criar === "function") {
-          try {
-            const result = await supaService.criar(p);
-            if (result.success) {
-              return result.data;
-            }
-            throw new Error(result.error || "Erro ao criar agendamento");
-          } catch (e) {
-            console.warn("[AgendaApi] Supabase criar falhou, usando fallback:", e);
+          const result = await supaService.criar(p);
+          if (result.success) {
+            return result.data;
           }
+          throw new Error(result.error || "Erro ao criar agendamento");
         }
 
-        // ✅ Fallback: Legacy API
-        return await callAction(callApiData, "Agenda.Criar", p);
+        throw new Error("Serviço de agenda não disponível");
       },
 
       async atualizar(idAgenda, patch) {
@@ -335,31 +317,17 @@
           throw err;
         }
 
-        const idProfissional = requireIdProfissional_(PRONTIORef);
-        const idClinica = getIdClinica_(PRONTIORef);
-
-        // ✅ Tenta Supabase primeiro
+        // ✅ Usa Supabase (sem fallback para API legada)
         const supaService = getSupabaseService();
         if (supaService && typeof supaService.cancelar === "function") {
-          try {
-            const result = await supaService.cancelar(id, motivo ? String(motivo).slice(0, 500) : "");
-            if (result.success) {
-              return result.data;
-            }
-          } catch (e) {
-            console.warn("[AgendaApi] Supabase cancelar falhou, usando fallback:", e);
+          const result = await supaService.cancelar(id, motivo ? String(motivo).slice(0, 500) : "");
+          if (result.success) {
+            return result.data;
           }
+          throw new Error(result.error || "Erro ao cancelar agendamento");
         }
 
-        // ✅ Fallback: Legacy API
-        const payload = {
-          idAgenda: id,
-          motivo: motivo ? String(motivo).slice(0, 500) : "",
-          idProfissional
-        };
-        if (idClinica) payload.idClinica = idClinica;
-
-        return await callAction(callApiData, "Agenda.Cancelar", payload);
+        throw new Error("Serviço de agenda não disponível");
       },
 
       async validarConflito(payload) {
@@ -382,7 +350,27 @@
 
         if (idClinica) p.idClinica = idClinica;
 
-        return await callAction(callApiData, "Agenda.ValidarConflito", p);
+        // ✅ Usa Supabase (sem fallback para API legada)
+        const supaService = getSupabaseService();
+        if (supaService && typeof supaService.validarConflito === "function") {
+          const result = await supaService.validarConflito(p);
+          if (result.success) {
+            // Se tem conflito, lança erro para manter compatibilidade
+            if (result.data && result.data.temConflito) {
+              const err = new Error("Conflito de horário detectado.");
+              err.code = "CONFLICT";
+              throw err;
+            }
+            return result.data;
+          }
+          // Se falhou mas não é erro crítico, permite continuar
+          console.warn("[AgendaApi] Supabase validarConflito retornou erro:", result.error);
+          return { temConflito: false };
+        }
+
+        // ✅ Fallback: permite continuar se Supabase não disponível
+        console.warn("[AgendaApi] Supabase service não disponível para validarConflito");
+        return { temConflito: false };
       },
 
       // ✅ NOVO: usado por UI para pré-carregar eventos do dia (slots)
