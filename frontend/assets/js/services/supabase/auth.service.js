@@ -230,8 +230,8 @@
   // Exporta
   PRONTIO.services.auth = AuthService;
 
-  // Inicializa sessão se existir
-  AuthService.recuperarSessao();
+  // ✅ Sessão é recuperada no bootstrap.js com await
+  // (não chamar aqui pois é async e precisa aguardar)
 
   console.info("[PRONTIO.services.auth] Serviço Supabase inicializado");
 

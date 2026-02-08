@@ -67,6 +67,13 @@
       loader.loadOnce("assets/js/services/supabase/profissionais.service.js")
     ]);
 
+    // ✅ Aguarda recuperação da sessão Supabase (se existir)
+    try {
+      if (PRONTIO.services?.auth?.recuperarSessao) {
+        await PRONTIO.services.auth.recuperarSessao();
+      }
+    } catch (_) {}
+
     // ✅ Carrega API (base para auth/session)
     const okApi = await loader.loadOnce("assets/js/core/api.js");
 
