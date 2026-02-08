@@ -4,7 +4,11 @@
   PRONTIO.features.prontuario = PRONTIO.features.prontuario || {};
 
   const { qs } = PRONTIO.features.prontuario.utils;
-  const { callApiDataTry_ } = PRONTIO.features.prontuario.api;
+
+  // ✅ Usa Supabase service quando disponível
+  function getPacientesService() {
+    return PRONTIO.services && PRONTIO.services.pacientes ? PRONTIO.services.pacientes : null;
+  }
 
   function setTextOrDash_(selector, value) {
     const el = qs(selector);
@@ -25,18 +29,42 @@
     }
 
     try {
-      const data = await callApiDataTry_(
-        ["Prontuario.Paciente.ObterResumo", "Pacientes.ObterPorId", "Pacientes_ObterPorId"],
-        { idPaciente: ctx.idPaciente }
-      );
+      let pac = null;
 
-      const pac = data && data.paciente ? data.paciente : data;
+      // ✅ Tenta Supabase primeiro
+      const supaService = getPacientesService();
+      if (supaService && typeof supaService.obterPorId === "function") {
+        const result = await supaService.obterPorId(ctx.idPaciente);
+        if (result.success && result.data) {
+          pac = result.data.paciente || result.data;
+        }
+      }
+
+      if (!pac) {
+        throw new Error("Paciente não encontrado");
+      }
 
       const nome =
         (pac && (pac.nomeCompleto || pac.nomeExibicao || pac.nomeSocial || pac.nome || pac.Nome)) ||
         ctx.nomeCompleto ||
         "—";
-      const idade = pac && (pac.idade || pac.Idade);
+
+      // ✅ Calcula idade a partir da data de nascimento se não vier calculada
+      let idade = pac && (pac.idade || pac.Idade);
+      if (!idade && pac && pac.dataNascimento) {
+        try {
+          const nascimento = new Date(pac.dataNascimento);
+          const hoje = new Date();
+          let anos = hoje.getFullYear() - nascimento.getFullYear();
+          const mesAtual = hoje.getMonth();
+          const mesNasc = nascimento.getMonth();
+          if (mesAtual < mesNasc || (mesAtual === mesNasc && hoje.getDate() < nascimento.getDate())) {
+            anos--;
+          }
+          idade = anos + " anos";
+        } catch (_) {}
+      }
+
       const profissao = pac && (pac.profissao || pac.Profissao);
       const plano = pac && (pac.planoSaude || pac.convenio || pac.PlanoSaude || pac.Convenio || pac.plano);
       const carteirinha = pac && (pac.carteirinha || pac.numeroCarteirinha || pac.NumeroCarteirinha || pac.Carteirinha);

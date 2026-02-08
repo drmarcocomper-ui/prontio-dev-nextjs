@@ -557,17 +557,20 @@
       const idAgenda = String(ag?.idAgenda || ag?.ID_Agenda || ag?.id_agenda || ag?.id || "").trim();
       const nomePaciente = String(ag?.nomeCompleto || ag?.nomePaciente || ag?.nome_paciente || "").trim();
 
-      console.log("[Agenda] abrirProntuario:", { idPaciente, idAgenda, ag });
+      console.log("[Agenda] abrirProntuario:", { idPaciente, idAgenda, nomePaciente, ag });
 
       if (!ag || !idPaciente) {
         showAviso_("Este agendamento não está vinculado a um paciente cadastrado. Selecione um paciente no agendamento para vincular ao prontuário.");
         return;
       }
 
+      // ✅ Salva contexto no localStorage (lido por prontuario.context.js)
       try {
-        localStorage.setItem("prontio.pacienteSelecionado", JSON.stringify({
+        localStorage.setItem("prontio.prontuarioContexto", JSON.stringify({
           ID_Paciente: idPaciente,
           idPaciente: idPaciente,
+          ID_Agenda: idAgenda,
+          idAgenda: idAgenda,
           nomeCompleto: nomePaciente,
           nome: nomePaciente
         }));
@@ -576,6 +579,7 @@
       const params = new URLSearchParams();
       params.set("idPaciente", idPaciente);
       if (idAgenda) params.set("idAgenda", idAgenda);
+      if (nomePaciente) params.set("nomeCompleto", nomePaciente);
       global.location.href = "prontuario.html?" + params.toString();
     }
 
