@@ -177,17 +177,17 @@
   }
 
   function resolveLoginUrl_() {
-    // ✅ evita quebrar em GitHub Pages/subpath (não usa "/login.html")
+    // ✅ evita quebrar em GitHub Pages/subpath (não usa "/index.html")
     try {
       const base =
         (global.document && global.document.baseURI) ? String(global.document.baseURI) : String(global.location.href);
       const u = new URL(base);
-      u.pathname = u.pathname.replace(/\/[^/]*$/, "/login.html");
+      u.pathname = u.pathname.replace(/\/[^/]*$/, "/index.html");
       u.search = "";
       u.hash = "";
       return u.toString();
     } catch (_) {
-      return "login.html";
+      return "index.html";
     }
   }
 

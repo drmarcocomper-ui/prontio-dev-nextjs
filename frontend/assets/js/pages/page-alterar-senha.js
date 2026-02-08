@@ -61,7 +61,7 @@
           } else if (PRONTIO.auth && typeof PRONTIO.auth.forceLogoutLocal === "function") {
             PRONTIO.auth.forceLogoutLocal("AUTH_REQUIRED", { redirect: true, clearChat: true });
           } else {
-            global.location.href = "/login.html";
+            global.location.href = "/index.html";
           }
         } catch (_) {}
       }, 1500);
