@@ -239,7 +239,8 @@
       const params = [...this.queryParams];
 
       if (this.selectColumns !== "*") {
-        params.push(`select=${encodeURIComponent(this.selectColumns)}`);
+        // PostgREST select syntax não deve ser codificado
+        params.push(`select=${this.selectColumns}`);
       }
 
       if (this.orderByColumn) {
