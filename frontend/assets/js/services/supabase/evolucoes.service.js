@@ -95,11 +95,9 @@
           origem: origem || "PRONTUARIO"
         };
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("evolucao")
-          .insert(evolucao)
-          .select()
-          .single();
+          .insert(evolucao);
 
         if (error) {
           return { success: false, error: error.message };
@@ -107,7 +105,7 @@
 
         return {
           success: true,
-          data: { evolucao: this._mapToFrontend(data) }
+          data: { evolucao: { texto: evolucao.texto, origem: evolucao.origem } }
         };
       } catch (err) {
         return { success: false, error: err.message };
@@ -125,15 +123,13 @@
       }
 
       try {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("evolucao")
           .update({
             texto: texto.trim(),
             atualizado_em: new Date().toISOString()
           })
-          .eq("id", idEvolucao)
-          .select()
-          .single();
+          .eq("id", idEvolucao);
 
         if (error) {
           return { success: false, error: error.message };
@@ -141,7 +137,7 @@
 
         return {
           success: true,
-          data: { evolucao: this._mapToFrontend(data) }
+          data: { evolucao: { idEvolucao, texto: texto.trim() } }
         };
       } catch (err) {
         return { success: false, error: err.message };

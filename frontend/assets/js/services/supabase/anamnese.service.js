@@ -110,7 +110,10 @@
       }
 
       try {
+        const anamneseId = crypto.randomUUID();
+
         const anamnese = {
+          id: anamneseId,
           clinica_id: clinicaId,
           paciente_id: idPaciente,
           profissional_id: profissionalId || null,
@@ -118,11 +121,9 @@
           dados: dados || {}
         };
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("anamnese")
-          .insert(anamnese)
-          .select()
-          .single();
+          .insert(anamnese);
 
         if (error) {
           return { success: false, error: error.message };
@@ -130,7 +131,7 @@
 
         return {
           success: true,
-          data: { anamnese: this._mapToFrontend(data) }
+          data: { anamnese: { idAnamnese: anamneseId, nomeTemplate, dados } }
         };
       } catch (err) {
         return { success: false, error: err.message };
@@ -155,12 +156,10 @@
         if (nomeTemplate !== undefined) updateData.nome_template = nomeTemplate;
         if (dados !== undefined) updateData.dados = dados;
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("anamnese")
           .update(updateData)
-          .eq("id", idAnamnese)
-          .select()
-          .single();
+          .eq("id", idAnamnese);
 
         if (error) {
           return { success: false, error: error.message };
@@ -168,7 +167,7 @@
 
         return {
           success: true,
-          data: { anamnese: this._mapToFrontend(data) }
+          data: { anamnese: { idAnamnese, nomeTemplate, dados } }
         };
       } catch (err) {
         return { success: false, error: err.message };

@@ -130,8 +130,12 @@
       }
 
       try {
+        // Gera UUID no cliente para poder usar nos itens
+        const receitaId = crypto.randomUUID();
+
         // Cria receita
         const receita = {
+          id: receitaId,
           clinica_id: clinicaId,
           paciente_id: idPaciente,
           profissional_id: profissionalId || null,
@@ -140,11 +144,9 @@
           observacoes: observacoes || ""
         };
 
-        const { data: receitaCriada, error: errReceita } = await supabase
+        const { error: errReceita } = await supabase
           .from("receita")
-          .insert(receita)
-          .select()
-          .single();
+          .insert(receita);
 
         if (errReceita) {
           return { success: false, error: errReceita.message };
@@ -152,7 +154,7 @@
 
         // Cria itens
         const itensParaInserir = itens.map((item, idx) => ({
-          receita_id: receitaCriada.id,
+          receita_id: receitaId,
           nome_medicamento: item.remedio || item.nomeRemedio || item.nome || "",
           posologia: item.posologia || "",
           via_administracao: item.via || item.viaAdministracao || "",
@@ -169,14 +171,11 @@
           console.warn("[ReceitasService] Erro ao inserir itens:", errItens);
         }
 
-        // Busca receita completa com itens
-        const result = await this.obterPorId(receitaCriada.id);
-
         return {
           success: true,
           data: {
-            idReceita: receitaCriada.id,
-            receita: result.data?.receita
+            idReceita: receitaId,
+            receita: { idReceita: receitaId, dataReceita: receita.data_receita, observacoes: receita.observacoes }
           }
         };
       } catch (err) {
