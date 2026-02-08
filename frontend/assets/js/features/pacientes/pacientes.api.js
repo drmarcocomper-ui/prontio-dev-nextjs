@@ -102,6 +102,11 @@
     };
   }
 
+  // ✅ Verifica se Supabase service está disponível
+  function getSupabaseService() {
+    return PRONTIO.services && PRONTIO.services.pacientes ? PRONTIO.services.pacientes : null;
+  }
+
   function createPacientesApi(PRONTIORef) {
     const callApiData = resolveCallApiData(PRONTIORef);
 
@@ -109,9 +114,23 @@
       const t = String(termo || "").trim();
       if (t.length < 2) return { pacientes: [] };
 
-      const payload = { termo: t, limite: (typeof limite === "number" && limite > 0) ? limite : 12 };
+      // ✅ Tenta Supabase primeiro
+      const supaService = getSupabaseService();
+      if (supaService && typeof supaService.buscarSimples === "function") {
+        try {
+          const result = await supaService.buscarSimples(t, limite || 12);
+          if (result.success) {
+            return {
+              pacientes: (result.data?.pacientes || []).map(normalizePatientObj).filter(Boolean)
+            };
+          }
+        } catch (e) {
+          console.warn("[PacientesApi] Supabase buscarSimples falhou, usando fallback:", e);
+        }
+      }
 
-      // Registry suporta dot e underscore
+      // ✅ Fallback: Legacy API
+      const payload = { termo: t, limite: (typeof limite === "number" && limite > 0) ? limite : 12 };
       const data = await callWithFallback(callApiData, "Pacientes.BuscarSimples", "Pacientes_BuscarSimples", payload);
       return {
         pacientes: (data && data.pacientes ? data.pacientes : []).map(normalizePatientObj).filter(Boolean)
@@ -119,17 +138,59 @@
     }
 
     async function listar(payload) {
-      // Registry: Pacientes.Listar alias de Pacientes_Listar
+      // ✅ Tenta Supabase primeiro
+      const supaService = getSupabaseService();
+      if (supaService && typeof supaService.listar === "function") {
+        try {
+          const result = await supaService.listar(payload || {});
+          if (result.success) {
+            return result.data;
+          }
+        } catch (e) {
+          console.warn("[PacientesApi] Supabase listar falhou, usando fallback:", e);
+        }
+      }
+
+      // ✅ Fallback: Legacy API
       return await callWithFallback(callApiData, "Pacientes.Listar", "Pacientes_Listar", payload || {});
     }
 
     async function criar(payload) {
-      // Registry: Pacientes.Criar alias de Pacientes_Criar
+      // ✅ Tenta Supabase primeiro
+      const supaService = getSupabaseService();
+      if (supaService && typeof supaService.criar === "function") {
+        try {
+          const result = await supaService.criar(payload || {});
+          if (result.success) {
+            return result.data;
+          }
+          throw new Error(result.error || "Erro ao criar paciente");
+        } catch (e) {
+          console.warn("[PacientesApi] Supabase criar falhou, usando fallback:", e);
+        }
+      }
+
+      // ✅ Fallback: Legacy API
       return await callWithFallback(callApiData, "Pacientes.Criar", "Pacientes_Criar", payload || {});
     }
 
     async function atualizar(payload) {
-      // ✅ Registry agora tem Pacientes.Atualizar
+      // ✅ Tenta Supabase primeiro
+      const supaService = getSupabaseService();
+      if (supaService && typeof supaService.atualizar === "function") {
+        try {
+          const id = payload.idPaciente || payload.ID_Paciente;
+          const result = await supaService.atualizar(id, payload);
+          if (result.success) {
+            return result.data;
+          }
+          throw new Error(result.error || "Erro ao atualizar paciente");
+        } catch (e) {
+          console.warn("[PacientesApi] Supabase atualizar falhou, usando fallback:", e);
+        }
+      }
+
+      // ✅ Fallback: Legacy API
       return await callWithFallback(callApiData, "Pacientes.Atualizar", "Pacientes_Atualizar", payload || {});
     }
 
@@ -140,6 +201,21 @@
         err.code = "VALIDATION_ERROR";
         throw err;
       }
+
+      // ✅ Tenta Supabase primeiro
+      const supaService = getSupabaseService();
+      if (supaService && typeof supaService.obterPorId === "function") {
+        try {
+          const result = await supaService.obterPorId(id);
+          if (result.success) {
+            return result.data;
+          }
+        } catch (e) {
+          console.warn("[PacientesApi] Supabase obterPorId falhou, usando fallback:", e);
+        }
+      }
+
+      // ✅ Fallback: Legacy API
       return await callWithFallback(callApiData, "Pacientes.ObterPorId", "Pacientes_ObterPorId", { idPaciente: id });
     }
 
@@ -148,7 +224,22 @@
     }
 
     async function alterarStatusAtivo(payload) {
-      // Registry: Pacientes.AlterarStatusAtivo alias de Pacientes_AlterarStatusAtivo
+      // ✅ Tenta Supabase primeiro
+      const supaService = getSupabaseService();
+      if (supaService && typeof supaService.alterarStatus === "function") {
+        try {
+          const id = payload.idPaciente || payload.ID_Paciente;
+          const ativo = payload.ativo !== false;
+          const result = await supaService.alterarStatus(id, ativo);
+          if (result.success) {
+            return result.data;
+          }
+        } catch (e) {
+          console.warn("[PacientesApi] Supabase alterarStatus falhou, usando fallback:", e);
+        }
+      }
+
+      // ✅ Fallback: Legacy API
       return await callWithFallback(callApiData, "Pacientes.AlterarStatusAtivo", "Pacientes_AlterarStatusAtivo", payload || {});
     }
 

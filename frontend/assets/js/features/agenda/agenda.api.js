@@ -194,6 +194,11 @@
     return v !== undefined ? Number(v) : 0;
   }
 
+  // ✅ Verifica se Supabase service está disponível
+  function getSupabaseService() {
+    return PRONTIO.services && PRONTIO.services.agenda ? PRONTIO.services.agenda : null;
+  }
+
   // ------------------------------------------------------------
   // API pública (feature)
   // ------------------------------------------------------------
@@ -228,6 +233,26 @@
         const idProfissional = requireIdProfissional_(PRONTIORef);
         const idClinica = getIdClinica_(PRONTIORef);
 
+        // ✅ Tenta Supabase primeiro
+        const supaService = getSupabaseService();
+        if (supaService && typeof supaService.listarPorPeriodo === "function") {
+          try {
+            const result = await supaService.listarPorPeriodo({
+              inicio: inicio.toISOString(),
+              fim: fim.toISOString(),
+              idProfissional,
+              incluirCancelados: !!(p.filtros && p.filtros.incluirCancelados === true),
+              idPaciente: (p.filtros && p.filtros.idPaciente) ? String(p.filtros.idPaciente) : null
+            });
+            if (result.success) {
+              return result.data;
+            }
+          } catch (e) {
+            console.warn("[AgendaApi] Supabase listar falhou, usando fallback:", e);
+          }
+        }
+
+        // ✅ Fallback: Legacy API
         const payload = {
           inicio: inicio.toISOString(),
           fim: fim.toISOString(),
@@ -252,6 +277,21 @@
         p.idProfissional = idProfissional;
         if (idClinica && p.idClinica === undefined) p.idClinica = idClinica;
 
+        // ✅ Tenta Supabase primeiro
+        const supaService = getSupabaseService();
+        if (supaService && typeof supaService.criar === "function") {
+          try {
+            const result = await supaService.criar(p);
+            if (result.success) {
+              return result.data;
+            }
+            throw new Error(result.error || "Erro ao criar agendamento");
+          } catch (e) {
+            console.warn("[AgendaApi] Supabase criar falhou, usando fallback:", e);
+          }
+        }
+
+        // ✅ Fallback: Legacy API
         return await callAction(callApiData, "Agenda.Criar", p);
       },
 
@@ -292,6 +332,20 @@
         const idProfissional = requireIdProfissional_(PRONTIORef);
         const idClinica = getIdClinica_(PRONTIORef);
 
+        // ✅ Tenta Supabase primeiro
+        const supaService = getSupabaseService();
+        if (supaService && typeof supaService.cancelar === "function") {
+          try {
+            const result = await supaService.cancelar(id, motivo ? String(motivo).slice(0, 500) : "");
+            if (result.success) {
+              return result.data;
+            }
+          } catch (e) {
+            console.warn("[AgendaApi] Supabase cancelar falhou, usando fallback:", e);
+          }
+        }
+
+        // ✅ Fallback: Legacy API
         const payload = {
           idAgenda: id,
           motivo: motivo ? String(motivo).slice(0, 500) : "",
