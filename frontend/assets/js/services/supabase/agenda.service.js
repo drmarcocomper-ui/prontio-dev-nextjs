@@ -32,7 +32,7 @@
       try {
         let query = supabase
           .from("agenda_evento")
-          .select("*, paciente:paciente_id(id, nome_completo, nome_social, telefone_principal), profissional:profissional_id(id, nome_completo)")
+          .select("*")
           .eq("clinica_id", clinicaId)
           .gte("inicio_datetime", inicio)
           .lte("inicio_datetime", fim);
@@ -77,7 +77,7 @@
       try {
         const { data, error } = await supabase
           .from("agenda_evento")
-          .select("*, paciente:paciente_id(id, nome_completo, nome_social), profissional:profissional_id(id, nome_completo)")
+          .select("*")
           .eq("id", id)
           .single();
 
