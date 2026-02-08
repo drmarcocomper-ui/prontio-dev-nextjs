@@ -361,9 +361,11 @@
       if (dados.fimDateTime !== undefined) d.fim_datetime = dados.fimDateTime;
       if (dados.titulo !== undefined) d.titulo = dados.titulo;
       if (dados.notas !== undefined) d.notas = dados.notas;
-      if (dados.tipo !== undefined) d.tipo = dados.tipo;
-      if (dados.status !== undefined) d.status = dados.status || "MARCADO";
-      if (dados.origem !== undefined) d.origem = dados.origem;
+      // ✅ Converte tipo para uppercase (enum no banco é CONSULTA, RETORNO, etc.)
+      if (dados.tipo !== undefined) d.tipo = String(dados.tipo).toUpperCase();
+      if (dados.status !== undefined) d.status = String(dados.status || "MARCADO").toUpperCase();
+      // ✅ Converte origem para uppercase
+      if (dados.origem !== undefined) d.origem = String(dados.origem).toUpperCase();
       if (dados.permiteEncaixe !== undefined) d.permite_encaixe = dados.permiteEncaixe;
       if (dados.permitirEncaixe !== undefined) d.permite_encaixe = dados.permitirEncaixe;
 
