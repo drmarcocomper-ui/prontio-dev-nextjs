@@ -125,6 +125,11 @@
       css: ["assets/css/pages/page-usuarios.css"]
     },
 
+    medicamentos: {
+      js: ["assets/js/pages/page-medicamentos.js"],
+      css: ["assets/css/pages/page-medicamentos.css"]
+    },
+
     "alterar-senha": {
       js: ["assets/js/pages/page-alterar-senha.js"],
       css: []

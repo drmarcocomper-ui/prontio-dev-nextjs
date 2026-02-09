@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>PRONTIO - Medicamentos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <script>(function(){try{var t=localStorage.getItem("prontio.theme");if(t==="dark"||t==="light"){document.documentElement.dataset.theme=t}else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches){document.documentElement.dataset.theme="dark"}}catch(e){}})();</script>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/components/modals.css">
+  <link rel="stylesheet" href="assets/css/components/topbar.css">
+  <link rel="stylesheet" href="assets/css/pages/page-medicamentos.css">
+</head>
+
+<body
+  data-theme="light"
+  data-page-id="medicamentos"
+  data-subtitle="Cadastro de medicamentos para receitas"
+  data-tag="Medicamentos"
+  data-context="Configuracoes"
+>
+  <div class="app-shell">
+    <aside id="sidebar" class="sidebar" data-component="sidebar"></aside>
+    <div class="sidebar-backdrop" data-sidebar-backdrop></div>
+
+    <main class="main-area">
+      <div id="topbarMount" data-partial="topbar"></div>
+
+      <section class="content content-medicamentos">
+        <div id="mensagem" class="mensagem" style="display:none;" role="status" aria-live="polite"></div>
+
+        <!-- Card Formulario -->
+        <section id="secCadastroMedicamento" class="card">
+          <div class="card-header">
+            <h2 id="tituloFormMedicamento">Novo Medicamento</h2>
+            <p class="card-subtitle">Cadastre medicamentos para usar nas receitas.</p>
+          </div>
+
+          <form id="formMedicamento" class="form-medicamento" autocomplete="off">
+            <input type="hidden" id="idMedicamento" name="idMedicamento">
+
+            <div class="form-grid">
+              <div class="campo campo-full">
+                <label for="nomeMedicamento">Nome do medicamento *</label>
+                <input type="text" id="nomeMedicamento" required placeholder="Ex.: Dipirona 500mg">
+              </div>
+
+              <div class="campo campo-full">
+                <label for="posologiaPadrao">Posologia padrao</label>
+                <input type="text" id="posologiaPadrao" placeholder="Ex.: 1 comprimido de 6/6h">
+              </div>
+
+              <div class="campo">
+                <label for="quantidadePadrao">Quantidade padrao</label>
+                <input type="text" id="quantidadePadrao" placeholder="Ex.: 20 comprimidos">
+              </div>
+
+              <div class="campo">
+                <label for="viaPadrao">Via de administracao</label>
+                <select id="viaPadrao">
+                  <option value="">Selecione...</option>
+                  <option value="VO">VO - Via Oral</option>
+                  <option value="IM">IM - Intramuscular</option>
+                  <option value="EV">EV - Endovenosa</option>
+                  <option value="SC">SC - Subcutanea</option>
+                  <option value="SL">SL - Sublingual</option>
+                  <option value="Topico">Topico</option>
+                  <option value="Retal">Retal</option>
+                  <option value="Nasal">Nasal</option>
+                  <option value="Ocular">Ocular</option>
+                  <option value="Inalatorio">Inalatorio</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label for="tipoReceita">Tipo de receita</label>
+                <select id="tipoReceita">
+                  <option value="COMUM">Comum</option>
+                  <option value="ESPECIAL">Especial (Branca 2 vias)</option>
+                  <option value="CONTROLADA">Controlada (Amarela)</option>
+                  <option value="AZUL">Azul (B1/B2)</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label class="check-favorito">
+                  <input type="checkbox" id="favoritoMedicamento">
+                  Favorito (aparece primeiro nas buscas)
+                </label>
+              </div>
+            </div>
+
+            <div class="botoes-form">
+              <button type="submit" id="btnSalvarMedicamento" class="btn primario">Salvar medicamento</button>
+              <button type="button" id="btnCancelarEdicao" class="btn secundario" style="display:none;">Cancelar edicao</button>
+            </div>
+          </form>
+        </section>
+
+        <hr class="divisor">
+
+        <!-- Card Lista -->
+        <section class="card">
+          <div class="card-header card-header-lista">
+            <div>
+              <h2>Lista de Medicamentos</h2>
+              <p class="card-subtitle">Clique em um medicamento para editar.</p>
+            </div>
+            <div class="acoes-header-lista">
+              <button id="btnNovoMedicamento" class="btn primario" type="button">Novo medicamento</button>
+              <button id="btnImportarCsv" class="btn secundario" type="button">Importar CSV</button>
+            </div>
+          </div>
+
+          <div class="linha-controles">
+            <div class="bloco-filtro">
+              <label for="filtroTexto">Buscar:</label>
+              <input type="text" id="filtroTexto" placeholder="Nome do medicamento...">
+            </div>
+            <div class="bloco-filtro">
+              <label class="check-ativo">
+                <input type="checkbox" id="chkSomenteAtivos" checked>
+                Apenas ativos
+              </label>
+              <label class="check-ativo">
+                <input type="checkbox" id="chkApenasFavoritos">
+                Apenas favoritos
+              </label>
+            </div>
+          </div>
+
+          <div id="listaMedicamentos" class="lista-medicamentos">
+            <p class="lista-vazia">Carregando medicamentos...</p>
+          </div>
+
+          <div id="contadorMedicamentos" class="contador-itens">0 medicamentos</div>
+        </section>
+
+        <!-- Modal Importar CSV -->
+        <div id="modalImportarCsv" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+          <div class="modal modal--lg">
+            <div class="modal-header">
+              <h2 class="modal-title">Importar Medicamentos (CSV)</h2>
+              <button type="button" class="modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="modal-body">
+              <p>Cole o conteudo CSV da planilha abaixo. O formato esperado e:</p>
+              <code>Nome_Medicacao,Posologia,Quantidade,Via_Administracao,Tipo_Receita,Favorito</code>
+              <br><br>
+              <textarea id="csvImportArea" rows="10" placeholder="Cole o CSV aqui..." style="width:100%;font-family:monospace;"></textarea>
+              <p class="texto-menor texto-suave">Dica: No Google Sheets, selecione as linhas e copie (Ctrl+C). Cole aqui.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn secundario" data-close-modal>Cancelar</button>
+              <button type="button" id="btnProcessarCsv" class="btn primario">Importar</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
