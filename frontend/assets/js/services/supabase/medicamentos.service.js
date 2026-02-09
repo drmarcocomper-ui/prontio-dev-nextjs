@@ -237,33 +237,21 @@
       }
 
       try {
+        // Todos os objetos devem ter EXATAMENTE as mesmas chaves para batch insert
         const itens = medicamentos.map(m => {
-          const item = {
+          const nome = String(m.Nome_Medicacao || m.nome || "").trim();
+          if (!nome) return null;
+
+          return {
             id: crypto.randomUUID(),
-            nome: String(m.Nome_Medicacao || m.nome || "").trim(),
+            clinica_id: clinicaId || null,
+            nome: nome,
+            posologia_padrao: String(m.Posologia || m.posologia || "").trim() || null,
+            quantidade_padrao: String(m.Quantidade || m.quantidade || "").trim() || null,
+            via_padrao: String(m.Via_Administracao || m.via || "").trim() || null,
             ativo: true
           };
-
-          // Só inclui campos opcionais se tiverem valor
-          if (clinicaId) item.clinica_id = clinicaId;
-
-          const posologia = String(m.Posologia || m.posologia || "").trim();
-          if (posologia) item.posologia_padrao = posologia;
-
-          const quantidade = String(m.Quantidade || m.quantidade || "").trim();
-          if (quantidade) item.quantidade_padrao = quantidade;
-
-          const via = String(m.Via_Administracao || m.via || "").trim();
-          if (via) item.via_padrao = via;
-
-          const tipoReceita = String(m.Tipo_Receita || m.tipoReceita || "").trim().toUpperCase();
-          if (tipoReceita) item.tipo_receita = tipoReceita;
-
-          const favorito = m.Favorito === true || m.Favorito === "true" || m.Favorito === "TRUE" || m.favorito === true;
-          if (favorito) item.favorito = true;
-
-          return item;
-        }).filter(m => m.nome);
+        }).filter(Boolean);
 
         if (!itens.length) {
           return { success: false, error: "Nenhum medicamento valido encontrado" };
