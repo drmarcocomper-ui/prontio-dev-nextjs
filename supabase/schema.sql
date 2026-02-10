@@ -2,6 +2,9 @@
 -- Prontio — Schema SQL para Supabase
 -- ============================================
 
+-- Extensão pg_trgm (necessária para busca por nome)
+create extension if not exists pg_trgm;
+
 -- 1. Pacientes
 -- --------------------------------------------
 create table pacientes (
@@ -109,11 +112,6 @@ create table configuracoes (
 );
 
 comment on table configuracoes is 'Configurações do consultório (chave-valor)';
-
--- ============================================
--- Extensão pg_trgm (necessária para busca por nome)
--- ============================================
-create extension if not exists pg_trgm;
 
 -- ============================================
 -- Row Level Security (RLS)
