@@ -1,0 +1,132 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+interface Paciente {
+  id: string;
+  nome: string;
+  cpf: string | null;
+}
+
+export function PatientSearch({
+  defaultPatientId,
+  defaultPatientName,
+}: {
+  defaultPatientId?: string;
+  defaultPatientName?: string;
+}) {
+  const [query, setQuery] = useState(defaultPatientName ?? "");
+  const [results, setResults] = useState<Paciente[]>([]);
+  const [selectedId, setSelectedId] = useState(defaultPatientId ?? "");
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (query.length < 2) {
+      setResults([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("pacientes")
+        .select("id, nome, cpf")
+        .ilike("nome", `%${query}%`)
+        .order("nome")
+        .limit(8);
+
+      setResults(data ?? []);
+      setIsOpen(true);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  function selectPatient(p: Paciente) {
+    setSelectedId(p.id);
+    setQuery(p.nome);
+    setIsOpen(false);
+  }
+
+  function formatCPF(cpf: string) {
+    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input type="hidden" name="paciente_id" value={selectedId} />
+      <div className="relative">
+        <svg
+          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (selectedId) setSelectedId("");
+          }}
+          onFocus={() => results.length > 0 && setIsOpen(true)}
+          placeholder="Buscar paciente por nome..."
+          className="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        />
+      </div>
+
+      {isOpen && results.length > 0 && (
+        <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          {results.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => selectPatient(p)}
+                className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
+                  {p.nome
+                    .split(" ")
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((w) => w[0])
+                    .join("")
+                    .toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{p.nome}</p>
+                  {p.cpf && (
+                    <p className="text-xs text-gray-500">
+                      CPF: {formatCPF(p.cpf)}
+                    </p>
+                  )}
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {isOpen && query.length >= 2 && results.length === 0 && (
+        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-4 text-center text-sm text-gray-500 shadow-lg">
+          Nenhum paciente encontrado.
+        </div>
+      )}
+    </div>
+  );
+}
