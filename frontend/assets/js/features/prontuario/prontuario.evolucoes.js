@@ -240,8 +240,7 @@
           result = await supaService.salvar({
             idPaciente: ctx.idPaciente,
             idAgenda: ctx.idAgenda || null,
-            texto,
-            origem: "PRONTUARIO"
+            texto
           });
         }
 

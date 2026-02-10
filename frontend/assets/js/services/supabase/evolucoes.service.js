@@ -72,7 +72,7 @@
     /**
      * Salva nova evolução
      */
-    async salvar({ idPaciente, idAgenda = null, texto, origem = "PRONTUARIO" }) {
+    async salvar({ idPaciente, idAgenda = null, texto }) {
       const supabase = getSupabase();
       const clinicaId = getClinicaId();
       const profissionalId = getProfissionalId();
@@ -90,12 +90,12 @@
           clinica_id: clinicaId,
           paciente_id: idPaciente,
           texto: texto.trim(),
-          origem: origem || "PRONTUARIO"
+          data_evolucao: new Date().toISOString().split("T")[0]
         };
 
         // Só inclui campos opcionais se tiverem valor
         if (profissionalId) evolucao.profissional_id = profissionalId;
-        if (idAgenda) evolucao.agenda_id = idAgenda;
+        if (idAgenda) evolucao.agenda_evento_id = idAgenda;
 
         const { error } = await supabase
           .from("evolucao")
@@ -107,7 +107,7 @@
 
         return {
           success: true,
-          data: { evolucao: { texto: evolucao.texto, origem: evolucao.origem } }
+          data: { evolucao: { texto: evolucao.texto } }
         };
       } catch (err) {
         return { success: false, error: err.message };
@@ -127,11 +127,11 @@
       try {
         const { error } = await supabase
           .from("evolucao")
+          .eq("id", idEvolucao)
           .update({
             texto: texto.trim(),
             atualizado_em: new Date().toISOString()
-          })
-          .eq("id", idEvolucao);
+          });
 
         if (error) {
           return { success: false, error: error.message };
@@ -159,8 +159,8 @@
       try {
         const { error } = await supabase
           .from("evolucao")
-          .update({ ativo: false })
-          .eq("id", idEvolucao);
+          .eq("id", idEvolucao)
+          .update({ ativo: false });
 
         if (error) {
           return { success: false, error: error.message };
@@ -183,9 +183,10 @@
         ID_Evolucao: e.id,
         idPaciente: e.paciente_id,
         idProfissional: e.profissional_id,
-        idAgenda: e.agenda_id,
+        idAgenda: e.agenda_evento_id,
         texto: e.texto,
-        origem: e.origem,
+        tipo: e.tipo,
+        dataEvolucao: e.data_evolucao,
         autor: getProfissionalNome(),
         dataHoraRegistro: e.criado_em,
         dataHora: e.criado_em,
