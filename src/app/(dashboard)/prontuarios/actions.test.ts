@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockInsert = vi.fn();
+const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
 const mockRedirect = vi.fn();
+let mockUpdateError: { message: string } | null = null;
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
@@ -15,6 +17,12 @@ vi.mock("@/lib/supabase/server", () => ({
               return Promise.resolve({ data: { id: "pr-new" }, error: null });
             },
           }),
+        }),
+        update: (data: unknown) => ({
+          eq: (_col: string, val: string) => {
+            mockUpdate({ data, id: val });
+            return Promise.resolve({ error: mockUpdateError });
+          },
         }),
         delete: () => ({
           eq: (_col: string, val: string) => {
@@ -33,7 +41,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-import { criarProntuario, excluirProntuario } from "./actions";
+import { criarProntuario, atualizarProntuario, excluirProntuario } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -75,6 +83,55 @@ describe("criarProntuario", () => {
       queixa_principal: "Dor de cabeça",
     }));
     expect(mockRedirect).toHaveBeenCalledWith("/prontuarios/pr-new?success=Prontu%C3%A1rio+registrado");
+  });
+});
+
+describe("atualizarProntuario", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUpdateError = null;
+  });
+
+  it("retorna fieldErrors quando paciente não selecionado", async () => {
+    const result = await atualizarProntuario({}, makeFormData({ id: "pr-1", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
+  });
+
+  it("retorna fieldErrors quando data está vazia", async () => {
+    const result = await atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "", queixa_principal: "Dor" }));
+    expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
+  });
+
+  it("retorna fieldErrors quando queixa e conduta estão vazios", async () => {
+    const result = await atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2024-06-15" }));
+    expect(result.fieldErrors?.queixa_principal).toBe("Preencha ao menos a queixa principal ou a conduta.");
+  });
+
+  it("aceita quando apenas conduta é preenchida", async () => {
+    await expect(
+      atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2024-06-15", conduta: "Prescrição" }))
+    ).rejects.toThrow("REDIRECT");
+    expect(mockUpdate).toHaveBeenCalled();
+  });
+
+  it("redireciona após atualização com sucesso", async () => {
+    await expect(
+      atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2024-06-15", queixa_principal: "Dor de cabeça" }))
+    ).rejects.toThrow("REDIRECT");
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      id: "pr-1",
+      data: expect.objectContaining({
+        paciente_id: "p-1",
+        queixa_principal: "Dor de cabeça",
+      }),
+    }));
+    expect(mockRedirect).toHaveBeenCalledWith("/prontuarios/pr-1?success=Prontu%C3%A1rio+atualizado");
+  });
+
+  it("retorna erro quando supabase falha", async () => {
+    mockUpdateError = { message: "DB error" };
+    const result = await atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2024-06-15", conduta: "Prescrição" }));
+    expect(result.error).toBe("Erro ao atualizar prontuário. Tente novamente.");
   });
 });
 
