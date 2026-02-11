@@ -1,0 +1,164 @@
+import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
+vi.mock("./search-input", () => ({
+  SearchInput: ({ defaultValue }: { defaultValue?: string }) => (
+    <input placeholder="Buscar" defaultValue={defaultValue} data-testid="search-input" />
+  ),
+}));
+
+const mockData: { data: unknown[] | null } = { data: [] };
+
+function createQueryResult() {
+  const result = {
+    then: (resolve: (value: typeof mockData) => void) => resolve(mockData),
+    or: () => createQueryResult(),
+    order: () => createQueryResult(),
+  };
+  return result;
+}
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: () =>
+    Promise.resolve({
+      from: () => ({ select: () => createQueryResult() }),
+    }),
+}));
+
+import PacientesPage from "./page";
+
+const pacientesMock = [
+  {
+    id: "1",
+    nome: "Maria Silva",
+    cpf: "12345678901",
+    telefone: "11999998888",
+    email: "maria@email.com",
+    data_nascimento: "1990-05-15",
+    created_at: "2024-01-01",
+  },
+  {
+    id: "2",
+    nome: "João Santos",
+    cpf: null,
+    telefone: null,
+    email: null,
+    data_nascimento: null,
+    created_at: "2024-01-02",
+  },
+];
+
+async function renderPage(searchParams: { q?: string } = {}) {
+  const jsx = await PacientesPage({ searchParams: Promise.resolve(searchParams) });
+  return render(jsx);
+}
+
+describe("PacientesPage", () => {
+  beforeEach(() => {
+    mockData.data = [];
+  });
+
+  it("renderiza o título Pacientes", async () => {
+    await renderPage();
+    expect(screen.getByText("Pacientes")).toBeInTheDocument();
+  });
+
+  it("renderiza o botão Novo paciente com link correto", async () => {
+    await renderPage();
+    const links = screen.getAllByText("Novo paciente");
+    expect(links[0].closest("a")).toHaveAttribute("href", "/pacientes/novo");
+  });
+
+  it("renderiza o SearchInput", async () => {
+    await renderPage();
+    expect(screen.getByTestId("search-input")).toBeInTheDocument();
+  });
+
+  it("mostra estado vazio quando não há pacientes", async () => {
+    mockData.data = [];
+    await renderPage();
+    expect(screen.getByText("Nenhum paciente encontrado")).toBeInTheDocument();
+    expect(screen.getByText("Comece cadastrando seu primeiro paciente.")).toBeInTheDocument();
+  });
+
+  it("mostra mensagem diferente no estado vazio quando há busca", async () => {
+    mockData.data = [];
+    await renderPage({ q: "xyz" });
+    expect(screen.getByText("Nenhum paciente encontrado")).toBeInTheDocument();
+    expect(screen.getByText("Tente buscar com outros termos.")).toBeInTheDocument();
+  });
+
+  it("renderiza tabela com pacientes", async () => {
+    mockData.data = pacientesMock;
+    await renderPage();
+    expect(screen.getByText("Maria Silva")).toBeInTheDocument();
+    expect(screen.getByText("João Santos")).toBeInTheDocument();
+  });
+
+  it("exibe contagem de pacientes", async () => {
+    mockData.data = pacientesMock;
+    await renderPage();
+    expect(screen.getByText("2 pacientes cadastrados")).toBeInTheDocument();
+  });
+
+  it("exibe contagem singular para 1 paciente", async () => {
+    mockData.data = [pacientesMock[0]];
+    await renderPage();
+    expect(screen.getByText("1 paciente cadastrado")).toBeInTheDocument();
+  });
+
+  it("formata CPF corretamente", async () => {
+    mockData.data = pacientesMock;
+    await renderPage();
+    expect(screen.getByText("123.456.789-01")).toBeInTheDocument();
+  });
+
+  it("formata telefone corretamente", async () => {
+    mockData.data = pacientesMock;
+    await renderPage();
+    expect(screen.getByText("(11) 99999-8888")).toBeInTheDocument();
+  });
+
+  it("exibe traço quando dados são nulos", async () => {
+    mockData.data = [pacientesMock[1]];
+    await renderPage();
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBe(3);
+  });
+
+  it("exibe iniciais do paciente", async () => {
+    mockData.data = pacientesMock;
+    await renderPage();
+    expect(screen.getByText("MS")).toBeInTheDocument();
+    expect(screen.getByText("JS")).toBeInTheDocument();
+  });
+
+  it("exibe email do paciente quando disponível", async () => {
+    mockData.data = pacientesMock;
+    await renderPage();
+    expect(screen.getByText("maria@email.com")).toBeInTheDocument();
+  });
+
+  it("link do paciente aponta para a página de detalhes", async () => {
+    mockData.data = [pacientesMock[0]];
+    await renderPage();
+    const link = screen.getByText("Maria Silva").closest("a");
+    expect(link).toHaveAttribute("href", "/pacientes/1");
+  });
+});
