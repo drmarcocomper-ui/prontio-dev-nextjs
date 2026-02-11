@@ -116,6 +116,13 @@ describe("TransacaoForm", () => {
     expect(input).toHaveValue("350,00");
   });
 
+  it("máscara de moeda retorna vazio para entrada sem dígitos", async () => {
+    render(<TransacaoForm />);
+    const input = screen.getByLabelText(/Valor/) as HTMLInputElement;
+    await userEvent.type(input, "abc");
+    expect(input.value).toBe("");
+  });
+
   it("exibe mensagem de erro quando state.error está definido", () => {
     formState.current = { error: "Erro ao registrar transação." };
     render(<TransacaoForm />);

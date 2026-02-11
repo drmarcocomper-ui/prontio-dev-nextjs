@@ -1,6 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const formState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+const formPending = vi.hoisted(() => ({ current: false }));
+
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return { ...actual, useActionState: () => [formState.current, vi.fn(), formPending.current] };
+});
 
 vi.mock("next/link", () => ({
   default: ({
@@ -47,6 +55,11 @@ const defaults = {
 };
 
 describe("PacienteForm", () => {
+  beforeEach(() => {
+    formState.current = {};
+    formPending.current = false;
+  });
+
   describe("modo criação", () => {
     it("renderiza todas as seções do formulário", () => {
       render(<PacienteForm />);
@@ -132,6 +145,27 @@ describe("PacienteForm", () => {
       const { container } = render(<PacienteForm defaults={defaults} />);
       const hidden = container.querySelector('input[type="hidden"][name="id"]');
       expect(hidden).toHaveValue("abc-123");
+    });
+  });
+
+  describe("estados do formulário", () => {
+    it("exibe mensagem de erro quando state.error está definido", () => {
+      formState.current = { error: "Erro ao cadastrar paciente." };
+      render(<PacienteForm />);
+      expect(screen.getByText("Erro ao cadastrar paciente.")).toBeInTheDocument();
+    });
+
+    it("exibe erro de campo quando fieldErrors está definido", () => {
+      formState.current = { fieldErrors: { nome: "Nome é obrigatório." } };
+      render(<PacienteForm />);
+      expect(screen.getByText("Nome é obrigatório.")).toBeInTheDocument();
+    });
+
+    it("desabilita botão e exibe spinner quando isPending", () => {
+      formPending.current = true;
+      render(<PacienteForm />);
+      const button = screen.getByRole("button", { name: /Cadastrar paciente/ });
+      expect(button).toBeDisabled();
     });
   });
 

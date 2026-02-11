@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import { ConfirmModal } from "./confirm-modal";
@@ -67,6 +67,13 @@ describe("ConfirmModal", () => {
   it("usa confirmLabel customizado", () => {
     render(<ConfirmModal {...defaultProps} confirmLabel="Remover" />);
     expect(screen.getByText("Remover")).toBeInTheDocument();
+  });
+
+  it("não fecha ao pressionar tecla diferente de Escape", () => {
+    const onClose = vi.fn();
+    render(<ConfirmModal {...defaultProps} onClose={onClose} />);
+    fireEvent.keyDown(document, { key: "a" });
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("não responde ao Escape quando modal está fechado", async () => {

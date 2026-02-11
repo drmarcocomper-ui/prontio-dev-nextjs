@@ -325,6 +325,28 @@ describe("PacienteDetalhesPage", () => {
     expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
   });
 
+  it("calcula idade corretamente quando aniversário é no mês atual mas depois de hoje", async () => {
+    const today = new Date();
+    const futureDay = Math.min(today.getDate() + 10, 28);
+    const birthDate = `1990-${String(today.getMonth() + 1).padStart(2, "0")}-${String(futureDay).padStart(2, "0")}`;
+    mockPaciente = { ...pacienteCompleto, data_nascimento: birthDate };
+    await renderPage();
+    const expectedAge = today.getFullYear() - 1990 - 1;
+    const matches = screen.getAllByText(new RegExp(`${expectedAge} anos`));
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("calcula idade corretamente quando aniversário já passou no mês atual", async () => {
+    const today = new Date();
+    const pastDay = Math.max(today.getDate() - 5, 1);
+    const birthDate = `1990-${String(today.getMonth() + 1).padStart(2, "0")}-${String(pastDay).padStart(2, "0")}`;
+    mockPaciente = { ...pacienteCompleto, data_nascimento: birthDate };
+    await renderPage();
+    const expectedAge = today.getFullYear() - 1990;
+    const matches = screen.getAllByText(new RegExp(`${expectedAge} anos`));
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("exibe valor raw quando tipo da receita não está em RECEITA_TIPO_LABELS", async () => {
     mockReceitas = [
       { id: "rec-x", data: "2024-06-15", tipo: "tipo_desconhecido", medicamentos: "Med X" },

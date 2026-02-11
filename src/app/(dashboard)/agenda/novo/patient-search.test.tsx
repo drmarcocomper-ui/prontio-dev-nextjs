@@ -166,6 +166,19 @@ describe("PatientSearch", () => {
     expect(hidden.value).toBe("");
   });
 
+  it("usa array vazio quando Supabase retorna data null", async () => {
+    mockSearchResults = null as unknown as typeof mockSearchResults;
+    render(<PatientSearch />);
+    const input = screen.getByPlaceholderText("Buscar paciente por nome...");
+
+    await userEvent.type(input, "Ma");
+    vi.advanceTimersByTime(350);
+
+    await waitFor(() => {
+      expect(screen.getByText("Nenhum paciente encontrado.")).toBeInTheDocument();
+    });
+  });
+
   it("reabre dropdown ao focar no input quando há resultados", async () => {
     render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");

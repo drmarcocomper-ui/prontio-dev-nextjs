@@ -115,6 +115,11 @@ describe("atualizarPaciente", () => {
     const result = await atualizarPaciente({}, makeFormData({ id: "p-1", nome: "Maria", email: "invalido" }));
     expect(result.fieldErrors?.email).toBe("E-mail inválido.");
   });
+
+  it("retorna fieldErrors quando CPF é inválido na atualização", async () => {
+    const result = await atualizarPaciente({}, makeFormData({ id: "p-1", nome: "Maria", cpf: "123" }));
+    expect(result.fieldErrors?.cpf).toBe("CPF deve ter 11 dígitos.");
+  });
 });
 
 describe("excluirPaciente", () => {
