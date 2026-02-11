@@ -118,4 +118,20 @@ describe("EditarTransacaoPage", () => {
     expect(defaults.paciente_id).toBeNull();
     expect(defaults.paciente_nome).toBeNull();
   });
+
+  it("converte valor 0 para '0,00'", async () => {
+    mockTransacao = { ...transacaoMock, valor: 0 };
+    await renderPage();
+    const form = screen.getByTestId("transacao-form");
+    const defaults = JSON.parse(form.getAttribute("data-defaults")!);
+    expect(defaults.valor).toBe("0,00");
+  });
+
+  it("retorna valor vazio quando valor é NaN", async () => {
+    mockTransacao = { ...transacaoMock, valor: NaN };
+    await renderPage();
+    const form = screen.getByTestId("transacao-form");
+    const defaults = JSON.parse(form.getAttribute("data-defaults")!);
+    expect(defaults.valor).toBe("");
+  });
 });

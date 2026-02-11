@@ -145,4 +145,52 @@ describe("TransacaoDetalhesPage", () => {
     await renderPage();
     expect(screen.queryByText("João Souza")).not.toBeInTheDocument();
   });
+
+  it("exibe status Pendente", async () => {
+    mockTransacao = { ...transacaoCompleta, status: "pendente" };
+    await renderPage();
+    expect(screen.getByText("Pendente")).toBeInTheDocument();
+  });
+
+  it("exibe status Cancelado", async () => {
+    mockTransacao = { ...transacaoCompleta, status: "cancelado" };
+    await renderPage();
+    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+  });
+
+  it("usa fallback de estilo para status desconhecido", async () => {
+    mockTransacao = { ...transacaoCompleta, status: "desconhecido" };
+    await renderPage();
+    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+  });
+
+  it("não exibe categoria quando ausente", async () => {
+    mockTransacao = { ...transacaoCompleta, categoria: null };
+    await renderPage();
+    expect(screen.queryByText("Categoria")).not.toBeInTheDocument();
+  });
+
+  it("não exibe forma de pagamento quando ausente", async () => {
+    mockTransacao = { ...transacaoCompleta, forma_pagamento: null };
+    await renderPage();
+    expect(screen.queryByText("Forma de pagamento")).not.toBeInTheDocument();
+  });
+
+  it("não exibe observações quando ausentes", async () => {
+    mockTransacao = { ...transacaoCompleta, observacoes: null };
+    await renderPage();
+    expect(screen.queryByText("Observações")).not.toBeInTheDocument();
+  });
+
+  it("exibe valor raw para categoria desconhecida", async () => {
+    mockTransacao = { ...transacaoCompleta, categoria: "cat_custom" };
+    await renderPage();
+    expect(screen.getByText("cat_custom")).toBeInTheDocument();
+  });
+
+  it("exibe valor raw para forma de pagamento desconhecida", async () => {
+    mockTransacao = { ...transacaoCompleta, forma_pagamento: "crypto" };
+    await renderPage();
+    expect(screen.getByText("crypto")).toBeInTheDocument();
+  });
 });
