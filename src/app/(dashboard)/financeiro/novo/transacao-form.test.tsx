@@ -28,10 +28,13 @@ vi.mock("next/link", () => ({
 
 vi.mock("../actions", () => ({
   criarTransacao: vi.fn(),
+  atualizarTransacao: vi.fn(),
 }));
 
 vi.mock("@/app/(dashboard)/agenda/novo/patient-search", () => ({
-  PatientSearch: () => <input data-testid="patient-search" />,
+  PatientSearch: ({ defaultPatientId, defaultPatientName }: { defaultPatientId?: string; defaultPatientName?: string }) => (
+    <input data-testid="patient-search" data-patient-id={defaultPatientId} data-patient-name={defaultPatientName} />
+  ),
 }));
 
 import { TransacaoForm } from "./transacao-form";
@@ -140,5 +143,92 @@ describe("TransacaoForm", () => {
     render(<TransacaoForm />);
     const button = screen.getByRole("button", { name: /Registrar/ });
     expect(button).toBeDisabled();
+  });
+
+  // Edit mode tests
+  it("renderiza botão 'Salvar alterações' no modo edição", () => {
+    render(
+      <TransacaoForm
+        defaults={{
+          id: "t-1",
+          tipo: "receita",
+          descricao: "Consulta",
+          valor: "350,00",
+          data: "2024-06-15",
+        }}
+      />
+    );
+    expect(screen.getByRole("button", { name: /Salvar alterações/ })).toBeInTheDocument();
+  });
+
+  it("link Cancelar aponta para o detalhe no modo edição", () => {
+    render(
+      <TransacaoForm
+        defaults={{
+          id: "t-1",
+          tipo: "receita",
+          descricao: "Consulta",
+          valor: "350,00",
+          data: "2024-06-15",
+        }}
+      />
+    );
+    const link = screen.getByText("Cancelar").closest("a");
+    expect(link).toHaveAttribute("href", "/financeiro/t-1");
+  });
+
+  it("preenche campos com defaults no modo edição", () => {
+    render(
+      <TransacaoForm
+        defaults={{
+          id: "t-1",
+          tipo: "receita",
+          descricao: "Consulta particular",
+          valor: "350,00",
+          data: "2024-06-15",
+          observacoes: "Obs teste",
+        }}
+      />
+    );
+    expect(screen.getByLabelText(/Descrição/)).toHaveValue("Consulta particular");
+    expect(screen.getByLabelText(/Valor/)).toHaveValue("350,00");
+    expect(screen.getByLabelText(/Data/)).toHaveValue("2024-06-15");
+    expect(screen.getByLabelText("Observações")).toHaveValue("Obs teste");
+  });
+
+  it("inclui hidden input com id no modo edição", () => {
+    const { container } = render(
+      <TransacaoForm
+        defaults={{
+          id: "t-1",
+          tipo: "receita",
+          descricao: "Consulta",
+          valor: "350,00",
+          data: "2024-06-15",
+        }}
+      />
+    );
+    const hidden = container.querySelector('input[name="id"]') as HTMLInputElement;
+    expect(hidden).toBeTruthy();
+    expect(hidden.value).toBe("t-1");
+  });
+
+  it("passa defaults de paciente para PatientSearch no modo edição", () => {
+    render(
+      <TransacaoForm
+        defaults={{
+          id: "t-1",
+          tipo: "receita",
+          descricao: "Consulta",
+          valor: "350,00",
+          data: "2024-06-15",
+          paciente_id: "p-1",
+          paciente_nome: "Maria Silva",
+        }}
+      />
+    );
+    const ps = screen.getByTestId("patient-search");
+    expect(ps).toHaveAttribute("data-patient-id", "p-1");
+    expect(ps).toHaveAttribute("data-patient-name", "Maria Silva");
   });
 });

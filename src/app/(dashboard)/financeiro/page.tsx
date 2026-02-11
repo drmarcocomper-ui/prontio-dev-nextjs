@@ -182,9 +182,12 @@ export default async function FinanceiroPage({
                     {formatDate(t.data)}
                   </td>
                   <td className="px-5 py-3.5">
-                    <p className="text-sm font-medium text-gray-900">
+                    <Link
+                      href={`/financeiro/${t.id}`}
+                      className="text-sm font-medium text-gray-900 hover:text-sky-600"
+                    >
                       {t.descricao}
-                    </p>
+                    </Link>
                     {t.pacientes && (
                       <p className="text-xs text-gray-500">
                         {t.pacientes.nome}

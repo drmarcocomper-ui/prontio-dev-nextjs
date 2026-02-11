@@ -27,10 +27,13 @@ vi.mock("next/link", () => ({
 
 vi.mock("../actions", () => ({
   criarAgendamento: vi.fn(),
+  atualizarAgendamento: vi.fn(),
 }));
 
 vi.mock("./patient-search", () => ({
-  PatientSearch: () => <input data-testid="patient-search" placeholder="Buscar paciente" />,
+  PatientSearch: ({ defaultPatientId, defaultPatientName }: { defaultPatientId?: string; defaultPatientName?: string }) => (
+    <input data-testid="patient-search" placeholder="Buscar paciente" data-patient-id={defaultPatientId} data-patient-name={defaultPatientName} />
+  ),
 }));
 
 import { AgendamentoForm } from "./agendamento-form";
@@ -107,5 +110,76 @@ describe("AgendamentoForm", () => {
     render(<AgendamentoForm defaultDate="2024-06-15" />);
     const button = screen.getByRole("button", { name: /Agendar/ });
     expect(button).toBeDisabled();
+  });
+
+  // Edit mode tests
+  it("renderiza botão 'Salvar alterações' no modo edição", () => {
+    render(
+      <AgendamentoForm
+        defaults={{
+          id: "ag-1",
+          paciente_id: "p-1",
+          paciente_nome: "Maria Silva",
+          data: "2024-06-15",
+          hora_inicio: "09:00",
+          hora_fim: "09:30",
+          tipo: "consulta",
+          observacoes: "Obs",
+        }}
+      />
+    );
+    expect(screen.getByRole("button", { name: /Salvar alterações/ })).toBeInTheDocument();
+  });
+
+  it("link Cancelar aponta para o detalhe no modo edição", () => {
+    render(
+      <AgendamentoForm
+        defaults={{
+          id: "ag-1",
+          data: "2024-06-15",
+          hora_inicio: "09:00",
+          hora_fim: "09:30",
+        }}
+      />
+    );
+    const link = screen.getByText("Cancelar").closest("a");
+    expect(link).toHaveAttribute("href", "/agenda/ag-1");
+  });
+
+  it("preenche campos com defaults no modo edição", () => {
+    render(
+      <AgendamentoForm
+        defaults={{
+          id: "ag-1",
+          paciente_id: "p-1",
+          paciente_nome: "Maria Silva",
+          data: "2024-06-15",
+          hora_inicio: "09:00",
+          hora_fim: "09:30",
+          tipo: "consulta",
+          observacoes: "Observação teste",
+        }}
+      />
+    );
+    expect(screen.getByLabelText(/Data/)).toHaveValue("2024-06-15");
+    expect(screen.getByLabelText(/Início/)).toHaveValue("09:00");
+    expect(screen.getByLabelText(/Término/)).toHaveValue("09:30");
+    expect(screen.getByLabelText("Observações")).toHaveValue("Observação teste");
+  });
+
+  it("inclui hidden input com id no modo edição", () => {
+    const { container } = render(
+      <AgendamentoForm
+        defaults={{
+          id: "ag-1",
+          data: "2024-06-15",
+          hora_inicio: "09:00",
+          hora_fim: "09:30",
+        }}
+      />
+    );
+    const hidden = container.querySelector('input[name="id"]') as HTMLInputElement;
+    expect(hidden).toBeTruthy();
+    expect(hidden.value).toBe("ag-1");
   });
 });

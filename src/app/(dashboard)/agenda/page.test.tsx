@@ -168,11 +168,11 @@ describe("AgendaPage", () => {
     expect(screen.getByText("JS")).toBeInTheDocument();
   });
 
-  it("link do paciente aponta para a página de detalhes", async () => {
+  it("link do paciente aponta para a página de detalhes do agendamento", async () => {
     mockData.data = [agendamentosMock[0]];
     await renderPage();
     const link = screen.getByText("Maria Silva").closest("a");
-    expect(link).toHaveAttribute("href", "/pacientes/p-1");
+    expect(link).toHaveAttribute("href", "/agenda/ag-1");
   });
 
   it("renderiza StatusSelect para cada agendamento", async () => {

@@ -2,8 +2,19 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { criarAgendamento, type AgendamentoFormState } from "../actions";
+import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
 import { PatientSearch } from "./patient-search";
+
+export interface AgendamentoDefaults {
+  id?: string;
+  paciente_id?: string;
+  paciente_nome?: string;
+  data?: string;
+  hora_inicio?: string;
+  hora_fim?: string;
+  tipo?: string | null;
+  observacoes?: string | null;
+}
 
 const inputClass =
   "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
@@ -13,14 +24,28 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-red-600">{message}</p>;
 }
 
-export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
+export function AgendamentoForm({
+  defaultDate,
+  defaults,
+}: {
+  defaultDate?: string;
+  defaults?: AgendamentoDefaults;
+}) {
+  const isEditing = !!defaults?.id;
+  const action = isEditing ? atualizarAgendamento : criarAgendamento;
+  const dateValue = defaults?.data ?? defaultDate ?? "";
+
   const [state, formAction, isPending] = useActionState<AgendamentoFormState, FormData>(
-    criarAgendamento,
+    action,
     {}
   );
 
+  const cancelHref = isEditing ? `/agenda/${defaults.id}` : `/agenda?data=${dateValue}`;
+
   return (
     <form action={formAction} className="space-y-6">
+      {isEditing && <input type="hidden" name="id" value={defaults.id} />}
+
       {state.error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
@@ -33,7 +58,10 @@ export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
           Paciente <span className="text-red-500">*</span>
         </label>
         <div className="mt-1">
-          <PatientSearch />
+          <PatientSearch
+            defaultPatientId={defaults?.paciente_id}
+            defaultPatientName={defaults?.paciente_nome}
+          />
         </div>
         <FieldError message={state.fieldErrors?.paciente_id} />
       </div>
@@ -49,7 +77,7 @@ export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
             name="data"
             type="date"
             required
-            defaultValue={defaultDate}
+            defaultValue={dateValue}
             className={inputClass}
           />
           <FieldError message={state.fieldErrors?.data} />
@@ -64,6 +92,7 @@ export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
             name="hora_inicio"
             type="time"
             required
+            defaultValue={defaults?.hora_inicio ?? ""}
             className={inputClass}
           />
           <FieldError message={state.fieldErrors?.hora_inicio} />
@@ -78,6 +107,7 @@ export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
             name="hora_fim"
             type="time"
             required
+            defaultValue={defaults?.hora_fim ?? ""}
             className={inputClass}
           />
           <FieldError message={state.fieldErrors?.hora_fim} />
@@ -89,7 +119,7 @@ export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
           Tipo
         </label>
-        <select id="tipo" name="tipo" className={inputClass}>
+        <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} className={inputClass}>
           <option value="">Selecione</option>
           <option value="consulta">Consulta</option>
           <option value="retorno">Retorno</option>
@@ -108,6 +138,7 @@ export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
           id="observacoes"
           name="observacoes"
           rows={3}
+          defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}
         />
       </div>
@@ -115,7 +146,7 @@ export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
         <Link
-          href={`/agenda?data=${defaultDate}`}
+          href={cancelHref}
           className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
         >
           Cancelar
@@ -128,7 +159,7 @@ export function AgendamentoForm({ defaultDate }: { defaultDate: string }) {
           {isPending && (
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           )}
-          Agendar
+          {isEditing ? "Salvar alterações" : "Agendar"}
         </button>
       </div>
     </form>

@@ -27,7 +27,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-import { criarAgendamento, atualizarStatusAgendamento, excluirAgendamento } from "./actions";
+import { criarAgendamento, atualizarAgendamento, atualizarStatusAgendamento, excluirAgendamento } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -89,6 +89,57 @@ describe("criarAgendamento", () => {
       status: "agendado",
     }));
     expect(mockRedirect).toHaveBeenCalledWith("/agenda?data=2024-06-15&success=Agendamento+criado");
+  });
+});
+
+describe("atualizarAgendamento", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("retorna fieldErrors quando paciente não selecionado", async () => {
+    const result = await atualizarAgendamento({}, makeFormData({
+      id: "ag-1", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30",
+    }));
+    expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
+  });
+
+  it("retorna fieldErrors quando data está vazia", async () => {
+    const result = await atualizarAgendamento({}, makeFormData({
+      id: "ag-1", paciente_id: "p-1", data: "", hora_inicio: "09:00", hora_fim: "09:30",
+    }));
+    expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
+  });
+
+  it("retorna fieldErrors quando hora_fim <= hora_inicio", async () => {
+    const result = await atualizarAgendamento({}, makeFormData({
+      id: "ag-1", paciente_id: "p-1", data: "2024-06-15", hora_inicio: "10:00", hora_fim: "09:00",
+    }));
+    expect(result.fieldErrors?.hora_fim).toBe("Horário de término deve ser após o início.");
+  });
+
+  it("redireciona após atualização com sucesso", async () => {
+    await expect(
+      atualizarAgendamento({}, makeFormData({
+        id: "ag-1", paciente_id: "p-1", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30",
+      }))
+    ).rejects.toThrow("REDIRECT");
+    expect(mockUpdateEq).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paciente_id: "p-1",
+        data: "2024-06-15",
+        hora_inicio: "09:00",
+        hora_fim: "09:30",
+      }),
+      "ag-1"
+    );
+    expect(mockRedirect).toHaveBeenCalledWith("/agenda/ag-1?success=Agendamento+atualizado");
+  });
+
+  it("retorna erro quando supabase falha", async () => {
+    mockUpdateEq.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await atualizarAgendamento({}, makeFormData({
+      id: "ag-1", paciente_id: "p-1", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30",
+    }));
+    expect(result.error).toBe("Erro ao atualizar agendamento. Tente novamente.");
   });
 });
 

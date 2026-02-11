@@ -96,30 +96,27 @@ export default async function AgendaPage({
               className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300"
             >
               {/* Time */}
-              <div className="w-24 shrink-0 text-center">
+              <Link href={`/agenda/${ag.id}`} className="w-24 shrink-0 text-center">
                 <p className="text-lg font-semibold text-gray-900">
                   {formatTime(ag.hora_inicio)}
                 </p>
                 <p className="text-xs text-gray-500">
                   até {formatTime(ag.hora_fim)}
                 </p>
-              </div>
+              </Link>
 
               {/* Divider */}
               <div className="h-12 w-px bg-gray-200" />
 
               {/* Patient Info */}
-              <div className="flex min-w-0 flex-1 items-center gap-3">
+              <Link href={`/agenda/${ag.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
                   {getInitials(ag.pacientes.nome)}
                 </div>
                 <div className="min-w-0">
-                  <Link
-                    href={`/pacientes/${ag.pacientes.id}`}
-                    className="block truncate text-sm font-medium text-gray-900 hover:text-sky-600"
-                  >
+                  <span className="block truncate text-sm font-medium text-gray-900 hover:text-sky-600">
                     {ag.pacientes.nome}
-                  </Link>
+                  </span>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     {ag.tipo && (
                       <span>{TIPO_LABELS[ag.tipo] ?? ag.tipo}</span>
@@ -130,7 +127,7 @@ export default async function AgendaPage({
                     )}
                   </div>
                 </div>
-              </div>
+              </Link>
 
               {/* Status Badge (mobile) */}
               <div className="hidden sm:block">

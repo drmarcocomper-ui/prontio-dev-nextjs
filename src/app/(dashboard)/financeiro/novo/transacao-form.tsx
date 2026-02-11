@@ -2,8 +2,22 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { criarTransacao, type TransacaoFormState } from "../actions";
+import { criarTransacao, atualizarTransacao, type TransacaoFormState } from "../actions";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
+
+export interface TransacaoDefaults {
+  id?: string;
+  tipo?: string;
+  categoria?: string | null;
+  descricao?: string;
+  valor?: string;
+  data?: string;
+  paciente_id?: string | null;
+  paciente_nome?: string | null;
+  forma_pagamento?: string | null;
+  status?: string;
+  observacoes?: string | null;
+}
 
 const inputClass =
   "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
@@ -40,19 +54,25 @@ const CATEGORIAS_DESPESA = [
   { value: "outros", label: "Outros" },
 ];
 
-export function TransacaoForm() {
+export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
+  const isEditing = !!defaults?.id;
   const today = new Date().toISOString().split("T")[0];
-  const [tipo, setTipo] = useState("receita");
+  const [tipo, setTipo] = useState(defaults?.tipo ?? "receita");
+
+  const action = isEditing ? atualizarTransacao : criarTransacao;
 
   const [state, formAction, isPending] = useActionState<TransacaoFormState, FormData>(
-    criarTransacao,
+    action,
     {}
   );
 
   const categorias = tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
+  const cancelHref = isEditing ? `/financeiro/${defaults.id}` : "/financeiro";
 
   return (
     <form action={formAction} className="space-y-6">
+      {isEditing && <input type="hidden" name="id" value={defaults.id} />}
+
       {state.error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
@@ -121,6 +141,7 @@ export function TransacaoForm() {
             type="text"
             required
             placeholder="Ex: Consulta particular"
+            defaultValue={defaults?.descricao ?? ""}
             className={inputClass}
           />
           <FieldError message={state.fieldErrors?.descricao} />
@@ -137,6 +158,7 @@ export function TransacaoForm() {
             inputMode="numeric"
             required
             placeholder="0,00"
+            defaultValue={defaults?.valor ?? ""}
             onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
             className={inputClass}
           />
@@ -155,7 +177,7 @@ export function TransacaoForm() {
             name="data"
             type="date"
             required
-            defaultValue={today}
+            defaultValue={defaults?.data ?? today}
             className={inputClass}
           />
           <FieldError message={state.fieldErrors?.data} />
@@ -165,7 +187,7 @@ export function TransacaoForm() {
           <label htmlFor="categoria" className="block text-sm font-medium text-gray-700">
             Categoria
           </label>
-          <select id="categoria" name="categoria" className={inputClass}>
+          <select id="categoria" name="categoria" defaultValue={defaults?.categoria ?? ""} className={inputClass}>
             <option value="">Selecione</option>
             {categorias.map((c) => (
               <option key={c.value} value={c.value}>
@@ -179,7 +201,7 @@ export function TransacaoForm() {
           <label htmlFor="forma_pagamento" className="block text-sm font-medium text-gray-700">
             Forma de pagamento
           </label>
-          <select id="forma_pagamento" name="forma_pagamento" className={inputClass}>
+          <select id="forma_pagamento" name="forma_pagamento" defaultValue={defaults?.forma_pagamento ?? ""} className={inputClass}>
             <option value="">Selecione</option>
             <option value="dinheiro">Dinheiro</option>
             <option value="pix">PIX</option>
@@ -198,7 +220,7 @@ export function TransacaoForm() {
           <label htmlFor="status" className="block text-sm font-medium text-gray-700">
             Status
           </label>
-          <select id="status" name="status" defaultValue="pago" className={inputClass}>
+          <select id="status" name="status" defaultValue={defaults?.status ?? "pago"} className={inputClass}>
             <option value="pago">Pago</option>
             <option value="pendente">Pendente</option>
           </select>
@@ -212,7 +234,10 @@ export function TransacaoForm() {
             Paciente <span className="text-xs text-gray-400">(opcional)</span>
           </label>
           <div className="mt-1">
-            <PatientSearch />
+            <PatientSearch
+              defaultPatientId={defaults?.paciente_id ?? undefined}
+              defaultPatientName={defaults?.paciente_nome ?? undefined}
+            />
           </div>
         </div>
       )}
@@ -226,6 +251,7 @@ export function TransacaoForm() {
           id="observacoes"
           name="observacoes"
           rows={2}
+          defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}
         />
       </div>
@@ -233,7 +259,7 @@ export function TransacaoForm() {
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
         <Link
-          href="/financeiro"
+          href={cancelHref}
           className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
         >
           Cancelar
@@ -246,7 +272,7 @@ export function TransacaoForm() {
           {isPending && (
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           )}
-          Registrar
+          {isEditing ? "Salvar alterações" : "Registrar"}
         </button>
       </div>
     </form>

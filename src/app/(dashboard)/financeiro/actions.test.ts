@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockInsert = vi.fn().mockResolvedValue({ error: null });
+const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
 const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 
@@ -12,6 +13,9 @@ vi.mock("@/lib/supabase/server", () => ({
           mockInsert(data);
           return mockInsert.mock.results[mockInsert.mock.results.length - 1].value;
         },
+        update: (data: unknown) => ({
+          eq: (_col: string, val: string) => mockUpdateEq(data, val),
+        }),
         delete: () => ({
           eq: (_col: string, val: string) => mockDelete(val),
         }),
@@ -26,7 +30,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-import { criarTransacao, excluirTransacao } from "./actions";
+import { criarTransacao, atualizarTransacao, excluirTransacao } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -80,6 +84,51 @@ describe("criarTransacao", () => {
     mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
     expect(result.error).toBe("Erro ao registrar transação. Tente novamente.");
+  });
+});
+
+describe("atualizarTransacao", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("retorna fieldErrors quando tipo está vazio", async () => {
+    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", descricao: "Teste", valor: "100,00", data: "2024-06-15" }));
+    expect(result.fieldErrors?.tipo).toBe("Selecione o tipo.");
+  });
+
+  it("retorna fieldErrors quando descrição está vazia", async () => {
+    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "", valor: "100,00", data: "2024-06-15" }));
+    expect(result.fieldErrors?.descricao).toBe("Descrição é obrigatória.");
+  });
+
+  it("retorna fieldErrors quando valor é inválido", async () => {
+    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "Teste", valor: "0", data: "2024-06-15" }));
+    expect(result.fieldErrors?.valor).toBe("Informe um valor válido.");
+  });
+
+  it("retorna fieldErrors quando data está vazia", async () => {
+    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "Teste", valor: "100,00", data: "" }));
+    expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
+  });
+
+  it("redireciona após atualização com sucesso", async () => {
+    await expect(
+      atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "Consulta", valor: "350,00", data: "2024-06-15" }))
+    ).rejects.toThrow("REDIRECT");
+    expect(mockUpdateEq).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipo: "receita",
+        descricao: "Consulta",
+        valor: 350,
+      }),
+      "t-1"
+    );
+    expect(mockRedirect).toHaveBeenCalledWith("/financeiro/t-1?success=Transa%C3%A7%C3%A3o+atualizada");
+  });
+
+  it("retorna erro quando supabase falha", async () => {
+    mockUpdateEq.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
+    expect(result.error).toBe("Erro ao atualizar transação. Tente novamente.");
   });
 });
 

@@ -55,6 +55,57 @@ export async function criarTransacao(
   redirect("/financeiro?success=Transa%C3%A7%C3%A3o+registrada");
 }
 
+export async function atualizarTransacao(
+  _prev: TransacaoFormState,
+  formData: FormData
+): Promise<TransacaoFormState> {
+  const id = formData.get("id") as string;
+  const tipo = formData.get("tipo") as string;
+  const categoria = (formData.get("categoria") as string) || null;
+  const descricao = (formData.get("descricao") as string)?.trim();
+  const valorRaw = (formData.get("valor") as string)?.replace(/\./g, "").replace(",", ".");
+  const valor = parseFloat(valorRaw);
+  const data = formData.get("data") as string;
+  const paciente_id = (formData.get("paciente_id") as string) || null;
+  const forma_pagamento = (formData.get("forma_pagamento") as string) || null;
+  const status = (formData.get("status") as string) || "pago";
+  const observacoes = (formData.get("observacoes") as string)?.trim() || null;
+
+  const fieldErrors: Record<string, string> = {};
+
+  if (!tipo) fieldErrors.tipo = "Selecione o tipo.";
+  if (!descricao) fieldErrors.descricao = "Descrição é obrigatória.";
+  if (!valorRaw || isNaN(valor) || valor <= 0) fieldErrors.valor = "Informe um valor válido.";
+  if (!data) fieldErrors.data = "Data é obrigatória.";
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("transacoes")
+    .update({
+      tipo,
+      categoria,
+      descricao,
+      valor,
+      data,
+      paciente_id,
+      forma_pagamento,
+      status,
+      observacoes,
+    })
+    .eq("id", id);
+
+  if (error) {
+    return { error: "Erro ao atualizar transação. Tente novamente." };
+  }
+
+  redirect(`/financeiro/${id}?success=Transa%C3%A7%C3%A3o+atualizada`);
+}
+
 export async function excluirTransacao(id: string): Promise<void> {
   const supabase = await createClient();
 
