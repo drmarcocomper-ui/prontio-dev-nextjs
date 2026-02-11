@@ -1,5 +1,18 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const formState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+const formPending = vi.hoisted(() => ({ current: false }));
+const mockToastSuccess = vi.hoisted(() => vi.fn());
+
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return { ...actual, useActionState: () => [formState.current, vi.fn(), formPending.current] };
+});
+
+vi.mock("sonner", () => ({
+  toast: { success: (...args: unknown[]) => mockToastSuccess(...args) },
+}));
 
 vi.mock("./actions", () => ({
   salvarConfiguracoes: vi.fn(),
@@ -19,6 +32,12 @@ const filledDefaults: Record<string, string> = {
 };
 
 describe("ProfissionalForm", () => {
+  beforeEach(() => {
+    formState.current = {};
+    formPending.current = false;
+    mockToastSuccess.mockClear();
+  });
+
   it("renderiza todos os campos", () => {
     render(<ProfissionalForm defaults={emptyDefaults} />);
     expect(screen.getByLabelText("Nome completo")).toBeInTheDocument();
@@ -52,5 +71,24 @@ describe("ProfissionalForm", () => {
     const hidden = document.querySelector('input[name="config_nome_consultorio"]') as HTMLInputElement;
     expect(hidden).toBeInTheDocument();
     expect(hidden.value).toBe("Clínica Saúde");
+  });
+
+  it("exibe mensagem de erro quando state.error está definido", () => {
+    formState.current = { error: "Erro ao salvar configurações. Tente novamente." };
+    render(<ProfissionalForm defaults={emptyDefaults} />);
+    expect(screen.getByText("Erro ao salvar configurações. Tente novamente.")).toBeInTheDocument();
+  });
+
+  it("chama toast.success quando state.success é true", () => {
+    formState.current = { success: true };
+    render(<ProfissionalForm defaults={emptyDefaults} />);
+    expect(mockToastSuccess).toHaveBeenCalledWith("Configurações salvas com sucesso.");
+  });
+
+  it("desabilita botão quando isPending", () => {
+    formPending.current = true;
+    render(<ProfissionalForm defaults={emptyDefaults} />);
+    const button = screen.getByRole("button", { name: /Salvar/ });
+    expect(button).toBeDisabled();
   });
 });

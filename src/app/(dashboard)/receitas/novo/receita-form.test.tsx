@@ -1,5 +1,13 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const formState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+const formPending = vi.hoisted(() => ({ current: false }));
+
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return { ...actual, useActionState: () => [formState.current, vi.fn(), formPending.current] };
+});
 
 vi.mock("next/link", () => ({
   default: ({
@@ -29,6 +37,11 @@ vi.mock("@/app/(dashboard)/agenda/novo/patient-search", () => ({
 import { ReceitaForm } from "./receita-form";
 
 describe("ReceitaForm", () => {
+  beforeEach(() => {
+    formState.current = {};
+    formPending.current = false;
+  });
+
   it("renderiza todos os campos do formulário", () => {
     render(<ReceitaForm />);
     expect(screen.getByText(/Paciente/)).toBeInTheDocument();
@@ -90,5 +103,24 @@ describe("ReceitaForm", () => {
     render(<ReceitaForm cancelHref="/pacientes/p-1" />);
     const link = screen.getByText("Cancelar").closest("a");
     expect(link).toHaveAttribute("href", "/pacientes/p-1");
+  });
+
+  it("exibe mensagem de erro quando state.error está definido", () => {
+    formState.current = { error: "Erro ao salvar receita." };
+    render(<ReceitaForm />);
+    expect(screen.getByText("Erro ao salvar receita.")).toBeInTheDocument();
+  });
+
+  it("exibe erro de campo quando fieldErrors está definido", () => {
+    formState.current = { fieldErrors: { paciente_id: "Selecione um paciente." } };
+    render(<ReceitaForm />);
+    expect(screen.getByText("Selecione um paciente.")).toBeInTheDocument();
+  });
+
+  it("desabilita botão quando isPending", () => {
+    formPending.current = true;
+    render(<ReceitaForm />);
+    const button = screen.getByRole("button", { name: /Salvar receita/ });
+    expect(button).toBeDisabled();
   });
 });

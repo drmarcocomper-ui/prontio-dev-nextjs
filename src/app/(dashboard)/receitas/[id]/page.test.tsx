@@ -132,4 +132,10 @@ describe("ReceitaDetalhesPage", () => {
     const link = screen.getByText("Editar").closest("a");
     expect(link).toHaveAttribute("href", "/receitas/rec-1/editar");
   });
+
+  it("exibe tipo bruto quando não encontrado em TIPO_LABELS", async () => {
+    mockReceita = { ...receitaCompleta, tipo: "desconhecido" };
+    await renderPage();
+    expect(screen.getByText("desconhecido")).toBeInTheDocument();
+  });
 });

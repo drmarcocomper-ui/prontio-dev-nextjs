@@ -1,22 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockUpsert = vi.fn();
-const mockUpdateUser = vi.fn();
+const mockUpsert = vi.fn().mockResolvedValue({ error: null });
+const mockUpdateUser = vi.fn().mockResolvedValue({ error: null });
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: () => ({
-        upsert: (rows: unknown, opts: unknown) => {
-          mockUpsert(rows, opts);
-          return Promise.resolve({ error: null });
-        },
+        upsert: (rows: unknown, opts: unknown) => mockUpsert(rows, opts),
       }),
       auth: {
-        updateUser: (data: unknown) => {
-          mockUpdateUser(data);
-          return Promise.resolve({ error: null });
-        },
+        updateUser: (data: unknown) => mockUpdateUser(data),
       },
     }),
 }));
@@ -63,6 +57,14 @@ describe("salvarConfiguracoes", () => {
       { onConflict: "chave" }
     );
   });
+
+  it("retorna erro quando upsert falha", async () => {
+    mockUpsert.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await salvarConfiguracoes({}, makeFormData({
+      config_nome_consultorio: "Clínica",
+    }));
+    expect(result.error).toBe("Erro ao salvar configurações. Tente novamente.");
+  });
 });
 
 describe("alterarSenha", () => {
@@ -82,5 +84,11 @@ describe("alterarSenha", () => {
     const result = await alterarSenha({}, makeFormData({ new_password: "novaSenha123", confirm_password: "novaSenha123" }));
     expect(result.success).toBe(true);
     expect(mockUpdateUser).toHaveBeenCalledWith({ password: "novaSenha123" });
+  });
+
+  it("retorna erro quando updateUser falha", async () => {
+    mockUpdateUser.mockResolvedValueOnce({ error: { message: "Auth error" } });
+    const result = await alterarSenha({}, makeFormData({ new_password: "novaSenha123", confirm_password: "novaSenha123" }));
+    expect(result.error).toBe("Erro ao alterar senha. Tente novamente.");
   });
 });

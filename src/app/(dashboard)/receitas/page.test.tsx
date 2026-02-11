@@ -141,4 +141,10 @@ describe("ReceitasPage", () => {
     const link = screen.getByText("Maria Silva").closest("a");
     expect(link).toHaveAttribute("href", "/receitas/rec-1");
   });
+
+  it("exibe tipo bruto quando não encontrado em TIPO_LABELS", async () => {
+    mockData.data = [{ ...receitasMock[0], tipo: "desconhecido" }];
+    await renderPage();
+    expect(screen.getByText("desconhecido")).toBeInTheDocument();
+  });
 });

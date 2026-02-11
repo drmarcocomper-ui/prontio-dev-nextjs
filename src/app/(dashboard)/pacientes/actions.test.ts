@@ -1,29 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockDelete = vi.fn();
+const mockInsert = vi.fn().mockResolvedValue({ error: null });
+const mockUpdate = vi.fn().mockResolvedValue({ error: null });
+const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: () => ({
-        insert: (data: unknown) => {
-          mockInsert(data);
-          return Promise.resolve({ error: null });
-        },
+        insert: (data: unknown) => mockInsert(data),
         update: (data: unknown) => ({
-          eq: (_col: string, _val: string) => {
-            mockUpdate(data);
-            return Promise.resolve({ error: null });
-          },
+          eq: (_col: string, _val: string) => mockUpdate(data),
         }),
         delete: () => ({
-          eq: (_col: string, val: string) => {
-            mockDelete(val);
-            return Promise.resolve({ error: null });
-          },
+          eq: (_col: string, val: string) => mockDelete(val),
         }),
       }),
     }),
@@ -78,6 +69,18 @@ describe("criarPaciente", () => {
       expect.objectContaining({ cpf: "12345678901", telefone: "11987654321" })
     );
   });
+
+  it("retorna erro de CPF duplicado quando código 23505", async () => {
+    mockInsert.mockResolvedValueOnce({ error: { code: "23505" } });
+    const result = await criarPaciente({}, makeFormData({ nome: "João" }));
+    expect(result.error).toBe("Já existe um paciente com este CPF.");
+  });
+
+  it("retorna erro genérico quando insert falha", async () => {
+    mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await criarPaciente({}, makeFormData({ nome: "João" }));
+    expect(result.error).toBe("Erro ao cadastrar paciente. Tente novamente.");
+  });
 });
 
 describe("atualizarPaciente", () => {
@@ -95,6 +98,23 @@ describe("atualizarPaciente", () => {
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ nome: "Maria" }));
     expect(mockRedirect).toHaveBeenCalledWith("/pacientes/p-1?success=Paciente+atualizado");
   });
+
+  it("retorna erro de CPF duplicado quando código 23505", async () => {
+    mockUpdate.mockResolvedValueOnce({ error: { code: "23505" } });
+    const result = await atualizarPaciente({}, makeFormData({ id: "p-1", nome: "Maria" }));
+    expect(result.error).toBe("Já existe um paciente com este CPF.");
+  });
+
+  it("retorna erro genérico quando update falha", async () => {
+    mockUpdate.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await atualizarPaciente({}, makeFormData({ id: "p-1", nome: "Maria" }));
+    expect(result.error).toBe("Erro ao atualizar paciente. Tente novamente.");
+  });
+
+  it("retorna fieldErrors quando email é inválido na atualização", async () => {
+    const result = await atualizarPaciente({}, makeFormData({ id: "p-1", nome: "Maria", email: "invalido" }));
+    expect(result.fieldErrors?.email).toBe("E-mail inválido.");
+  });
 });
 
 describe("excluirPaciente", () => {
@@ -104,5 +124,10 @@ describe("excluirPaciente", () => {
     await expect(excluirPaciente("p-1")).rejects.toThrow("REDIRECT");
     expect(mockDelete).toHaveBeenCalledWith("p-1");
     expect(mockRedirect).toHaveBeenCalledWith("/pacientes?success=Paciente+exclu%C3%ADdo");
+  });
+
+  it("lança erro quando exclusão falha", async () => {
+    mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
+    await expect(excluirPaciente("p-1")).rejects.toThrow("Erro ao excluir paciente.");
   });
 });

@@ -162,4 +162,23 @@ describe("FinanceiroPage", () => {
     expect(screen.getByTestId("delete-t-1")).toBeInTheDocument();
     expect(screen.getByTestId("delete-t-2")).toBeInTheDocument();
   });
+
+  it("aceita filtro por tipo via searchParams", async () => {
+    mockData.data = transacoesMock;
+    await renderPage({ tipo: "receita" });
+    expect(screen.getByText("Consulta particular")).toBeInTheDocument();
+  });
+
+  it("exibe traço quando categoria é null", async () => {
+    mockData.data = [{ ...transacoesMock[0], categoria: null, forma_pagamento: null }];
+    await renderPage();
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBe(2);
+  });
+
+  it("exibe saldo negativo em vermelho", async () => {
+    mockData.data = [{ ...transacoesMock[1], valor: 500 }];
+    await renderPage();
+    expect(screen.getByText("-R$ 500,00")).toBeInTheDocument();
+  });
 });

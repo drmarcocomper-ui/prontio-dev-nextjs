@@ -91,4 +91,23 @@ describe("ConfiguracoesPage", () => {
     expect(screen.getByTestId("conta-form")).toBeInTheDocument();
     expect(screen.getByTestId("conta-form")).toHaveAttribute("data-email", "doc@test.com");
   });
+
+  it("passa email vazio quando user é null", async () => {
+    mockUser.data = { user: null };
+    await renderPage({ tab: "conta" });
+    expect(screen.getByTestId("conta-form")).toHaveAttribute("data-email", "");
+    mockUser.data = { user: { email: "doc@test.com" } };
+  });
+
+  it("transforma rows null em config vazio", async () => {
+    mockConfigData.data = null;
+    await renderPage();
+    const form = screen.getByTestId("consultorio-form");
+    const defaults = JSON.parse(form.getAttribute("data-defaults") || "{}");
+    expect(Object.keys(defaults).length).toBe(0);
+    mockConfigData.data = [
+      { chave: "nome_consultorio", valor: "Clínica Teste" },
+      { chave: "cnpj", valor: "12345678000100" },
+    ];
+  });
 });
