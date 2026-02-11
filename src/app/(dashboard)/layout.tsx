@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { Sidebar } from "@/components/sidebar";
+import { ToastHandler } from "@/components/toast-handler";
 
 export default function DashboardLayout({
   children,
@@ -11,6 +13,9 @@ export default function DashboardLayout({
       <div className="flex flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto p-8">{children}</main>
       </div>
+      <Suspense>
+        <ToastHandler />
+      </Suspense>
     </div>
   );
 }

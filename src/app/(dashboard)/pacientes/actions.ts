@@ -78,7 +78,7 @@ export async function criarPaciente(
     return { error: "Erro ao cadastrar paciente. Tente novamente." };
   }
 
-  redirect("/pacientes");
+  redirect("/pacientes?success=Paciente+cadastrado");
 }
 
 export async function atualizarPaciente(
@@ -154,7 +154,7 @@ export async function atualizarPaciente(
     return { error: "Erro ao atualizar paciente. Tente novamente." };
   }
 
-  redirect(`/pacientes/${id}`);
+  redirect(`/pacientes/${id}?success=Paciente+atualizado`);
 }
 
 export async function excluirPaciente(id: string): Promise<void> {
@@ -166,5 +166,5 @@ export async function excluirPaciente(id: string): Promise<void> {
     throw new Error("Erro ao excluir paciente.");
   }
 
-  redirect("/pacientes");
+  redirect("/pacientes?success=Paciente+exclu%C3%ADdo");
 }

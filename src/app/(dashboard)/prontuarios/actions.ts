@@ -58,7 +58,7 @@ export async function criarProntuario(
     return { error: "Erro ao salvar prontuário. Tente novamente." };
   }
 
-  redirect(`/prontuarios/${inserted.id}`);
+  redirect(`/prontuarios/${inserted.id}?success=Prontu%C3%A1rio+registrado`);
 }
 
 export async function excluirProntuario(id: string): Promise<void> {
@@ -70,5 +70,5 @@ export async function excluirProntuario(id: string): Promise<void> {
     throw new Error("Erro ao excluir prontuário.");
   }
 
-  redirect("/prontuarios");
+  redirect("/prontuarios?success=Prontu%C3%A1rio+exclu%C3%ADdo");
 }

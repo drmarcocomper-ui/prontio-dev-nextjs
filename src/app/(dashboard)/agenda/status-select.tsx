@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { atualizarStatusAgendamento } from "./actions";
 
 const STATUS_OPTIONS = [
@@ -25,8 +26,13 @@ export function StatusSelect({
 
   function handleChange(newStatus: string) {
     startTransition(async () => {
-      await atualizarStatusAgendamento(agendamentoId, newStatus);
-      router.refresh();
+      try {
+        await atualizarStatusAgendamento(agendamentoId, newStatus);
+        toast.success("Status atualizado");
+        router.refresh();
+      } catch {
+        toast.error("Erro ao atualizar status.");
+      }
     });
   }
 

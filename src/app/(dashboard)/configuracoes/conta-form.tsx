@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import { alterarSenha, type ConfigFormState } from "./actions";
 
 const inputClass =
@@ -11,6 +12,10 @@ export function ContaForm({ email }: { email: string }) {
     alterarSenha,
     {}
   );
+
+  useEffect(() => {
+    if (state.success) toast.success("Senha alterada com sucesso.");
+  }, [state]);
 
   return (
     <div className="space-y-8">
@@ -27,11 +32,6 @@ export function ContaForm({ email }: { email: string }) {
         {state.error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {state.error}
-          </div>
-        )}
-        {state.success && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            Senha alterada com sucesso.
           </div>
         )}
 

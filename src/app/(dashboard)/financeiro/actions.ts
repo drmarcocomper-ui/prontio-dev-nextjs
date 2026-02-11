@@ -52,7 +52,7 @@ export async function criarTransacao(
     return { error: "Erro ao registrar transação. Tente novamente." };
   }
 
-  redirect("/financeiro");
+  redirect("/financeiro?success=Transa%C3%A7%C3%A3o+registrada");
 }
 
 export async function excluirTransacao(id: string): Promise<void> {
@@ -64,5 +64,5 @@ export async function excluirTransacao(id: string): Promise<void> {
     throw new Error("Erro ao excluir transação.");
   }
 
-  redirect("/financeiro");
+  redirect("/financeiro?success=Transa%C3%A7%C3%A3o+exclu%C3%ADda");
 }

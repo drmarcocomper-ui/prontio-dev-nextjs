@@ -49,7 +49,7 @@ export async function criarAgendamento(
     return { error: "Erro ao criar agendamento. Tente novamente." };
   }
 
-  redirect(`/agenda?data=${data}`);
+  redirect(`/agenda?data=${data}&success=Agendamento+criado`);
 }
 
 export async function atualizarStatusAgendamento(
@@ -77,5 +77,5 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
     throw new Error("Erro ao excluir agendamento.");
   }
 
-  redirect(`/agenda?data=${data}`);
+  redirect(`/agenda?data=${data}&success=Agendamento+exclu%C3%ADdo`);
 }
