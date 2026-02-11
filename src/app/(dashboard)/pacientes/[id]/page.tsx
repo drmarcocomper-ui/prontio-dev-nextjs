@@ -63,6 +63,14 @@ function calcAge(dateStr: string) {
   return age;
 }
 
+const TIPO_LABELS: Record<string, string> = {
+  consulta: "Consulta",
+  retorno: "Retorno",
+  exame: "Exame",
+  procedimento: "Procedimento",
+  avaliacao: "Avaliação",
+};
+
 const SEXO_LABELS: Record<string, string> = {
   masculino: "Masculino",
   feminino: "Feminino",
@@ -103,6 +111,12 @@ export default async function PacienteDetalhesPage({
   if (!paciente) {
     notFound();
   }
+
+  const { data: prontuarios } = await supabase
+    .from("prontuarios")
+    .select("id, data, tipo, cid, queixa_principal")
+    .eq("paciente_id", id)
+    .order("data", { ascending: false });
 
   const enderecoCompleto = [
     paciente.endereco,
@@ -250,6 +264,71 @@ export default async function PacienteDetalhesPage({
             />
           </dl>
         </div>
+      </div>
+
+      {/* Evoluções clínicas */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            Evoluções clínicas
+          </h2>
+          <Link
+            href={`/prontuarios/novo?paciente_id=${paciente.id}&paciente_nome=${encodeURIComponent(paciente.nome)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Nova evolução
+          </Link>
+        </div>
+
+        {prontuarios && prontuarios.length > 0 ? (
+          <div className="space-y-3">
+            {prontuarios.map((pront) => (
+              <Link
+                key={pront.id}
+                href={`/prontuarios/${pront.id}`}
+                className="block rounded-lg border border-gray-100 p-4 transition-colors hover:border-gray-200 hover:bg-gray-50"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatDate(pront.data)}
+                      </span>
+                      {pront.tipo && (
+                        <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+                          {TIPO_LABELS[pront.tipo] ?? pront.tipo}
+                        </span>
+                      )}
+                      {pront.cid && (
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                          CID: {pront.cid}
+                        </span>
+                      )}
+                    </div>
+                    {pront.queixa_principal && (
+                      <p className="mt-1 truncate text-sm text-gray-500">
+                        {pront.queixa_principal}
+                      </p>
+                    )}
+                  </div>
+                  <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-gray-400">
+            Nenhuma evolução registrada.
+          </p>
+        )}
       </div>
     </div>
   );

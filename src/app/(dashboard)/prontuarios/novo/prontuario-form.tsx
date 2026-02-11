@@ -2,8 +2,23 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { criarProntuario, type ProntuarioFormState } from "../actions";
+import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
+
+export interface ProntuarioDefaults {
+  id?: string;
+  paciente_id?: string;
+  paciente_nome?: string;
+  data?: string;
+  tipo?: string | null;
+  cid?: string | null;
+  queixa_principal?: string | null;
+  historia_doenca?: string | null;
+  exame_fisico?: string | null;
+  hipotese_diagnostica?: string | null;
+  conduta?: string | null;
+  observacoes?: string | null;
+}
 
 const inputClass =
   "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
@@ -14,21 +29,28 @@ function FieldError({ message }: { message?: string }) {
 }
 
 export function ProntuarioForm({
-  defaultPatientId,
-  defaultPatientName,
+  defaults,
+  cancelHref,
 }: {
-  defaultPatientId?: string;
-  defaultPatientName?: string;
+  defaults?: ProntuarioDefaults;
+  cancelHref?: string;
 }) {
+  const isEditing = !!defaults?.id;
   const today = new Date().toISOString().split("T")[0];
 
+  const action = isEditing ? atualizarProntuario : criarProntuario;
+
   const [state, formAction, isPending] = useActionState<ProntuarioFormState, FormData>(
-    criarProntuario,
+    action,
     {}
   );
 
+  const cancel = cancelHref ?? (isEditing ? `/prontuarios/${defaults?.id}` : "/prontuarios");
+
   return (
     <form action={formAction} className="space-y-6">
+      {isEditing && <input type="hidden" name="id" value={defaults.id} />}
+
       {state.error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
@@ -43,8 +65,8 @@ export function ProntuarioForm({
           </label>
           <div className="mt-1">
             <PatientSearch
-              defaultPatientId={defaultPatientId}
-              defaultPatientName={defaultPatientName}
+              defaultPatientId={defaults?.paciente_id}
+              defaultPatientName={defaults?.paciente_nome}
             />
           </div>
           <FieldError message={state.fieldErrors?.paciente_id} />
@@ -59,7 +81,7 @@ export function ProntuarioForm({
             name="data"
             type="date"
             required
-            defaultValue={today}
+            defaultValue={defaults?.data ?? today}
             className={inputClass}
           />
           <FieldError message={state.fieldErrors?.data} />
@@ -72,7 +94,7 @@ export function ProntuarioForm({
           <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
             Tipo
           </label>
-          <select id="tipo" name="tipo" className={inputClass}>
+          <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} className={inputClass}>
             <option value="">Selecione</option>
             <option value="consulta">Consulta</option>
             <option value="retorno">Retorno</option>
@@ -91,6 +113,7 @@ export function ProntuarioForm({
             name="cid"
             type="text"
             placeholder="Ex: J06.9"
+            defaultValue={defaults?.cid ?? ""}
             className={inputClass}
           />
         </div>
@@ -111,6 +134,7 @@ export function ProntuarioForm({
             name="queixa_principal"
             rows={2}
             placeholder="Motivo da consulta..."
+            defaultValue={defaults?.queixa_principal ?? ""}
             className={inputClass}
           />
           <FieldError message={state.fieldErrors?.queixa_principal} />
@@ -125,6 +149,7 @@ export function ProntuarioForm({
             name="historia_doenca"
             rows={3}
             placeholder="Evolução dos sintomas, duração, fatores de melhora/piora..."
+            defaultValue={defaults?.historia_doenca ?? ""}
             className={inputClass}
           />
         </div>
@@ -138,6 +163,7 @@ export function ProntuarioForm({
             name="exame_fisico"
             rows={3}
             placeholder="Sinais vitais, achados do exame..."
+            defaultValue={defaults?.exame_fisico ?? ""}
             className={inputClass}
           />
         </div>
@@ -151,6 +177,7 @@ export function ProntuarioForm({
             name="hipotese_diagnostica"
             rows={2}
             placeholder="Diagnóstico provável..."
+            defaultValue={defaults?.hipotese_diagnostica ?? ""}
             className={inputClass}
           />
         </div>
@@ -164,6 +191,7 @@ export function ProntuarioForm({
             name="conduta"
             rows={3}
             placeholder="Plano terapêutico, medicamentos prescritos, orientações..."
+            defaultValue={defaults?.conduta ?? ""}
             className={inputClass}
           />
         </div>
@@ -178,6 +206,7 @@ export function ProntuarioForm({
           id="observacoes"
           name="observacoes"
           rows={2}
+          defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}
         />
       </div>
@@ -185,7 +214,7 @@ export function ProntuarioForm({
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
         <Link
-          href="/prontuarios"
+          href={cancel}
           className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
         >
           Cancelar
@@ -198,7 +227,7 @@ export function ProntuarioForm({
           {isPending && (
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           )}
-          Salvar prontuário
+          {isEditing ? "Salvar alterações" : "Salvar prontuário"}
         </button>
       </div>
     </form>
