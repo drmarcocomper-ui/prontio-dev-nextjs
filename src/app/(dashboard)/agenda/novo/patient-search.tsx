@@ -33,12 +33,12 @@ export function PatientSearch({
   }, []);
 
   useEffect(() => {
-    if (query.length < 2) {
-      setResults([]);
-      return;
-    }
-
     const timeout = setTimeout(async () => {
+      if (query.length < 2) {
+        setResults([]);
+        return;
+      }
+
       const supabase = createClient();
       const { data } = await supabase
         .from("pacientes")

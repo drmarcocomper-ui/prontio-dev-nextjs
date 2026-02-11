@@ -43,7 +43,7 @@ vi.mock("@/lib/supabase/server", () => ({
     Promise.resolve({
       from: (table: string) => ({
         select: () => ({
-          eq: (..._args: unknown[]) => {
+          eq: () => {
             if (table === "pacientes") {
               return {
                 single: () => Promise.resolve({ data: mockPaciente }),

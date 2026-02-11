@@ -11,10 +11,10 @@ vi.mock("@/lib/supabase/server", () => ({
       from: () => ({
         insert: (data: unknown) => mockInsert(data),
         update: (data: unknown) => ({
-          eq: (_col: string, _val: string) => mockUpdate(data),
+          eq: () => mockUpdate(data),
         }),
         delete: () => ({
-          eq: (_col: string, val: string) => mockDelete(val),
+          eq: (_col: unknown, val: string) => mockDelete(val),
         }),
       }),
     }),

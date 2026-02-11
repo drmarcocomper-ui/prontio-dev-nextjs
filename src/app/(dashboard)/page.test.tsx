@@ -20,25 +20,7 @@ vi.mock("next/link", () => ({
 let callIndex = 0;
 let mockResults: Record<string, unknown>[] = [];
 
-function createQueryResult() {
-  const idx = callIndex++;
-  const result = {
-    then: (resolve: (value: Record<string, unknown>) => void) =>
-      resolve(mockResults[idx] ?? { data: [], count: 0 }),
-    eq: () => createQueryResult(),
-    neq: () => createQueryResult(),
-    gte: () => createQueryResult(),
-    lte: () => createQueryResult(),
-    not: () => createQueryResult(),
-    order: () => createQueryResult(),
-    limit: () => createQueryResult(),
-  };
-  // Each chain consumes one index; subsequent chained calls reuse the same index
-  callIndex = idx + 1;
-  return result;
-}
-
-// Override: each .from().select() starts a new chain that resolves on await
+// Each .from().select() starts a new chain that resolves on await
 function createFromResult() {
   return {
     select: () => {
