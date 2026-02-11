@@ -1,8 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockSelect = vi.fn();
+let mockSearchResults: { id: string; nome: string; cpf: string | null }[] = [
+  { id: "p-1", nome: "Maria Silva", cpf: "12345678901" },
+  { id: "p-2", nome: "Maria Oliveira", cpf: null },
+];
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
@@ -14,10 +18,7 @@ vi.mock("@/lib/supabase/client", () => ({
             order: () => ({
               limit: () =>
                 Promise.resolve({
-                  data: [
-                    { id: "p-1", nome: "Maria Silva", cpf: "12345678901" },
-                    { id: "p-2", nome: "Maria Oliveira", cpf: null },
-                  ],
+                  data: mockSearchResults,
                 }),
             }),
           }),
@@ -33,6 +34,10 @@ describe("PatientSearch", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockSelect.mockClear();
+    mockSearchResults = [
+      { id: "p-1", nome: "Maria Silva", cpf: "12345678901" },
+      { id: "p-2", nome: "Maria Oliveira", cpf: null },
+    ];
   });
 
   afterEach(() => {
@@ -109,5 +114,73 @@ describe("PatientSearch", () => {
     vi.advanceTimersByTime(350);
 
     expect(screen.queryByText("Maria Silva")).not.toBeInTheDocument();
+  });
+
+  it("fecha dropdown ao clicar fora", async () => {
+    render(<PatientSearch />);
+    const input = screen.getByPlaceholderText("Buscar paciente por nome...");
+
+    await userEvent.type(input, "Ma");
+    vi.advanceTimersByTime(350);
+
+    await waitFor(() => {
+      expect(screen.getByText("Maria Silva")).toBeInTheDocument();
+    });
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByText("Maria Silva")).not.toBeInTheDocument();
+  });
+
+  it("exibe mensagem quando nenhum paciente é encontrado", async () => {
+    mockSearchResults = [];
+    render(<PatientSearch />);
+    const input = screen.getByPlaceholderText("Buscar paciente por nome...");
+
+    await userEvent.type(input, "Xyz");
+    vi.advanceTimersByTime(350);
+
+    await waitFor(() => {
+      expect(screen.getByText("Nenhum paciente encontrado.")).toBeInTheDocument();
+    });
+  });
+
+  it("limpa selectedId ao digitar após seleção", async () => {
+    render(<PatientSearch />);
+    const input = screen.getByPlaceholderText("Buscar paciente por nome...");
+
+    await userEvent.type(input, "Ma");
+    vi.advanceTimersByTime(350);
+
+    await waitFor(() => {
+      expect(screen.getByText("Maria Silva")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Maria Silva"));
+    const hidden = document.querySelector('input[name="paciente_id"]') as HTMLInputElement;
+    expect(hidden.value).toBe("p-1");
+
+    await userEvent.clear(input);
+    await userEvent.type(input, "Jo");
+
+    expect(hidden.value).toBe("");
+  });
+
+  it("reabre dropdown ao focar no input quando há resultados", async () => {
+    render(<PatientSearch />);
+    const input = screen.getByPlaceholderText("Buscar paciente por nome...");
+
+    await userEvent.type(input, "Ma");
+    vi.advanceTimersByTime(350);
+
+    await waitFor(() => {
+      expect(screen.getByText("Maria Silva")).toBeInTheDocument();
+    });
+
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText("Maria Silva")).not.toBeInTheDocument();
+
+    fireEvent.focus(input);
+    expect(screen.getByText("Maria Silva")).toBeInTheDocument();
   });
 });

@@ -1,5 +1,18 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const formState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+const formPending = vi.hoisted(() => ({ current: false }));
+const mockToastSuccess = vi.hoisted(() => vi.fn());
+
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return { ...actual, useActionState: () => [formState.current, vi.fn(), formPending.current] };
+});
+
+vi.mock("sonner", () => ({
+  toast: { success: (...args: unknown[]) => mockToastSuccess(...args) },
+}));
 
 vi.mock("./actions", () => ({
   alterarSenha: vi.fn(),
@@ -8,6 +21,12 @@ vi.mock("./actions", () => ({
 import { ContaForm } from "./conta-form";
 
 describe("ContaForm", () => {
+  beforeEach(() => {
+    formState.current = {};
+    formPending.current = false;
+    mockToastSuccess.mockClear();
+  });
+
   it("exibe o email da conta", () => {
     render(<ContaForm email="user@test.com" />);
     expect(screen.getByText("E-mail da conta")).toBeInTheDocument();
@@ -46,5 +65,24 @@ describe("ContaForm", () => {
   it("renderiza o botão Alterar senha", () => {
     render(<ContaForm email="user@test.com" />);
     expect(screen.getByRole("button", { name: "Alterar senha" })).toBeInTheDocument();
+  });
+
+  it("exibe mensagem de erro quando state.error está definido", () => {
+    formState.current = { error: "Erro ao alterar senha." };
+    render(<ContaForm email="user@test.com" />);
+    expect(screen.getByText("Erro ao alterar senha.")).toBeInTheDocument();
+  });
+
+  it("chama toast.success quando state.success é true", () => {
+    formState.current = { success: true };
+    render(<ContaForm email="user@test.com" />);
+    expect(mockToastSuccess).toHaveBeenCalledWith("Senha alterada com sucesso.");
+  });
+
+  it("desabilita botão quando isPending", () => {
+    formPending.current = true;
+    render(<ContaForm email="user@test.com" />);
+    const button = screen.getByRole("button", { name: /Alterar senha/ });
+    expect(button).toBeDisabled();
   });
 });

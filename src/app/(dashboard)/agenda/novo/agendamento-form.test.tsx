@@ -1,5 +1,13 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const formState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+const formPending = vi.hoisted(() => ({ current: false }));
+
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return { ...actual, useActionState: () => [formState.current, vi.fn(), formPending.current] };
+});
 
 vi.mock("next/link", () => ({
   default: ({
@@ -28,6 +36,11 @@ vi.mock("./patient-search", () => ({
 import { AgendamentoForm } from "./agendamento-form";
 
 describe("AgendamentoForm", () => {
+  beforeEach(() => {
+    formState.current = {};
+    formPending.current = false;
+  });
+
   it("renderiza todos os campos do formulário", () => {
     render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByText(/Paciente/)).toBeInTheDocument();
@@ -75,5 +88,24 @@ describe("AgendamentoForm", () => {
   it("renderiza o PatientSearch", () => {
     render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByTestId("patient-search")).toBeInTheDocument();
+  });
+
+  it("exibe mensagem de erro quando state.error está definido", () => {
+    formState.current = { error: "Erro ao criar agendamento. Tente novamente." };
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
+    expect(screen.getByText("Erro ao criar agendamento. Tente novamente.")).toBeInTheDocument();
+  });
+
+  it("exibe erro de campo quando fieldErrors está definido", () => {
+    formState.current = { fieldErrors: { paciente_id: "Selecione um paciente." } };
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
+    expect(screen.getByText("Selecione um paciente.")).toBeInTheDocument();
+  });
+
+  it("desabilita botão e exibe spinner quando isPending", () => {
+    formPending.current = true;
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
+    const button = screen.getByRole("button", { name: /Agendar/ });
+    expect(button).toBeDisabled();
   });
 });

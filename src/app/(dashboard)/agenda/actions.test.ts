@@ -1,29 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockInsert = vi.fn();
-const mockUpdateEq = vi.fn();
-const mockDelete = vi.fn();
+const mockInsert = vi.fn().mockResolvedValue({ error: null });
+const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
+const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: () => ({
-        insert: (data: unknown) => {
-          mockInsert(data);
-          return Promise.resolve({ error: null });
-        },
+        insert: (data: unknown) => mockInsert(data),
         update: (data: unknown) => ({
-          eq: (_col: string, val: string) => {
-            mockUpdateEq(data, val);
-            return Promise.resolve({ error: null });
-          },
+          eq: (_col: string, val: string) => mockUpdateEq(data, val),
         }),
         delete: () => ({
-          eq: (_col: string, val: string) => {
-            mockDelete(val);
-            return Promise.resolve({ error: null });
-          },
+          eq: (_col: string, val: string) => mockDelete(val),
         }),
       }),
     }),
@@ -64,6 +55,28 @@ describe("criarAgendamento", () => {
     expect(result.fieldErrors?.hora_fim).toBe("Horário de término deve ser após o início.");
   });
 
+  it("retorna fieldErrors quando hora_inicio está vazia", async () => {
+    const result = await criarAgendamento({}, makeFormData({
+      paciente_id: "p-1", data: "2024-06-15", hora_inicio: "", hora_fim: "09:30",
+    }));
+    expect(result.fieldErrors?.hora_inicio).toBe("Horário de início é obrigatório.");
+  });
+
+  it("retorna fieldErrors quando hora_fim está vazia", async () => {
+    const result = await criarAgendamento({}, makeFormData({
+      paciente_id: "p-1", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "",
+    }));
+    expect(result.fieldErrors?.hora_fim).toBe("Horário de término é obrigatório.");
+  });
+
+  it("retorna error quando insert no banco falha", async () => {
+    mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await criarAgendamento({}, makeFormData({
+      paciente_id: "p-1", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30",
+    }));
+    expect(result.error).toBe("Erro ao criar agendamento. Tente novamente.");
+  });
+
   it("redireciona após criação com sucesso", async () => {
     await expect(
       criarAgendamento({}, makeFormData({
@@ -86,6 +99,11 @@ describe("atualizarStatusAgendamento", () => {
     await atualizarStatusAgendamento("ag-1", "confirmado");
     expect(mockUpdateEq).toHaveBeenCalledWith({ status: "confirmado" }, "ag-1");
   });
+
+  it("lança erro quando atualização no banco falha", async () => {
+    mockUpdateEq.mockResolvedValueOnce({ error: { message: "DB error" } });
+    await expect(atualizarStatusAgendamento("ag-1", "confirmado")).rejects.toThrow("Erro ao atualizar status.");
+  });
 });
 
 describe("excluirAgendamento", () => {
@@ -95,5 +113,10 @@ describe("excluirAgendamento", () => {
     await expect(excluirAgendamento("ag-1", "2024-06-15")).rejects.toThrow("REDIRECT");
     expect(mockDelete).toHaveBeenCalledWith("ag-1");
     expect(mockRedirect).toHaveBeenCalledWith("/agenda?data=2024-06-15&success=Agendamento+exclu%C3%ADdo");
+  });
+
+  it("lança erro quando exclusão no banco falha", async () => {
+    mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
+    await expect(excluirAgendamento("ag-1", "2024-06-15")).rejects.toThrow("Erro ao excluir agendamento.");
   });
 });

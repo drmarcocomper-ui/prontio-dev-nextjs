@@ -36,4 +36,19 @@ describe("Filters", () => {
     await userEvent.selectOptions(select, "receita");
     expect(mockReplace).toHaveBeenCalledWith(expect.stringContaining("tipo=receita"));
   });
+
+  it("remove parâmetro quando valor é vazio", async () => {
+    render(<Filters currentMonth="2024-06" currentType="receita" />);
+    const select = screen.getByRole("combobox");
+    await userEvent.selectOptions(select, "");
+    expect(mockReplace).toHaveBeenCalledWith(expect.not.stringContaining("tipo="));
+  });
+
+  it("chama router.replace ao mudar mês", async () => {
+    render(<Filters currentMonth="2024-06" currentType="" />);
+    const input = document.querySelector('input[type="month"]') as HTMLInputElement;
+    await userEvent.clear(input);
+    await userEvent.type(input, "2024-07");
+    expect(mockReplace).toHaveBeenCalled();
+  });
 });

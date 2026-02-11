@@ -1,6 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const formState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+const formPending = vi.hoisted(() => ({ current: false }));
+
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return { ...actual, useActionState: () => [formState.current, vi.fn(), formPending.current] };
+});
 
 vi.mock("next/link", () => ({
   default: ({
@@ -29,6 +37,11 @@ vi.mock("@/app/(dashboard)/agenda/novo/patient-search", () => ({
 import { TransacaoForm } from "./transacao-form";
 
 describe("TransacaoForm", () => {
+  beforeEach(() => {
+    formState.current = {};
+    formPending.current = false;
+  });
+
   it("renderiza os radio buttons de tipo", () => {
     render(<TransacaoForm />);
     expect(screen.getByText("Receita")).toBeInTheDocument();
@@ -92,5 +105,24 @@ describe("TransacaoForm", () => {
     const input = screen.getByLabelText(/Valor/);
     await userEvent.type(input, "35000");
     expect(input).toHaveValue("350,00");
+  });
+
+  it("exibe mensagem de erro quando state.error está definido", () => {
+    formState.current = { error: "Erro ao registrar transação." };
+    render(<TransacaoForm />);
+    expect(screen.getByText("Erro ao registrar transação.")).toBeInTheDocument();
+  });
+
+  it("exibe erro de campo quando fieldErrors está definido", () => {
+    formState.current = { fieldErrors: { descricao: "Descrição é obrigatória." } };
+    render(<TransacaoForm />);
+    expect(screen.getByText("Descrição é obrigatória.")).toBeInTheDocument();
+  });
+
+  it("desabilita botão quando isPending", () => {
+    formPending.current = true;
+    render(<TransacaoForm />);
+    const button = screen.getByRole("button", { name: /Registrar/ });
+    expect(button).toBeDisabled();
   });
 });
