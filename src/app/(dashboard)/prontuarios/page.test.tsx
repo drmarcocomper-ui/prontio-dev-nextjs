@@ -151,4 +151,16 @@ describe("ProntuariosPage", () => {
     const link = screen.getByText("Maria Silva").closest("a");
     expect(link).toHaveAttribute("href", "/prontuarios/pr-1");
   });
+
+  it("exibe valor raw quando tipo não está em TIPO_LABELS", async () => {
+    mockData.data = [{ ...prontuariosMock[0], tipo: "tipo_desconhecido" }];
+    await renderPage();
+    expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
+  });
+
+  it("lida com prontuarios null do Supabase", async () => {
+    mockData.data = null;
+    await renderPage();
+    expect(screen.getByText("Nenhum prontuário encontrado")).toBeInTheDocument();
+  });
 });

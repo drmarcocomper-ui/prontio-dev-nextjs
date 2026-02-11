@@ -137,4 +137,10 @@ describe("ProntuarioDetalhesPage", () => {
     await renderPage();
     expect(screen.getByText("Nenhuma informação registrada.")).toBeInTheDocument();
   });
+
+  it("exibe valor raw quando tipo não está em TIPO_LABELS", async () => {
+    mockProntuario = { ...prontuarioCompleto, tipo: "tipo_desconhecido" };
+    await renderPage();
+    expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
+  });
 });

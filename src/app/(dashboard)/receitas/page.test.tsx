@@ -147,4 +147,10 @@ describe("ReceitasPage", () => {
     await renderPage();
     expect(screen.getByText("desconhecido")).toBeInTheDocument();
   });
+
+  it("lida com receitas null do Supabase", async () => {
+    mockData.data = null;
+    await renderPage();
+    expect(screen.getByText("Nenhuma receita encontrada")).toBeInTheDocument();
+  });
 });

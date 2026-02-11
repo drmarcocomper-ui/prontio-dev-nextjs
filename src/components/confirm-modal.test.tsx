@@ -68,4 +68,13 @@ describe("ConfirmModal", () => {
     render(<ConfirmModal {...defaultProps} confirmLabel="Remover" />);
     expect(screen.getByText("Remover")).toBeInTheDocument();
   });
+
+  it("não responde ao Escape quando modal está fechado", async () => {
+    const onClose = vi.fn();
+    const { rerender } = render(<ConfirmModal {...defaultProps} open={true} onClose={onClose} />);
+    rerender(<ConfirmModal {...defaultProps} open={false} onClose={onClose} />);
+    onClose.mockClear();
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

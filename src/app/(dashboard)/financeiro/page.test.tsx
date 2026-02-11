@@ -181,4 +181,23 @@ describe("FinanceiroPage", () => {
     await renderPage();
     expect(screen.getByText("-R$ 500,00")).toBeInTheDocument();
   });
+
+  it("exibe valor raw quando categoria não está em CATEGORIA_LABELS", async () => {
+    mockData.data = [{ ...transacoesMock[0], categoria: "cat_desconhecida", forma_pagamento: "pagamento_desconhecido" }];
+    await renderPage();
+    expect(screen.getByText("cat_desconhecida")).toBeInTheDocument();
+    expect(screen.getByText("pagamento_desconhecido")).toBeInTheDocument();
+  });
+
+  it("exibe status Cancelado para transação cancelada", async () => {
+    mockData.data = [{ ...transacoesMock[0], status: "cancelado" }];
+    await renderPage();
+    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+  });
+
+  it("lida com transacoes null do Supabase", async () => {
+    mockData.data = null;
+    await renderPage();
+    expect(screen.getByText("Nenhuma transação neste período")).toBeInTheDocument();
+  });
 });

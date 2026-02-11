@@ -316,4 +316,27 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Sem Tipo")).toBeInTheDocument();
     expect(screen.getByText("16:00 – 16:30")).toBeInTheDocument();
   });
+
+  it("exibe tipo raw da atividade quando não está em TIPO_LABELS", async () => {
+    setMockResults({ atividades: [makeActivity("a-raw", 5, "tipo_desconhecido")] });
+    await renderPage();
+    expect(screen.getByText(/tipo_desconhecido/)).toBeInTheDocument();
+  });
+
+  it("lida com dados null do Supabase usando fallback para array vazio", async () => {
+    callIndex = 0;
+    mockResults = [
+      { count: null },
+      { count: null },
+      { count: null },
+      { data: null },
+      { data: null },
+      { data: null },
+    ];
+    await renderPage();
+    expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText("R$ 0,00")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma consulta agendada para hoje.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma atividade registrada ainda.")).toBeInTheDocument();
+  });
 });

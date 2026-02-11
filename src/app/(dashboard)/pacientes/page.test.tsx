@@ -161,4 +161,16 @@ describe("PacientesPage", () => {
     const link = screen.getByText("Maria Silva").closest("a");
     expect(link).toHaveAttribute("href", "/pacientes/1");
   });
+
+  it("formata telefone fixo com 10 dígitos", async () => {
+    mockData.data = [{ ...pacientesMock[0], telefone: "1133334444" }];
+    await renderPage();
+    expect(screen.getByText("(11) 3333-4444")).toBeInTheDocument();
+  });
+
+  it("exibe telefone sem formatação quando formato desconhecido", async () => {
+    mockData.data = [{ ...pacientesMock[0], telefone: "123" }];
+    await renderPage();
+    expect(screen.getByText("123")).toBeInTheDocument();
+  });
 });

@@ -303,4 +303,33 @@ describe("PacienteDetalhesPage", () => {
     await renderPage();
     expect(screen.getByText("Evoluções clínicas")).toBeInTheDocument();
   });
+
+  it("exibe valor raw quando sexo não está em SEXO_LABELS", async () => {
+    mockPaciente = { ...pacienteCompleto, sexo: "outro_sexo" };
+    await renderPage();
+    const elements = screen.getAllByText("outro_sexo");
+    expect(elements.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("exibe valor raw quando estado_civil não está em ESTADO_CIVIL_LABELS", async () => {
+    mockPaciente = { ...pacienteCompleto, estado_civil: "outro_estado" };
+    await renderPage();
+    expect(screen.getByText("outro_estado")).toBeInTheDocument();
+  });
+
+  it("exibe valor raw quando tipo do prontuário não está em TIPO_LABELS", async () => {
+    mockProntuarios = [
+      { id: "pr-x", data: "2024-06-15", tipo: "tipo_desconhecido", cid: null, queixa_principal: null },
+    ];
+    await renderPage();
+    expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
+  });
+
+  it("exibe valor raw quando tipo da receita não está em RECEITA_TIPO_LABELS", async () => {
+    mockReceitas = [
+      { id: "rec-x", data: "2024-06-15", tipo: "tipo_desconhecido", medicamentos: "Med X" },
+    ];
+    await renderPage();
+    expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
+  });
 });

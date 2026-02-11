@@ -181,4 +181,19 @@ describe("AgendaPage", () => {
     expect(screen.getByTestId("status-select-ag-1")).toBeInTheDocument();
     expect(screen.getByTestId("status-select-ag-2")).toBeInTheDocument();
   });
+
+  it("exibe valor raw quando tipo não está em TIPO_LABELS", async () => {
+    mockData.data = [{
+      ...agendamentosMock[0],
+      tipo: "tipo_desconhecido",
+    }];
+    await renderPage();
+    expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
+  });
+
+  it("lida com agendamentos null do Supabase", async () => {
+    mockData.data = null;
+    await renderPage();
+    expect(screen.getByText("Nenhum agendamento para este dia")).toBeInTheDocument();
+  });
 });
