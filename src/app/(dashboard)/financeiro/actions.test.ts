@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockInsert = vi.fn();
-const mockDelete = vi.fn();
+const mockInsert = vi.fn().mockResolvedValue({ error: null });
+const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -10,13 +10,10 @@ vi.mock("@/lib/supabase/server", () => ({
       from: () => ({
         insert: (data: unknown) => {
           mockInsert(data);
-          return Promise.resolve({ error: null });
+          return mockInsert.mock.results[mockInsert.mock.results.length - 1].value;
         },
         delete: () => ({
-          eq: (_col: string, val: string) => {
-            mockDelete(val);
-            return Promise.resolve({ error: null });
-          },
+          eq: (_col: string, val: string) => mockDelete(val),
         }),
       }),
     }),
@@ -78,6 +75,12 @@ describe("criarTransacao", () => {
     }));
     expect(mockRedirect).toHaveBeenCalledWith("/financeiro?success=Transa%C3%A7%C3%A3o+registrada");
   });
+
+  it("retorna erro quando insert falha", async () => {
+    mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
+    expect(result.error).toBe("Erro ao registrar transação. Tente novamente.");
+  });
 });
 
 describe("excluirTransacao", () => {
@@ -87,5 +90,10 @@ describe("excluirTransacao", () => {
     await expect(excluirTransacao("t-1")).rejects.toThrow("REDIRECT");
     expect(mockDelete).toHaveBeenCalledWith("t-1");
     expect(mockRedirect).toHaveBeenCalledWith("/financeiro?success=Transa%C3%A7%C3%A3o+exclu%C3%ADda");
+  });
+
+  it("lança erro quando exclusão falha", async () => {
+    mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
+    await expect(excluirTransacao("t-1")).rejects.toThrow("Erro ao excluir transação.");
   });
 });

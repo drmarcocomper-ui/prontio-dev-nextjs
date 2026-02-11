@@ -50,4 +50,11 @@ describe("NovoProntuarioPage", () => {
     const form = screen.getByTestId("prontuario-form");
     expect(form).toHaveAttribute("data-patient-id", "p-1");
   });
+
+  it("usa 'Paciente' como fallback quando paciente_nome não é fornecido", async () => {
+    await renderPage({ paciente_id: "p-1" });
+    expect(screen.getByText("Paciente")).toBeInTheDocument();
+    const link = screen.getByText("Paciente").closest("a");
+    expect(link).toHaveAttribute("href", "/pacientes/p-1");
+  });
 });

@@ -200,4 +200,10 @@ describe("FinanceiroPage", () => {
     await renderPage();
     expect(screen.getByText("Nenhuma transação neste período")).toBeInTheDocument();
   });
+
+  it("usa estilo padrão quando status não está em STATUS_STYLES", async () => {
+    mockData.data = [{ ...transacoesMock[0], status: "desconhecido" }];
+    await renderPage();
+    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+  });
 });

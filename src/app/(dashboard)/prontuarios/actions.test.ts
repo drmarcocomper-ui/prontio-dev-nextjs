@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockDelete = vi.fn();
+const mockInsert = vi.fn().mockResolvedValue({ data: { id: "pr-new" }, error: null });
+const mockUpdate = vi.fn().mockResolvedValue({ error: null });
+const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
-let mockUpdateError: { message: string } | null = null;
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
@@ -12,23 +11,14 @@ vi.mock("@/lib/supabase/server", () => ({
       from: () => ({
         insert: (data: unknown) => ({
           select: () => ({
-            single: () => {
-              mockInsert(data);
-              return Promise.resolve({ data: { id: "pr-new" }, error: null });
-            },
+            single: () => mockInsert(data),
           }),
         }),
         update: (data: unknown) => ({
-          eq: (_col: string, val: string) => {
-            mockUpdate({ data, id: val });
-            return Promise.resolve({ error: mockUpdateError });
-          },
+          eq: (_col: string, val: string) => mockUpdate({ data, id: val }),
         }),
         delete: () => ({
-          eq: (_col: string, val: string) => {
-            mockDelete(val);
-            return Promise.resolve({ error: null });
-          },
+          eq: (_col: string, val: string) => mockDelete(val),
         }),
       }),
     }),
@@ -84,12 +74,17 @@ describe("criarProntuario", () => {
     }));
     expect(mockRedirect).toHaveBeenCalledWith("/prontuarios/pr-new?success=Prontu%C3%A1rio+registrado");
   });
+
+  it("retorna erro quando insert falha", async () => {
+    mockInsert.mockResolvedValueOnce({ data: null, error: { message: "DB error" } });
+    const result = await criarProntuario({}, makeFormData({ paciente_id: "p-1", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.error).toBe("Erro ao salvar prontuário. Tente novamente.");
+  });
 });
 
 describe("atualizarProntuario", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUpdateError = null;
   });
 
   it("retorna fieldErrors quando paciente não selecionado", async () => {
@@ -129,7 +124,7 @@ describe("atualizarProntuario", () => {
   });
 
   it("retorna erro quando supabase falha", async () => {
-    mockUpdateError = { message: "DB error" };
+    mockUpdate.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2024-06-15", conduta: "Prescrição" }));
     expect(result.error).toBe("Erro ao atualizar prontuário. Tente novamente.");
   });
@@ -142,5 +137,10 @@ describe("excluirProntuario", () => {
     await expect(excluirProntuario("pr-1")).rejects.toThrow("REDIRECT");
     expect(mockDelete).toHaveBeenCalledWith("pr-1");
     expect(mockRedirect).toHaveBeenCalledWith("/prontuarios?success=Prontu%C3%A1rio+exclu%C3%ADdo");
+  });
+
+  it("lança erro quando exclusão falha", async () => {
+    mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
+    await expect(excluirProntuario("pr-1")).rejects.toThrow("Erro ao excluir prontuário.");
   });
 });

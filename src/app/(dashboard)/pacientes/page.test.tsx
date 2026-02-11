@@ -173,4 +173,10 @@ describe("PacientesPage", () => {
     await renderPage();
     expect(screen.getByText("123")).toBeInTheDocument();
   });
+
+  it("lida com pacientes null do Supabase", async () => {
+    mockData.data = null;
+    await renderPage();
+    expect(screen.getByText("Nenhum paciente encontrado")).toBeInTheDocument();
+  });
 });

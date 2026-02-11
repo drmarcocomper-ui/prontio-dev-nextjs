@@ -89,6 +89,15 @@ describe("TransacaoForm", () => {
     expect(screen.queryByTestId("patient-search")).not.toBeInTheDocument();
   });
 
+  it("volta para categorias de receita ao clicar em Receita após Despesa", async () => {
+    render(<TransacaoForm />);
+    await userEvent.click(screen.getByText("Despesa"));
+    expect(screen.getByText("Aluguel")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Receita"));
+    expect(screen.getByText("Consulta")).toBeInTheDocument();
+    expect(screen.getByTestId("patient-search")).toBeInTheDocument();
+  });
+
   it("renderiza o botão Registrar", () => {
     render(<TransacaoForm />);
     expect(screen.getByRole("button", { name: "Registrar" })).toBeInTheDocument();
