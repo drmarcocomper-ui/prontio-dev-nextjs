@@ -36,6 +36,7 @@ vi.mock("./delete-button", () => ({
 let mockPaciente: Record<string, unknown> | null = null;
 
 let mockProntuarios: Record<string, unknown>[] = [];
+let mockReceitas: Record<string, unknown>[] = [];
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
@@ -46,6 +47,11 @@ vi.mock("@/lib/supabase/server", () => ({
             if (table === "pacientes") {
               return {
                 single: () => Promise.resolve({ data: mockPaciente }),
+              };
+            }
+            if (table === "receitas") {
+              return {
+                order: () => Promise.resolve({ data: mockReceitas }),
               };
             }
             return {

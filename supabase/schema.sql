@@ -104,7 +104,24 @@ create index transacoes_paciente_idx on transacoes (paciente_id);
 
 comment on table transacoes is 'Receitas e despesas do consultório';
 
--- 5. Configurações
+-- 5. Receitas médicas
+-- --------------------------------------------
+create table receitas (
+  id            uuid primary key default gen_random_uuid(),
+  paciente_id   uuid not null references pacientes (id) on delete cascade,
+  data          date not null,
+  tipo          text not null check (tipo in ('simples', 'especial', 'controle_especial')),
+  medicamentos  text not null,
+  observacoes   text,
+  created_at    timestamptz not null default now()
+);
+
+create index receitas_paciente_idx on receitas (paciente_id);
+create index receitas_data_idx on receitas (data desc);
+
+comment on table receitas is 'Receitas médicas prescritas aos pacientes';
+
+-- 6. Configurações
 -- --------------------------------------------
 create table configuracoes (
   chave  text primary key,
@@ -121,6 +138,7 @@ alter table pacientes enable row level security;
 alter table agendamentos enable row level security;
 alter table prontuarios enable row level security;
 alter table transacoes enable row level security;
+alter table receitas enable row level security;
 alter table configuracoes enable row level security;
 
 -- Política: usuários autenticados têm acesso total
@@ -139,6 +157,10 @@ create policy "Acesso autenticado" on prontuarios
   using (true) with check (true);
 
 create policy "Acesso autenticado" on transacoes
+  for all to authenticated
+  using (true) with check (true);
+
+create policy "Acesso autenticado" on receitas
   for all to authenticated
   using (true) with check (true);
 
