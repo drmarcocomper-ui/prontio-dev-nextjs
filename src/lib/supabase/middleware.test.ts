@@ -111,4 +111,28 @@ describe("updateSession", () => {
     expect(mockNextCookiesSet).toHaveBeenCalledWith("sb-token", "new-value", { path: "/" });
     expect(mockNextCookiesSet).toHaveBeenCalledWith("sb-refresh", "refresh-value", { path: "/" });
   });
+
+  describe("sem variáveis de ambiente", () => {
+    beforeEach(() => {
+      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    });
+
+    it("redireciona para /login em rota protegida", async () => {
+      await updateSession(createMockRequest("/pacientes"));
+      expect(mockRedirect).toHaveBeenCalled();
+    });
+
+    it("permite acesso à /login", async () => {
+      const result = await updateSession(createMockRequest("/login"));
+      expect(mockRedirect).not.toHaveBeenCalled();
+      expect(result).toBeDefined();
+    });
+
+    it("permite acesso à /auth", async () => {
+      const result = await updateSession(createMockRequest("/auth/callback"));
+      expect(mockRedirect).not.toHaveBeenCalled();
+      expect(result).toBeDefined();
+    });
+  });
 });
