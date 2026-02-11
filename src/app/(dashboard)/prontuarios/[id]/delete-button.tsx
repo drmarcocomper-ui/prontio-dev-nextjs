@@ -2,15 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { excluirProntuario } from "../actions";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export function DeleteButton({ prontuarioId }: { prontuarioId: string }) {
-  const [confirming, setConfirming] = useState(false);
+  const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  if (!confirming) {
-    return (
+  return (
+    <>
       <button
-        onClick={() => setConfirming(true)}
+        onClick={() => setOpen(true)}
         className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition-colors hover:bg-red-50"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -18,31 +19,17 @@ export function DeleteButton({ prontuarioId }: { prontuarioId: string }) {
         </svg>
         Excluir
       </button>
-    );
-  }
 
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-500">Tem certeza?</span>
-      <button
-        onClick={() =>
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        onConfirm={() =>
           startTransition(() => excluirProntuario(prontuarioId))
         }
-        disabled={isPending}
-        className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
-      >
-        {isPending ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-        ) : (
-          "Confirmar"
-        )}
-      </button>
-      <button
-        onClick={() => setConfirming(false)}
-        className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-      >
-        Cancelar
-      </button>
-    </div>
+        title="Excluir prontuário"
+        description="Tem certeza que deseja excluir este prontuário? Esta ação não pode ser desfeita."
+        isPending={isPending}
+      />
+    </>
   );
 }
