@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -56,5 +56,26 @@ describe("DatePicker", () => {
   it("habilita botão Hoje quando não é hoje", () => {
     render(<DatePicker currentDate="2024-01-01" />);
     expect(screen.getByText("Hoje")).not.toBeDisabled();
+  });
+
+  it("navega para hoje ao clicar no botão Hoje", async () => {
+    render(<DatePicker currentDate="2024-01-01" />);
+    await userEvent.click(screen.getByText("Hoje"));
+    const today = new Date().toISOString().split("T")[0];
+    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining(`data=${today}`));
+  });
+
+  it("navega ao alterar o input de data", () => {
+    render(<DatePicker currentDate="2024-06-15" />);
+    const input = document.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "2024-07-20" } });
+    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("data=2024-07-20"));
+  });
+
+  it("não navega quando input de data é limpo", () => {
+    render(<DatePicker currentDate="2024-06-15" />);
+    const input = document.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "" } });
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

@@ -98,6 +98,17 @@ const atividadesMock = [
   },
 ];
 
+function makeActivity(id: string, minutesAgo: number, tipo: string | null = "consulta") {
+  const date = new Date(Date.now() - minutesAgo * 60000);
+  return {
+    id,
+    data: "2024-06-15",
+    tipo,
+    created_at: date.toISOString(),
+    pacientes: { id: `p-${id}`, nome: `Paciente ${id}` },
+  };
+}
+
 function setMockResults(overrides: Partial<{
   pacientesCount: number;
   consultasHoje: number;
@@ -216,5 +227,93 @@ describe("DashboardPage", () => {
   it("exibe R$ 0,00 quando não há receitas", async () => {
     await renderPage();
     expect(screen.getByText("R$ 0,00")).toBeInTheDocument();
+  });
+
+  it("exibe 'agora' para atividade criada há menos de 1 minuto", async () => {
+    setMockResults({ atividades: [makeActivity("a1", 0)] });
+    await renderPage();
+    expect(screen.getByText("agora")).toBeInTheDocument();
+  });
+
+  it("exibe 'há X min' para atividade criada há minutos", async () => {
+    setMockResults({ atividades: [makeActivity("a2", 15)] });
+    await renderPage();
+    expect(screen.getByText("há 15 min")).toBeInTheDocument();
+  });
+
+  it("exibe 'há Xh' para atividade criada há horas", async () => {
+    setMockResults({ atividades: [makeActivity("a3", 180)] }); // 3 hours
+    await renderPage();
+    expect(screen.getByText("há 3h")).toBeInTheDocument();
+  });
+
+  it("exibe 'ontem' para atividade criada há 1 dia", async () => {
+    setMockResults({ atividades: [makeActivity("a4", 60 * 25)] }); // 25 hours
+    await renderPage();
+    expect(screen.getByText("ontem")).toBeInTheDocument();
+  });
+
+  it("exibe 'há X dias' para atividade criada há dias", async () => {
+    setMockResults({ atividades: [makeActivity("a5", 60 * 24 * 4)] }); // 4 days
+    await renderPage();
+    expect(screen.getByText("há 4 dias")).toBeInTheDocument();
+  });
+
+  it("exibe data formatada para atividade com mais de 7 dias", async () => {
+    const oldDate = new Date(Date.now() - 60000 * 60 * 24 * 30); // 30 days ago
+    setMockResults({
+      atividades: [{
+        id: "a6",
+        data: "2024-06-15",
+        tipo: "consulta",
+        created_at: oldDate.toISOString(),
+        pacientes: { id: "p-a6", nome: "Paciente Antigo" },
+      }],
+    });
+    await renderPage();
+    // Should show a formatted date like "15/05/2024" etc.
+    expect(screen.getByText("Paciente Antigo")).toBeInTheDocument();
+    // The time should be a date string, not "há X dias"
+    expect(screen.queryByText(/^há/)).not.toBeInTheDocument();
+    expect(screen.queryByText("agora")).not.toBeInTheDocument();
+    expect(screen.queryByText("ontem")).not.toBeInTheDocument();
+  });
+
+  it("exibe 'Evolução' quando tipo da atividade é null", async () => {
+    setMockResults({ atividades: [makeActivity("a7", 5, null)] });
+    await renderPage();
+    expect(screen.getByText(/Evolução/)).toBeInTheDocument();
+  });
+
+  it("exibe tipo raw quando não está no mapa TIPO_LABELS", async () => {
+    setMockResults({
+      proximas: [{
+        id: "ag-x",
+        hora_inicio: "14:00:00",
+        hora_fim: "14:30:00",
+        tipo: "outro_tipo",
+        status: "custom_status",
+        pacientes: { id: "p-x", nome: "Paciente X" },
+      }],
+    });
+    await renderPage();
+    expect(screen.getByText("outro_tipo")).toBeInTheDocument();
+    expect(screen.getByText("custom_status")).toBeInTheDocument();
+  });
+
+  it("não exibe tipo quando consulta não tem tipo", async () => {
+    setMockResults({
+      proximas: [{
+        id: "ag-no-type",
+        hora_inicio: "16:00:00",
+        hora_fim: "16:30:00",
+        tipo: null,
+        status: "agendado",
+        pacientes: { id: "p-nt", nome: "Sem Tipo" },
+      }],
+    });
+    await renderPage();
+    expect(screen.getByText("Sem Tipo")).toBeInTheDocument();
+    expect(screen.getByText("16:00 – 16:30")).toBeInTheDocument();
   });
 });
