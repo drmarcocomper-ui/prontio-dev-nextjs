@@ -117,6 +117,8 @@ async function renderPage(id = "abc-123") {
 describe("PacienteDetalhesPage", () => {
   beforeEach(() => {
     mockPaciente = pacienteCompleto;
+    mockProntuarios = [];
+    mockReceitas = [];
     mockNotFound.mockClear();
   });
 
@@ -221,5 +223,84 @@ describe("PacienteDetalhesPage", () => {
     await renderPage("def-456");
     const dashes = screen.getAllByText("—");
     expect(dashes.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("formata telefone fixo com 10 dígitos", async () => {
+    mockPaciente = { ...pacienteCompleto, telefone: "1133334444" };
+    await renderPage();
+    expect(screen.getByText("(11) 3333-4444")).toBeInTheDocument();
+  });
+
+  it("exibe telefone sem formatação quando formato desconhecido", async () => {
+    mockPaciente = { ...pacienteCompleto, telefone: "123" };
+    await renderPage();
+    expect(screen.getByText("123")).toBeInTheDocument();
+  });
+
+  it("exibe empty state de evoluções quando não há prontuários", async () => {
+    mockProntuarios = [];
+    await renderPage();
+    expect(screen.getByText("Nenhuma evolução registrada.")).toBeInTheDocument();
+  });
+
+  it("renderiza lista de prontuários quando existem", async () => {
+    mockProntuarios = [
+      { id: "pr-1", data: "2024-06-15", tipo: "consulta", cid: "J06.9", queixa_principal: "Dor de garganta" },
+      { id: "pr-2", data: "2024-06-10", tipo: null, cid: null, queixa_principal: null },
+    ];
+    await renderPage();
+    expect(screen.getByText("Consulta")).toBeInTheDocument();
+    expect(screen.getByText("CID: J06.9")).toBeInTheDocument();
+    expect(screen.getByText("Dor de garganta")).toBeInTheDocument();
+    const link = screen.getByText("Dor de garganta").closest("a");
+    expect(link).toHaveAttribute("href", "/prontuarios/pr-1");
+  });
+
+  it("renderiza link Nova evolução com paciente_id", async () => {
+    await renderPage();
+    const link = screen.getByText("Nova evolução").closest("a");
+    expect(link).toHaveAttribute(
+      "href",
+      expect.stringContaining("paciente_id=abc-123")
+    );
+  });
+
+  it("exibe empty state de receitas quando não há receitas", async () => {
+    mockReceitas = [];
+    await renderPage();
+    expect(screen.getByText("Nenhuma receita emitida.")).toBeInTheDocument();
+  });
+
+  it("renderiza lista de receitas quando existem", async () => {
+    mockReceitas = [
+      { id: "rec-1", data: "2024-06-15", tipo: "simples", medicamentos: "Amoxicilina 500mg" },
+      { id: "rec-2", data: "2024-06-10", tipo: "controle_especial", medicamentos: "Ritalina 10mg" },
+    ];
+    await renderPage();
+    expect(screen.getByText("Amoxicilina 500mg")).toBeInTheDocument();
+    expect(screen.getByText("Ritalina 10mg")).toBeInTheDocument();
+    expect(screen.getByText("Simples")).toBeInTheDocument();
+    expect(screen.getByText("Controle Especial")).toBeInTheDocument();
+    const link = screen.getByText("Amoxicilina 500mg").closest("a");
+    expect(link).toHaveAttribute("href", "/receitas/rec-1");
+  });
+
+  it("renderiza link Nova receita com paciente_id", async () => {
+    await renderPage();
+    const link = screen.getByText("Nova receita").closest("a");
+    expect(link).toHaveAttribute(
+      "href",
+      expect.stringContaining("paciente_id=abc-123")
+    );
+  });
+
+  it("renderiza seção Receitas médicas", async () => {
+    await renderPage();
+    expect(screen.getByText("Receitas médicas")).toBeInTheDocument();
+  });
+
+  it("renderiza seção Evoluções clínicas", async () => {
+    await renderPage();
+    expect(screen.getByText("Evoluções clínicas")).toBeInTheDocument();
   });
 });
