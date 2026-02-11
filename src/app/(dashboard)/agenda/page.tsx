@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DatePicker } from "./date-picker";
-import { StatusSelect, getStatusBadge } from "./status-select";
+import { StatusSelect } from "./status-select";
+import { StatusBadge } from "./status-badge";
 
 interface Agendamento {
   id: string;
@@ -133,7 +134,7 @@ export default async function AgendaPage({
 
               {/* Status Badge (mobile) */}
               <div className="hidden sm:block">
-                {getStatusBadge(ag.status)}
+                <StatusBadge status={ag.status} />
               </div>
 
               {/* Status Select */}

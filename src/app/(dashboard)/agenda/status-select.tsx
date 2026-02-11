@@ -13,18 +13,6 @@ const STATUS_OPTIONS = [
   { value: "faltou", label: "Faltou", color: "bg-gray-100 text-gray-600" },
 ];
 
-export function getStatusBadge(status: string) {
-  const opt = STATUS_OPTIONS.find((o) => o.value === status);
-  if (!opt) return null;
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${opt.color}`}
-    >
-      {opt.label}
-    </span>
-  );
-}
-
 export function StatusSelect({
   agendamentoId,
   currentStatus,
