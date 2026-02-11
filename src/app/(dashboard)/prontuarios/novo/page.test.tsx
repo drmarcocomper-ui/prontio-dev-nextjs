@@ -18,9 +18,12 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("./prontuario-form", () => ({
-  ProntuarioForm: (props: Record<string, unknown>) => (
-    <form data-testid="prontuario-form" data-patient-id={props.defaultPatientId ?? ""} />
-  ),
+  ProntuarioForm: (props: Record<string, unknown>) => {
+    const defaults = props.defaults as Record<string, string> | undefined;
+    return (
+      <form data-testid="prontuario-form" data-patient-id={defaults?.paciente_id ?? ""} data-cancel-href={props.cancelHref ?? ""} />
+    );
+  },
 }));
 
 import NovoProntuarioPage from "./page";

@@ -35,14 +35,23 @@ vi.mock("./delete-button", () => ({
 
 let mockPaciente: Record<string, unknown> | null = null;
 
+let mockProntuarios: Record<string, unknown>[] = [];
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
-      from: () => ({
+      from: (table: string) => ({
         select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: mockPaciente }),
-          }),
+          eq: (..._args: unknown[]) => {
+            if (table === "pacientes") {
+              return {
+                single: () => Promise.resolve({ data: mockPaciente }),
+              };
+            }
+            return {
+              order: () => Promise.resolve({ data: mockProntuarios }),
+            };
+          },
         }),
       }),
     }),
