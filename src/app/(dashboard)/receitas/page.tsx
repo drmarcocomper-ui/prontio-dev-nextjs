@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SearchInput } from "./search-input";
@@ -7,6 +8,8 @@ import {
   formatDate,
   getInitials,
 } from "./types";
+
+export const metadata: Metadata = { title: "Receitas" };
 
 export default async function ReceitasPage({
   searchParams,

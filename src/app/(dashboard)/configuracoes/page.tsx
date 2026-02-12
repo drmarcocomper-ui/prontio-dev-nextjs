@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Tabs } from "./tabs";
 import { ConsultorioForm } from "./consultorio-form";
 import { ProfissionalForm } from "./profissional-form";
 import { HorariosForm } from "./horarios-form";
 import { ContaForm } from "./conta-form";
+
+export const metadata: Metadata = { title: "Configurações" };
 
 export default async function ConfiguracoesPage({
   searchParams,

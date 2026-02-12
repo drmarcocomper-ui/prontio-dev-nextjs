@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +13,21 @@ import {
   getInitials,
   type TransacaoFull as Transacao,
 } from "../constants";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("transacoes")
+    .select("descricao")
+    .eq("id", id)
+    .single();
+  return { title: data?.descricao ?? "Transação" };
+}
 
 export default async function TransacaoDetalhesPage({
   params,

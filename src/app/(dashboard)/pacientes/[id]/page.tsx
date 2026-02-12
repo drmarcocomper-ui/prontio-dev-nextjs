@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -7,6 +8,21 @@ import {
   SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS,
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("pacientes")
+    .select("nome")
+    .eq("id", id)
+    .single();
+  return { title: data?.nome ?? "Paciente" };
+}
 
 function InfoItem({ label, value }: { label: string; value: string | null | undefined }) {
   return (

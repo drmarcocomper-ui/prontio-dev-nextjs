@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { TransacaoForm } from "./transacao-form";
+
+export const metadata: Metadata = { title: "Nova Transação" };
 
 export default function NovaTransacaoPage() {
   return (

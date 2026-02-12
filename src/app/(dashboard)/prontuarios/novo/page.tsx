@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ProntuarioForm } from "./prontuario-form";
+
+export const metadata: Metadata = { title: "Nova Evolução" };
 
 export default async function NovoProntuarioPage({
   searchParams,

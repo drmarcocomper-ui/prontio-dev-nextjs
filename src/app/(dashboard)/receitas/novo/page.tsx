@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ReceitaForm } from "./receita-form";
+
+export const metadata: Metadata = { title: "Nova Receita" };
 
 export default async function NovaReceitaPage({
   searchParams,

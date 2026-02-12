@@ -1,9 +1,27 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "../status-badge";
 import { DeleteButton } from "./delete-button";
 import { type Agendamento, TIPO_LABELS, formatTime, formatDateBR, getInitials } from "../types";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("agendamentos")
+    .select("pacientes(nome)")
+    .eq("id", id)
+    .single();
+  const nome = (data as unknown as { pacientes: { nome: string } } | null)
+    ?.pacientes?.nome;
+  return { title: nome ? `Agendamento - ${nome}` : "Agendamento" };
+}
 
 export default async function AgendamentoDetalhesPage({
   params,

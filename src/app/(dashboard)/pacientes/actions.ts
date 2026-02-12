@@ -6,7 +6,7 @@ import {
   NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
   ENDERECO_MAX_LENGTH, NUMERO_MAX_LENGTH, COMPLEMENTO_MAX_LENGTH,
   BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH, CONVENIO_MAX_LENGTH,
-  OBSERVACOES_MAX_LENGTH,
+  OBSERVACOES_MAX_LENGTH, validarCPF,
 } from "./types";
 
 export type PacienteFormState = {
@@ -41,8 +41,8 @@ function validarCamposPaciente(formData: FormData) {
     fieldErrors.nome = `Máximo de ${NOME_MAX_LENGTH} caracteres.`;
   }
 
-  if (cpf && cpf.length !== 11) {
-    fieldErrors.cpf = "CPF deve ter 11 dígitos.";
+  if (cpf && !validarCPF(cpf)) {
+    fieldErrors.cpf = "CPF inválido.";
   }
 
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PacienteForm } from "./paciente-form";
+
+export const metadata: Metadata = { title: "Novo Paciente" };
 
 export default function NovoPacientePage() {
   return (

@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProntuarioForm } from "../../novo/prontuario-form";
 import { type Prontuario } from "../../types";
+
+export const metadata: Metadata = { title: "Editar Prontuário" };
 
 export default async function EditarProntuarioPage({
   params,

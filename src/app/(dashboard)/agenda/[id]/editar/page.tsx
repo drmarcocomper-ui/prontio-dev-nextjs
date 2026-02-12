@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AgendamentoForm } from "../../novo/agendamento-form";
 import { type Agendamento } from "../../types";
+
+export const metadata: Metadata = { title: "Editar Agendamento" };
 
 export default async function EditarAgendamentoPage({
   params,

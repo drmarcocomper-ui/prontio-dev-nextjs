@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SearchInput } from "./search-input";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
+
+export const metadata: Metadata = { title: "Pacientes" };
 
 export default async function PacientesPage({
   searchParams,

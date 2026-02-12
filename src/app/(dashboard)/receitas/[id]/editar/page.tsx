@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ReceitaForm } from "../../novo/receita-form";
 import type { ReceitaComPaciente } from "../../types";
+
+export const metadata: Metadata = { title: "Editar Receita" };
 
 export default async function EditarReceitaPage({
   params,

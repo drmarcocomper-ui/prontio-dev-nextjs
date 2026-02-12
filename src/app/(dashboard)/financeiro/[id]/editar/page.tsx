@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TransacaoForm } from "../../novo/transacao-form";
 import { maskCurrency, type TransacaoFull } from "../../constants";
+
+export const metadata: Metadata = { title: "Editar Transação" };
 
 export default async function EditarTransacaoPage({
   params,

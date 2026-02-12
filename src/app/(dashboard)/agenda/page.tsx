@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DatePicker } from "./date-picker";
 import { StatusSelect } from "./status-select";
 import { StatusBadge } from "./status-badge";
 import { type Agendamento, TIPO_LABELS, formatTime, getInitials } from "./types";
+
+export const metadata: Metadata = { title: "Agenda" };
 
 export default async function AgendaPage({
   searchParams,

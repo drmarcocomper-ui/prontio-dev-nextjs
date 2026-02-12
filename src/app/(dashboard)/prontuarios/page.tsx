@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SearchInput } from "./search-input";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
+
+export const metadata: Metadata = { title: "Prontuários" };
 
 export default async function ProntuariosPage({
   searchParams,

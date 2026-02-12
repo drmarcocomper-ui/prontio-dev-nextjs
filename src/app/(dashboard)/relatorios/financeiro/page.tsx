@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MonthFilter } from "./month-filter";
@@ -19,6 +20,8 @@ import {
   aggregateByCategoria,
   aggregateByPagamento,
 } from "./utils";
+
+export const metadata: Metadata = { title: "Relatório Financeiro" };
 
 export default async function RelatorioFinanceiroPage({
   searchParams,

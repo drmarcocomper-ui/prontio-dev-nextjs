@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { PrintButton } from "./print-button";
 import {
@@ -15,6 +16,8 @@ import {
   aggregateByCategoria,
   aggregateByPagamento,
 } from "../utils";
+
+export const metadata: Metadata = { title: "Imprimir Relatório" };
 
 export default async function ImprimirRelatorioPage({
   searchParams,

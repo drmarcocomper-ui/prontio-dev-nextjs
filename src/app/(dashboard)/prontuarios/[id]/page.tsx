@@ -1,8 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteButton } from "./delete-button";
 import { type Prontuario, TIPO_LABELS, formatDateLong, getInitials } from "../types";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("prontuarios")
+    .select("pacientes(nome)")
+    .eq("id", id)
+    .single();
+  const nome = (data as unknown as { pacientes: { nome: string } } | null)
+    ?.pacientes?.nome;
+  return { title: nome ? `Prontuário - ${nome}` : "Prontuário" };
+}
 
 function Section({
   title,

@@ -14,7 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prontio - Gestão de Consultório Médico",
+  title: {
+    default: "Prontio - Gestão de Consultório Médico",
+    template: "%s | Prontio",
+  },
   description:
     "Sistema de gestão para consultório médico. Gerencie pacientes, agendamentos, prontuários e muito mais.",
 };

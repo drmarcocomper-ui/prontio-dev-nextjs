@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Filters } from "./filters";
@@ -11,6 +12,8 @@ import {
   formatDate,
   type TransacaoListItem,
 } from "./constants";
+
+export const metadata: Metadata = { title: "Financeiro" };
 
 export default async function FinanceiroPage({
   searchParams,

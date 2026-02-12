@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AgendamentoForm } from "./agendamento-form";
+
+export const metadata: Metadata = { title: "Novo Agendamento" };
 
 export default async function NovoAgendamentoPage({
   searchParams,

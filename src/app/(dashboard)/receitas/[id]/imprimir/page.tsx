@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PrintButton } from "./print-button";
@@ -7,6 +8,23 @@ import {
   formatDateMedium,
   formatCPF,
 } from "../../types";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("receitas")
+    .select("pacientes(nome)")
+    .eq("id", id)
+    .single();
+  const nome = (data as unknown as { pacientes: { nome: string } } | null)
+    ?.pacientes?.nome;
+  return { title: nome ? `Imprimir Receita - ${nome}` : "Imprimir Receita" };
+}
 
 export default async function ImprimirReceitaPage({
   params,
