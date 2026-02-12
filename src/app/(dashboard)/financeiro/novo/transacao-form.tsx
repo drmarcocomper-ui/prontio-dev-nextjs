@@ -4,20 +4,15 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { criarTransacao, atualizarTransacao, type TransacaoFormState } from "../actions";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
-
-export interface TransacaoDefaults {
-  id?: string;
-  tipo?: string;
-  categoria?: string | null;
-  descricao?: string;
-  valor?: string;
-  data?: string;
-  paciente_id?: string | null;
-  paciente_nome?: string | null;
-  forma_pagamento?: string | null;
-  status?: string;
-  observacoes?: string | null;
-}
+import {
+  type TransacaoDefaults,
+  DESCRICAO_MAX_LENGTH,
+  OBSERVACOES_MAX_LENGTH,
+  CATEGORIAS_RECEITA,
+  CATEGORIAS_DESPESA,
+  PAGAMENTO_LABELS,
+  maskCurrency,
+} from "../constants";
 
 const inputClass =
   "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
@@ -26,33 +21,6 @@ function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="mt-1 text-xs text-red-600">{message}</p>;
 }
-
-function maskCurrency(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-  const num = parseInt(digits, 10) / 100;
-  return num.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-const CATEGORIAS_RECEITA = [
-  { value: "consulta", label: "Consulta" },
-  { value: "retorno", label: "Retorno" },
-  { value: "exame", label: "Exame" },
-  { value: "procedimento", label: "Procedimento" },
-  { value: "outros", label: "Outros" },
-];
-
-const CATEGORIAS_DESPESA = [
-  { value: "aluguel", label: "Aluguel" },
-  { value: "salario", label: "Salário" },
-  { value: "material", label: "Material" },
-  { value: "equipamento", label: "Equipamento" },
-  { value: "imposto", label: "Imposto" },
-  { value: "outros", label: "Outros" },
-];
 
 export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
   const isEditing = !!defaults?.id;
@@ -100,7 +68,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
               onChange={() => setTipo("receita")}
               className="sr-only"
             />
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m0 0-6.75-6.75M12 19.5l6.75-6.75" />
             </svg>
             Receita
@@ -120,7 +88,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
               onChange={() => setTipo("despesa")}
               className="sr-only"
             />
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v-15m0 0-6.75 6.75M12 4.5l6.75 6.75" />
             </svg>
             Despesa
@@ -140,6 +108,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
             name="descricao"
             type="text"
             required
+            maxLength={DESCRICAO_MAX_LENGTH}
             placeholder="Ex: Consulta particular"
             defaultValue={defaults?.descricao ?? ""}
             className={inputClass}
@@ -203,13 +172,11 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           </label>
           <select id="forma_pagamento" name="forma_pagamento" defaultValue={defaults?.forma_pagamento ?? ""} className={inputClass}>
             <option value="">Selecione</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="pix">PIX</option>
-            <option value="cartao_credito">Cartão de crédito</option>
-            <option value="cartao_debito">Cartão de débito</option>
-            <option value="boleto">Boleto</option>
-            <option value="transferencia">Transferência</option>
-            <option value="convenio">Convênio</option>
+            {Object.entries(PAGAMENTO_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -251,9 +218,11 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           id="observacoes"
           name="observacoes"
           rows={2}
+          maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}
         />
+        <FieldError message={state.fieldErrors?.observacoes} />
       </div>
 
       {/* Actions */}
@@ -270,7 +239,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-50"
         >
           {isPending && (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <div aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           )}
           {isEditing ? "Salvar alterações" : "Registrar"}
         </button>

@@ -21,6 +21,11 @@ vi.mock("./filters", () => ({
   Filters: () => <div data-testid="filters" />,
 }));
 
+vi.mock("./constants", async () => {
+  const actual = await vi.importActual("./constants");
+  return { ...actual };
+});
+
 vi.mock("./delete-button", () => ({
   DeleteButton: ({ transacaoId }: { transacaoId: string }) => (
     <button data-testid={`delete-${transacaoId}`}>Excluir</button>
@@ -204,6 +209,6 @@ describe("FinanceiroPage", () => {
   it("usa estilo padrão quando status não está em STATUS_STYLES", async () => {
     mockData.data = [{ ...transacoesMock[0], status: "desconhecido" }];
     await renderPage();
-    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+    expect(screen.getByText("desconhecido")).toBeInTheDocument();
   });
 });

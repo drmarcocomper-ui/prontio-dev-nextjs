@@ -25,6 +25,11 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("../constants", async () => {
+  const actual = await vi.importActual("../constants");
+  return { ...actual };
+});
+
 vi.mock("./delete-button", () => ({
   DeleteButton: ({ transacaoId }: { transacaoId: string }) => (
     <button data-testid="delete-button" data-id={transacaoId}>Excluir</button>
@@ -161,7 +166,7 @@ describe("TransacaoDetalhesPage", () => {
   it("usa fallback de estilo para status desconhecido", async () => {
     mockTransacao = { ...transacaoCompleta, status: "desconhecido" };
     await renderPage();
-    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+    expect(screen.getByText("desconhecido")).toBeInTheDocument();
   });
 
   it("não exibe categoria quando ausente", async () => {

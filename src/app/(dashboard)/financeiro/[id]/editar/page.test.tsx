@@ -25,6 +25,11 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("../../constants", async () => {
+  const actual = await vi.importActual("../../constants");
+  return { ...actual };
+});
+
 vi.mock("../../novo/transacao-form", () => ({
   TransacaoForm: ({ defaults }: { defaults: Record<string, unknown> }) => (
     <form data-testid="transacao-form" data-defaults={JSON.stringify(defaults)} />

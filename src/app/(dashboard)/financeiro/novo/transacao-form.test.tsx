@@ -31,6 +31,11 @@ vi.mock("../actions", () => ({
   atualizarTransacao: vi.fn(),
 }));
 
+vi.mock("../constants", async () => {
+  const actual = await vi.importActual("../constants");
+  return { ...actual };
+});
+
 vi.mock("@/app/(dashboard)/agenda/novo/patient-search", () => ({
   PatientSearch: ({ defaultPatientId, defaultPatientName }: { defaultPatientId?: string; defaultPatientName?: string }) => (
     <input data-testid="patient-search" data-patient-id={defaultPatientId} data-patient-name={defaultPatientName} />
@@ -211,6 +216,18 @@ describe("TransacaoForm", () => {
     const hidden = container.querySelector('input[name="id"]') as HTMLInputElement;
     expect(hidden).toBeTruthy();
     expect(hidden.value).toBe("t-1");
+  });
+
+  it("campo descrição tem maxLength de 255", () => {
+    render(<TransacaoForm />);
+    const input = screen.getByLabelText(/Descrição/) as HTMLInputElement;
+    expect(input.maxLength).toBe(255);
+  });
+
+  it("campo observações tem maxLength de 1000", () => {
+    render(<TransacaoForm />);
+    const textarea = screen.getByLabelText("Observações") as HTMLTextAreaElement;
+    expect(textarea.maxLength).toBe(1000);
   });
 
   it("passa defaults de paciente para PatientSearch no modo edição", () => {

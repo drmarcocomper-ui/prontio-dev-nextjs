@@ -5,10 +5,11 @@ import { DeleteButton } from "./delete-button";
 import {
   CATEGORIA_LABELS,
   PAGAMENTO_LABELS,
+  STATUS_LABELS,
   STATUS_STYLES,
   formatCurrency,
   formatDate,
-  type Transacao,
+  type TransacaoListItem,
 } from "./constants";
 
 export default async function FinanceiroPage({
@@ -28,7 +29,7 @@ export default async function FinanceiroPage({
 
   let query = supabase
     .from("transacoes")
-    .select("id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, created_at, pacientes(nome)")
+    .select("id, tipo, categoria, descricao, valor, data, forma_pagamento, status, pacientes(nome)")
     .gte("data", startDate)
     .lte("data", endDate)
     .order("data", { ascending: false })
@@ -39,7 +40,7 @@ export default async function FinanceiroPage({
   }
 
   const { data: transacoes } = await query;
-  const items = (transacoes ?? []) as unknown as Transacao[];
+  const items = (transacoes ?? []) as unknown as TransacaoListItem[];
 
   const totalReceitas = items
     .filter((t) => t.tipo === "receita" && t.status !== "cancelado")
@@ -68,7 +69,7 @@ export default async function FinanceiroPage({
           href="/financeiro/novo"
           className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Nova transação
@@ -162,7 +163,7 @@ export default async function FinanceiroPage({
                         STATUS_STYLES[t.status] ?? "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {t.status === "pago" ? "Pago" : t.status === "pendente" ? "Pendente" : "Cancelado"}
+                      {STATUS_LABELS[t.status] ?? t.status}
                     </span>
                   </td>
                   <td
@@ -183,7 +184,7 @@ export default async function FinanceiroPage({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg aria-hidden="true" className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
           </svg>
           <h3 className="mt-4 text-sm font-semibold text-gray-900">
@@ -196,7 +197,7 @@ export default async function FinanceiroPage({
             href="/financeiro/novo"
             className="mt-6 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             Nova transação

@@ -10,7 +10,7 @@ export default function NovaTransacaoPage() {
           href="/financeiro"
           className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
           Financeiro

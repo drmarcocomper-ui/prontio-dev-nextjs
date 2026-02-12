@@ -2,9 +2,17 @@ import { describe, it, expect } from "vitest";
 import {
   CATEGORIA_LABELS,
   PAGAMENTO_LABELS,
+  STATUS_LABELS,
   STATUS_STYLES,
+  CATEGORIAS_RECEITA,
+  CATEGORIAS_DESPESA,
+  DESCRICAO_MAX_LENGTH,
+  OBSERVACOES_MAX_LENGTH,
   formatCurrency,
   formatDate,
+  formatDateLong,
+  getInitials,
+  maskCurrency,
 } from "./constants";
 
 describe("constants", () => {
@@ -69,6 +77,75 @@ describe("constants", () => {
     it("formata data de janeiro corretamente", () => {
       const result = formatDate("2024-01-01");
       expect(result).toBe("01/01/2024");
+    });
+  });
+
+  describe("STATUS_LABELS", () => {
+    it("contém todos os status esperados", () => {
+      expect(STATUS_LABELS.pago).toBe("Pago");
+      expect(STATUS_LABELS.pendente).toBe("Pendente");
+      expect(STATUS_LABELS.cancelado).toBe("Cancelado");
+    });
+  });
+
+  describe("CATEGORIAS_RECEITA / CATEGORIAS_DESPESA", () => {
+    it("categorias de receita contêm consulta e procedimento", () => {
+      const values = CATEGORIAS_RECEITA.map((c) => c.value);
+      expect(values).toContain("consulta");
+      expect(values).toContain("procedimento");
+    });
+
+    it("categorias de despesa contêm aluguel e salario", () => {
+      const values = CATEGORIAS_DESPESA.map((c) => c.value);
+      expect(values).toContain("aluguel");
+      expect(values).toContain("salario");
+    });
+  });
+
+  describe("constantes de tamanho", () => {
+    it("DESCRICAO_MAX_LENGTH é 255", () => {
+      expect(DESCRICAO_MAX_LENGTH).toBe(255);
+    });
+
+    it("OBSERVACOES_MAX_LENGTH é 1000", () => {
+      expect(OBSERVACOES_MAX_LENGTH).toBe(1000);
+    });
+  });
+
+  describe("formatDateLong", () => {
+    it("formata data no formato longo em pt-BR", () => {
+      const result = formatDateLong("2024-06-15");
+      expect(result).toContain("15");
+      expect(result).toContain("junho");
+      expect(result).toContain("2024");
+    });
+  });
+
+  describe("getInitials", () => {
+    it("retorna iniciais de nome com dois termos", () => {
+      expect(getInitials("Maria Silva")).toBe("MS");
+    });
+
+    it("retorna uma inicial para nome com um termo", () => {
+      expect(getInitials("João")).toBe("J");
+    });
+
+    it("retorna no máximo duas iniciais", () => {
+      expect(getInitials("Ana Maria Costa")).toBe("AM");
+    });
+  });
+
+  describe("maskCurrency", () => {
+    it("formata dígitos como valor monetário", () => {
+      expect(maskCurrency("35000")).toBe("350,00");
+    });
+
+    it("retorna vazio para entrada sem dígitos", () => {
+      expect(maskCurrency("abc")).toBe("");
+    });
+
+    it("formata centavos corretamente", () => {
+      expect(maskCurrency("99")).toBe("0,99");
     });
   });
 });

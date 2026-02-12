@@ -80,6 +80,18 @@ describe("criarTransacao", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/financeiro?success=Transa%C3%A7%C3%A3o+registrada");
   });
 
+  it("retorna fieldErrors quando descrição excede 255 caracteres", async () => {
+    const longDesc = "a".repeat(256);
+    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: longDesc, valor: "100,00", data: "2024-06-15" }));
+    expect(result.fieldErrors?.descricao).toBe("Máximo de 255 caracteres.");
+  });
+
+  it("retorna fieldErrors quando observações excede 1000 caracteres", async () => {
+    const longObs = "a".repeat(1001);
+    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Teste", valor: "100,00", data: "2024-06-15", observacoes: longObs }));
+    expect(result.fieldErrors?.observacoes).toBe("Máximo de 1000 caracteres.");
+  });
+
   it("retorna erro quando insert falha", async () => {
     mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));

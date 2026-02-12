@@ -2,30 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TransacaoForm } from "../../novo/transacao-form";
-
-interface TransacaoComPaciente {
-  id: string;
-  tipo: string;
-  categoria: string | null;
-  descricao: string;
-  valor: number;
-  data: string;
-  paciente_id: string | null;
-  forma_pagamento: string | null;
-  status: string;
-  observacoes: string | null;
-  pacientes: { id: string; nome: string } | null;
-}
-
-function maskCurrency(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-  const num = parseInt(digits, 10) / 100;
-  return num.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+import { maskCurrency, type TransacaoFull } from "../../constants";
 
 export default async function EditarTransacaoPage({
   params,
@@ -47,7 +24,7 @@ export default async function EditarTransacaoPage({
     notFound();
   }
 
-  const t = transacao as unknown as TransacaoComPaciente;
+  const t = transacao as unknown as TransacaoFull;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -57,7 +34,7 @@ export default async function EditarTransacaoPage({
           href={`/financeiro/${t.id}`}
           className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
           Voltar para transação

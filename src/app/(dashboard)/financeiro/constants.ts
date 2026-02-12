@@ -1,3 +1,15 @@
+export interface TransacaoListItem {
+  id: string;
+  tipo: string;
+  categoria: string | null;
+  descricao: string;
+  valor: number;
+  data: string;
+  forma_pagamento: string | null;
+  status: string;
+  pacientes: { nome: string } | null;
+}
+
 export interface Transacao {
   id: string;
   tipo: string;
@@ -28,6 +40,23 @@ export interface TransacaoFull {
   pacientes: { id: string; nome: string } | null;
 }
 
+export interface TransacaoDefaults {
+  id?: string;
+  tipo?: string;
+  categoria?: string | null;
+  descricao?: string;
+  valor?: string;
+  data?: string;
+  paciente_id?: string | null;
+  paciente_nome?: string | null;
+  forma_pagamento?: string | null;
+  status?: string;
+  observacoes?: string | null;
+}
+
+export const DESCRICAO_MAX_LENGTH = 255;
+export const OBSERVACOES_MAX_LENGTH = 1000;
+
 export const CATEGORIA_LABELS: Record<string, string> = {
   consulta: "Consulta",
   retorno: "Retorno",
@@ -51,11 +80,34 @@ export const PAGAMENTO_LABELS: Record<string, string> = {
   convenio: "Convênio",
 };
 
+export const STATUS_LABELS: Record<string, string> = {
+  pago: "Pago",
+  pendente: "Pendente",
+  cancelado: "Cancelado",
+};
+
 export const STATUS_STYLES: Record<string, string> = {
   pago: "bg-emerald-100 text-emerald-700",
   pendente: "bg-amber-100 text-amber-700",
   cancelado: "bg-red-100 text-red-700",
 };
+
+export const CATEGORIAS_RECEITA = [
+  { value: "consulta", label: "Consulta" },
+  { value: "retorno", label: "Retorno" },
+  { value: "exame", label: "Exame" },
+  { value: "procedimento", label: "Procedimento" },
+  { value: "outros", label: "Outros" },
+];
+
+export const CATEGORIAS_DESPESA = [
+  { value: "aluguel", label: "Aluguel" },
+  { value: "salario", label: "Salário" },
+  { value: "material", label: "Material" },
+  { value: "equipamento", label: "Equipamento" },
+  { value: "imposto", label: "Imposto" },
+  { value: "outros", label: "Outros" },
+];
 
 export function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -63,4 +115,33 @@ export function formatCurrency(value: number) {
 
 export function formatDate(dateStr: string) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
+}
+
+export function formatDateLong(dateStr: string) {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
+}
+
+export function maskCurrency(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  const num = parseInt(digits, 10) / 100;
+  return num.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
