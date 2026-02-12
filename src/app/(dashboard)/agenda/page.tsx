@@ -31,7 +31,7 @@ export default async function AgendaPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -59,10 +59,10 @@ export default async function AgendaPage({
           {items.map((ag) => (
             <div
               key={ag.id}
-              className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300"
+              className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 transition-colors hover:border-gray-300 sm:gap-4 sm:p-4"
             >
               {/* Time */}
-              <Link href={`/agenda/${ag.id}`} className="w-24 shrink-0 text-center">
+              <Link href={`/agenda/${ag.id}`} className="w-20 shrink-0 text-center sm:w-24">
                 <p className="text-lg font-semibold text-gray-900">
                   {formatTime(ag.hora_inicio)}
                 </p>
@@ -72,7 +72,7 @@ export default async function AgendaPage({
               </Link>
 
               {/* Divider */}
-              <div className="h-12 w-px bg-gray-200" />
+              <div className="hidden h-12 w-px bg-gray-200 sm:block" />
 
               {/* Patient Info */}
               <Link href={`/agenda/${ag.id}`} className="flex min-w-0 flex-1 items-center gap-3">

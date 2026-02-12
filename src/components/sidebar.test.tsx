@@ -45,8 +45,9 @@ describe("Sidebar", () => {
 
   it("renderiza o logo e nome Prontio", () => {
     render(<Sidebar />);
-    expect(screen.getByText("P")).toBeInTheDocument();
-    expect(screen.getByText("Prontio")).toBeInTheDocument();
+    // Mobile top bar + desktop sidebar both render logo
+    expect(screen.getAllByText("P").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renderiza todos os 6 links de navegação", () => {

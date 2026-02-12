@@ -55,7 +55,7 @@ export default async function PacientesPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pacientes</h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -83,7 +83,7 @@ export default async function PacientesPage({
 
       {/* Table */}
       {items.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -144,6 +144,7 @@ export default async function PacientesPage({
                   <td className="whitespace-nowrap px-6 py-4 text-right">
                     <Link
                       href={`/pacientes/${p.id}`}
+                      aria-label="Ver detalhes"
                       className="text-gray-400 transition-colors hover:text-gray-600"
                     >
                       <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

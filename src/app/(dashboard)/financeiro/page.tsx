@@ -104,7 +104,7 @@ export default async function FinanceiroPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
           <p className="mt-1 text-sm capitalize text-gray-500">{monthLabel}</p>
@@ -151,7 +151,7 @@ export default async function FinanceiroPage({
 
       {/* Transactions Table */}
       {items.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>

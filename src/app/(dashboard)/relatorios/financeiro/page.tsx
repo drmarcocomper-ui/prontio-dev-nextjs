@@ -115,7 +115,7 @@ export default async function RelatorioFinanceiroPage({
 
       {/* Breakdown por categoria */}
       {categoriaBreakdown.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <div className="border-b border-gray-200 px-5 py-4">
             <h2 className="text-sm font-semibold text-gray-900">Por categoria</h2>
           </div>
@@ -164,7 +164,7 @@ export default async function RelatorioFinanceiroPage({
 
       {/* Breakdown por forma de pagamento */}
       {pagamentoBreakdown.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <div className="border-b border-gray-200 px-5 py-4">
             <h2 className="text-sm font-semibold text-gray-900">Por forma de pagamento</h2>
           </div>
@@ -203,7 +203,7 @@ export default async function RelatorioFinanceiroPage({
 
       {/* Lista de transações */}
       {items.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <div className="border-b border-gray-200 px-5 py-4">
             <h2 className="text-sm font-semibold text-gray-900">Transações do período</h2>
           </div>
