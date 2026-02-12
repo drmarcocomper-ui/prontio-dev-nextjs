@@ -25,6 +25,11 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("../types", async () => {
+  const actual = await vi.importActual("../types");
+  return { ...actual };
+});
+
 vi.mock("./delete-button", () => ({
   DeleteButton: ({ pacienteId }: { pacienteId: string }) => (
     <button data-testid="delete-button" data-id={pacienteId}>

@@ -31,6 +31,11 @@ vi.mock("../actions", () => ({
   atualizarPaciente: vi.fn(),
 }));
 
+vi.mock("../types", async () => {
+  const actual = await vi.importActual("../types");
+  return { ...actual };
+});
+
 import { PacienteForm } from "./paciente-form";
 
 const defaults = {
@@ -166,6 +171,27 @@ describe("PacienteForm", () => {
       render(<PacienteForm />);
       const button = screen.getByRole("button", { name: /Cadastrar paciente/ });
       expect(button).toBeDisabled();
+    });
+  });
+
+  describe("limites e validação de data", () => {
+    it("campo nome tem maxLength", () => {
+      render(<PacienteForm />);
+      const input = screen.getByLabelText(/Nome completo/) as HTMLInputElement;
+      expect(input.maxLength).toBe(255);
+    });
+
+    it("campo observações tem maxLength", () => {
+      render(<PacienteForm />);
+      const textarea = screen.getByLabelText("Observações") as HTMLTextAreaElement;
+      expect(textarea.maxLength).toBe(1000);
+    });
+
+    it("campo data de nascimento tem max igual a hoje", () => {
+      render(<PacienteForm />);
+      const input = screen.getByLabelText("Data de nascimento") as HTMLInputElement;
+      const today = new Date().toISOString().split("T")[0];
+      expect(input.max).toBe(today);
     });
   });
 

@@ -7,60 +7,15 @@ import {
   atualizarPaciente,
   type PacienteFormState,
 } from "../actions";
-
-export interface PacienteDefaults {
-  id?: string;
-  nome?: string;
-  cpf?: string | null;
-  rg?: string | null;
-  data_nascimento?: string | null;
-  sexo?: string | null;
-  estado_civil?: string | null;
-  telefone?: string | null;
-  email?: string | null;
-  cep?: string | null;
-  endereco?: string | null;
-  numero?: string | null;
-  complemento?: string | null;
-  bairro?: string | null;
-  cidade?: string | null;
-  estado?: string | null;
-  convenio?: string | null;
-  observacoes?: string | null;
-}
-
-const ESTADOS = [
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
-  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
-];
-
-function maskCPF(value: string) {
-  return value
-    .replace(/\D/g, "")
-    .slice(0, 11)
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-}
-
-function maskPhone(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 10) {
-    return digits
-      .replace(/(\d{2})(\d)/, "($1) $2")
-      .replace(/(\d{4})(\d)/, "$1-$2");
-  }
-  return digits
-    .replace(/(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d)/, "$1-$2");
-}
-
-function maskCEP(value: string) {
-  return value
-    .replace(/\D/g, "")
-    .slice(0, 8)
-    .replace(/(\d{5})(\d)/, "$1-$2");
-}
+import {
+  type PacienteDefaults,
+  ESTADOS_UF,
+  NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
+  ENDERECO_MAX_LENGTH, NUMERO_MAX_LENGTH, COMPLEMENTO_MAX_LENGTH,
+  BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH, CONVENIO_MAX_LENGTH,
+  OBSERVACOES_MAX_LENGTH,
+  maskCPF, maskPhone, maskCEP,
+} from "../types";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -78,6 +33,7 @@ export function PacienteForm({
   const isEditing = !!defaults?.id;
   const action = isEditing ? atualizarPaciente : criarPaciente;
   const cancelHref = isEditing ? `/pacientes/${defaults.id}` : "/pacientes";
+  const today = new Date().toISOString().split("T")[0];
 
   const [state, formAction, isPending] = useActionState<PacienteFormState, FormData>(
     action,
@@ -110,6 +66,7 @@ export function PacienteForm({
               name="nome"
               type="text"
               required
+              maxLength={NOME_MAX_LENGTH}
               defaultValue={defaults?.nome ?? ""}
               className={inputClass}
             />
@@ -141,9 +98,11 @@ export function PacienteForm({
               id="rg"
               name="rg"
               type="text"
+              maxLength={RG_MAX_LENGTH}
               defaultValue={defaults?.rg ?? ""}
               className={inputClass}
             />
+            <FieldError message={state.fieldErrors?.rg} />
           </div>
 
           <div>
@@ -154,9 +113,11 @@ export function PacienteForm({
               id="data_nascimento"
               name="data_nascimento"
               type="date"
+              max={today}
               defaultValue={defaults?.data_nascimento ?? ""}
               className={inputClass}
             />
+            <FieldError message={state.fieldErrors?.data_nascimento} />
           </div>
 
           <div>
@@ -216,6 +177,7 @@ export function PacienteForm({
               onChange={(e) => (e.target.value = maskPhone(e.target.value))}
               className={inputClass}
             />
+            <FieldError message={state.fieldErrors?.telefone} />
           </div>
 
           <div>
@@ -226,6 +188,7 @@ export function PacienteForm({
               id="email"
               name="email"
               type="email"
+              maxLength={EMAIL_MAX_LENGTH}
               placeholder="paciente@email.com"
               defaultValue={defaults?.email ?? ""}
               className={inputClass}
@@ -254,6 +217,7 @@ export function PacienteForm({
               onChange={(e) => (e.target.value = maskCEP(e.target.value))}
               className={inputClass}
             />
+            <FieldError message={state.fieldErrors?.cep} />
           </div>
 
           <div className="sm:col-span-4">
@@ -264,9 +228,11 @@ export function PacienteForm({
               id="endereco"
               name="endereco"
               type="text"
+              maxLength={ENDERECO_MAX_LENGTH}
               defaultValue={defaults?.endereco ?? ""}
               className={inputClass}
             />
+            <FieldError message={state.fieldErrors?.endereco} />
           </div>
 
           <div className="sm:col-span-1">
@@ -277,6 +243,7 @@ export function PacienteForm({
               id="numero"
               name="numero"
               type="text"
+              maxLength={NUMERO_MAX_LENGTH}
               defaultValue={defaults?.numero ?? ""}
               className={inputClass}
             />
@@ -290,6 +257,7 @@ export function PacienteForm({
               id="complemento"
               name="complemento"
               type="text"
+              maxLength={COMPLEMENTO_MAX_LENGTH}
               defaultValue={defaults?.complemento ?? ""}
               className={inputClass}
             />
@@ -303,6 +271,7 @@ export function PacienteForm({
               id="bairro"
               name="bairro"
               type="text"
+              maxLength={BAIRRO_MAX_LENGTH}
               defaultValue={defaults?.bairro ?? ""}
               className={inputClass}
             />
@@ -316,6 +285,7 @@ export function PacienteForm({
               id="cidade"
               name="cidade"
               type="text"
+              maxLength={CIDADE_MAX_LENGTH}
               defaultValue={defaults?.cidade ?? ""}
               className={inputClass}
             />
@@ -332,7 +302,7 @@ export function PacienteForm({
               className={inputClass}
             >
               <option value="">UF</option>
-              {ESTADOS.map((uf) => (
+              {ESTADOS_UF.map((uf) => (
                 <option key={uf} value={uf}>
                   {uf}
                 </option>
@@ -357,6 +327,7 @@ export function PacienteForm({
               id="convenio"
               name="convenio"
               type="text"
+              maxLength={CONVENIO_MAX_LENGTH}
               placeholder="Nome do convênio"
               defaultValue={defaults?.convenio ?? ""}
               className={inputClass}
@@ -372,6 +343,7 @@ export function PacienteForm({
             id="observacoes"
             name="observacoes"
             rows={3}
+            maxLength={OBSERVACOES_MAX_LENGTH}
             defaultValue={defaults?.observacoes ?? ""}
             className={inputClass}
           />

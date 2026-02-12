@@ -26,6 +26,7 @@ export function SearchInput({ defaultValue }: { defaultValue?: string }) {
   return (
     <div className="relative">
       <svg
+        aria-hidden="true"
         className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
         fill="none"
         viewBox="0 0 24 24"
@@ -41,6 +42,7 @@ export function SearchInput({ defaultValue }: { defaultValue?: string }) {
       <input
         ref={inputRef}
         type="search"
+        aria-label="Buscar pacientes"
         placeholder="Buscar por nome, CPF ou telefone..."
         defaultValue={defaultValue}
         onChange={(e) => handleSearch(e.target.value)}

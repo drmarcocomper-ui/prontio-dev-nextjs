@@ -27,6 +27,11 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("./types", async () => {
+  const actual = await vi.importActual("./types");
+  return { ...actual };
+});
+
 import { criarPaciente, atualizarPaciente, excluirPaciente } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
@@ -51,6 +56,26 @@ describe("criarPaciente", () => {
   it("retorna fieldErrors quando email é inválido", async () => {
     const result = await criarPaciente({}, makeFormData({ nome: "João", email: "invalido" }));
     expect(result.fieldErrors?.email).toBe("E-mail inválido.");
+  });
+
+  it("retorna fieldErrors quando telefone tem dígitos insuficientes", async () => {
+    const result = await criarPaciente({}, makeFormData({ nome: "João", telefone: "123456" }));
+    expect(result.fieldErrors?.telefone).toBe("Telefone deve ter 10 ou 11 dígitos.");
+  });
+
+  it("retorna fieldErrors quando CEP não tem 8 dígitos", async () => {
+    const result = await criarPaciente({}, makeFormData({ nome: "João", cep: "1234" }));
+    expect(result.fieldErrors?.cep).toBe("CEP deve ter 8 dígitos.");
+  });
+
+  it("retorna fieldErrors quando data de nascimento é no futuro", async () => {
+    const result = await criarPaciente({}, makeFormData({ nome: "João", data_nascimento: "2099-01-01" }));
+    expect(result.fieldErrors?.data_nascimento).toBe("A data de nascimento não pode ser no futuro.");
+  });
+
+  it("retorna fieldErrors quando observações excedem limite", async () => {
+    const result = await criarPaciente({}, makeFormData({ nome: "João", observacoes: "A".repeat(1001) }));
+    expect(result.fieldErrors?.observacoes).toBe("Máximo de 1000 caracteres.");
   });
 
   it("redireciona após criação com sucesso", async () => {
@@ -119,6 +144,11 @@ describe("atualizarPaciente", () => {
   it("retorna fieldErrors quando CPF é inválido na atualização", async () => {
     const result = await atualizarPaciente({}, makeFormData({ id: "p-1", nome: "Maria", cpf: "123" }));
     expect(result.fieldErrors?.cpf).toBe("CPF deve ter 11 dígitos.");
+  });
+
+  it("retorna fieldErrors quando telefone é inválido na atualização", async () => {
+    const result = await atualizarPaciente({}, makeFormData({ id: "p-1", nome: "Maria", telefone: "123" }));
+    expect(result.fieldErrors?.telefone).toBe("Telefone deve ter 10 ou 11 dígitos.");
   });
 });
 

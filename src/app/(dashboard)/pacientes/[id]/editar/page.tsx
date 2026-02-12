@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PacienteForm } from "../../novo/paciente-form";
+import { type PacienteDefaults } from "../../types";
 
 export default async function EditarPacientePage({
   params,
@@ -17,7 +18,7 @@ export default async function EditarPacientePage({
       "id, nome, cpf, rg, data_nascimento, sexo, estado_civil, telefone, email, cep, endereco, numero, complemento, bairro, cidade, estado, convenio, observacoes"
     )
     .eq("id", id)
-    .single();
+    .single<PacienteDefaults>();
 
   if (!paciente) {
     notFound();
@@ -31,7 +32,7 @@ export default async function EditarPacientePage({
           href={`/pacientes/${paciente.id}`}
           className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
           Voltar para {paciente.nome}
