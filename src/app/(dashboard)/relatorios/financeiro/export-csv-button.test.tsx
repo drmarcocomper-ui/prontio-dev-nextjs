@@ -115,4 +115,10 @@ describe("ExportCsvButton", () => {
     const text = await readBlobText(blob);
     expect(text).toContain('""especial""');
   });
+
+  it("SVG tem aria-hidden", () => {
+    render(<ExportCsvButton data={mockData} month="2024-06" />);
+    const svg = document.querySelector("svg");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
 });

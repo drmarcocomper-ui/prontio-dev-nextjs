@@ -25,6 +25,16 @@ vi.mock("./export-csv-button", () => ({
   ExportCsvButton: () => <button data-testid="export-csv">Exportar CSV</button>,
 }));
 
+vi.mock("./utils", async () => {
+  const actual = await vi.importActual("./utils");
+  return { ...actual };
+});
+
+vi.mock("../../financeiro/constants", async () => {
+  const actual = await vi.importActual("../../financeiro/constants");
+  return { ...actual };
+});
+
 const mockData: { data: unknown[] | null } = { data: [] };
 
 function createQueryResult() {

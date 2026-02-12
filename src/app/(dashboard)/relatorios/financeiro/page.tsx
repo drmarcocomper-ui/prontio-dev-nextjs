@@ -5,11 +5,20 @@ import { ExportCsvButton, type TransacaoCSV } from "./export-csv-button";
 import {
   CATEGORIA_LABELS,
   PAGAMENTO_LABELS,
+  STATUS_LABELS,
   STATUS_STYLES,
   formatCurrency,
   formatDate,
-  type Transacao,
+  type TransacaoListItem,
 } from "../../financeiro/constants";
+import {
+  REPORT_SELECT,
+  getMonthDateRange,
+  computeKPIs,
+  getMonthLabel,
+  aggregateByCategoria,
+  aggregateByPagamento,
+} from "./utils";
 
 export default async function RelatorioFinanceiroPage({
   searchParams,
@@ -17,83 +26,24 @@ export default async function RelatorioFinanceiroPage({
   searchParams: Promise<{ mes?: string }>;
 }) {
   const { mes } = await searchParams;
-
-  const now = new Date();
-  const currentMonth = mes || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const [year, month] = currentMonth.split("-").map(Number);
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+  const { currentMonth, year, month, startDate, endDate } = getMonthDateRange(mes);
 
   const supabase = await createClient();
 
   const { data: transacoes } = await supabase
     .from("transacoes")
-    .select("id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, created_at, pacientes(nome)")
+    .select(REPORT_SELECT)
     .gte("data", startDate)
     .lte("data", endDate)
     .order("data", { ascending: false })
     .order("created_at", { ascending: false });
 
-  const items = (transacoes ?? []) as unknown as Transacao[];
+  const items = (transacoes ?? []) as unknown as TransacaoListItem[];
 
-  const totalReceitas = items
-    .filter((t) => t.tipo === "receita" && t.status !== "cancelado")
-    .reduce((sum, t) => sum + t.valor, 0);
-
-  const totalDespesas = items
-    .filter((t) => t.tipo === "despesa" && t.status !== "cancelado")
-    .reduce((sum, t) => sum + t.valor, 0);
-
-  const saldo = totalReceitas - totalDespesas;
-
-  const monthLabel = new Date(year, month - 1).toLocaleDateString("pt-BR", {
-    month: "long",
-    year: "numeric",
-  });
-
-  // Breakdown por categoria
-  const categoriaMap = new Map<string, { receitas: number; despesas: number }>();
-  for (const t of items) {
-    if (t.status === "cancelado") continue;
-    const cat = t.categoria ?? "sem_categoria";
-    const entry = categoriaMap.get(cat) ?? { receitas: 0, despesas: 0 };
-    if (t.tipo === "receita") {
-      entry.receitas += t.valor;
-    } else {
-      entry.despesas += t.valor;
-    }
-    categoriaMap.set(cat, entry);
-  }
-
-  const categoriaBreakdown = Array.from(categoriaMap.entries())
-    .map(([cat, vals]) => ({
-      categoria: cat,
-      label: cat === "sem_categoria" ? "Sem categoria" : (CATEGORIA_LABELS[cat] ?? cat),
-      receitas: vals.receitas,
-      despesas: vals.despesas,
-      saldo: vals.receitas - vals.despesas,
-    }))
-    .sort((a, b) => (b.receitas + b.despesas) - (a.receitas + a.despesas));
-
-  // Breakdown por forma de pagamento
-  const pagamentoMap = new Map<string, { qtd: number; total: number }>();
-  for (const t of items) {
-    if (t.status === "cancelado") continue;
-    const pg = t.forma_pagamento ?? "nao_informado";
-    const entry = pagamentoMap.get(pg) ?? { qtd: 0, total: 0 };
-    entry.qtd += 1;
-    entry.total += t.valor;
-    pagamentoMap.set(pg, entry);
-  }
-
-  const pagamentoBreakdown = Array.from(pagamentoMap.entries())
-    .map(([pg, vals]) => ({
-      forma: pg,
-      label: pg === "nao_informado" ? "Não informado" : (PAGAMENTO_LABELS[pg] ?? pg),
-      qtd: vals.qtd,
-      total: vals.total,
-    }))
-    .sort((a, b) => b.total - a.total);
+  const { totalReceitas, totalDespesas, saldo } = computeKPIs(items);
+  const monthLabel = getMonthLabel(year, month);
+  const categoriaBreakdown = aggregateByCategoria(items);
+  const pagamentoBreakdown = aggregateByPagamento(items);
 
   // CSV data
   const csvData: TransacaoCSV[] = items.map((t) => ({
@@ -103,7 +53,7 @@ export default async function RelatorioFinanceiroPage({
     descricao: t.descricao,
     valor: t.valor.toFixed(2).replace(".", ","),
     forma_pagamento: t.forma_pagamento ? (PAGAMENTO_LABELS[t.forma_pagamento] ?? t.forma_pagamento) : "",
-    status: t.status === "pago" ? "Pago" : t.status === "pendente" ? "Pendente" : "Cancelado",
+    status: STATUS_LABELS[t.status] ?? t.status,
     paciente: t.pacientes?.nome ?? "",
   }));
 
@@ -122,7 +72,7 @@ export default async function RelatorioFinanceiroPage({
             href={`/relatorios/financeiro/imprimir?mes=${currentMonth}`}
             className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
             </svg>
             Imprimir
@@ -301,7 +251,7 @@ export default async function RelatorioFinanceiroPage({
                         STATUS_STYLES[t.status] ?? "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {t.status === "pago" ? "Pago" : t.status === "pendente" ? "Pendente" : "Cancelado"}
+                      {STATUS_LABELS[t.status] ?? t.status}
                     </span>
                   </td>
                   <td
@@ -319,7 +269,7 @@ export default async function RelatorioFinanceiroPage({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg aria-hidden="true" className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
           </svg>
           <h3 className="mt-4 text-sm font-semibold text-gray-900">

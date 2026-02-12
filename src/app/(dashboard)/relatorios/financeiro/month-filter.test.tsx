@@ -35,4 +35,10 @@ describe("MonthFilter", () => {
     fireEvent.change(input, { target: { value: "2024-08" } });
     expect(mockReplace).toHaveBeenCalledWith(expect.stringContaining("mes=2024-08"));
   });
+
+  it("input tem aria-label", () => {
+    render(<MonthFilter currentMonth="2024-06" />);
+    const input = screen.getByLabelText("Filtrar por mês");
+    expect(input).toBeInTheDocument();
+  });
 });

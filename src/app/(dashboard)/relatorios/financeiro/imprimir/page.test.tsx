@@ -5,6 +5,16 @@ vi.mock("./print-button", () => ({
   PrintButton: () => <button data-testid="print-button">Imprimir</button>,
 }));
 
+vi.mock("../utils", async () => {
+  const actual = await vi.importActual("../utils");
+  return { ...actual };
+});
+
+vi.mock("../../../financeiro/constants", async () => {
+  const actual = await vi.importActual("../../../financeiro/constants");
+  return { ...actual };
+});
+
 const mockTransacoes: { data: unknown[] | null } = { data: [] };
 const mockConfigs: { data: unknown[] | null } = { data: [] };
 
