@@ -17,7 +17,7 @@ export default async function NovoAgendamentoPage({
           href={`/agenda?data=${defaultDate}`}
           className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
           Agenda

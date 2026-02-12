@@ -1,23 +1,16 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-
-function formatDateBR(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
+import { formatDateBR } from "./types";
 
 function addDays(dateStr: string, days: number) {
   const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
+  const date = new Date(y, m - 1, d, 12);
   date.setDate(date.getDate() + days);
-  return date.toISOString().split("T")[0];
+  const ny = date.getFullYear();
+  const nm = String(date.getMonth() + 1).padStart(2, "0");
+  const nd = String(date.getDate()).padStart(2, "0");
+  return `${ny}-${nm}-${nd}`;
 }
 
 export function DatePicker({ currentDate }: { currentDate: string }) {

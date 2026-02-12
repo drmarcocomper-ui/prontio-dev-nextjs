@@ -3,16 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "../status-badge";
 import { DeleteButton } from "./delete-button";
-import { type Agendamento, TIPO_LABELS, formatTime, getInitials } from "../types";
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
+import { type Agendamento, TIPO_LABELS, formatTime, formatDateBR, getInitials } from "../types";
 
 export default async function AgendamentoDetalhesPage({
   params,
@@ -63,7 +54,7 @@ export default async function AgendamentoDetalhesPage({
               {ag.pacientes.nome}
             </Link>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-              <span className="capitalize">{formatDate(ag.data)}</span>
+              <span className="capitalize">{formatDateBR(ag.data)}</span>
               {ag.tipo && (
                 <span className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
                   {TIPO_LABELS[ag.tipo] ?? ag.tipo}

@@ -4,16 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { atualizarStatusAgendamento } from "./actions";
-import { STATUS_TRANSITIONS } from "./types";
-
-const STATUS_LABELS: Record<string, string> = {
-  agendado: "Agendado",
-  confirmado: "Confirmado",
-  em_atendimento: "Em atendimento",
-  atendido: "Atendido",
-  cancelado: "Cancelado",
-  faltou: "Faltou",
-};
+import { STATUS_TRANSITIONS, STATUS_LABELS } from "./types";
 
 export function StatusSelect({
   agendamentoId,

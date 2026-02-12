@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface ConfirmModalProps {
   open: boolean;
@@ -21,8 +21,12 @@ export function ConfirmModal({
   confirmLabel = "Excluir",
   isPending = false,
 }: ConfirmModalProps) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     if (!open) return;
+
+    cancelRef.current?.focus();
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -38,6 +42,10 @@ export function ConfirmModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-modal-title"
+      aria-describedby="confirm-modal-description"
     >
       <div
         className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
@@ -51,6 +59,7 @@ export function ConfirmModal({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -60,13 +69,14 @@ export function ConfirmModal({
             </svg>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-            <p className="mt-1 text-sm text-gray-500">{description}</p>
+            <h3 id="confirm-modal-title" className="text-lg font-semibold text-gray-900">{title}</h3>
+            <p id="confirm-modal-description" className="mt-1 text-sm text-gray-500">{description}</p>
           </div>
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
           <button
+            ref={cancelRef}
             onClick={onClose}
             disabled={isPending}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"

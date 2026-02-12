@@ -21,6 +21,7 @@ export function PatientSearch({
   const [selectedId, setSelectedId] = useState(defaultPatientId ?? "");
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [searchError, setSearchError] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -39,18 +40,25 @@ export function PatientSearch({
     const timeout = setTimeout(async () => {
       if (query.length < 2) {
         setResults([]);
+        setSearchError(false);
         return;
       }
 
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("pacientes")
         .select("id, nome, cpf")
         .ilike("nome", `%${query}%`)
         .order("nome")
         .limit(8);
 
-      setResults(data ?? []);
+      if (error) {
+        setSearchError(true);
+        setResults([]);
+      } else {
+        setSearchError(false);
+        setResults(data ?? []);
+      }
       setIsOpen(true);
       setActiveIndex(-1);
     }, 300);
@@ -183,8 +191,12 @@ export function PatientSearch({
       )}
 
       {isOpen && query.length >= 2 && results.length === 0 && (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-4 text-center text-sm text-gray-500 shadow-lg" role="status">
-          Nenhum paciente encontrado.
+        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-4 text-center text-sm shadow-lg" role="status">
+          {searchError ? (
+            <span className="text-red-600">Erro ao buscar pacientes. Tente novamente.</span>
+          ) : (
+            <span className="text-gray-500">Nenhum paciente encontrado.</span>
+          )}
         </div>
       )}
     </div>

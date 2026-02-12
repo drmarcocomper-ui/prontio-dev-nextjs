@@ -3,11 +3,11 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
-import { type AgendamentoDefaults, OBSERVACOES_MAX_LENGTH } from "../types";
+import { type AgendamentoDefaults, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "./patient-search";
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
+  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -33,7 +33,7 @@ export function AgendamentoForm({
   const cancelHref = isEditing ? `/agenda/${defaults.id}` : `/agenda?data=${dateValue}`;
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
       {state.error && (
@@ -67,6 +67,7 @@ export function AgendamentoForm({
             name="data"
             type="date"
             required
+            disabled={isPending}
             defaultValue={dateValue}
             className={inputClass}
           />
@@ -82,6 +83,7 @@ export function AgendamentoForm({
             name="hora_inicio"
             type="time"
             required
+            disabled={isPending}
             defaultValue={defaults?.hora_inicio ?? ""}
             className={inputClass}
           />
@@ -97,6 +99,7 @@ export function AgendamentoForm({
             name="hora_fim"
             type="time"
             required
+            disabled={isPending}
             defaultValue={defaults?.hora_fim ?? ""}
             className={inputClass}
           />
@@ -109,13 +112,13 @@ export function AgendamentoForm({
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
           Tipo
         </label>
-        <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} className={inputClass}>
+        <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} disabled={isPending} className={inputClass}>
           <option value="">Selecione</option>
-          <option value="consulta">Consulta</option>
-          <option value="retorno">Retorno</option>
-          <option value="exame">Exame</option>
-          <option value="procedimento">Procedimento</option>
-          <option value="avaliacao">Avaliação</option>
+          {Object.entries(TIPO_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -129,6 +132,7 @@ export function AgendamentoForm({
           name="observacoes"
           rows={3}
           maxLength={OBSERVACOES_MAX_LENGTH}
+          disabled={isPending}
           defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}
         />
