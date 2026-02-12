@@ -1,30 +1,56 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { Pagination } from "@/components/pagination";
+import { SortableHeader } from "@/components/sortable-header";
 import { SearchInput } from "./search-input";
+import { PacienteFilters } from "./filters";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
 
 export const metadata: Metadata = { title: "Pacientes" };
 
+const PAGE_SIZE = 20;
+
 export default async function PacientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; pagina?: string; ordem?: string; dir?: string; sexo?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, pagina, ordem, dir, sexo } = await searchParams;
+  const currentPage = Math.max(1, Number(pagina) || 1);
+  const sortColumn = ordem || "nome";
+  const sortDir = dir === "desc" ? "desc" : "asc";
+  const ascending = sortDir === "asc";
+
   const supabase = await createClient();
 
   let query = supabase
     .from("pacientes")
-    .select("id, nome, cpf, telefone, email, data_nascimento")
-    .order("nome");
+    .select("id, nome, cpf, telefone, email, data_nascimento", { count: "exact" })
+    .order(sortColumn, { ascending });
 
   if (q) {
     query = query.or(`nome.ilike.%${q}%,cpf.ilike.%${q}%,telefone.ilike.%${q}%`);
   }
 
-  const { data: pacientes } = await query;
+  if (sexo) {
+    query = query.eq("sexo", sexo);
+  }
+
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  query = query.range(from, to);
+
+  const { data: pacientes, count } = await query;
   const items = (pacientes ?? []) as PacienteListItem[];
+  const totalItems = count ?? 0;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+
+  const sp: Record<string, string> = {};
+  if (q) sp.q = q;
+  if (ordem) sp.ordem = ordem;
+  if (dir) sp.dir = dir;
+  if (sexo) sp.sexo = sexo;
 
   return (
     <div className="space-y-6">
@@ -33,7 +59,7 @@ export default async function PacientesPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pacientes</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {items.length} paciente{items.length !== 1 ? "s" : ""} cadastrado{items.length !== 1 ? "s" : ""}
+            {totalItems} paciente{totalItems !== 1 ? "s" : ""} cadastrado{totalItems !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
@@ -47,8 +73,13 @@ export default async function PacientesPage({
         </Link>
       </div>
 
-      {/* Search */}
-      <SearchInput defaultValue={q} />
+      {/* Search + Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <SearchInput defaultValue={q} />
+        </div>
+        <PacienteFilters currentSexo={sexo ?? ""} />
+      </div>
 
       {/* Table */}
       {items.length > 0 ? (
@@ -56,18 +87,28 @@ export default async function PacientesPage({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Paciente
-                </th>
+                <SortableHeader
+                  label="Paciente"
+                  column="nome"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/pacientes"
+                  searchParams={sp}
+                />
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   CPF
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Telefone
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Nascimento
-                </th>
+                <SortableHeader
+                  label="Nascimento"
+                  column="data_nascimento"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/pacientes"
+                  searchParams={sp}
+                />
                 <th className="w-12" />
               </tr>
             </thead>
@@ -90,13 +131,13 @@ export default async function PacientesPage({
                     </Link>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {p.cpf ? formatCPF(p.cpf) : "—"}
+                    {p.cpf ? formatCPF(p.cpf) : "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {p.telefone ? formatPhone(p.telefone) : "—"}
+                    {p.telefone ? formatPhone(p.telefone) : "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {p.data_nascimento ? formatDate(p.data_nascimento) : "—"}
+                    {p.data_nascimento ? formatDate(p.data_nascimento) : "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right">
                     <Link
@@ -139,6 +180,17 @@ export default async function PacientesPage({
           )}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={PAGE_SIZE}
+        basePath="/pacientes"
+        searchParams={sp}
+      />
     </div>
   );
 }
+

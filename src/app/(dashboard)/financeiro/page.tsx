@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { Pagination } from "@/components/pagination";
+import { SortableHeader } from "@/components/sortable-header";
 import { Filters } from "./filters";
 import { DeleteButton } from "./delete-button";
 import {
@@ -15,12 +17,24 @@ import {
 
 export const metadata: Metadata = { title: "Financeiro" };
 
+const PAGE_SIZE = 20;
+
 export default async function FinanceiroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string; tipo?: string }>;
+  searchParams: Promise<{
+    mes?: string;
+    tipo?: string;
+    pagina?: string;
+    ordem?: string;
+    dir?: string;
+  }>;
 }) {
-  const { mes, tipo } = await searchParams;
+  const { mes, tipo, pagina, ordem, dir } = await searchParams;
+  const currentPage = Math.max(1, Number(pagina) || 1);
+  const sortColumn = ordem || "data";
+  const sortDir = dir === "asc" ? "asc" : "desc";
+  const ascending = sortDir === "asc";
 
   const now = new Date();
   const currentMonth = mes || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -32,24 +46,44 @@ export default async function FinanceiroPage({
 
   let query = supabase
     .from("transacoes")
-    .select("id, tipo, categoria, descricao, valor, data, forma_pagamento, status, pacientes(nome)")
+    .select("id, tipo, categoria, descricao, valor, data, forma_pagamento, status, pacientes(nome)", { count: "exact" })
     .gte("data", startDate)
     .lte("data", endDate)
-    .order("data", { ascending: false })
+    .order(sortColumn, { ascending })
     .order("created_at", { ascending: false });
 
   if (tipo) {
     query = query.eq("tipo", tipo);
   }
 
-  const { data: transacoes } = await query;
-  const items = (transacoes ?? []) as unknown as TransacaoListItem[];
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  query = query.range(from, to);
 
-  const totalReceitas = items
+  const { data: transacoes, count } = await query;
+  const items = (transacoes ?? []) as unknown as TransacaoListItem[];
+  const totalItems = count ?? 0;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+
+  // Summary query (all items for the month, not just current page)
+  let summaryQuery = supabase
+    .from("transacoes")
+    .select("tipo, valor, status")
+    .gte("data", startDate)
+    .lte("data", endDate);
+
+  if (tipo) {
+    summaryQuery = summaryQuery.eq("tipo", tipo);
+  }
+
+  const { data: allTransacoes } = await summaryQuery;
+  const allItems = allTransacoes ?? [];
+
+  const totalReceitas = allItems
     .filter((t) => t.tipo === "receita" && t.status !== "cancelado")
     .reduce((sum, t) => sum + t.valor, 0);
 
-  const totalDespesas = items
+  const totalDespesas = allItems
     .filter((t) => t.tipo === "despesa" && t.status !== "cancelado")
     .reduce((sum, t) => sum + t.valor, 0);
 
@@ -59,6 +93,12 @@ export default async function FinanceiroPage({
     month: "long",
     year: "numeric",
   });
+
+  const sp: Record<string, string> = {};
+  if (mes) sp.mes = mes;
+  if (tipo) sp.tipo = tipo;
+  if (ordem) sp.ordem = ordem;
+  if (dir) sp.dir = dir;
 
   return (
     <div className="space-y-6">
@@ -114,12 +154,24 @@ export default async function FinanceiroPage({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Data
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Descrição
-                </th>
+                <SortableHeader
+                  label="Data"
+                  column="data"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/financeiro"
+                  searchParams={sp}
+                  className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                />
+                <SortableHeader
+                  label="Descrição"
+                  column="descricao"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/financeiro"
+                  searchParams={sp}
+                  className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                />
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Categoria
                 </th>
@@ -129,9 +181,15 @@ export default async function FinanceiroPage({
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Status
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Valor
-                </th>
+                <SortableHeader
+                  label="Valor"
+                  column="valor"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/financeiro"
+                  searchParams={sp}
+                  className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
+                />
                 <th className="w-10 px-3 py-3" />
               </tr>
             </thead>
@@ -155,10 +213,10 @@ export default async function FinanceiroPage({
                     )}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3.5 text-sm text-gray-600">
-                    {t.categoria ? (CATEGORIA_LABELS[t.categoria] ?? t.categoria) : "—"}
+                    {t.categoria ? (CATEGORIA_LABELS[t.categoria] ?? t.categoria) : "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3.5 text-sm text-gray-600">
-                    {t.forma_pagamento ? (PAGAMENTO_LABELS[t.forma_pagamento] ?? t.forma_pagamento) : "—"}
+                    {t.forma_pagamento ? (PAGAMENTO_LABELS[t.forma_pagamento] ?? t.forma_pagamento) : "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3.5">
                     <span
@@ -207,6 +265,16 @@ export default async function FinanceiroPage({
           </Link>
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={PAGE_SIZE}
+        basePath="/financeiro"
+        searchParams={sp}
+      />
     </div>
   );
 }

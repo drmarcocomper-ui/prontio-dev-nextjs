@@ -7,20 +7,26 @@ export function SearchInput({ defaultValue }: { defaultValue?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<NodeJS.Timeout>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleSearch(term: string) {
-    const params = new URLSearchParams(searchParams.toString());
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
 
-    if (term) {
-      params.set("q", term);
-    } else {
-      params.delete("q");
-    }
+      if (term) {
+        params.set("q", term);
+      } else {
+        params.delete("q");
+      }
 
-    startTransition(() => {
-      router.replace(`/pacientes?${params.toString()}`);
-    });
+      params.delete("pagina");
+
+      startTransition(() => {
+        router.replace(`/pacientes?${params.toString()}`);
+      });
+    }, 300);
   }
 
   return (

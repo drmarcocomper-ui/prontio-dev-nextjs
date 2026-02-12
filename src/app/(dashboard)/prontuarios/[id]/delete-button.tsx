@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { excluirProntuario } from "../actions";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -24,7 +25,14 @@ export function DeleteButton({ prontuarioId }: { prontuarioId: string }) {
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={() =>
-          startTransition(() => excluirProntuario(prontuarioId))
+          startTransition(async () => {
+            try {
+              await excluirProntuario(prontuarioId);
+            } catch {
+              toast.error("Erro ao excluir prontuário. Tente novamente.");
+              setOpen(false);
+            }
+          })
         }
         title="Excluir prontuário"
         description="Tem certeza que deseja excluir este prontuário? Esta ação não pode ser desfeita."

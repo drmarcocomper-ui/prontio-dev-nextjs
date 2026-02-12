@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { excluirAgendamento } from "../actions";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -30,7 +31,14 @@ export function DeleteButton({
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={() =>
-          startTransition(() => excluirAgendamento(agendamentoId, data))
+          startTransition(async () => {
+            try {
+              await excluirAgendamento(agendamentoId, data);
+            } catch {
+              toast.error("Erro ao excluir agendamento. Tente novamente.");
+              setOpen(false);
+            }
+          })
         }
         title="Excluir agendamento"
         description="Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita."

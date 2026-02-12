@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { excluirTransacao } from "../actions";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -24,7 +25,14 @@ export function DeleteButton({ transacaoId }: { transacaoId: string }) {
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={() =>
-          startTransition(() => excluirTransacao(transacaoId))
+          startTransition(async () => {
+            try {
+              await excluirTransacao(transacaoId);
+            } catch {
+              toast.error("Erro ao excluir transação. Tente novamente.");
+              setOpen(false);
+            }
+          })
         }
         title="Excluir transação"
         description="Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita."

@@ -3,13 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
-export function Filters({
-  currentMonth,
-  currentType,
-}: {
-  currentMonth: string;
-  currentType: string;
-}) {
+export function ReceitaFilters({ currentTipo }: { currentTipo: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -23,27 +17,21 @@ export function Filters({
     }
     params.delete("pagina");
     startTransition(() => {
-      router.replace(`/financeiro?${params.toString()}`);
+      router.replace(`/receitas?${params.toString()}`);
     });
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <input
-        type="month"
-        value={currentMonth}
-        onChange={(e) => updateParam("mes", e.target.value)}
-        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-      />
-
+    <div className="flex items-center gap-3">
       <select
-        value={currentType}
+        value={currentTipo}
         onChange={(e) => updateParam("tipo", e.target.value)}
-        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
       >
         <option value="">Todos os tipos</option>
-        <option value="receita">Receitas</option>
-        <option value="despesa">Despesas</option>
+        <option value="simples">Simples</option>
+        <option value="especial">Especial</option>
+        <option value="controle_especial">Controle Especial</option>
       </select>
 
       {isPending && (

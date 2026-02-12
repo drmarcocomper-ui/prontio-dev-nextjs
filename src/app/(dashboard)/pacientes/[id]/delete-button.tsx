@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { excluirPaciente } from "../actions";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -24,7 +25,14 @@ export function DeleteButton({ pacienteId }: { pacienteId: string }) {
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={() =>
-          startTransition(() => excluirPaciente(pacienteId))
+          startTransition(async () => {
+            try {
+              await excluirPaciente(pacienteId);
+            } catch {
+              toast.error("Erro ao excluir paciente. Tente novamente.");
+              setOpen(false);
+            }
+          })
         }
         title="Excluir paciente"
         description="Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita."

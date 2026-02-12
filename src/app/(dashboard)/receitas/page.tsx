@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { Pagination } from "@/components/pagination";
+import { SortSelect } from "@/components/sort-select";
 import { SearchInput } from "./search-input";
+import { ReceitaFilters } from "./filters";
 import {
   type ReceitaListItem,
   TIPO_LABELS,
@@ -11,27 +14,60 @@ import {
 
 export const metadata: Metadata = { title: "Receitas" };
 
+const PAGE_SIZE = 20;
+
 export default async function ReceitasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    pagina?: string;
+    ordem?: string;
+    dir?: string;
+    tipo?: string;
+  }>;
 }) {
-  const { q } = await searchParams;
+  const { q, pagina, ordem, dir, tipo } = await searchParams;
+  const currentPage = Math.max(1, Number(pagina) || 1);
+  const sortColumn = ordem || "data";
+  const sortDir = dir === "asc" ? "asc" : "desc";
+  const ascending = sortDir === "asc";
+
   const supabase = await createClient();
 
   let query = supabase
     .from("receitas")
-    .select("id, data, tipo, medicamentos, pacientes(id, nome)")
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(50);
+    .select("id, data, tipo, medicamentos, pacientes(id, nome)", { count: "exact" });
+
+  if (sortColumn === "paciente") {
+    query = query.order("pacientes(nome)", { ascending });
+  } else {
+    query = query.order(sortColumn, { ascending });
+  }
+  query = query.order("created_at", { ascending: false });
 
   if (q) {
     query = query.or(`medicamentos.ilike.%${q}%,pacientes.nome.ilike.%${q}%`);
   }
 
-  const { data: receitas } = await query;
+  if (tipo) {
+    query = query.eq("tipo", tipo);
+  }
+
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  query = query.range(from, to);
+
+  const { data: receitas, count } = await query;
   const items = (receitas ?? []) as unknown as ReceitaListItem[];
+  const totalItems = count ?? 0;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+
+  const sp: Record<string, string> = {};
+  if (q) sp.q = q;
+  if (ordem) sp.ordem = ordem;
+  if (dir) sp.dir = dir;
+  if (tipo) sp.tipo = tipo;
 
   return (
     <div className="space-y-6">
@@ -40,7 +76,7 @@ export default async function ReceitasPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Receitas</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {items.length} registro{items.length !== 1 ? "s" : ""}
+            {totalItems} registro{totalItems !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
@@ -54,8 +90,26 @@ export default async function ReceitasPage({
         </Link>
       </div>
 
-      {/* Search */}
-      <SearchInput defaultValue={q} />
+      {/* Search + Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <SearchInput defaultValue={q} />
+        </div>
+        <ReceitaFilters currentTipo={tipo ?? ""} />
+      </div>
+
+      {/* Sort */}
+      <SortSelect
+        options={[
+          { label: "Data (mais recente)", column: "data", direction: "desc" },
+          { label: "Data (mais antiga)", column: "data", direction: "asc" },
+          { label: "Paciente (A-Z)", column: "paciente", direction: "asc" },
+          { label: "Paciente (Z-A)", column: "paciente", direction: "desc" },
+        ]}
+        currentColumn={sortColumn}
+        currentDirection={sortDir}
+        basePath="/receitas"
+      />
 
       {/* List */}
       {items.length > 0 ? (
@@ -130,6 +184,16 @@ export default async function ReceitasPage({
           )}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={PAGE_SIZE}
+        basePath="/receitas"
+        searchParams={sp}
+      />
     </div>
   );
 }

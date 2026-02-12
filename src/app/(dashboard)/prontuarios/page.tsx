@@ -1,34 +1,83 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { Pagination } from "@/components/pagination";
+import { SortSelect } from "@/components/sort-select";
 import { SearchInput } from "./search-input";
+import { ProntuarioFilters } from "./filters";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
 
 export const metadata: Metadata = { title: "Prontuários" };
 
+const PAGE_SIZE = 20;
+
 export default async function ProntuariosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    pagina?: string;
+    ordem?: string;
+    dir?: string;
+    tipo?: string;
+    de?: string;
+    ate?: string;
+  }>;
 }) {
-  const { q } = await searchParams;
+  const { q, pagina, ordem, dir, tipo, de, ate } = await searchParams;
+  const currentPage = Math.max(1, Number(pagina) || 1);
+  const sortColumn = ordem || "data";
+  const sortDir = dir === "asc" ? "asc" : "desc";
+  const ascending = sortDir === "asc";
+
   const supabase = await createClient();
 
   let query = supabase
     .from("prontuarios")
     .select(
-      "id, data, tipo, cid, queixa_principal, conduta, pacientes(id, nome)"
-    )
-    .order("data", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(50);
+      "id, data, tipo, cid, queixa_principal, conduta, pacientes(id, nome)",
+      { count: "exact" }
+    );
+
+  if (sortColumn === "paciente") {
+    query = query.order("pacientes(nome)", { ascending });
+  } else {
+    query = query.order(sortColumn, { ascending });
+  }
+  query = query.order("created_at", { ascending: false });
 
   if (q) {
     query = query.or(`cid.ilike.%${q}%,queixa_principal.ilike.%${q}%,pacientes.nome.ilike.%${q}%`);
   }
 
-  const { data: prontuarios } = await query;
+  if (tipo) {
+    query = query.eq("tipo", tipo);
+  }
+
+  if (de) {
+    query = query.gte("data", de);
+  }
+
+  if (ate) {
+    query = query.lte("data", ate);
+  }
+
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  query = query.range(from, to);
+
+  const { data: prontuarios, count } = await query;
   const items = (prontuarios ?? []) as unknown as ProntuarioListItem[];
+  const totalItems = count ?? 0;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+
+  const sp: Record<string, string> = {};
+  if (q) sp.q = q;
+  if (ordem) sp.ordem = ordem;
+  if (dir) sp.dir = dir;
+  if (tipo) sp.tipo = tipo;
+  if (de) sp.de = de;
+  if (ate) sp.ate = ate;
 
   return (
     <div className="space-y-6">
@@ -37,7 +86,7 @@ export default async function ProntuariosPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Prontuários</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {items.length} registro{items.length !== 1 ? "s" : ""}
+            {totalItems} registro{totalItems !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
@@ -53,6 +102,26 @@ export default async function ProntuariosPage({
 
       {/* Search */}
       <SearchInput defaultValue={q} />
+
+      {/* Filters + Sort */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ProntuarioFilters
+          currentTipo={tipo ?? ""}
+          currentDe={de ?? ""}
+          currentAte={ate ?? ""}
+        />
+        <SortSelect
+          options={[
+            { label: "Data (mais recente)", column: "data", direction: "desc" },
+            { label: "Data (mais antiga)", column: "data", direction: "asc" },
+            { label: "Paciente (A-Z)", column: "paciente", direction: "asc" },
+            { label: "Paciente (Z-A)", column: "paciente", direction: "desc" },
+          ]}
+          currentColumn={sortColumn}
+          currentDirection={sortDir}
+          basePath="/prontuarios"
+        />
+      </div>
 
       {/* List */}
       {items.length > 0 ? (
@@ -143,6 +212,16 @@ export default async function ProntuariosPage({
           )}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={PAGE_SIZE}
+        basePath="/prontuarios"
+        searchParams={sp}
+      />
     </div>
   );
 }

@@ -1,23 +1,28 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useRef, useTransition } from "react";
 
 export function SearchInput({ defaultValue }: { defaultValue?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const timerRef = useRef<NodeJS.Timeout>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleSearch(term: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (term) {
-      params.set("q", term);
-    } else {
-      params.delete("q");
-    }
-    startTransition(() => {
-      router.replace(`/receitas?${params.toString()}`);
-    });
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (term) {
+        params.set("q", term);
+      } else {
+        params.delete("q");
+      }
+      params.delete("pagina");
+      startTransition(() => {
+        router.replace(`/receitas?${params.toString()}`);
+      });
+    }, 300);
   }
 
   return (

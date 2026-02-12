@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { excluirReceita } from "../actions";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -24,7 +25,14 @@ export function DeleteButton({ receitaId }: { receitaId: string }) {
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={() =>
-          startTransition(() => excluirReceita(receitaId))
+          startTransition(async () => {
+            try {
+              await excluirReceita(receitaId);
+            } catch {
+              toast.error("Erro ao excluir receita. Tente novamente.");
+              setOpen(false);
+            }
+          })
         }
         title="Excluir receita"
         description="Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita."
