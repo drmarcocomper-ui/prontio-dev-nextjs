@@ -30,6 +30,11 @@ vi.mock("../actions", () => ({
   atualizarAgendamento: vi.fn(),
 }));
 
+vi.mock("../types", async () => {
+  const actual = await vi.importActual("../types");
+  return { ...actual };
+});
+
 vi.mock("./patient-search", () => ({
   PatientSearch: ({ defaultPatientId, defaultPatientName }: { defaultPatientId?: string; defaultPatientName?: string }) => (
     <input data-testid="patient-search" placeholder="Buscar paciente" data-patient-id={defaultPatientId} data-patient-name={defaultPatientName} />

@@ -9,12 +9,13 @@ const STATUS_BADGE_OPTIONS: Record<string, { label: string; color: string }> = {
 
 export function StatusBadge({ status }: { status: string }) {
   const opt = STATUS_BADGE_OPTIONS[status];
-  if (!opt) return null;
+  const label = opt?.label ?? status;
+  const color = opt?.color ?? "bg-gray-100 text-gray-600";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${opt.color}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
     >
-      {opt.label}
+      {label}
     </span>
   );
 }

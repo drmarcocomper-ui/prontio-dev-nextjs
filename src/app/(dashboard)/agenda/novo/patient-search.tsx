@@ -20,12 +20,15 @@ export function PatientSearch({
   const [results, setResults] = useState<Paciente[]>([]);
   const [selectedId, setSelectedId] = useState(defaultPatientId ?? "");
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setActiveIndex(-1);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -49,6 +52,7 @@ export function PatientSearch({
 
       setResults(data ?? []);
       setIsOpen(true);
+      setActiveIndex(-1);
     }, 300);
 
     return () => clearTimeout(timeout);
@@ -58,11 +62,46 @@ export function PatientSearch({
     setSelectedId(p.id);
     setQuery(p.nome);
     setIsOpen(false);
+    setActiveIndex(-1);
   }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!isOpen || results.length === 0) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (activeIndex >= 0 && activeIndex < results.length) {
+          selectPatient(results[activeIndex]);
+        }
+        break;
+      case "Escape":
+        setIsOpen(false);
+        setActiveIndex(-1);
+        break;
+    }
+  }
+
+  useEffect(() => {
+    if (activeIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[activeIndex] as HTMLElement | undefined;
+      item?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [activeIndex]);
 
   function formatCPF(cpf: string) {
     return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   }
+
+  const listboxId = "patient-search-listbox";
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -74,6 +113,7 @@ export function PatientSearch({
           viewBox="0 0 24 24"
           strokeWidth={2}
           stroke="currentColor"
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
         </svg>
@@ -85,19 +125,39 @@ export function PatientSearch({
             if (selectedId) setSelectedId("");
           }}
           onFocus={() => results.length > 0 && setIsOpen(true)}
+          onKeyDown={handleKeyDown}
           placeholder="Buscar paciente por nome..."
+          role="combobox"
+          aria-expanded={isOpen && results.length > 0}
+          aria-controls={listboxId}
+          aria-activedescendant={activeIndex >= 0 ? `patient-option-${activeIndex}` : undefined}
+          aria-autocomplete="list"
           className="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
         />
       </div>
 
       {isOpen && results.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-          {results.map((p) => (
-            <li key={p.id}>
+        <ul
+          ref={listRef}
+          id={listboxId}
+          role="listbox"
+          aria-label="Resultados de pacientes"
+          className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+        >
+          {results.map((p, index) => (
+            <li
+              key={p.id}
+              id={`patient-option-${index}`}
+              role="option"
+              aria-selected={index === activeIndex}
+            >
               <button
                 type="button"
                 onClick={() => selectPatient(p)}
-                className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
+                onMouseEnter={() => setActiveIndex(index)}
+                className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
+                  index === activeIndex ? "bg-sky-50" : "hover:bg-gray-50"
+                }`}
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
                   {p.nome
@@ -123,7 +183,7 @@ export function PatientSearch({
       )}
 
       {isOpen && query.length >= 2 && results.length === 0 && (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-4 text-center text-sm text-gray-500 shadow-lg">
+        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-4 text-center text-sm text-gray-500 shadow-lg" role="status">
           Nenhum paciente encontrado.
         </div>
       )}

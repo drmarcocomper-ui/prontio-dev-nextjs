@@ -3,44 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DatePicker } from "./date-picker";
 import { StatusSelect } from "./status-select";
 import { StatusBadge } from "./status-badge";
-
-interface Agendamento {
-  id: string;
-  paciente_id: string;
-  data: string;
-  hora_inicio: string;
-  hora_fim: string;
-  tipo: string | null;
-  status: string;
-  observacoes: string | null;
-  pacientes: {
-    id: string;
-    nome: string;
-    telefone: string | null;
-  };
-}
-
-const TIPO_LABELS: Record<string, string> = {
-  consulta: "Consulta",
-  retorno: "Retorno",
-  exame: "Exame",
-  procedimento: "Procedimento",
-  avaliacao: "Avaliação",
-};
-
-function formatTime(time: string) {
-  return time.slice(0, 5);
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
+import { type Agendamento, TIPO_LABELS, formatTime, getInitials } from "./types";
 
 export default async function AgendaPage({
   searchParams,
@@ -77,7 +40,7 @@ export default async function AgendaPage({
           href={`/agenda/novo?data=${currentDate}`}
           className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Novo agendamento
@@ -143,7 +106,7 @@ export default async function AgendaPage({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
           </svg>
           <h3 className="mt-4 text-sm font-semibold text-gray-900">

@@ -18,8 +18,8 @@ describe("DatePicker", () => {
 
   it("renderiza os botões de navegação", () => {
     render(<DatePicker currentDate="2024-06-15" />);
-    expect(screen.getByTitle("Dia anterior")).toBeInTheDocument();
-    expect(screen.getByTitle("Próximo dia")).toBeInTheDocument();
+    expect(screen.getByLabelText("Dia anterior")).toBeInTheDocument();
+    expect(screen.getByLabelText("Próximo dia")).toBeInTheDocument();
     expect(screen.getByText("Hoje")).toBeInTheDocument();
   });
 
@@ -37,13 +37,13 @@ describe("DatePicker", () => {
 
   it("navega para o dia anterior ao clicar", async () => {
     render(<DatePicker currentDate="2024-06-15" />);
-    await userEvent.click(screen.getByTitle("Dia anterior"));
+    await userEvent.click(screen.getByLabelText("Dia anterior"));
     expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("data=2024-06-14"));
   });
 
   it("navega para o próximo dia ao clicar", async () => {
     render(<DatePicker currentDate="2024-06-15" />);
-    await userEvent.click(screen.getByTitle("Próximo dia"));
+    await userEvent.click(screen.getByLabelText("Próximo dia"));
     expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("data=2024-06-16"));
   });
 

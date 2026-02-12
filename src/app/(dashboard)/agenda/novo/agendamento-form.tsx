@@ -3,18 +3,8 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
+import { type AgendamentoDefaults, OBSERVACOES_MAX_LENGTH } from "../types";
 import { PatientSearch } from "./patient-search";
-
-export interface AgendamentoDefaults {
-  id?: string;
-  paciente_id?: string;
-  paciente_nome?: string;
-  data?: string;
-  hora_inicio?: string;
-  hora_fim?: string;
-  tipo?: string | null;
-  observacoes?: string | null;
-}
 
 const inputClass =
   "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
@@ -138,6 +128,7 @@ export function AgendamentoForm({
           id="observacoes"
           name="observacoes"
           rows={3}
+          maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}
         />

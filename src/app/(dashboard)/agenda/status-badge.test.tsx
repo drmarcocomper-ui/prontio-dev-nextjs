@@ -20,9 +20,11 @@ describe("StatusBadge", () => {
     }
   });
 
-  it("não renderiza nada para status desconhecido", () => {
-    const { container } = render(<StatusBadge status="invalido" />);
-    expect(container.innerHTML).toBe("");
+  it("renderiza fallback para status desconhecido", () => {
+    render(<StatusBadge status="invalido" />);
+    const badge = screen.getByText("invalido");
+    expect(badge).toBeInTheDocument();
+    expect(badge.className).toContain("bg-gray-100");
   });
 
   it("aplica classes de cor corretas", () => {

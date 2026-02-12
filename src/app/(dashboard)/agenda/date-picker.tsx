@@ -35,13 +35,13 @@ export function DatePicker({ currentDate }: { currentDate: string }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex items-center rounded-lg border border-gray-300 bg-white shadow-sm">
+      <div className="flex items-center rounded-lg border border-gray-300 bg-white shadow-sm" role="group" aria-label="Navegação de data">
         <button
           onClick={() => navigate(addDays(currentDate, -1))}
           className="px-3 py-2 text-gray-600 transition-colors hover:bg-gray-50"
-          title="Dia anterior"
+          aria-label="Dia anterior"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
@@ -55,9 +55,9 @@ export function DatePicker({ currentDate }: { currentDate: string }) {
         <button
           onClick={() => navigate(addDays(currentDate, 1))}
           className="px-3 py-2 text-gray-600 transition-colors hover:bg-gray-50"
-          title="Próximo dia"
+          aria-label="Próximo dia"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
           </svg>
         </button>
@@ -67,6 +67,7 @@ export function DatePicker({ currentDate }: { currentDate: string }) {
         type="date"
         value={currentDate}
         onChange={(e) => e.target.value && navigate(e.target.value)}
+        aria-label="Selecionar data"
         className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
       />
 

@@ -2,19 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AgendamentoForm } from "../../novo/agendamento-form";
-
-interface AgendamentoComPaciente {
-  id: string;
-  data: string;
-  hora_inicio: string;
-  hora_fim: string;
-  tipo: string | null;
-  observacoes: string | null;
-  pacientes: {
-    id: string;
-    nome: string;
-  };
-}
+import { type Agendamento } from "../../types";
 
 export default async function EditarAgendamentoPage({
   params,
@@ -36,7 +24,7 @@ export default async function EditarAgendamentoPage({
     notFound();
   }
 
-  const ag = agendamento as unknown as AgendamentoComPaciente;
+  const ag = agendamento as unknown as Agendamento;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -46,7 +34,7 @@ export default async function EditarAgendamentoPage({
           href={`/agenda/${ag.id}`}
           className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
           Voltar para agendamento

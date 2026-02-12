@@ -3,30 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "../status-badge";
 import { DeleteButton } from "./delete-button";
-
-interface Agendamento {
-  id: string;
-  data: string;
-  hora_inicio: string;
-  hora_fim: string;
-  tipo: string | null;
-  status: string;
-  observacoes: string | null;
-  created_at: string;
-  pacientes: {
-    id: string;
-    nome: string;
-    telefone: string | null;
-  };
-}
-
-const TIPO_LABELS: Record<string, string> = {
-  consulta: "Consulta",
-  retorno: "Retorno",
-  exame: "Exame",
-  procedimento: "Procedimento",
-  avaliacao: "Avaliação",
-};
+import { type Agendamento, TIPO_LABELS, formatTime, getInitials } from "../types";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
@@ -35,20 +12,6 @@ function formatDate(dateStr: string) {
     month: "long",
     year: "numeric",
   });
-}
-
-function formatTime(time: string) {
-  return time.slice(0, 5);
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
 }
 
 export default async function AgendamentoDetalhesPage({
@@ -80,7 +43,7 @@ export default async function AgendamentoDetalhesPage({
         href={`/agenda?data=${ag.data}`}
         className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
       >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
         Agenda
@@ -115,7 +78,7 @@ export default async function AgendamentoDetalhesPage({
             href={`/agenda/${ag.id}/editar`}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
             </svg>
             Editar
@@ -127,7 +90,7 @@ export default async function AgendamentoDetalhesPage({
       {/* Details */}
       <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-6">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
           </svg>
           Detalhes do agendamento
