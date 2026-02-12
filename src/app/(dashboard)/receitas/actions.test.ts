@@ -31,6 +31,11 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("./types", async () => {
+  const actual = await vi.importActual("./types");
+  return { ...actual };
+});
+
 import { criarReceita, atualizarReceita, excluirReceita } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
@@ -52,6 +57,11 @@ describe("criarReceita", () => {
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
   });
 
+  it("retorna fieldErrors quando data é no futuro", async () => {
+    const result = await criarReceita({}, makeFormData({ paciente_id: "p-1", data: "2099-01-01", tipo: "simples", medicamentos: "Amoxicilina" }));
+    expect(result.fieldErrors?.data).toBe("A data não pode ser no futuro.");
+  });
+
   it("retorna fieldErrors quando tipo está vazio", async () => {
     const result = await criarReceita({}, makeFormData({ paciente_id: "p-1", data: "2024-06-15", tipo: "", medicamentos: "Amoxicilina" }));
     expect(result.fieldErrors?.tipo).toBe("Selecione o tipo da receita.");
@@ -60,6 +70,16 @@ describe("criarReceita", () => {
   it("retorna fieldErrors quando medicamentos está vazio", async () => {
     const result = await criarReceita({}, makeFormData({ paciente_id: "p-1", data: "2024-06-15", tipo: "simples", medicamentos: "" }));
     expect(result.fieldErrors?.medicamentos).toBe("Medicamentos é obrigatório.");
+  });
+
+  it("retorna fieldErrors quando medicamentos excede limite", async () => {
+    const result = await criarReceita({}, makeFormData({ paciente_id: "p-1", data: "2024-06-15", tipo: "simples", medicamentos: "A".repeat(5001) }));
+    expect(result.fieldErrors?.medicamentos).toBe("Máximo de 5000 caracteres.");
+  });
+
+  it("retorna fieldErrors quando observacoes excede limite", async () => {
+    const result = await criarReceita({}, makeFormData({ paciente_id: "p-1", data: "2024-06-15", tipo: "simples", medicamentos: "Amoxicilina", observacoes: "A".repeat(1001) }));
+    expect(result.fieldErrors?.observacoes).toBe("Máximo de 1000 caracteres.");
   });
 
   it("redireciona após criação com sucesso", async () => {
@@ -94,6 +114,11 @@ describe("atualizarReceita", () => {
   it("retorna fieldErrors quando data está vazia", async () => {
     const result = await atualizarReceita({}, makeFormData({ id: "rec-1", paciente_id: "p-1", data: "", tipo: "simples", medicamentos: "Amoxicilina" }));
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
+  });
+
+  it("retorna fieldErrors quando data é no futuro", async () => {
+    const result = await atualizarReceita({}, makeFormData({ id: "rec-1", paciente_id: "p-1", data: "2099-01-01", tipo: "simples", medicamentos: "Amoxicilina" }));
+    expect(result.fieldErrors?.data).toBe("A data não pode ser no futuro.");
   });
 
   it("retorna fieldErrors quando tipo está vazio", async () => {

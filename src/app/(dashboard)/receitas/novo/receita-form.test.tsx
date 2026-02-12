@@ -30,6 +30,11 @@ vi.mock("../actions", () => ({
   atualizarReceita: vi.fn(),
 }));
 
+vi.mock("../types", async () => {
+  const actual = await vi.importActual("../types");
+  return { ...actual };
+});
+
 vi.mock("@/app/(dashboard)/agenda/novo/patient-search", () => ({
   PatientSearch: () => <input data-testid="patient-search" />,
 }));
@@ -122,5 +127,24 @@ describe("ReceitaForm", () => {
     render(<ReceitaForm />);
     const button = screen.getByRole("button", { name: /Salvar receita/ });
     expect(button).toBeDisabled();
+  });
+
+  it("campo medicamentos tem maxLength", () => {
+    render(<ReceitaForm />);
+    const textarea = screen.getByLabelText("Medicamentos *") as HTMLTextAreaElement;
+    expect(textarea.maxLength).toBe(5000);
+  });
+
+  it("campo observações tem maxLength", () => {
+    render(<ReceitaForm />);
+    const textarea = screen.getByLabelText("Observações") as HTMLTextAreaElement;
+    expect(textarea.maxLength).toBe(1000);
+  });
+
+  it("campo data tem max igual a hoje", () => {
+    render(<ReceitaForm />);
+    const input = screen.getByLabelText(/Data/) as HTMLInputElement;
+    const today = new Date().toISOString().split("T")[0];
+    expect(input.max).toBe(today);
   });
 });

@@ -17,6 +17,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("./types", async () => {
+  const actual = await vi.importActual("./types");
+  return { ...actual };
+});
+
 vi.mock("./search-input", () => ({
   SearchInput: ({ defaultValue }: { defaultValue?: string }) => (
     <input data-testid="search-input" defaultValue={defaultValue} />

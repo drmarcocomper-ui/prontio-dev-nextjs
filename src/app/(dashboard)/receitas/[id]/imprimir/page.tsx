@@ -1,36 +1,12 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PrintButton } from "./print-button";
-
-interface Receita {
-  id: string;
-  data: string;
-  tipo: string;
-  medicamentos: string;
-  observacoes: string | null;
-  pacientes: {
-    nome: string;
-    cpf: string | null;
-  };
-}
-
-const TIPO_LABELS: Record<string, string> = {
-  simples: "Receita Simples",
-  especial: "Receita Especial",
-  controle_especial: "Receita de Controle Especial",
-};
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatCPF(cpf: string) {
-  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-}
+import {
+  type ReceitaImpressao,
+  TIPO_LABELS_IMPRESSAO,
+  formatDateMedium,
+  formatCPF,
+} from "../../types";
 
 export default async function ImprimirReceitaPage({
   params,
@@ -50,7 +26,7 @@ export default async function ImprimirReceitaPage({
     notFound();
   }
 
-  const r = receita as unknown as Receita;
+  const r = receita as unknown as ReceitaImpressao;
 
   const { data: configs } = await supabase
     .from("configuracoes")
@@ -89,7 +65,7 @@ export default async function ImprimirReceitaPage({
           href={`/receitas/${r.id}`}
           className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
           Voltar para receita
@@ -121,9 +97,9 @@ export default async function ImprimirReceitaPage({
         {/* Tipo da receita */}
         <div className="mt-6 text-center">
           <h2 className="text-lg font-bold uppercase tracking-wider text-gray-900">
-            {TIPO_LABELS[r.tipo] ?? r.tipo}
+            {TIPO_LABELS_IMPRESSAO[r.tipo] ?? r.tipo}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">{formatDate(r.data)}</p>
+          <p className="mt-1 text-sm text-gray-500">{formatDateMedium(r.data)}</p>
         </div>
 
         {/* Dados do Paciente */}
