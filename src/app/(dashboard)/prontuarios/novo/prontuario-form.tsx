@@ -3,22 +3,8 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
+import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH } from "../types";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
-
-export interface ProntuarioDefaults {
-  id?: string;
-  paciente_id?: string;
-  paciente_nome?: string;
-  data?: string;
-  tipo?: string | null;
-  cid?: string | null;
-  queixa_principal?: string | null;
-  historia_doenca?: string | null;
-  exame_fisico?: string | null;
-  hipotese_diagnostica?: string | null;
-  conduta?: string | null;
-  observacoes?: string | null;
-}
 
 const inputClass =
   "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
@@ -81,6 +67,7 @@ export function ProntuarioForm({
             name="data"
             type="date"
             required
+            max={today}
             defaultValue={defaults?.data ?? today}
             className={inputClass}
           />
@@ -113,6 +100,7 @@ export function ProntuarioForm({
             name="cid"
             type="text"
             placeholder="Ex: J06.9"
+            maxLength={CID_MAX_LENGTH}
             defaultValue={defaults?.cid ?? ""}
             className={inputClass}
           />
@@ -133,6 +121,7 @@ export function ProntuarioForm({
             id="queixa_principal"
             name="queixa_principal"
             rows={2}
+            maxLength={TEXTO_MAX_LENGTH}
             placeholder="Motivo da consulta..."
             defaultValue={defaults?.queixa_principal ?? ""}
             className={inputClass}
@@ -148,10 +137,12 @@ export function ProntuarioForm({
             id="historia_doenca"
             name="historia_doenca"
             rows={3}
+            maxLength={TEXTO_MAX_LENGTH}
             placeholder="Evolução dos sintomas, duração, fatores de melhora/piora..."
             defaultValue={defaults?.historia_doenca ?? ""}
             className={inputClass}
           />
+          <FieldError message={state.fieldErrors?.historia_doenca} />
         </div>
 
         <div>
@@ -162,10 +153,12 @@ export function ProntuarioForm({
             id="exame_fisico"
             name="exame_fisico"
             rows={3}
+            maxLength={TEXTO_MAX_LENGTH}
             placeholder="Sinais vitais, achados do exame..."
             defaultValue={defaults?.exame_fisico ?? ""}
             className={inputClass}
           />
+          <FieldError message={state.fieldErrors?.exame_fisico} />
         </div>
 
         <div>
@@ -176,10 +169,12 @@ export function ProntuarioForm({
             id="hipotese_diagnostica"
             name="hipotese_diagnostica"
             rows={2}
+            maxLength={TEXTO_MAX_LENGTH}
             placeholder="Diagnóstico provável..."
             defaultValue={defaults?.hipotese_diagnostica ?? ""}
             className={inputClass}
           />
+          <FieldError message={state.fieldErrors?.hipotese_diagnostica} />
         </div>
 
         <div>
@@ -190,6 +185,7 @@ export function ProntuarioForm({
             id="conduta"
             name="conduta"
             rows={3}
+            maxLength={TEXTO_MAX_LENGTH}
             placeholder="Plano terapêutico, medicamentos prescritos, orientações..."
             defaultValue={defaults?.conduta ?? ""}
             className={inputClass}
@@ -206,6 +202,7 @@ export function ProntuarioForm({
           id="observacoes"
           name="observacoes"
           rows={2}
+          maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}
         />

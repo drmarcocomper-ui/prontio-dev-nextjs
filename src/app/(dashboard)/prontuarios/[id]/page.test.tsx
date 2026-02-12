@@ -31,6 +31,11 @@ vi.mock("./delete-button", () => ({
   ),
 }));
 
+vi.mock("../types", async () => {
+  const actual = await vi.importActual("../types");
+  return { ...actual };
+});
+
 let mockProntuario: Record<string, unknown> | null = null;
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -60,6 +65,7 @@ const prontuarioCompleto = {
   conduta: "Amoxicilina 500mg 8/8h por 7 dias",
   observacoes: "Retorno em 7 dias",
   created_at: "2024-06-15T10:30:00Z",
+  updated_at: null,
   pacientes: { id: "p-1", nome: "Maria Silva" },
 };
 
@@ -142,5 +148,17 @@ describe("ProntuarioDetalhesPage", () => {
     mockProntuario = { ...prontuarioCompleto, tipo: "tipo_desconhecido" };
     await renderPage();
     expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
+  });
+
+  it("não exibe última atualização quando updated_at é null", async () => {
+    await renderPage();
+    expect(screen.getByText(/Registro criado em/)).toBeInTheDocument();
+    expect(screen.queryByText(/Última atualização/)).not.toBeInTheDocument();
+  });
+
+  it("exibe última atualização quando updated_at está definido", async () => {
+    mockProntuario = { ...prontuarioCompleto, updated_at: "2024-06-16T14:00:00Z" };
+    await renderPage();
+    expect(screen.getByText(/Última atualização em/)).toBeInTheDocument();
   });
 });

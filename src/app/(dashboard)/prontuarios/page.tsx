@@ -1,43 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SearchInput } from "./search-input";
-
-interface Prontuario {
-  id: string;
-  data: string;
-  tipo: string | null;
-  cid: string | null;
-  queixa_principal: string | null;
-  hipotese_diagnostica: string | null;
-  conduta: string | null;
-  created_at: string;
-  pacientes: {
-    id: string;
-    nome: string;
-  };
-}
-
-const TIPO_LABELS: Record<string, string> = {
-  consulta: "Consulta",
-  retorno: "Retorno",
-  exame: "Exame",
-  procedimento: "Procedimento",
-  avaliacao: "Avaliação",
-};
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
+import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
 
 export default async function ProntuariosPage({
   searchParams,
@@ -50,7 +14,7 @@ export default async function ProntuariosPage({
   let query = supabase
     .from("prontuarios")
     .select(
-      "id, data, tipo, cid, queixa_principal, hipotese_diagnostica, conduta, created_at, pacientes(id, nome)"
+      "id, data, tipo, cid, queixa_principal, conduta, pacientes(id, nome)"
     )
     .order("data", { ascending: false })
     .order("created_at", { ascending: false })
@@ -61,7 +25,7 @@ export default async function ProntuariosPage({
   }
 
   const { data: prontuarios } = await query;
-  const items = (prontuarios ?? []) as unknown as Prontuario[];
+  const items = (prontuarios ?? []) as unknown as ProntuarioListItem[];
 
   return (
     <div className="space-y-6">
@@ -77,7 +41,7 @@ export default async function ProntuariosPage({
           href="/prontuarios/novo"
           className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Nova evolução
@@ -143,7 +107,7 @@ export default async function ProntuariosPage({
                 </div>
 
                 {/* Chevron */}
-                <svg className="mt-1 h-5 w-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <svg aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
               </div>
@@ -152,7 +116,7 @@ export default async function ProntuariosPage({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg aria-hidden="true" className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
           </svg>
           <h3 className="mt-4 text-sm font-semibold text-gray-900">
@@ -168,7 +132,7 @@ export default async function ProntuariosPage({
               href="/prontuarios/novo"
               className="mt-6 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
               Nova evolução

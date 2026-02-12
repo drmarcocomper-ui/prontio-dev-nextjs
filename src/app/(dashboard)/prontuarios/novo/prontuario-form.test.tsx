@@ -30,6 +30,11 @@ vi.mock("../actions", () => ({
   atualizarProntuario: vi.fn(),
 }));
 
+vi.mock("../types", async () => {
+  const actual = await vi.importActual("../types");
+  return { ...actual };
+});
+
 vi.mock("@/app/(dashboard)/agenda/novo/patient-search", () => ({
   PatientSearch: () => <input data-testid="patient-search" />,
 }));
@@ -80,6 +85,13 @@ describe("ProntuarioForm", () => {
     expect(input).toHaveValue(today);
   });
 
+  it("campo data tem max igual a hoje", () => {
+    render(<ProntuarioForm />);
+    const input = screen.getByLabelText(/Data/) as HTMLInputElement;
+    const today = new Date().toISOString().split("T")[0];
+    expect(input.max).toBe(today);
+  });
+
   it("renderiza o PatientSearch", () => {
     render(<ProntuarioForm />);
     expect(screen.getByTestId("patient-search")).toBeInTheDocument();
@@ -92,6 +104,20 @@ describe("ProntuarioForm", () => {
     expect(screen.getByText("Exame")).toBeInTheDocument();
     expect(screen.getByText("Procedimento")).toBeInTheDocument();
     expect(screen.getByText("Avaliação")).toBeInTheDocument();
+  });
+
+  it("textareas têm maxLength definido", () => {
+    render(<ProntuarioForm />);
+    const queixa = screen.getByLabelText("Queixa principal") as HTMLTextAreaElement;
+    expect(queixa.maxLength).toBe(5000);
+    const obs = screen.getByLabelText("Observações") as HTMLTextAreaElement;
+    expect(obs.maxLength).toBe(1000);
+  });
+
+  it("CID tem maxLength definido", () => {
+    render(<ProntuarioForm />);
+    const cid = screen.getByLabelText("CID") as HTMLInputElement;
+    expect(cid.maxLength).toBe(20);
   });
 
   it("renderiza botão Salvar alterações no modo edição", () => {

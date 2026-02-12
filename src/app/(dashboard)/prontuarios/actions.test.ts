@@ -31,6 +31,11 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("./types", async () => {
+  const actual = await vi.importActual("./types");
+  return { ...actual };
+});
+
 import { criarProntuario, atualizarProntuario, excluirProntuario } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
@@ -52,9 +57,38 @@ describe("criarProntuario", () => {
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
   });
 
+  it("retorna fieldErrors quando data é no futuro", async () => {
+    const result = await criarProntuario({}, makeFormData({ paciente_id: "p-1", data: "2099-01-01", queixa_principal: "Dor" }));
+    expect(result.fieldErrors?.data).toBe("A data não pode ser no futuro.");
+  });
+
   it("retorna fieldErrors quando queixa e conduta estão vazios", async () => {
     const result = await criarProntuario({}, makeFormData({ paciente_id: "p-1", data: "2024-06-15" }));
     expect(result.fieldErrors?.queixa_principal).toBe("Preencha ao menos a queixa principal ou a conduta.");
+  });
+
+  it("retorna fieldErrors quando CID excede limite", async () => {
+    const result = await criarProntuario({}, makeFormData({
+      paciente_id: "p-1", data: "2024-06-15", queixa_principal: "Dor",
+      cid: "A".repeat(21),
+    }));
+    expect(result.fieldErrors?.cid).toBe("Máximo de 20 caracteres.");
+  });
+
+  it("retorna fieldErrors quando queixa_principal excede limite", async () => {
+    const result = await criarProntuario({}, makeFormData({
+      paciente_id: "p-1", data: "2024-06-15",
+      queixa_principal: "A".repeat(5001),
+    }));
+    expect(result.fieldErrors?.queixa_principal).toBe("Máximo de 5000 caracteres.");
+  });
+
+  it("retorna fieldErrors quando observacoes excede limite", async () => {
+    const result = await criarProntuario({}, makeFormData({
+      paciente_id: "p-1", data: "2024-06-15", queixa_principal: "Dor",
+      observacoes: "A".repeat(1001),
+    }));
+    expect(result.fieldErrors?.observacoes).toBe("Máximo de 1000 caracteres.");
   });
 
   it("aceita quando apenas conduta é preenchida", async () => {
@@ -97,6 +131,11 @@ describe("atualizarProntuario", () => {
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
   });
 
+  it("retorna fieldErrors quando data é no futuro", async () => {
+    const result = await atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2099-01-01", queixa_principal: "Dor" }));
+    expect(result.fieldErrors?.data).toBe("A data não pode ser no futuro.");
+  });
+
   it("retorna fieldErrors quando queixa e conduta estão vazios", async () => {
     const result = await atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2024-06-15" }));
     expect(result.fieldErrors?.queixa_principal).toBe("Preencha ao menos a queixa principal ou a conduta.");
@@ -107,6 +146,15 @@ describe("atualizarProntuario", () => {
       atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2024-06-15", conduta: "Prescrição" }))
     ).rejects.toThrow("REDIRECT");
     expect(mockUpdate).toHaveBeenCalled();
+  });
+
+  it("inclui updated_at ao atualizar", async () => {
+    await expect(
+      atualizarProntuario({}, makeFormData({ id: "pr-1", paciente_id: "p-1", data: "2024-06-15", queixa_principal: "Dor" }))
+    ).rejects.toThrow("REDIRECT");
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ updated_at: expect.any(String) }),
+    }));
   });
 
   it("redireciona após atualização com sucesso", async () => {

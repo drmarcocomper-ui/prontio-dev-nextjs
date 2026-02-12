@@ -2,23 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProntuarioForm } from "../../novo/prontuario-form";
-
-interface ProntuarioComPaciente {
-  id: string;
-  data: string;
-  tipo: string | null;
-  cid: string | null;
-  queixa_principal: string | null;
-  historia_doenca: string | null;
-  exame_fisico: string | null;
-  hipotese_diagnostica: string | null;
-  conduta: string | null;
-  observacoes: string | null;
-  pacientes: {
-    id: string;
-    nome: string;
-  };
-}
+import { type Prontuario } from "../../types";
 
 export default async function EditarProntuarioPage({
   params,
@@ -40,7 +24,7 @@ export default async function EditarProntuarioPage({
     notFound();
   }
 
-  const p = prontuario as unknown as ProntuarioComPaciente;
+  const p = prontuario as unknown as Prontuario;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -50,7 +34,7 @@ export default async function EditarProntuarioPage({
           href={`/prontuarios/${p.id}`}
           className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
           Voltar para prontuário

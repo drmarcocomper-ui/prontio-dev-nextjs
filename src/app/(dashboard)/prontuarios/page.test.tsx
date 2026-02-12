@@ -23,6 +23,11 @@ vi.mock("./search-input", () => ({
   ),
 }));
 
+vi.mock("./types", async () => {
+  const actual = await vi.importActual("./types");
+  return { ...actual };
+});
+
 const mockData: { data: unknown[] | null } = { data: [] };
 
 function createQueryResult() {
@@ -51,9 +56,7 @@ const prontuariosMock = [
     tipo: "consulta",
     cid: "J06.9",
     queixa_principal: "Dor de garganta há 3 dias",
-    hipotese_diagnostica: "IVAS",
     conduta: "Amoxicilina 500mg",
-    created_at: "2024-06-15T10:00:00Z",
     pacientes: { id: "p-1", nome: "Maria Silva" },
   },
   {
@@ -62,9 +65,7 @@ const prontuariosMock = [
     tipo: null,
     cid: null,
     queixa_principal: null,
-    hipotese_diagnostica: null,
     conduta: "Retorno em 15 dias",
-    created_at: "2024-06-14T09:00:00Z",
     pacientes: { id: "p-2", nome: "João Santos" },
   },
 ];

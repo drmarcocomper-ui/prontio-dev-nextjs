@@ -25,6 +25,11 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("../../types", async () => {
+  const actual = await vi.importActual("../../types");
+  return { ...actual };
+});
+
 vi.mock("../../novo/prontuario-form", () => ({
   ProntuarioForm: ({ defaults }: { defaults: Record<string, unknown> }) => (
     <form data-testid="prontuario-form" data-defaults={JSON.stringify(defaults)} />
