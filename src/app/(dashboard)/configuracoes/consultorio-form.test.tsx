@@ -19,6 +19,11 @@ vi.mock("./actions", () => ({
   salvarConfiguracoes: vi.fn(),
 }));
 
+vi.mock("./constants", async () => {
+  const actual = await vi.importActual("./constants");
+  return { ...actual };
+});
+
 import { ConsultorioForm } from "./consultorio-form";
 
 const emptyDefaults: Record<string, string> = {};
@@ -84,6 +89,31 @@ describe("ConsultorioForm", () => {
   it("campo estado tem maxLength 2", () => {
     render(<ConsultorioForm defaults={emptyDefaults} />);
     expect(screen.getByLabelText("Estado")).toHaveAttribute("maxlength", "2");
+  });
+
+  it("campo nome_consultorio tem maxLength de 255", () => {
+    render(<ConsultorioForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText(/Nome do consultório/)).toHaveAttribute("maxlength", "255");
+  });
+
+  it("campo cnpj tem maxLength de 18", () => {
+    render(<ConsultorioForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("CNPJ")).toHaveAttribute("maxlength", "18");
+  });
+
+  it("campo telefone tem maxLength de 15", () => {
+    render(<ConsultorioForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("Telefone")).toHaveAttribute("maxlength", "15");
+  });
+
+  it("campo endereco tem maxLength de 255", () => {
+    render(<ConsultorioForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("Endereço")).toHaveAttribute("maxlength", "255");
+  });
+
+  it("campo cidade tem maxLength de 100", () => {
+    render(<ConsultorioForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("Cidade")).toHaveAttribute("maxlength", "100");
   });
 
   it("exibe mensagem de erro quando state.error está definido", () => {

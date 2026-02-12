@@ -18,6 +18,11 @@ vi.mock("./actions", () => ({
   salvarConfiguracoes: vi.fn(),
 }));
 
+vi.mock("./constants", async () => {
+  const actual = await vi.importActual("./constants");
+  return { ...actual };
+});
+
 import { ProfissionalForm } from "./profissional-form";
 
 const emptyDefaults: Record<string, string> = {};
@@ -71,6 +76,31 @@ describe("ProfissionalForm", () => {
     const hidden = document.querySelector('input[name="config_nome_consultorio"]') as HTMLInputElement;
     expect(hidden).toBeInTheDocument();
     expect(hidden.value).toBe("Clínica Saúde");
+  });
+
+  it("campo nome_profissional tem maxLength de 255", () => {
+    render(<ProfissionalForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("Nome completo")).toHaveAttribute("maxlength", "255");
+  });
+
+  it("campo especialidade tem maxLength de 100", () => {
+    render(<ProfissionalForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("Especialidade")).toHaveAttribute("maxlength", "100");
+  });
+
+  it("campo crm tem maxLength de 50", () => {
+    render(<ProfissionalForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("CRM")).toHaveAttribute("maxlength", "50");
+  });
+
+  it("campo rqe tem maxLength de 50", () => {
+    render(<ProfissionalForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("RQE")).toHaveAttribute("maxlength", "50");
+  });
+
+  it("campo email tem maxLength de 254", () => {
+    render(<ProfissionalForm defaults={emptyDefaults} />);
+    expect(screen.getByLabelText("E-mail profissional")).toHaveAttribute("maxlength", "254");
   });
 
   it("exibe mensagem de erro quando state.error está definido", () => {

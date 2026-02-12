@@ -58,6 +58,14 @@ describe("salvarConfiguracoes", () => {
     );
   });
 
+  it("retorna erro quando campo excede max length", async () => {
+    const longName = "a".repeat(256);
+    const result = await salvarConfiguracoes({}, makeFormData({
+      config_nome_consultorio: longName,
+    }));
+    expect(result.error).toBe("Campo excede o limite de 255 caracteres.");
+  });
+
   it("retorna erro quando upsert falha", async () => {
     mockUpsert.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await salvarConfiguracoes({}, makeFormData({
@@ -84,6 +92,12 @@ describe("alterarSenha", () => {
     const result = await alterarSenha({}, makeFormData({ new_password: "novaSenha123", confirm_password: "novaSenha123" }));
     expect(result.success).toBe(true);
     expect(mockUpdateUser).toHaveBeenCalledWith({ password: "novaSenha123" });
+  });
+
+  it("retorna erro quando senha excede max length", async () => {
+    const longPassword = "a".repeat(129);
+    const result = await alterarSenha({}, makeFormData({ new_password: longPassword, confirm_password: longPassword }));
+    expect(result.error).toBe("A senha deve ter no máximo 128 caracteres.");
   });
 
   it("retorna erro quando updateUser falha", async () => {

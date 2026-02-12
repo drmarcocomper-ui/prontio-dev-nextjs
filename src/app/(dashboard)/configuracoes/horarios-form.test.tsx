@@ -18,6 +18,11 @@ vi.mock("./actions", () => ({
   salvarConfiguracoes: vi.fn(),
 }));
 
+vi.mock("./constants", async () => {
+  const actual = await vi.importActual("./constants");
+  return { ...actual };
+});
+
 import { HorariosForm } from "./horarios-form";
 
 const emptyDefaults: Record<string, string> = {};

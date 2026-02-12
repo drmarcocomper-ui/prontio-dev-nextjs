@@ -3,18 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { salvarConfiguracoes, type ConfigFormState } from "./actions";
-
-const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
-
-const DIAS = [
-  { key: "seg", label: "Segunda-feira" },
-  { key: "ter", label: "Terça-feira" },
-  { key: "qua", label: "Quarta-feira" },
-  { key: "qui", label: "Quinta-feira" },
-  { key: "sex", label: "Sexta-feira" },
-  { key: "sab", label: "Sábado" },
-];
+import { INPUT_CLASS, DIAS } from "./constants";
 
 export function HorariosForm({
   defaults,
@@ -53,7 +42,7 @@ export function HorariosForm({
           max="240"
           step="5"
           defaultValue={defaults.duracao_consulta ?? "30"}
-          className={inputClass}
+          className={INPUT_CLASS}
         />
       </div>
 
@@ -118,7 +107,7 @@ export function HorariosForm({
           className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-50"
         >
           {isPending && (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <div aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           )}
           Salvar
         </button>

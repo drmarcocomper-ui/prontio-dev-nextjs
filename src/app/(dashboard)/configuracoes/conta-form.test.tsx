@@ -18,6 +18,11 @@ vi.mock("./actions", () => ({
   alterarSenha: vi.fn(),
 }));
 
+vi.mock("./constants", async () => {
+  const actual = await vi.importActual("./constants");
+  return { ...actual };
+});
+
 import { ContaForm } from "./conta-form";
 
 describe("ContaForm", () => {
@@ -65,6 +70,12 @@ describe("ContaForm", () => {
   it("renderiza o botão Alterar senha", () => {
     render(<ContaForm email="user@test.com" />);
     expect(screen.getByRole("button", { name: "Alterar senha" })).toBeInTheDocument();
+  });
+
+  it("campos de senha têm maxLength 128", () => {
+    render(<ContaForm email="user@test.com" />);
+    expect(screen.getByLabelText("Nova senha")).toHaveAttribute("maxlength", "128");
+    expect(screen.getByLabelText("Confirmar nova senha")).toHaveAttribute("maxlength", "128");
   });
 
   it("exibe mensagem de erro quando state.error está definido", () => {
