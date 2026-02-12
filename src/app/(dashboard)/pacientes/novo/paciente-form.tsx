@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { FieldError, INPUT_CLASS } from "@/components/form-utils";
 import {
   criarPaciente,
   atualizarPaciente,
@@ -18,14 +19,6 @@ import {
   OBSERVACOES_MAX_LENGTH,
   maskCPF, maskPhone, maskCEP,
 } from "../types";
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-xs text-red-600">{message}</p>;
-}
-
-const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50";
 
 export function PacienteForm({
   defaults,
@@ -71,7 +64,7 @@ export function PacienteForm({
               disabled={isPending}
               maxLength={NOME_MAX_LENGTH}
               defaultValue={defaults?.nome ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
             <FieldError message={state.fieldErrors?.nome} />
           </div>
@@ -89,7 +82,7 @@ export function PacienteForm({
               placeholder="000.000.000-00"
               defaultValue={defaults?.cpf ? maskCPF(defaults.cpf) : ""}
               onChange={(e) => (e.target.value = maskCPF(e.target.value))}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
             <FieldError message={state.fieldErrors?.cpf} />
           </div>
@@ -105,7 +98,7 @@ export function PacienteForm({
               disabled={isPending}
               maxLength={RG_MAX_LENGTH}
               defaultValue={defaults?.rg ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
             <FieldError message={state.fieldErrors?.rg} />
           </div>
@@ -121,7 +114,7 @@ export function PacienteForm({
               disabled={isPending}
               max={today}
               defaultValue={defaults?.data_nascimento ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
             <FieldError message={state.fieldErrors?.data_nascimento} />
           </div>
@@ -135,7 +128,7 @@ export function PacienteForm({
               name="sexo"
               disabled={isPending}
               defaultValue={defaults?.sexo ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             >
               <option value="">Selecione</option>
               {Object.entries(SEXO_LABELS).map(([value, label]) => (
@@ -155,7 +148,7 @@ export function PacienteForm({
               name="estado_civil"
               disabled={isPending}
               defaultValue={defaults?.estado_civil ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             >
               <option value="">Selecione</option>
               {Object.entries(ESTADO_CIVIL_LABELS).map(([value, label]) => (
@@ -186,7 +179,7 @@ export function PacienteForm({
               placeholder="(00) 00000-0000"
               defaultValue={defaults?.telefone ? maskPhone(defaults.telefone) : ""}
               onChange={(e) => (e.target.value = maskPhone(e.target.value))}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
             <FieldError message={state.fieldErrors?.telefone} />
           </div>
@@ -203,7 +196,7 @@ export function PacienteForm({
               maxLength={EMAIL_MAX_LENGTH}
               placeholder="paciente@email.com"
               defaultValue={defaults?.email ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
             <FieldError message={state.fieldErrors?.email} />
           </div>
@@ -228,7 +221,7 @@ export function PacienteForm({
               placeholder="00000-000"
               defaultValue={defaults?.cep ? maskCEP(defaults.cep) : ""}
               onChange={(e) => (e.target.value = maskCEP(e.target.value))}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
             <FieldError message={state.fieldErrors?.cep} />
           </div>
@@ -244,7 +237,7 @@ export function PacienteForm({
               disabled={isPending}
               maxLength={ENDERECO_MAX_LENGTH}
               defaultValue={defaults?.endereco ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
             <FieldError message={state.fieldErrors?.endereco} />
           </div>
@@ -260,7 +253,7 @@ export function PacienteForm({
               disabled={isPending}
               maxLength={NUMERO_MAX_LENGTH}
               defaultValue={defaults?.numero ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
           </div>
 
@@ -275,7 +268,7 @@ export function PacienteForm({
               disabled={isPending}
               maxLength={COMPLEMENTO_MAX_LENGTH}
               defaultValue={defaults?.complemento ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
           </div>
 
@@ -290,7 +283,7 @@ export function PacienteForm({
               disabled={isPending}
               maxLength={BAIRRO_MAX_LENGTH}
               defaultValue={defaults?.bairro ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
           </div>
 
@@ -305,7 +298,7 @@ export function PacienteForm({
               disabled={isPending}
               maxLength={CIDADE_MAX_LENGTH}
               defaultValue={defaults?.cidade ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
           </div>
 
@@ -318,7 +311,7 @@ export function PacienteForm({
               name="estado"
               disabled={isPending}
               defaultValue={defaults?.estado ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             >
               <option value="">UF</option>
               {ESTADOS_UF.map((uf) => (
@@ -350,7 +343,7 @@ export function PacienteForm({
               maxLength={CONVENIO_MAX_LENGTH}
               placeholder="Nome do convênio"
               defaultValue={defaults?.convenio ?? ""}
-              className={inputClass}
+              className={INPUT_CLASS}
             />
           </div>
         </div>
@@ -366,7 +359,7 @@ export function PacienteForm({
             disabled={isPending}
             maxLength={OBSERVACOES_MAX_LENGTH}
             defaultValue={defaults?.observacoes ?? ""}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
         </div>
       </fieldset>

@@ -109,39 +109,6 @@ export const CATEGORIAS_DESPESA = [
   { value: "outros", label: "Outros" },
 ];
 
-export function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-export function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-export function formatDateLong(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-export function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
-
-export function maskCurrency(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-  const num = parseInt(digits, 10) / 100;
-  return num.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+// --- Helpers de formatação (re-exports) ---
+export { formatCurrency, formatDate, formatDateLong, getInitials } from "@/lib/format";
+export { maskCurrency } from "@/lib/masks";

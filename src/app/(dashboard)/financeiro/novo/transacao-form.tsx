@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
+import { FieldError, INPUT_CLASS } from "@/components/form-utils";
 import { criarTransacao, atualizarTransacao, type TransacaoFormState } from "../actions";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import {
@@ -14,14 +15,6 @@ import {
   STATUS_LABELS,
   maskCurrency,
 } from "../constants";
-
-const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50";
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-xs text-red-600">{message}</p>;
-}
 
 export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
   const isEditing = !!defaults?.id;
@@ -115,7 +108,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
             maxLength={DESCRICAO_MAX_LENGTH}
             placeholder="Ex: Consulta particular"
             defaultValue={defaults?.descricao ?? ""}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.descricao} />
         </div>
@@ -134,7 +127,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
             placeholder="0,00"
             defaultValue={defaults?.valor ?? ""}
             onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.valor} />
         </div>
@@ -153,7 +146,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
             required
             disabled={isPending}
             defaultValue={defaults?.data ?? today}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.data} />
         </div>
@@ -162,7 +155,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           <label htmlFor="categoria" className="block text-sm font-medium text-gray-700">
             Categoria
           </label>
-          <select id="categoria" name="categoria" disabled={isPending} defaultValue={defaults?.categoria ?? ""} className={inputClass}>
+          <select id="categoria" name="categoria" disabled={isPending} defaultValue={defaults?.categoria ?? ""} className={INPUT_CLASS}>
             <option value="">Selecione</option>
             {categorias.map((c) => (
               <option key={c.value} value={c.value}>
@@ -176,7 +169,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           <label htmlFor="forma_pagamento" className="block text-sm font-medium text-gray-700">
             Forma de pagamento
           </label>
-          <select id="forma_pagamento" name="forma_pagamento" disabled={isPending} defaultValue={defaults?.forma_pagamento ?? ""} className={inputClass}>
+          <select id="forma_pagamento" name="forma_pagamento" disabled={isPending} defaultValue={defaults?.forma_pagamento ?? ""} className={INPUT_CLASS}>
             <option value="">Selecione</option>
             {Object.entries(PAGAMENTO_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -193,7 +186,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           <label htmlFor="status" className="block text-sm font-medium text-gray-700">
             Status
           </label>
-          <select id="status" name="status" disabled={isPending} defaultValue={defaults?.status ?? "pago"} className={inputClass}>
+          <select id="status" name="status" disabled={isPending} defaultValue={defaults?.status ?? "pago"} className={INPUT_CLASS}>
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -230,7 +223,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           disabled={isPending}
           maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
-          className={inputClass}
+          className={INPUT_CLASS}
         />
         <FieldError message={state.fieldErrors?.observacoes} />
       </div>

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DeleteButton } from "./delete-button";
+import { DeleteButton } from "@/components/delete-button";
+import { excluirReceita } from "../actions";
 import {
   type Receita,
   TIPO_LABELS,
@@ -103,7 +104,7 @@ export default async function ReceitaDetalhesPage({
             </svg>
             Editar
           </Link>
-          <DeleteButton receitaId={r.id} />
+          <DeleteButton onDelete={excluirReceita.bind(null, r.id)} title="Excluir receita" description="Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita." errorMessage="Erro ao excluir receita. Tente novamente." />
         </div>
       </div>
 

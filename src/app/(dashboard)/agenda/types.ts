@@ -65,27 +65,5 @@ export const STATUS_STYLES: Record<string, string> = {
   faltou: "bg-gray-100 text-gray-600",
 };
 
-export function formatTime(time: string) {
-  return time.slice(0, 5);
-}
-
-export function formatDateBR(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d, 12);
-  return date.toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-export function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
+// --- Helpers de formatação (re-exports) ---
+export { formatTime, formatDateBR, getInitials } from "@/lib/format";

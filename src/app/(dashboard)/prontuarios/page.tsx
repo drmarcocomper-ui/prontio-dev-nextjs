@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortSelect } from "@/components/sort-select";
-import { SearchInput } from "./search-input";
+import { SearchInput } from "@/components/search-input";
 import { ProntuarioFilters } from "./filters";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
 
@@ -101,7 +101,7 @@ export default async function ProntuariosPage({
       </div>
 
       {/* Search */}
-      <SearchInput defaultValue={q} />
+      <SearchInput basePath="/prontuarios" placeholder="Buscar por paciente ou CID..." ariaLabel="Buscar prontuários" defaultValue={q} />
 
       {/* Filters + Sort */}
       <div className="flex flex-wrap items-center justify-between gap-3">

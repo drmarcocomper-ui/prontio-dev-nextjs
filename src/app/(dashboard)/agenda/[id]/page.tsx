@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "../status-badge";
-import { DeleteButton } from "./delete-button";
+import { DeleteButton } from "@/components/delete-button";
+import { excluirAgendamento } from "../actions";
 import { type Agendamento, TIPO_LABELS, formatTime, formatDateBR, getInitials } from "../types";
 
 export async function generateMetadata({
@@ -92,7 +93,7 @@ export default async function AgendamentoDetalhesPage({
             </svg>
             Editar
           </Link>
-          <DeleteButton agendamentoId={ag.id} data={ag.data} />
+          <DeleteButton onDelete={excluirAgendamento.bind(null, ag.id, ag.data)} title="Excluir agendamento" description="Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita." errorMessage="Erro ao excluir agendamento. Tente novamente." />
         </div>
       </div>
 

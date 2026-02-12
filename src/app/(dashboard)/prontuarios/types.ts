@@ -56,25 +56,5 @@ export const TIPO_LABELS: Record<string, string> = {
   avaliacao: "Avaliação",
 };
 
-export function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-export function formatDateLong(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-export function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
+// --- Helpers de formatação (re-exports) ---
+export { formatDate, formatDateLong, getInitials } from "@/lib/format";

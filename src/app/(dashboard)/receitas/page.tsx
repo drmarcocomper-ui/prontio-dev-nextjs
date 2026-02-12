@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortSelect } from "@/components/sort-select";
-import { SearchInput } from "./search-input";
+import { SearchInput } from "@/components/search-input";
 import { ReceitaFilters } from "./filters";
 import {
   type ReceitaListItem,
@@ -93,7 +93,7 @@ export default async function ReceitasPage({
       {/* Search + Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
-          <SearchInput defaultValue={q} />
+          <SearchInput basePath="/receitas" placeholder="Buscar por paciente ou medicamento..." ariaLabel="Buscar receitas" defaultValue={q} />
         </div>
         <ReceitaFilters currentTipo={tipo ?? ""} />
       </div>

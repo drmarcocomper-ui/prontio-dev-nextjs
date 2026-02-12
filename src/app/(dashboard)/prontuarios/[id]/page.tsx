@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DeleteButton } from "./delete-button";
+import { DeleteButton } from "@/components/delete-button";
+import { excluirProntuario } from "../actions";
 import { type Prontuario, TIPO_LABELS, formatDateLong, getInitials } from "../types";
 
 export async function generateMetadata({
@@ -116,7 +117,7 @@ export default async function ProntuarioDetalhesPage({
             </svg>
             Editar
           </Link>
-          <DeleteButton prontuarioId={p.id} />
+          <DeleteButton onDelete={excluirProntuario.bind(null, p.id)} title="Excluir prontuário" description="Tem certeza que deseja excluir este prontuário? Esta ação não pode ser desfeita." errorMessage="Erro ao excluir prontuário. Tente novamente." />
         </div>
       </div>
 

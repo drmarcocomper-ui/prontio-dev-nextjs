@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortableHeader } from "@/components/sortable-header";
-import { SearchInput } from "./search-input";
+import { SearchInput } from "@/components/search-input";
 import { PacienteFilters } from "./filters";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
 
@@ -76,7 +76,7 @@ export default async function PacientesPage({
       {/* Search + Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
-          <SearchInput defaultValue={q} />
+          <SearchInput basePath="/pacientes" placeholder="Buscar por nome, CPF ou telefone..." ariaLabel="Buscar pacientes" defaultValue={q} />
         </div>
         <PacienteFilters currentSexo={sexo ?? ""} />
       </div>

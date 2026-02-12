@@ -119,36 +119,9 @@ export function validarCPF(cpf: string): boolean {
   return true;
 }
 
-// --- Helpers de formatação ---
-
-export function formatCPF(cpf: string) {
-  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-}
-
-export function formatPhone(phone: string) {
-  const d = phone.replace(/\D/g, "");
-  if (d.length === 11) return d.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-  if (d.length === 10) return d.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-  return phone;
-}
-
-export function formatCEP(cep: string) {
-  return cep.replace(/(\d{5})(\d{3})/, "$1-$2");
-}
-
-export function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-export function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
+// --- Helpers de formatação (re-exports) ---
+export { formatCPF, formatPhone, formatCEP, formatDate, getInitials } from "@/lib/format";
+export { maskCPF, maskPhone, maskCEP } from "@/lib/masks";
 
 export function calcAge(dateStr: string) {
   const birth = new Date(dateStr + "T00:00:00");
@@ -157,34 +130,4 @@ export function calcAge(dateStr: string) {
   const m = today.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
   return age;
-}
-
-// --- Máscaras de input ---
-
-export function maskCPF(value: string) {
-  return value
-    .replace(/\D/g, "")
-    .slice(0, 11)
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-}
-
-export function maskPhone(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 10) {
-    return digits
-      .replace(/(\d{2})(\d)/, "($1) $2")
-      .replace(/(\d{4})(\d)/, "$1-$2");
-  }
-  return digits
-    .replace(/(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d)/, "$1-$2");
-}
-
-export function maskCEP(value: string) {
-  return value
-    .replace(/\D/g, "")
-    .slice(0, 8)
-    .replace(/(\d{5})(\d)/, "$1-$2");
 }

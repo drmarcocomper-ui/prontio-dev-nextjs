@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { SearchInput } from "./search-input";
+import { SearchInput } from "@/components/search-input";
 
 describe("SearchInput", () => {
   beforeEach(() => {
@@ -17,20 +17,20 @@ describe("SearchInput", () => {
   });
 
   it("renderiza o campo de busca com placeholder", () => {
-    render(<SearchInput />);
+    render(<SearchInput basePath="/pacientes" placeholder="Buscar por nome, CPF ou telefone..." ariaLabel="Buscar pacientes" />);
     expect(
       screen.getByPlaceholderText("Buscar por nome, CPF ou telefone...")
     ).toBeInTheDocument();
   });
 
   it("renderiza com valor padrão quando fornecido", () => {
-    render(<SearchInput defaultValue="Maria" />);
+    render(<SearchInput basePath="/pacientes" placeholder="Buscar por nome, CPF ou telefone..." ariaLabel="Buscar pacientes" defaultValue="Maria" />);
     const input = screen.getByPlaceholderText("Buscar por nome, CPF ou telefone...");
     expect(input).toHaveValue("Maria");
   });
 
   it("chama router.replace com termo de busca ao digitar", async () => {
-    render(<SearchInput />);
+    render(<SearchInput basePath="/pacientes" placeholder="Buscar por nome, CPF ou telefone..." ariaLabel="Buscar pacientes" />);
     const input = screen.getByPlaceholderText("Buscar por nome, CPF ou telefone...");
     await userEvent.type(input, "João");
     expect(mockReplace).toHaveBeenLastCalledWith(
@@ -39,14 +39,14 @@ describe("SearchInput", () => {
   });
 
   it("remove param q quando campo é limpo", async () => {
-    render(<SearchInput defaultValue="Maria" />);
+    render(<SearchInput basePath="/pacientes" placeholder="Buscar por nome, CPF ou telefone..." ariaLabel="Buscar pacientes" defaultValue="Maria" />);
     const input = screen.getByPlaceholderText("Buscar por nome, CPF ou telefone...");
     await userEvent.clear(input);
     expect(mockReplace).toHaveBeenLastCalledWith("/pacientes?");
   });
 
   it("renderiza o ícone de busca", () => {
-    render(<SearchInput />);
+    render(<SearchInput basePath="/pacientes" placeholder="Buscar por nome, CPF ou telefone..." ariaLabel="Buscar pacientes" />);
     const svg = document.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { formatTime, formatCurrency, getInitials, formatRelativeTime } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -46,40 +47,6 @@ const STATUS_LABELS: Record<string, string> = {
   confirmado: "Confirmado",
   aguardando: "Aguardando",
 };
-
-function formatTime(time: string) {
-  return time.slice(0, 5);
-}
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
-
-function formatRelativeTime(dateStr: string) {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMin < 1) return "agora";
-  if (diffMin < 60) return `há ${diffMin} min`;
-  if (diffHours < 24) return `há ${diffHours}h`;
-  if (diffDays === 1) return "ontem";
-  if (diffDays < 7) return `há ${diffDays} dias`;
-  return date.toLocaleDateString("pt-BR");
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient();

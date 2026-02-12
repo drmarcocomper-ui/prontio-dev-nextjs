@@ -2,17 +2,10 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { FieldError, INPUT_CLASS } from "@/components/form-utils";
 import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
 import { type AgendamentoDefaults, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "./patient-search";
-
-const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50";
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-xs text-red-600">{message}</p>;
-}
 
 export function AgendamentoForm({
   defaultDate,
@@ -69,7 +62,7 @@ export function AgendamentoForm({
             required
             disabled={isPending}
             defaultValue={dateValue}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.data} />
         </div>
@@ -85,7 +78,7 @@ export function AgendamentoForm({
             required
             disabled={isPending}
             defaultValue={defaults?.hora_inicio ?? ""}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.hora_inicio} />
         </div>
@@ -101,7 +94,7 @@ export function AgendamentoForm({
             required
             disabled={isPending}
             defaultValue={defaults?.hora_fim ?? ""}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.hora_fim} />
         </div>
@@ -112,7 +105,7 @@ export function AgendamentoForm({
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
           Tipo
         </label>
-        <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} disabled={isPending} className={inputClass}>
+        <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} disabled={isPending} className={INPUT_CLASS}>
           <option value="">Selecione</option>
           {Object.entries(TIPO_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -134,7 +127,7 @@ export function AgendamentoForm({
           maxLength={OBSERVACOES_MAX_LENGTH}
           disabled={isPending}
           defaultValue={defaults?.observacoes ?? ""}
-          className={inputClass}
+          className={INPUT_CLASS}
         />
       </div>
 

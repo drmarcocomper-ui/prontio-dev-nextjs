@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { SearchInput } from "./search-input";
+import { SearchInput } from "@/components/search-input";
 
 describe("SearchInput (prontuarios)", () => {
   beforeEach(() => {
@@ -17,31 +17,31 @@ describe("SearchInput (prontuarios)", () => {
   });
 
   it("renderiza o input com placeholder", () => {
-    render(<SearchInput />);
+    render(<SearchInput basePath="/prontuarios" placeholder="Buscar por paciente ou CID..." ariaLabel="Buscar prontuários" />);
     expect(screen.getByPlaceholderText("Buscar por paciente ou CID...")).toBeInTheDocument();
   });
 
   it("renderiza com valor padrão quando fornecido", () => {
-    render(<SearchInput defaultValue="Maria" />);
+    render(<SearchInput basePath="/prontuarios" placeholder="Buscar por paciente ou CID..." ariaLabel="Buscar prontuários" defaultValue="Maria" />);
     expect(screen.getByDisplayValue("Maria")).toBeInTheDocument();
   });
 
   it("chama router.replace ao digitar", async () => {
-    render(<SearchInput />);
+    render(<SearchInput basePath="/prontuarios" placeholder="Buscar por paciente ou CID..." ariaLabel="Buscar prontuários" />);
     const input = screen.getByPlaceholderText("Buscar por paciente ou CID...");
     await userEvent.type(input, "teste");
     expect(mockReplace).toHaveBeenCalledWith(expect.stringContaining("q=teste"));
   });
 
   it("remove o param q ao limpar o input", async () => {
-    render(<SearchInput defaultValue="x" />);
+    render(<SearchInput basePath="/prontuarios" placeholder="Buscar por paciente ou CID..." ariaLabel="Buscar prontuários" defaultValue="x" />);
     const input = screen.getByPlaceholderText("Buscar por paciente ou CID...");
     await userEvent.clear(input);
     expect(mockReplace).toHaveBeenCalledWith("/prontuarios?");
   });
 
   it("renderiza ícone de busca", () => {
-    render(<SearchInput />);
+    render(<SearchInput basePath="/prontuarios" placeholder="Buscar por paciente ou CID..." ariaLabel="Buscar prontuários" />);
     const svg = document.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });

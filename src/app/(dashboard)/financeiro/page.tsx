@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortableHeader } from "@/components/sortable-header";
 import { Filters } from "./filters";
-import { DeleteButton } from "./delete-button";
+import { DeleteButton } from "@/components/delete-button";
+import { excluirTransacao } from "./actions";
 import {
   CATEGORIA_LABELS,
   PAGAMENTO_LABELS,
@@ -236,7 +237,7 @@ export default async function FinanceiroPage({
                     {formatCurrency(t.valor)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3.5">
-                    <DeleteButton transacaoId={t.id} />
+                    <DeleteButton onDelete={excluirTransacao.bind(null, t.id)} title="Excluir transação" description="Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita." errorMessage="Erro ao excluir transação. Tente novamente." variant="icon" />
                   </td>
                 </tr>
               ))}

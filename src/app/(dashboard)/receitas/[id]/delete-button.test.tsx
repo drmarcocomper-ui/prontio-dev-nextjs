@@ -2,36 +2,32 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockExcluirReceita = vi.fn();
+import { DeleteButton } from "@/components/delete-button";
 
-vi.mock("../actions", () => ({
-  excluirReceita: (...args: unknown[]) => mockExcluirReceita(...args),
-}));
-
-import { DeleteButton } from "./delete-button";
+const mockOnDelete = vi.fn();
 
 describe("DeleteButton (receita)", () => {
   beforeEach(() => {
-    mockExcluirReceita.mockClear();
+    mockOnDelete.mockClear();
   });
 
   it("renderiza o botão Excluir", () => {
-    render(<DeleteButton receitaId="rec-1" />);
+    render(<DeleteButton onDelete={mockOnDelete} title="Excluir receita" description="Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita." errorMessage="Erro ao excluir receita. Tente novamente." />);
     expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument();
   });
 
   it("abre o modal ao clicar", async () => {
-    render(<DeleteButton receitaId="rec-1" />);
+    render(<DeleteButton onDelete={mockOnDelete} title="Excluir receita" description="Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita." errorMessage="Erro ao excluir receita. Tente novamente." />);
     await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
     expect(screen.getByText("Excluir receita")).toBeInTheDocument();
     expect(screen.getByText("Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita.")).toBeInTheDocument();
   });
 
-  it("chama excluirReceita ao confirmar", async () => {
-    render(<DeleteButton receitaId="rec-1" />);
+  it("chama onDelete ao confirmar", async () => {
+    render(<DeleteButton onDelete={mockOnDelete} title="Excluir receita" description="Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita." errorMessage="Erro ao excluir receita. Tente novamente." />);
     await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
     const buttons = screen.getAllByRole("button", { name: "Excluir" });
     await userEvent.click(buttons[buttons.length - 1]);
-    expect(mockExcluirReceita).toHaveBeenCalledWith("rec-1");
+    expect(mockOnDelete).toHaveBeenCalled();
   });
 });

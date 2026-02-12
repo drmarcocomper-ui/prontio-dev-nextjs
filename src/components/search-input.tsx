@@ -3,7 +3,14 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useTransition } from "react";
 
-export function SearchInput({ defaultValue }: { defaultValue?: string }) {
+interface SearchInputProps {
+  basePath: string;
+  placeholder: string;
+  ariaLabel: string;
+  defaultValue?: string;
+}
+
+export function SearchInput({ basePath, placeholder, ariaLabel, defaultValue }: SearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const timerRef = useRef<NodeJS.Timeout>(null);
@@ -20,7 +27,7 @@ export function SearchInput({ defaultValue }: { defaultValue?: string }) {
       }
       params.delete("pagina");
       startTransition(() => {
-        router.replace(`/prontuarios?${params.toString()}`);
+        router.replace(`${basePath}?${params.toString()}`);
       });
     }, 300);
   }
@@ -35,12 +42,16 @@ export function SearchInput({ defaultValue }: { defaultValue?: string }) {
         strokeWidth={2}
         stroke="currentColor"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+        />
       </svg>
       <input
         type="search"
-        aria-label="Buscar prontuários"
-        placeholder="Buscar por paciente ou CID..."
+        aria-label={ariaLabel}
+        placeholder={placeholder}
         defaultValue={defaultValue}
         onChange={(e) => handleSearch(e.target.value)}
         className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"

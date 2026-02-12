@@ -67,37 +67,5 @@ export const TIPO_LABELS_IMPRESSAO: Record<string, string> = {
   controle_especial: "Receita de Controle Especial",
 };
 
-export function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-export function formatDateLong(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-export function formatDateMedium(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-export function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
-
-export function formatCPF(cpf: string) {
-  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-}
+// --- Helpers de formatação (re-exports) ---
+export { formatDate, formatDateLong, formatDateMedium, getInitials, formatCPF } from "@/lib/format";
