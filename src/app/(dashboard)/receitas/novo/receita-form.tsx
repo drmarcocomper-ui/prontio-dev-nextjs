@@ -8,10 +8,11 @@ import {
   type ReceitaDefaults,
   MEDICAMENTOS_MAX_LENGTH,
   OBSERVACOES_MAX_LENGTH,
+  TIPO_LABELS,
 } from "../types";
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
+  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -38,7 +39,7 @@ export function ReceitaForm({
   const cancel = cancelHref ?? (isEditing ? `/receitas/${defaults?.id}` : "/receitas");
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
       {state.error && (
@@ -71,6 +72,7 @@ export function ReceitaForm({
             name="data"
             type="date"
             required
+            disabled={isPending}
             max={today}
             defaultValue={defaults?.data ?? today}
             className={inputClass}
@@ -84,11 +86,13 @@ export function ReceitaForm({
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
           Tipo da receita <span className="text-red-500">*</span>
         </label>
-        <select id="tipo" name="tipo" required defaultValue={defaults?.tipo ?? ""} className={inputClass}>
+        <select id="tipo" name="tipo" required disabled={isPending} defaultValue={defaults?.tipo ?? ""} className={inputClass}>
           <option value="">Selecione</option>
-          <option value="simples">Simples</option>
-          <option value="especial">Especial</option>
-          <option value="controle_especial">Controle Especial</option>
+          {Object.entries(TIPO_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
         <FieldError message={state.fieldErrors?.tipo} />
       </div>
@@ -103,6 +107,7 @@ export function ReceitaForm({
           name="medicamentos"
           rows={8}
           required
+          disabled={isPending}
           maxLength={MEDICAMENTOS_MAX_LENGTH}
           placeholder="Liste os medicamentos, dosagens e posologias..."
           defaultValue={defaults?.medicamentos ?? ""}
@@ -120,6 +125,7 @@ export function ReceitaForm({
           id="observacoes"
           name="observacoes"
           rows={2}
+          disabled={isPending}
           maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}

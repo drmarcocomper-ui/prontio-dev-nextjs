@@ -27,7 +27,7 @@ export function ProfissionalForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {state.error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
@@ -46,6 +46,7 @@ export function ProfissionalForm({
             id="nome_profissional"
             name="config_nome_profissional"
             type="text"
+            disabled={isPending}
             maxLength={NOME_PROFISSIONAL_MAX}
             defaultValue={defaults.nome_profissional ?? ""}
             className={INPUT_CLASS}
@@ -60,6 +61,7 @@ export function ProfissionalForm({
             id="especialidade"
             name="config_especialidade"
             type="text"
+            disabled={isPending}
             maxLength={ESPECIALIDADE_MAX}
             placeholder="Ex: Clínica Geral"
             defaultValue={defaults.especialidade ?? ""}
@@ -75,6 +77,7 @@ export function ProfissionalForm({
             id="crm"
             name="config_crm"
             type="text"
+            disabled={isPending}
             maxLength={CRM_MAX}
             placeholder="CRM/UF 000000"
             defaultValue={defaults.crm ?? ""}
@@ -90,6 +93,7 @@ export function ProfissionalForm({
             id="rqe"
             name="config_rqe"
             type="text"
+            disabled={isPending}
             maxLength={RQE_MAX}
             defaultValue={defaults.rqe ?? ""}
             className={INPUT_CLASS}
@@ -104,6 +108,7 @@ export function ProfissionalForm({
             id="email_profissional"
             name="config_email_profissional"
             type="email"
+            disabled={isPending}
             maxLength={EMAIL_MAX}
             defaultValue={defaults.email_profissional ?? ""}
             className={INPUT_CLASS}

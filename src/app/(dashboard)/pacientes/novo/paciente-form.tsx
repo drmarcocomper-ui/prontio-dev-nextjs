@@ -10,6 +10,8 @@ import {
 import {
   type PacienteDefaults,
   ESTADOS_UF,
+  SEXO_LABELS,
+  ESTADO_CIVIL_LABELS,
   NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
   ENDERECO_MAX_LENGTH, NUMERO_MAX_LENGTH, COMPLEMENTO_MAX_LENGTH,
   BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH, CONVENIO_MAX_LENGTH,
@@ -23,7 +25,7 @@ function FieldError({ message }: { message?: string }) {
 }
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
+  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50";
 
 export function PacienteForm({
   defaults,
@@ -41,7 +43,7 @@ export function PacienteForm({
   );
 
   return (
-    <form action={formAction} className="space-y-8">
+    <form action={formAction} className="space-y-8" aria-busy={isPending}>
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
       {state.error && (
@@ -66,6 +68,7 @@ export function PacienteForm({
               name="nome"
               type="text"
               required
+              disabled={isPending}
               maxLength={NOME_MAX_LENGTH}
               defaultValue={defaults?.nome ?? ""}
               className={inputClass}
@@ -82,6 +85,7 @@ export function PacienteForm({
               name="cpf"
               type="text"
               inputMode="numeric"
+              disabled={isPending}
               placeholder="000.000.000-00"
               defaultValue={defaults?.cpf ? maskCPF(defaults.cpf) : ""}
               onChange={(e) => (e.target.value = maskCPF(e.target.value))}
@@ -98,6 +102,7 @@ export function PacienteForm({
               id="rg"
               name="rg"
               type="text"
+              disabled={isPending}
               maxLength={RG_MAX_LENGTH}
               defaultValue={defaults?.rg ?? ""}
               className={inputClass}
@@ -113,6 +118,7 @@ export function PacienteForm({
               id="data_nascimento"
               name="data_nascimento"
               type="date"
+              disabled={isPending}
               max={today}
               defaultValue={defaults?.data_nascimento ?? ""}
               className={inputClass}
@@ -127,13 +133,16 @@ export function PacienteForm({
             <select
               id="sexo"
               name="sexo"
+              disabled={isPending}
               defaultValue={defaults?.sexo ?? ""}
               className={inputClass}
             >
               <option value="">Selecione</option>
-              <option value="masculino">Masculino</option>
-              <option value="feminino">Feminino</option>
-              <option value="outro">Outro</option>
+              {Object.entries(SEXO_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -144,15 +153,16 @@ export function PacienteForm({
             <select
               id="estado_civil"
               name="estado_civil"
+              disabled={isPending}
               defaultValue={defaults?.estado_civil ?? ""}
               className={inputClass}
             >
               <option value="">Selecione</option>
-              <option value="solteiro">Solteiro(a)</option>
-              <option value="casado">Casado(a)</option>
-              <option value="divorciado">Divorciado(a)</option>
-              <option value="viuvo">Viúvo(a)</option>
-              <option value="uniao_estavel">União estável</option>
+              {Object.entries(ESTADO_CIVIL_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -172,6 +182,7 @@ export function PacienteForm({
               name="telefone"
               type="tel"
               inputMode="numeric"
+              disabled={isPending}
               placeholder="(00) 00000-0000"
               defaultValue={defaults?.telefone ? maskPhone(defaults.telefone) : ""}
               onChange={(e) => (e.target.value = maskPhone(e.target.value))}
@@ -188,6 +199,7 @@ export function PacienteForm({
               id="email"
               name="email"
               type="email"
+              disabled={isPending}
               maxLength={EMAIL_MAX_LENGTH}
               placeholder="paciente@email.com"
               defaultValue={defaults?.email ?? ""}
@@ -212,6 +224,7 @@ export function PacienteForm({
               name="cep"
               type="text"
               inputMode="numeric"
+              disabled={isPending}
               placeholder="00000-000"
               defaultValue={defaults?.cep ? maskCEP(defaults.cep) : ""}
               onChange={(e) => (e.target.value = maskCEP(e.target.value))}
@@ -228,6 +241,7 @@ export function PacienteForm({
               id="endereco"
               name="endereco"
               type="text"
+              disabled={isPending}
               maxLength={ENDERECO_MAX_LENGTH}
               defaultValue={defaults?.endereco ?? ""}
               className={inputClass}
@@ -243,6 +257,7 @@ export function PacienteForm({
               id="numero"
               name="numero"
               type="text"
+              disabled={isPending}
               maxLength={NUMERO_MAX_LENGTH}
               defaultValue={defaults?.numero ?? ""}
               className={inputClass}
@@ -257,6 +272,7 @@ export function PacienteForm({
               id="complemento"
               name="complemento"
               type="text"
+              disabled={isPending}
               maxLength={COMPLEMENTO_MAX_LENGTH}
               defaultValue={defaults?.complemento ?? ""}
               className={inputClass}
@@ -271,6 +287,7 @@ export function PacienteForm({
               id="bairro"
               name="bairro"
               type="text"
+              disabled={isPending}
               maxLength={BAIRRO_MAX_LENGTH}
               defaultValue={defaults?.bairro ?? ""}
               className={inputClass}
@@ -285,6 +302,7 @@ export function PacienteForm({
               id="cidade"
               name="cidade"
               type="text"
+              disabled={isPending}
               maxLength={CIDADE_MAX_LENGTH}
               defaultValue={defaults?.cidade ?? ""}
               className={inputClass}
@@ -298,6 +316,7 @@ export function PacienteForm({
             <select
               id="estado"
               name="estado"
+              disabled={isPending}
               defaultValue={defaults?.estado ?? ""}
               className={inputClass}
             >
@@ -327,6 +346,7 @@ export function PacienteForm({
               id="convenio"
               name="convenio"
               type="text"
+              disabled={isPending}
               maxLength={CONVENIO_MAX_LENGTH}
               placeholder="Nome do convênio"
               defaultValue={defaults?.convenio ?? ""}
@@ -343,6 +363,7 @@ export function PacienteForm({
             id="observacoes"
             name="observacoes"
             rows={3}
+            disabled={isPending}
             maxLength={OBSERVACOES_MAX_LENGTH}
             defaultValue={defaults?.observacoes ?? ""}
             className={inputClass}

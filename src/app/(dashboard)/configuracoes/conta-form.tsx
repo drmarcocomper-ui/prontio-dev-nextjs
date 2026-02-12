@@ -24,7 +24,7 @@ export function ContaForm({ email }: { email: string }) {
       </div>
 
       {/* Change password */}
-      <form action={formAction} className="space-y-4">
+      <form action={formAction} className="space-y-4" aria-busy={isPending}>
         <h3 className="text-sm font-semibold text-gray-900">Alterar senha</h3>
 
         {state.error && (
@@ -43,6 +43,7 @@ export function ContaForm({ email }: { email: string }) {
               name="new_password"
               type="password"
               required
+              disabled={isPending}
               minLength={SENHA_MIN}
               maxLength={SENHA_MAX}
               placeholder="Mínimo 6 caracteres"
@@ -59,6 +60,7 @@ export function ContaForm({ email }: { email: string }) {
               name="confirm_password"
               type="password"
               required
+              disabled={isPending}
               minLength={SENHA_MIN}
               maxLength={SENHA_MAX}
               placeholder="Repita a senha"

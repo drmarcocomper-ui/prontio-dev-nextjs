@@ -3,11 +3,11 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
-import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH } from "../types";
+import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
+  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -34,7 +34,7 @@ export function ProntuarioForm({
   const cancel = cancelHref ?? (isEditing ? `/prontuarios/${defaults?.id}` : "/prontuarios");
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
       {state.error && (
@@ -67,6 +67,7 @@ export function ProntuarioForm({
             name="data"
             type="date"
             required
+            disabled={isPending}
             max={today}
             defaultValue={defaults?.data ?? today}
             className={inputClass}
@@ -81,13 +82,13 @@ export function ProntuarioForm({
           <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
             Tipo
           </label>
-          <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} className={inputClass}>
+          <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} disabled={isPending} className={inputClass}>
             <option value="">Selecione</option>
-            <option value="consulta">Consulta</option>
-            <option value="retorno">Retorno</option>
-            <option value="exame">Exame</option>
-            <option value="procedimento">Procedimento</option>
-            <option value="avaliacao">Avaliação</option>
+            {Object.entries(TIPO_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -101,6 +102,7 @@ export function ProntuarioForm({
             type="text"
             placeholder="Ex: J06.9"
             maxLength={CID_MAX_LENGTH}
+            disabled={isPending}
             defaultValue={defaults?.cid ?? ""}
             className={inputClass}
           />
@@ -122,6 +124,7 @@ export function ProntuarioForm({
             name="queixa_principal"
             rows={2}
             maxLength={TEXTO_MAX_LENGTH}
+            disabled={isPending}
             placeholder="Motivo da consulta..."
             defaultValue={defaults?.queixa_principal ?? ""}
             className={inputClass}
@@ -138,6 +141,7 @@ export function ProntuarioForm({
             name="historia_doenca"
             rows={3}
             maxLength={TEXTO_MAX_LENGTH}
+            disabled={isPending}
             placeholder="Evolução dos sintomas, duração, fatores de melhora/piora..."
             defaultValue={defaults?.historia_doenca ?? ""}
             className={inputClass}
@@ -154,6 +158,7 @@ export function ProntuarioForm({
             name="exame_fisico"
             rows={3}
             maxLength={TEXTO_MAX_LENGTH}
+            disabled={isPending}
             placeholder="Sinais vitais, achados do exame..."
             defaultValue={defaults?.exame_fisico ?? ""}
             className={inputClass}
@@ -170,6 +175,7 @@ export function ProntuarioForm({
             name="hipotese_diagnostica"
             rows={2}
             maxLength={TEXTO_MAX_LENGTH}
+            disabled={isPending}
             placeholder="Diagnóstico provável..."
             defaultValue={defaults?.hipotese_diagnostica ?? ""}
             className={inputClass}
@@ -186,6 +192,7 @@ export function ProntuarioForm({
             name="conduta"
             rows={3}
             maxLength={TEXTO_MAX_LENGTH}
+            disabled={isPending}
             placeholder="Plano terapêutico, medicamentos prescritos, orientações..."
             defaultValue={defaults?.conduta ?? ""}
             className={inputClass}
@@ -203,6 +210,7 @@ export function ProntuarioForm({
           name="observacoes"
           rows={2}
           maxLength={OBSERVACOES_MAX_LENGTH}
+          disabled={isPending}
           defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}
         />

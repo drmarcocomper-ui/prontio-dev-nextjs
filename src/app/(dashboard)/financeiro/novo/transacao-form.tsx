@@ -11,11 +11,12 @@ import {
   CATEGORIAS_RECEITA,
   CATEGORIAS_DESPESA,
   PAGAMENTO_LABELS,
+  STATUS_LABELS,
   maskCurrency,
 } from "../constants";
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500";
+  "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -38,7 +39,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
   const cancelHref = isEditing ? `/financeiro/${defaults.id}` : "/financeiro";
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
       {state.error && (
@@ -64,6 +65,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
               type="radio"
               name="tipo"
               value="receita"
+              disabled={isPending}
               checked={tipo === "receita"}
               onChange={() => setTipo("receita")}
               className="sr-only"
@@ -84,6 +86,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
               type="radio"
               name="tipo"
               value="despesa"
+              disabled={isPending}
               checked={tipo === "despesa"}
               onChange={() => setTipo("despesa")}
               className="sr-only"
@@ -108,6 +111,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
             name="descricao"
             type="text"
             required
+            disabled={isPending}
             maxLength={DESCRICAO_MAX_LENGTH}
             placeholder="Ex: Consulta particular"
             defaultValue={defaults?.descricao ?? ""}
@@ -126,6 +130,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
             type="text"
             inputMode="numeric"
             required
+            disabled={isPending}
             placeholder="0,00"
             defaultValue={defaults?.valor ?? ""}
             onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
@@ -146,6 +151,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
             name="data"
             type="date"
             required
+            disabled={isPending}
             defaultValue={defaults?.data ?? today}
             className={inputClass}
           />
@@ -156,7 +162,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           <label htmlFor="categoria" className="block text-sm font-medium text-gray-700">
             Categoria
           </label>
-          <select id="categoria" name="categoria" defaultValue={defaults?.categoria ?? ""} className={inputClass}>
+          <select id="categoria" name="categoria" disabled={isPending} defaultValue={defaults?.categoria ?? ""} className={inputClass}>
             <option value="">Selecione</option>
             {categorias.map((c) => (
               <option key={c.value} value={c.value}>
@@ -170,7 +176,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           <label htmlFor="forma_pagamento" className="block text-sm font-medium text-gray-700">
             Forma de pagamento
           </label>
-          <select id="forma_pagamento" name="forma_pagamento" defaultValue={defaults?.forma_pagamento ?? ""} className={inputClass}>
+          <select id="forma_pagamento" name="forma_pagamento" disabled={isPending} defaultValue={defaults?.forma_pagamento ?? ""} className={inputClass}>
             <option value="">Selecione</option>
             {Object.entries(PAGAMENTO_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -187,9 +193,12 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           <label htmlFor="status" className="block text-sm font-medium text-gray-700">
             Status
           </label>
-          <select id="status" name="status" defaultValue={defaults?.status ?? "pago"} className={inputClass}>
-            <option value="pago">Pago</option>
-            <option value="pendente">Pendente</option>
+          <select id="status" name="status" disabled={isPending} defaultValue={defaults?.status ?? "pago"} className={inputClass}>
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -218,6 +227,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
           id="observacoes"
           name="observacoes"
           rows={2}
+          disabled={isPending}
           maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
           className={inputClass}

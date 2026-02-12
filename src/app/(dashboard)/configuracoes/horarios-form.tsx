@@ -20,7 +20,7 @@ export function HorariosForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {state.error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
@@ -41,6 +41,7 @@ export function HorariosForm({
           min="5"
           max="240"
           step="5"
+          disabled={isPending}
           defaultValue={defaults.duracao_consulta ?? "30"}
           className={INPUT_CLASS}
         />
@@ -65,15 +66,17 @@ export function HorariosForm({
               <input
                 name={`config_horario_${dia.key}_inicio`}
                 type="time"
+                disabled={isPending}
                 defaultValue={defaults[`horario_${dia.key}_inicio`] ?? "08:00"}
-                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
               />
               <span className="text-sm text-gray-400">até</span>
               <input
                 name={`config_horario_${dia.key}_fim`}
                 type="time"
+                disabled={isPending}
                 defaultValue={defaults[`horario_${dia.key}_fim`] ?? "18:00"}
-                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
               />
             </div>
           ))}
@@ -87,15 +90,17 @@ export function HorariosForm({
           <input
             name="config_intervalo_inicio"
             type="time"
+            disabled={isPending}
             defaultValue={defaults.intervalo_inicio ?? "12:00"}
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
           />
           <span className="text-sm text-gray-400">até</span>
           <input
             name="config_intervalo_fim"
             type="time"
+            disabled={isPending}
             defaultValue={defaults.intervalo_fim ?? "13:00"}
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
           />
         </div>
       </div>

@@ -30,7 +30,7 @@ export function ConsultorioForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {state.error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
@@ -47,6 +47,7 @@ export function ConsultorioForm({
             name="config_nome_consultorio"
             type="text"
             required
+            disabled={isPending}
             maxLength={NOME_CONSULTORIO_MAX}
             defaultValue={defaults.nome_consultorio ?? ""}
             className={INPUT_CLASS}
@@ -62,6 +63,7 @@ export function ConsultorioForm({
             name="config_cnpj"
             type="text"
             inputMode="numeric"
+            disabled={isPending}
             maxLength={CNPJ_MAX}
             placeholder="00.000.000/0000-00"
             defaultValue={defaults.cnpj ? maskCNPJ(defaults.cnpj) : ""}
@@ -79,6 +81,7 @@ export function ConsultorioForm({
             name="config_telefone_consultorio"
             type="tel"
             inputMode="numeric"
+            disabled={isPending}
             maxLength={TELEFONE_MAX}
             placeholder="(00) 00000-0000"
             defaultValue={defaults.telefone_consultorio ? maskPhone(defaults.telefone_consultorio) : ""}
@@ -95,6 +98,7 @@ export function ConsultorioForm({
             id="endereco_consultorio"
             name="config_endereco_consultorio"
             type="text"
+            disabled={isPending}
             maxLength={ENDERECO_MAX}
             defaultValue={defaults.endereco_consultorio ?? ""}
             className={INPUT_CLASS}
@@ -109,6 +113,7 @@ export function ConsultorioForm({
             id="cidade_consultorio"
             name="config_cidade_consultorio"
             type="text"
+            disabled={isPending}
             maxLength={CIDADE_MAX}
             defaultValue={defaults.cidade_consultorio ?? ""}
             className={INPUT_CLASS}
@@ -123,6 +128,7 @@ export function ConsultorioForm({
             id="estado_consultorio"
             name="config_estado_consultorio"
             type="text"
+            disabled={isPending}
             maxLength={ESTADO_MAX}
             placeholder="UF"
             defaultValue={defaults.estado_consultorio ?? ""}
