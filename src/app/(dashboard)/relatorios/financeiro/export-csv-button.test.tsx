@@ -46,8 +46,8 @@ describe("ExportCsvButton", () => {
     mockRevokeObjectURL = vi.fn();
     mockClick = vi.fn();
 
-    global.URL.createObjectURL = mockCreateObjectURL;
-    global.URL.revokeObjectURL = mockRevokeObjectURL;
+    global.URL.createObjectURL = mockCreateObjectURL as typeof URL.createObjectURL;
+    global.URL.revokeObjectURL = mockRevokeObjectURL as typeof URL.revokeObjectURL;
 
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "a") {

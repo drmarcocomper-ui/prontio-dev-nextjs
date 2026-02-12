@@ -25,14 +25,14 @@ vi.mock("./conta-form", () => ({
   ),
 }));
 
-const mockConfigData = {
+const mockConfigData: { data: { chave: string; valor: string }[] | null } = {
   data: [
     { chave: "nome_consultorio", valor: "Clínica Teste" },
     { chave: "cnpj", valor: "12345678000100" },
   ],
 };
 
-const mockUser = {
+const mockUser: { data: { user: { email: string } | null } } = {
   data: { user: { email: "doc@test.com" } },
 };
 

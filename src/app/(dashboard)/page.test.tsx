@@ -51,7 +51,14 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import DashboardPage from "./page";
 
-const proximasMock = [
+const proximasMock: {
+  id: string;
+  hora_inicio: string;
+  hora_fim: string;
+  tipo: string | null;
+  status: string;
+  pacientes: { id: string; nome: string };
+}[] = [
   {
     id: "ag-1",
     hora_inicio: "09:00:00",
@@ -70,7 +77,7 @@ const proximasMock = [
   },
 ];
 
-const atividadesMock = [
+const atividadesMock: ReturnType<typeof makeActivity>[] = [
   {
     id: "pr-1",
     data: "2024-06-15",
