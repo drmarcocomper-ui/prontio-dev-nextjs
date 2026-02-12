@@ -24,6 +24,8 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   redirect: (...args: unknown[]) => {
     mockRedirect(...args);
@@ -97,7 +99,7 @@ describe("criarReceita", () => {
   it("retorna erro quando insert falha", async () => {
     mockInsert.mockResolvedValueOnce({ data: null, error: { message: "DB error" } });
     const result = await criarReceita({}, makeFormData({ paciente_id: "p-1", data: "2024-06-15", tipo: "simples", medicamentos: "Amoxicilina" }));
-    expect(result.error).toBe("Erro ao salvar receita. Tente novamente.");
+    expect(result.error).toBe("Erro ao criar receita. Tente novamente.");
   });
 });
 

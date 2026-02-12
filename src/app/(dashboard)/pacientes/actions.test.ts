@@ -20,6 +20,8 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   redirect: (...args: unknown[]) => {
     mockRedirect(...args);
@@ -50,7 +52,7 @@ describe("criarPaciente", () => {
 
   it("retorna fieldErrors quando CPF é inválido", async () => {
     const result = await criarPaciente({}, makeFormData({ nome: "João", cpf: "123" }));
-    expect(result.fieldErrors?.cpf).toBe("CPF deve ter 11 dígitos.");
+    expect(result.fieldErrors?.cpf).toBe("CPF inválido.");
   });
 
   it("retorna fieldErrors quando email é inválido", async () => {
@@ -88,10 +90,10 @@ describe("criarPaciente", () => {
 
   it("limpa caracteres do CPF e telefone", async () => {
     await expect(
-      criarPaciente({}, makeFormData({ nome: "João", cpf: "123.456.789-01", telefone: "(11) 98765-4321" }))
+      criarPaciente({}, makeFormData({ nome: "João", cpf: "529.982.247-25", telefone: "(11) 98765-4321" }))
     ).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ cpf: "12345678901", telefone: "11987654321" })
+      expect.objectContaining({ cpf: "52998224725", telefone: "11987654321" })
     );
   });
 
@@ -104,7 +106,7 @@ describe("criarPaciente", () => {
   it("retorna erro genérico quando insert falha", async () => {
     mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await criarPaciente({}, makeFormData({ nome: "João" }));
-    expect(result.error).toBe("Erro ao cadastrar paciente. Tente novamente.");
+    expect(result.error).toBe("Erro ao criar paciente. Tente novamente.");
   });
 });
 
@@ -143,7 +145,7 @@ describe("atualizarPaciente", () => {
 
   it("retorna fieldErrors quando CPF é inválido na atualização", async () => {
     const result = await atualizarPaciente({}, makeFormData({ id: "p-1", nome: "Maria", cpf: "123" }));
-    expect(result.fieldErrors?.cpf).toBe("CPF deve ter 11 dígitos.");
+    expect(result.fieldErrors?.cpf).toBe("CPF inválido.");
   });
 
   it("retorna fieldErrors quando telefone é inválido na atualização", async () => {

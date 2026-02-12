@@ -51,6 +51,8 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   redirect: (...args: unknown[]) => {
     mockRedirect(...args);

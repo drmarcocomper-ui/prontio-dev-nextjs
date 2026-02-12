@@ -30,9 +30,9 @@ vi.mock("../types", async () => {
   return { ...actual };
 });
 
-vi.mock("./delete-button", () => ({
-  DeleteButton: ({ pacienteId }: { pacienteId: string }) => (
-    <button data-testid="delete-button" data-id={pacienteId}>
+vi.mock("@/components/delete-button", () => ({
+  DeleteButton: ({ onDelete, title }: { onDelete: () => void; title: string }) => (
+    <button data-testid="delete-button" data-title={title} onClick={onDelete}>
       Excluir
     </button>
   ),
@@ -155,10 +155,10 @@ describe("PacienteDetalhesPage", () => {
     expect(link).toHaveAttribute("href", "/pacientes/abc-123/editar");
   });
 
-  it("renderiza o DeleteButton com pacienteId", async () => {
+  it("renderiza o DeleteButton", async () => {
     await renderPage();
     const btn = screen.getByTestId("delete-button");
-    expect(btn).toHaveAttribute("data-id", "abc-123");
+    expect(btn).toHaveAttribute("data-title", "Excluir paciente");
   });
 
   it("formata e exibe o CPF", async () => {

@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockUpsert = vi.fn().mockResolvedValue({ error: null });
 const mockUpdateUser = vi.fn().mockResolvedValue({ error: null });
 
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({

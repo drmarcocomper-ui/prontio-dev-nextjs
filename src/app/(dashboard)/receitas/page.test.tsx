@@ -22,13 +22,25 @@ vi.mock("./types", async () => {
   return { ...actual };
 });
 
-vi.mock("./search-input", () => ({
+vi.mock("@/components/search-input", () => ({
   SearchInput: ({ defaultValue }: { defaultValue?: string }) => (
     <input data-testid="search-input" defaultValue={defaultValue} />
   ),
 }));
 
-const mockData: { data: unknown[] | null } = { data: [] };
+vi.mock("@/components/pagination", () => ({
+  Pagination: () => <div data-testid="pagination" />,
+}));
+
+vi.mock("@/components/sort-select", () => ({
+  SortSelect: () => <div data-testid="sort-select" />,
+}));
+
+vi.mock("./filters", () => ({
+  ReceitaFilters: () => <div data-testid="filters" />,
+}));
+
+const mockData: { data: unknown[] | null; count: number } = { data: [], count: 0 };
 
 function createQueryResult() {
   const result = {
@@ -36,6 +48,8 @@ function createQueryResult() {
     or: () => createQueryResult(),
     order: () => createQueryResult(),
     limit: () => createQueryResult(),
+    range: () => createQueryResult(),
+    eq: () => createQueryResult(),
   };
   return result;
 }
@@ -78,6 +92,7 @@ async function renderPage(searchParams: { q?: string } = {}) {
 describe("ReceitasPage", () => {
   beforeEach(() => {
     mockData.data = [];
+    mockData.count = 0;
   });
 
   it("renderiza o título Receitas", async () => {
@@ -116,6 +131,7 @@ describe("ReceitasPage", () => {
 
   it("exibe contagem de registros", async () => {
     mockData.data = receitasMock;
+    mockData.count = 2;
     await renderPage();
     expect(screen.getByText("2 registros")).toBeInTheDocument();
   });

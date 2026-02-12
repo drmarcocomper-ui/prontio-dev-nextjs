@@ -24,6 +24,8 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   redirect: (...args: unknown[]) => {
     mockRedirect(...args);
@@ -112,7 +114,7 @@ describe("criarProntuario", () => {
   it("retorna erro quando insert falha", async () => {
     mockInsert.mockResolvedValueOnce({ data: null, error: { message: "DB error" } });
     const result = await criarProntuario({}, makeFormData({ paciente_id: "p-1", data: "2024-06-15", queixa_principal: "Dor" }));
-    expect(result.error).toBe("Erro ao salvar prontuário. Tente novamente.");
+    expect(result.error).toBe("Erro ao criar prontuário. Tente novamente.");
   });
 });
 

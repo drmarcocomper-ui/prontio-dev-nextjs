@@ -30,9 +30,9 @@ vi.mock("../constants", async () => {
   return { ...actual };
 });
 
-vi.mock("./delete-button", () => ({
-  DeleteButton: ({ transacaoId }: { transacaoId: string }) => (
-    <button data-testid="delete-button" data-id={transacaoId}>Excluir</button>
+vi.mock("@/components/delete-button", () => ({
+  DeleteButton: ({ onDelete, title }: { onDelete: () => void; title: string }) => (
+    <button data-testid="delete-button" data-title={title} onClick={onDelete}>Excluir</button>
   ),
 }));
 
@@ -136,7 +136,7 @@ describe("TransacaoDetalhesPage", () => {
   it("renderiza o DeleteButton", async () => {
     await renderPage();
     const btn = screen.getByTestId("delete-button");
-    expect(btn).toHaveAttribute("data-id", "t-1");
+    expect(btn).toHaveAttribute("data-title", "Excluir transação");
   });
 
   it("exibe link para editar", async () => {

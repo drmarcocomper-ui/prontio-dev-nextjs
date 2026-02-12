@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -33,16 +33,20 @@ describe("SearchInput", () => {
     render(<SearchInput basePath="/pacientes" placeholder="Buscar por nome, CPF ou telefone..." ariaLabel="Buscar pacientes" />);
     const input = screen.getByPlaceholderText("Buscar por nome, CPF ou telefone...");
     await userEvent.type(input, "João");
-    expect(mockReplace).toHaveBeenLastCalledWith(
-      expect.stringContaining("q=Jo%C3%A3o")
-    );
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenLastCalledWith(
+        expect.stringContaining("q=Jo%C3%A3o")
+      );
+    }, { timeout: 1000 });
   });
 
   it("remove param q quando campo é limpo", async () => {
     render(<SearchInput basePath="/pacientes" placeholder="Buscar por nome, CPF ou telefone..." ariaLabel="Buscar pacientes" defaultValue="Maria" />);
     const input = screen.getByPlaceholderText("Buscar por nome, CPF ou telefone...");
     await userEvent.clear(input);
-    expect(mockReplace).toHaveBeenLastCalledWith("/pacientes?");
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenLastCalledWith("/pacientes?");
+    }, { timeout: 1000 });
   });
 
   it("renderiza o ícone de busca", () => {

@@ -22,19 +22,33 @@ vi.mock("./types", async () => {
   return { ...actual };
 });
 
-vi.mock("./search-input", () => ({
+vi.mock("@/components/search-input", () => ({
   SearchInput: ({ defaultValue }: { defaultValue?: string }) => (
     <input placeholder="Buscar" defaultValue={defaultValue} data-testid="search-input" />
   ),
 }));
 
-const mockData: { data: unknown[] | null } = { data: [] };
+vi.mock("@/components/pagination", () => ({
+  Pagination: () => <div data-testid="pagination" />,
+}));
+
+vi.mock("@/components/sortable-header", () => ({
+  SortableHeader: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
+}));
+
+vi.mock("./filters", () => ({
+  PacienteFilters: () => <div data-testid="filters" />,
+}));
+
+const mockData: { data: unknown[] | null; count: number } = { data: [], count: 0 };
 
 function createQueryResult() {
   const result = {
     then: (resolve: (value: typeof mockData) => void) => resolve(mockData),
     or: () => createQueryResult(),
     order: () => createQueryResult(),
+    range: () => createQueryResult(),
+    eq: () => createQueryResult(),
   };
   return result;
 }
@@ -77,6 +91,7 @@ async function renderPage(searchParams: { q?: string } = {}) {
 describe("PacientesPage", () => {
   beforeEach(() => {
     mockData.data = [];
+    mockData.count = 0;
   });
 
   it("renderiza o título Pacientes", async () => {
@@ -118,12 +133,14 @@ describe("PacientesPage", () => {
 
   it("exibe contagem de pacientes", async () => {
     mockData.data = pacientesMock;
+    mockData.count = 2;
     await renderPage();
     expect(screen.getByText("2 pacientes cadastrados")).toBeInTheDocument();
   });
 
   it("exibe contagem singular para 1 paciente", async () => {
     mockData.data = [pacientesMock[0]];
+    mockData.count = 1;
     await renderPage();
     expect(screen.getByText("1 paciente cadastrado")).toBeInTheDocument();
   });

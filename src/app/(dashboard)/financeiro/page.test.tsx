@@ -21,14 +21,22 @@ vi.mock("./filters", () => ({
   Filters: () => <div data-testid="filters" />,
 }));
 
+vi.mock("@/components/pagination", () => ({
+  Pagination: () => <div data-testid="pagination" />,
+}));
+
+vi.mock("@/components/sortable-header", () => ({
+  SortableHeader: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
+}));
+
 vi.mock("./constants", async () => {
   const actual = await vi.importActual("./constants");
   return { ...actual };
 });
 
-vi.mock("./delete-button", () => ({
-  DeleteButton: ({ transacaoId }: { transacaoId: string }) => (
-    <button data-testid={`delete-${transacaoId}`}>Excluir</button>
+vi.mock("@/components/delete-button", () => ({
+  DeleteButton: ({ title }: { title: string }) => (
+    <button data-testid="delete-button" data-title={title}>Excluir</button>
   ),
 }));
 
@@ -41,6 +49,7 @@ function createQueryResult() {
     gte: () => createQueryResult(),
     lte: () => createQueryResult(),
     order: () => createQueryResult(),
+    range: () => createQueryResult(),
   };
   return result;
 }
@@ -164,8 +173,8 @@ describe("FinanceiroPage", () => {
   it("renderiza DeleteButton para cada transação", async () => {
     mockData.data = transacoesMock;
     await renderPage();
-    expect(screen.getByTestId("delete-t-1")).toBeInTheDocument();
-    expect(screen.getByTestId("delete-t-2")).toBeInTheDocument();
+    const buttons = screen.getAllByTestId("delete-button");
+    expect(buttons).toHaveLength(2);
   });
 
   it("aceita filtro por tipo via searchParams", async () => {

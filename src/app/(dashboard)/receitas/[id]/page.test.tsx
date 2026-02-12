@@ -30,9 +30,9 @@ vi.mock("../types", async () => {
   return { ...actual };
 });
 
-vi.mock("./delete-button", () => ({
-  DeleteButton: ({ receitaId }: { receitaId: string }) => (
-    <button data-testid="delete-button" data-id={receitaId}>Excluir</button>
+vi.mock("@/components/delete-button", () => ({
+  DeleteButton: ({ onDelete, title }: { onDelete: () => void; title: string }) => (
+    <button data-testid="delete-button" data-title={title} onClick={onDelete}>Excluir</button>
   ),
 }));
 
@@ -105,7 +105,7 @@ describe("ReceitaDetalhesPage", () => {
   it("renderiza o DeleteButton", async () => {
     await renderPage();
     const btn = screen.getByTestId("delete-button");
-    expect(btn).toHaveAttribute("data-id", "rec-1");
+    expect(btn).toHaveAttribute("data-title", "Excluir receita");
   });
 
   it("renderiza os medicamentos", async () => {

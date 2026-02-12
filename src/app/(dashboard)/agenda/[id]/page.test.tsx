@@ -31,9 +31,9 @@ vi.mock("../status-badge", () => ({
   ),
 }));
 
-vi.mock("./delete-button", () => ({
-  DeleteButton: ({ agendamentoId, data }: { agendamentoId: string; data: string }) => (
-    <button data-testid="delete-button" data-id={agendamentoId} data-data={data}>Excluir</button>
+vi.mock("@/components/delete-button", () => ({
+  DeleteButton: ({ onDelete, title }: { onDelete: () => void; title: string }) => (
+    <button data-testid="delete-button" data-title={title} onClick={onDelete}>Excluir</button>
   ),
 }));
 
@@ -118,8 +118,7 @@ describe("AgendamentoDetalhesPage", () => {
   it("renderiza o DeleteButton com props corretas", async () => {
     await renderPage();
     const btn = screen.getByTestId("delete-button");
-    expect(btn).toHaveAttribute("data-id", "ag-1");
-    expect(btn).toHaveAttribute("data-data", "2024-06-15");
+    expect(btn).toHaveAttribute("data-title", "Excluir agendamento");
   });
 
   it("exibe observações", async () => {

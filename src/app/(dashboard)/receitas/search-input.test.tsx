@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -30,14 +30,18 @@ describe("SearchInput (receitas)", () => {
     render(<SearchInput basePath="/receitas" placeholder="Buscar por paciente ou medicamento..." ariaLabel="Buscar receitas" />);
     const input = screen.getByPlaceholderText("Buscar por paciente ou medicamento...");
     await userEvent.type(input, "teste");
-    expect(mockReplace).toHaveBeenCalledWith(expect.stringContaining("q=teste"));
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(expect.stringContaining("q=teste"));
+    }, { timeout: 1000 });
   });
 
   it("remove o param q ao limpar o input", async () => {
     render(<SearchInput basePath="/receitas" placeholder="Buscar por paciente ou medicamento..." ariaLabel="Buscar receitas" defaultValue="x" />);
     const input = screen.getByPlaceholderText("Buscar por paciente ou medicamento...");
     await userEvent.clear(input);
-    expect(mockReplace).toHaveBeenCalledWith("/receitas?");
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/receitas?");
+    }, { timeout: 1000 });
   });
 
   it("renderiza ícone de busca", () => {

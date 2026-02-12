@@ -23,6 +23,8 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   redirect: (...args: unknown[]) => {
     mockRedirect(...args);
@@ -95,7 +97,7 @@ describe("criarTransacao", () => {
   it("retorna erro quando insert falha", async () => {
     mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
-    expect(result.error).toBe("Erro ao registrar transação. Tente novamente.");
+    expect(result.error).toBe("Erro ao criar transação. Tente novamente.");
   });
 });
 
