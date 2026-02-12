@@ -32,13 +32,14 @@ export function SortableHeader({
   const href = qs ? `${basePath}?${qs}` : basePath;
 
   return (
-    <th scope="col" className={className ?? "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"}>
+    <th scope="col" aria-sort={isActive ? (currentDirection === "asc" ? "ascending" : "descending") : "none"} className={className ?? "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"}>
       <Link
         href={href}
         className="group inline-flex items-center gap-1 hover:text-gray-900"
       >
         {label}
         <span
+          aria-hidden="true"
           className={
             isActive
               ? "text-gray-700"

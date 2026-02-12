@@ -5,6 +5,7 @@ export default function NotFound() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="text-center">
         <svg
+          aria-hidden="true"
           className="mx-auto h-16 w-16 text-gray-400"
           fill="none"
           viewBox="0 0 24 24"
