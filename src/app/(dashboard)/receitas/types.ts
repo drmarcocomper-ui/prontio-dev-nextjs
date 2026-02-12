@@ -1,3 +1,5 @@
+export type ReceitaTipo = "simples" | "especial" | "controle_especial";
+
 export interface ReceitaPaciente {
   id: string;
   nome: string;
@@ -6,7 +8,7 @@ export interface ReceitaPaciente {
 export interface ReceitaListItem {
   id: string;
   data: string;
-  tipo: string;
+  tipo: ReceitaTipo;
   medicamentos: string;
   pacientes: ReceitaPaciente;
 }
@@ -14,7 +16,7 @@ export interface ReceitaListItem {
 export interface Receita {
   id: string;
   data: string;
-  tipo: string;
+  tipo: ReceitaTipo;
   medicamentos: string;
   observacoes: string | null;
   created_at: string;
@@ -24,7 +26,7 @@ export interface Receita {
 export interface ReceitaImpressao {
   id: string;
   data: string;
-  tipo: string;
+  tipo: ReceitaTipo;
   medicamentos: string;
   observacoes: string | null;
   pacientes: {
@@ -38,7 +40,7 @@ export interface ReceitaDefaults {
   paciente_id?: string;
   paciente_nome?: string;
   data?: string;
-  tipo?: string | null;
+  tipo?: ReceitaTipo | null;
   medicamentos?: string | null;
   observacoes?: string | null;
 }
@@ -46,7 +48,7 @@ export interface ReceitaDefaults {
 export interface ReceitaComPaciente {
   id: string;
   data: string;
-  tipo: string;
+  tipo: ReceitaTipo;
   medicamentos: string;
   observacoes: string | null;
   pacientes: ReceitaPaciente;
@@ -55,13 +57,13 @@ export interface ReceitaComPaciente {
 export const MEDICAMENTOS_MAX_LENGTH = 5000;
 export const OBSERVACOES_MAX_LENGTH = 1000;
 
-export const TIPO_LABELS: Record<string, string> = {
+export const TIPO_LABELS: Record<ReceitaTipo, string> = {
   simples: "Simples",
   especial: "Especial",
   controle_especial: "Controle Especial",
 };
 
-export const TIPO_LABELS_IMPRESSAO: Record<string, string> = {
+export const TIPO_LABELS_IMPRESSAO: Record<ReceitaTipo, string> = {
   simples: "Receita Simples",
   especial: "Receita Especial",
   controle_especial: "Receita de Controle Especial",

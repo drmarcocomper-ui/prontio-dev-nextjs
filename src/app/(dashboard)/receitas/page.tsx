@@ -29,7 +29,8 @@ export default async function ReceitasPage({
 }) {
   const { q, pagina, ordem, dir, tipo } = await searchParams;
   const currentPage = Math.max(1, Number(pagina) || 1);
-  const sortColumn = ordem || "data";
+  const VALID_SORT_COLUMNS = ["data", "paciente"];
+  const sortColumn = VALID_SORT_COLUMNS.includes(ordem ?? "") ? ordem! : "data";
   const sortDir = dir === "asc" ? "asc" : "desc";
   const ascending = sortDir === "asc";
 
@@ -58,7 +59,23 @@ export default async function ReceitasPage({
   const to = from + PAGE_SIZE - 1;
   query = query.range(from, to);
 
-  const { data: receitas, count } = await query;
+  const { data: receitas, count, error } = await query;
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Receitas</h1>
+          </div>
+        </div>
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Não foi possível carregar os dados. Tente recarregar a página.
+        </div>
+      </div>
+    );
+  }
+
   const items = (receitas ?? []) as unknown as ReceitaListItem[];
   const totalItems = count ?? 0;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);

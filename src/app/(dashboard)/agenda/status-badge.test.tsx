@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { StatusBadge } from "./status-badge";
+import type { AgendaStatus } from "./types";
 
 describe("StatusBadge", () => {
   it("renderiza label correto para cada status", () => {
-    const statuses = [
+    const statuses: { value: AgendaStatus; label: string }[] = [
       { value: "agendado", label: "Agendado" },
       { value: "confirmado", label: "Confirmado" },
       { value: "em_atendimento", label: "Em atendimento" },
@@ -18,13 +19,6 @@ describe("StatusBadge", () => {
       expect(screen.getByText(label)).toBeInTheDocument();
       unmount();
     }
-  });
-
-  it("renderiza fallback para status desconhecido", () => {
-    render(<StatusBadge status="invalido" />);
-    const badge = screen.getByText("invalido");
-    expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain("bg-gray-100");
   });
 
   it("aplica classes de cor corretas", () => {

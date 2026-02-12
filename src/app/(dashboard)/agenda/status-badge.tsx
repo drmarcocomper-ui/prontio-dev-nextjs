@@ -1,6 +1,6 @@
-import { STATUS_LABELS, STATUS_STYLES } from "./types";
+import { STATUS_LABELS, STATUS_STYLES, type AgendaStatus } from "./types";
 
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status }: { status: AgendaStatus }) {
   const label = STATUS_LABELS[status] ?? status;
   const color = STATUS_STYLES[status] ?? "bg-gray-100 text-gray-600";
   return (

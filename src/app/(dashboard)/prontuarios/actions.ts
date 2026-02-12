@@ -98,6 +98,10 @@ export async function atualizarProntuario(
   formData: FormData
 ): Promise<ProntuarioFormState> {
   const id = formData.get("id") as string;
+  if (!id) {
+    return { error: "ID inválido." };
+  }
+
   const {
     paciente_id, data, tipo, cid,
     queixa_principal, historia_doenca, exame_fisico,
@@ -138,6 +142,10 @@ export async function atualizarProntuario(
 }
 
 export async function excluirProntuario(id: string): Promise<void> {
+  if (!id) {
+    throw new Error("ID inválido.");
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("prontuarios").delete().eq("id", id);

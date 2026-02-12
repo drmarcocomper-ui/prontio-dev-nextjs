@@ -5,24 +5,24 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { atualizarStatusAgendamento } from "./actions";
-import { STATUS_TRANSITIONS, STATUS_LABELS } from "./types";
+import { STATUS_TRANSITIONS, STATUS_LABELS, type AgendaStatus } from "./types";
 
-const DESTRUCTIVE_STATUSES = new Set(["cancelado", "faltou"]);
+const DESTRUCTIVE_STATUSES = new Set<AgendaStatus>(["cancelado", "faltou"]);
 
 export function StatusSelect({
   agendamentoId,
   currentStatus,
 }: {
   agendamentoId: string;
-  currentStatus: string;
+  currentStatus: AgendaStatus;
 }) {
   const [isPending, startTransition] = useTransition();
-  const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
+  const [confirmStatus, setConfirmStatus] = useState<AgendaStatus | null>(null);
   const router = useRouter();
 
   const allowed = STATUS_TRANSITIONS[currentStatus] ?? [];
 
-  function executeChange(newStatus: string) {
+  function executeChange(newStatus: AgendaStatus) {
     startTransition(async () => {
       try {
         await atualizarStatusAgendamento(agendamentoId, newStatus);
@@ -36,7 +36,7 @@ export function StatusSelect({
     });
   }
 
-  function handleChange(newStatus: string) {
+  function handleChange(newStatus: AgendaStatus) {
     if (newStatus === currentStatus) return;
     if (DESTRUCTIVE_STATUSES.has(newStatus)) {
       setConfirmStatus(newStatus);
@@ -53,7 +53,7 @@ export function StatusSelect({
     <>
       <select
         value={currentStatus}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(e) => handleChange(e.target.value as AgendaStatus)}
         disabled={isPending}
         aria-label="Alterar status do agendamento"
         className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium shadow-sm transition-colors focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
@@ -74,7 +74,7 @@ export function StatusSelect({
         onConfirm={() => {
           if (confirmStatus) executeChange(confirmStatus);
         }}
-        title={`Marcar como ${STATUS_LABELS[confirmStatus ?? ""] ?? confirmStatus}?`}
+        title={`Marcar como ${confirmStatus ? STATUS_LABELS[confirmStatus] : ""}?`}
         description="Esta ação não pode ser desfeita facilmente. Deseja continuar?"
         confirmLabel="Confirmar"
         isPending={isPending}

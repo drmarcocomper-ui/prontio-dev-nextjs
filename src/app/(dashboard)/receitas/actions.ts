@@ -72,6 +72,10 @@ export async function atualizarReceita(
   formData: FormData
 ): Promise<ReceitaFormState> {
   const id = formData.get("id") as string;
+  if (!id) {
+    return { error: "ID inválido." };
+  }
+
   const { fieldErrors, ...fields } = validarCamposReceita(formData);
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -100,6 +104,10 @@ export async function atualizarReceita(
 }
 
 export async function excluirReceita(id: string): Promise<void> {
+  if (!id) {
+    throw new Error("ID inválido.");
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("receitas").delete().eq("id", id);

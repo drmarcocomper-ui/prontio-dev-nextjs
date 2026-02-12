@@ -18,7 +18,8 @@ export default async function PacientesPage({
 }) {
   const { q, pagina, ordem, dir, sexo } = await searchParams;
   const currentPage = Math.max(1, Number(pagina) || 1);
-  const sortColumn = ordem || "nome";
+  const VALID_SORT_COLUMNS = ["nome", "data_nascimento"];
+  const sortColumn = VALID_SORT_COLUMNS.includes(ordem ?? "") ? ordem! : "nome";
   const sortDir = dir === "desc" ? "desc" : "asc";
   const ascending = sortDir === "asc";
 
@@ -41,7 +42,23 @@ export default async function PacientesPage({
   const to = from + PAGE_SIZE - 1;
   query = query.range(from, to);
 
-  const { data: pacientes, count } = await query;
+  const { data: pacientes, count, error } = await query;
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Pacientes</h1>
+          </div>
+        </div>
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Não foi possível carregar os dados. Tente recarregar a página.
+        </div>
+      </div>
+    );
+  }
+
   const items = (pacientes ?? []) as PacienteListItem[];
   const totalItems = count ?? 0;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);

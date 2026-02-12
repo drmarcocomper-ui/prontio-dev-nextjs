@@ -76,6 +76,10 @@ export async function atualizarTransacao(
   formData: FormData
 ): Promise<TransacaoFormState> {
   const id = formData.get("id") as string;
+  if (!id) {
+    return { error: "ID inválido." };
+  }
+
   const { fieldErrors, ...fields } = validarCamposTransacao(formData);
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -110,6 +114,10 @@ export async function atualizarTransacao(
 }
 
 export async function excluirTransacao(id: string): Promise<void> {
+  if (!id) {
+    throw new Error("ID inválido.");
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("transacoes").delete().eq("id", id);

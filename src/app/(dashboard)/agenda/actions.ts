@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo } from "@/lib/validators";
-import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH } from "./types";
+import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, type AgendaStatus } from "./types";
 
 export type AgendamentoFormState = {
   error?: string;
@@ -121,7 +121,7 @@ export async function criarAgendamento(
 
 export async function atualizarStatusAgendamento(
   id: string,
-  novoStatus: string
+  novoStatus: AgendaStatus
 ): Promise<void> {
   const supabase = await createClient();
 
@@ -135,7 +135,7 @@ export async function atualizarStatusAgendamento(
     throw new Error("Agendamento não encontrado.");
   }
 
-  const statusAtual = agendamento.status as string;
+  const statusAtual = agendamento.status as AgendaStatus;
   const permitidos = STATUS_TRANSITIONS[statusAtual] ?? [];
 
   if (!permitidos.includes(novoStatus)) {
@@ -160,6 +160,10 @@ export async function atualizarAgendamento(
   formData: FormData
 ): Promise<AgendamentoFormState> {
   const id = formData.get("id") as string;
+  if (!id) {
+    return { error: "ID inválido." };
+  }
+
   const { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors } =
     validarCamposAgendamento(formData);
 
@@ -196,6 +200,10 @@ export async function atualizarAgendamento(
 }
 
 export async function excluirAgendamento(id: string, data: string): Promise<void> {
+  if (!id) {
+    throw new Error("ID inválido.");
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("agendamentos").delete().eq("id", id);

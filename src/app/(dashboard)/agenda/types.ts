@@ -1,3 +1,6 @@
+export type AgendaStatus = "agendado" | "confirmado" | "em_atendimento" | "atendido" | "cancelado" | "faltou";
+export type AgendaTipo = "consulta" | "retorno" | "exame" | "procedimento" | "avaliacao";
+
 export interface AgendamentoPaciente {
   id: string;
   nome: string;
@@ -10,8 +13,8 @@ export interface Agendamento {
   data: string;
   hora_inicio: string;
   hora_fim: string;
-  tipo: string | null;
-  status: string;
+  tipo: AgendaTipo | null;
+  status: AgendaStatus;
   observacoes: string | null;
   created_at: string;
   pacientes: AgendamentoPaciente;
@@ -24,13 +27,13 @@ export interface AgendamentoDefaults {
   data?: string;
   hora_inicio?: string;
   hora_fim?: string;
-  tipo?: string | null;
+  tipo?: AgendaTipo | null;
   observacoes?: string | null;
 }
 
 export const OBSERVACOES_MAX_LENGTH = 1000;
 
-export const STATUS_TRANSITIONS: Record<string, string[]> = {
+export const STATUS_TRANSITIONS: Record<AgendaStatus, AgendaStatus[]> = {
   agendado: ["confirmado", "cancelado", "faltou"],
   confirmado: ["em_atendimento", "cancelado", "faltou"],
   em_atendimento: ["atendido", "cancelado"],
@@ -39,7 +42,7 @@ export const STATUS_TRANSITIONS: Record<string, string[]> = {
   faltou: ["agendado"],
 };
 
-export const TIPO_LABELS: Record<string, string> = {
+export const TIPO_LABELS: Record<AgendaTipo, string> = {
   consulta: "Consulta",
   retorno: "Retorno",
   exame: "Exame",
@@ -47,7 +50,7 @@ export const TIPO_LABELS: Record<string, string> = {
   avaliacao: "Avaliação",
 };
 
-export const STATUS_LABELS: Record<string, string> = {
+export const STATUS_LABELS: Record<AgendaStatus, string> = {
   agendado: "Agendado",
   confirmado: "Confirmado",
   em_atendimento: "Em atendimento",
@@ -56,7 +59,7 @@ export const STATUS_LABELS: Record<string, string> = {
   faltou: "Faltou",
 };
 
-export const STATUS_STYLES: Record<string, string> = {
+export const STATUS_STYLES: Record<AgendaStatus, string> = {
   agendado: "bg-blue-100 text-blue-700",
   confirmado: "bg-sky-100 text-sky-700",
   em_atendimento: "bg-amber-100 text-amber-700",

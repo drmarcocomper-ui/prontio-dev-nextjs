@@ -2,6 +2,7 @@ import {
   CATEGORIA_LABELS,
   PAGAMENTO_LABELS,
   type TransacaoListItem,
+  type FormaPagamento,
 } from "../../financeiro/constants";
 
 export interface CategoriaBreakdownRow {
@@ -100,7 +101,7 @@ export function aggregateByPagamento(
       label:
         pg === "nao_informado"
           ? "Não informado"
-          : (PAGAMENTO_LABELS[pg] ?? pg),
+          : (PAGAMENTO_LABELS[pg as FormaPagamento] ?? pg),
       qtd: vals.qtd,
       total: vals.total,
     }))

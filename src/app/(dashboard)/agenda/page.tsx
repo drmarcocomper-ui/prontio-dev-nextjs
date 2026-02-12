@@ -18,11 +18,26 @@ export default async function AgendaPage({
 
   const supabase = await createClient();
 
-  const { data: agendamentos } = await supabase
+  const { data: agendamentos, error } = await supabase
     .from("agendamentos")
     .select("id, paciente_id, data, hora_inicio, hora_fim, tipo, status, observacoes, pacientes(id, nome, telefone)")
     .eq("data", currentDate)
     .order("hora_inicio");
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
+          </div>
+        </div>
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Não foi possível carregar os dados. Tente recarregar a página.
+        </div>
+      </div>
+    );
+  }
 
   const items = (agendamentos ?? []) as unknown as Agendamento[];
   const total = items.length;

@@ -115,6 +115,10 @@ export async function atualizarPaciente(
   formData: FormData
 ): Promise<PacienteFormState> {
   const id = formData.get("id") as string;
+  if (!id) {
+    return { error: "ID inválido." };
+  }
+
   const {
     nome, cpf, rg, data_nascimento, sexo, estado_civil,
     telefone, email, cep, endereco, numero, complemento,
@@ -150,6 +154,10 @@ export async function atualizarPaciente(
 }
 
 export async function excluirPaciente(id: string): Promise<void> {
+  if (!id) {
+    throw new Error("ID inválido.");
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("pacientes").delete().eq("id", id);

@@ -33,7 +33,8 @@ export default async function FinanceiroPage({
 }) {
   const { mes, tipo, pagina, ordem, dir } = await searchParams;
   const currentPage = Math.max(1, Number(pagina) || 1);
-  const sortColumn = ordem || "data";
+  const VALID_SORT_COLUMNS = ["data", "descricao", "valor"];
+  const sortColumn = VALID_SORT_COLUMNS.includes(ordem ?? "") ? ordem! : "data";
   const sortDir = dir === "asc" ? "asc" : "desc";
   const ascending = sortDir === "asc";
 
@@ -61,7 +62,23 @@ export default async function FinanceiroPage({
   const to = from + PAGE_SIZE - 1;
   query = query.range(from, to);
 
-  const { data: transacoes, count } = await query;
+  const { data: transacoes, count, error } = await query;
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
+          </div>
+        </div>
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Não foi possível carregar os dados. Tente recarregar a página.
+        </div>
+      </div>
+    );
+  }
+
   const items = (transacoes ?? []) as unknown as TransacaoListItem[];
   const totalItems = count ?? 0;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
@@ -77,8 +94,8 @@ export default async function FinanceiroPage({
     summaryQuery = summaryQuery.eq("tipo", tipo);
   }
 
-  const { data: allTransacoes } = await summaryQuery;
-  const allItems = allTransacoes ?? [];
+  const { data: allTransacoes, error: summaryError } = await summaryQuery;
+  const allItems = summaryError ? [] : (allTransacoes ?? []);
 
   const totalReceitas = allItems
     .filter((t) => t.tipo === "receita" && t.status !== "cancelado")
