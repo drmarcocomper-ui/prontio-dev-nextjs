@@ -122,16 +122,16 @@ export default async function RelatorioFinanceiroPage({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Categoria
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                   Receitas
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                   Despesas
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                   Saldo
                 </th>
               </tr>
@@ -171,13 +171,13 @@ export default async function RelatorioFinanceiroPage({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Forma
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                   Qtd
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                   Total
                 </th>
               </tr>
@@ -210,22 +210,22 @@ export default async function RelatorioFinanceiroPage({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Data
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Descrição
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Categoria
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Pagamento
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Status
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                   Valor
                 </th>
               </tr>

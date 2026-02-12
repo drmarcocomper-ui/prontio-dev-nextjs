@@ -58,7 +58,7 @@ export function SearchInput({ basePath, placeholder, ariaLabel, defaultValue }: 
       />
       {isPending && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-sky-600" />
+          <div role="status" aria-label="Carregando" className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-sky-600" />
         </div>
       )}
     </div>

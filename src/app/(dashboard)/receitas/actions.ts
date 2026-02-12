@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { tratarErroSupabase } from "@/lib/supabase-errors";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura } from "@/lib/validators";
 import { MEDICAMENTOS_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./types";
 
 export type ReceitaFormState = {
@@ -18,28 +21,16 @@ function validarCamposReceita(formData: FormData) {
 
   const fieldErrors: Record<string, string> = {};
 
-  if (!paciente_id) fieldErrors.paciente_id = "Selecione um paciente.";
+  campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
 
-  if (!data) {
-    fieldErrors.data = "Data é obrigatória.";
-  } else {
-    const today = new Date().toISOString().split("T")[0];
-    if (data > today) {
-      fieldErrors.data = "A data não pode ser no futuro.";
-    }
+  if (campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.")) {
+    dataNaoFutura(fieldErrors, "data", data);
   }
 
-  if (!tipo) fieldErrors.tipo = "Selecione o tipo da receita.";
-
-  if (!medicamentos) {
-    fieldErrors.medicamentos = "Medicamentos é obrigatório.";
-  } else if (medicamentos.length > MEDICAMENTOS_MAX_LENGTH) {
-    fieldErrors.medicamentos = `Máximo de ${MEDICAMENTOS_MAX_LENGTH} caracteres.`;
-  }
-
-  if (observacoes && observacoes.length > OBSERVACOES_MAX_LENGTH) {
-    fieldErrors.observacoes = `Máximo de ${OBSERVACOES_MAX_LENGTH} caracteres.`;
-  }
+  campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo da receita.");
+  campoObrigatorio(fieldErrors, "medicamentos", medicamentos, "Medicamentos é obrigatório.");
+  tamanhoMaximo(fieldErrors, "medicamentos", medicamentos, MEDICAMENTOS_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   return { paciente_id, data, tipo, medicamentos, observacoes, fieldErrors };
 }
@@ -69,9 +60,10 @@ export async function criarReceita(
     .single();
 
   if (error) {
-    return { error: "Erro ao salvar receita. Tente novamente." };
+    return { error: tratarErroSupabase(error, "criar", "receita") };
   }
 
+  revalidatePath("/receitas");
   redirect(`/receitas/${inserted.id}?success=Receita+registrada`);
 }
 
@@ -100,9 +92,10 @@ export async function atualizarReceita(
     .eq("id", id);
 
   if (error) {
-    return { error: "Erro ao atualizar receita. Tente novamente." };
+    return { error: tratarErroSupabase(error, "atualizar", "receita") };
   }
 
+  revalidatePath("/receitas");
   redirect(`/receitas/${id}?success=Receita+atualizada`);
 }
 
@@ -112,8 +105,9 @@ export async function excluirReceita(id: string): Promise<void> {
   const { error } = await supabase.from("receitas").delete().eq("id", id);
 
   if (error) {
-    throw new Error("Erro ao excluir receita.");
+    throw new Error(tratarErroSupabase(error, "excluir", "receita"));
   }
 
+  revalidatePath("/receitas");
   redirect("/receitas?success=Receita+exclu%C3%ADda");
 }

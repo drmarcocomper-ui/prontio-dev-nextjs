@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { tratarErroSupabase } from "@/lib/supabase-errors";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido } from "@/lib/validators";
 import {
   NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
   ENDERECO_MAX_LENGTH, NUMERO_MAX_LENGTH, COMPLEMENTO_MAX_LENGTH,
@@ -35,21 +38,15 @@ function validarCamposPaciente(formData: FormData) {
 
   const fieldErrors: Record<string, string> = {};
 
-  if (!nome) {
-    fieldErrors.nome = "Nome é obrigatório.";
-  } else if (nome.length > NOME_MAX_LENGTH) {
-    fieldErrors.nome = `Máximo de ${NOME_MAX_LENGTH} caracteres.`;
-  }
+  campoObrigatorio(fieldErrors, "nome", nome, "Nome é obrigatório.");
+  tamanhoMaximo(fieldErrors, "nome", nome, NOME_MAX_LENGTH);
 
   if (cpf && !validarCPF(cpf)) {
     fieldErrors.cpf = "CPF inválido.";
   }
 
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    fieldErrors.email = "E-mail inválido.";
-  } else if (email && email.length > EMAIL_MAX_LENGTH) {
-    fieldErrors.email = `Máximo de ${EMAIL_MAX_LENGTH} caracteres.`;
-  }
+  emailValido(fieldErrors, "email", email);
+  tamanhoMaximo(fieldErrors, "email", email, EMAIL_MAX_LENGTH);
 
   if (telefone && (telefone.length < 10 || telefone.length > 11)) {
     fieldErrors.telefone = "Telefone deve ter 10 ou 11 dígitos.";
@@ -59,37 +56,16 @@ function validarCamposPaciente(formData: FormData) {
     fieldErrors.cep = "CEP deve ter 8 dígitos.";
   }
 
-  if (data_nascimento) {
-    const today = new Date().toISOString().split("T")[0];
-    if (data_nascimento > today) {
-      fieldErrors.data_nascimento = "A data de nascimento não pode ser no futuro.";
-    }
-  }
+  dataNaoFutura(fieldErrors, "data_nascimento", data_nascimento, "A data de nascimento não pode ser no futuro.");
 
-  if (rg && rg.length > RG_MAX_LENGTH) {
-    fieldErrors.rg = `Máximo de ${RG_MAX_LENGTH} caracteres.`;
-  }
-  if (endereco && endereco.length > ENDERECO_MAX_LENGTH) {
-    fieldErrors.endereco = `Máximo de ${ENDERECO_MAX_LENGTH} caracteres.`;
-  }
-  if (numero && numero.length > NUMERO_MAX_LENGTH) {
-    fieldErrors.numero = `Máximo de ${NUMERO_MAX_LENGTH} caracteres.`;
-  }
-  if (complemento && complemento.length > COMPLEMENTO_MAX_LENGTH) {
-    fieldErrors.complemento = `Máximo de ${COMPLEMENTO_MAX_LENGTH} caracteres.`;
-  }
-  if (bairro && bairro.length > BAIRRO_MAX_LENGTH) {
-    fieldErrors.bairro = `Máximo de ${BAIRRO_MAX_LENGTH} caracteres.`;
-  }
-  if (cidade && cidade.length > CIDADE_MAX_LENGTH) {
-    fieldErrors.cidade = `Máximo de ${CIDADE_MAX_LENGTH} caracteres.`;
-  }
-  if (convenio && convenio.length > CONVENIO_MAX_LENGTH) {
-    fieldErrors.convenio = `Máximo de ${CONVENIO_MAX_LENGTH} caracteres.`;
-  }
-  if (observacoes && observacoes.length > OBSERVACOES_MAX_LENGTH) {
-    fieldErrors.observacoes = `Máximo de ${OBSERVACOES_MAX_LENGTH} caracteres.`;
-  }
+  tamanhoMaximo(fieldErrors, "rg", rg, RG_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "endereco", endereco, ENDERECO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "numero", numero, NUMERO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "complemento", complemento, COMPLEMENTO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "bairro", bairro, BAIRRO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "cidade", cidade, CIDADE_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "convenio", convenio, CONVENIO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   return {
     nome, cpf, rg, data_nascimento, sexo, estado_civil,
@@ -126,9 +102,11 @@ export async function criarPaciente(
     if (error.code === "23505") {
       return { error: "Já existe um paciente com este CPF." };
     }
-    return { error: "Erro ao cadastrar paciente. Tente novamente." };
+    return { error: tratarErroSupabase(error, "criar", "paciente") };
   }
 
+  revalidatePath("/pacientes");
+  revalidatePath("/");
   redirect("/pacientes?success=Paciente+cadastrado");
 }
 
@@ -163,9 +141,11 @@ export async function atualizarPaciente(
     if (error.code === "23505") {
       return { error: "Já existe um paciente com este CPF." };
     }
-    return { error: "Erro ao atualizar paciente. Tente novamente." };
+    return { error: tratarErroSupabase(error, "atualizar", "paciente") };
   }
 
+  revalidatePath("/pacientes");
+  revalidatePath("/");
   redirect(`/pacientes/${id}?success=Paciente+atualizado`);
 }
 
@@ -175,8 +155,10 @@ export async function excluirPaciente(id: string): Promise<void> {
   const { error } = await supabase.from("pacientes").delete().eq("id", id);
 
   if (error) {
-    throw new Error("Erro ao excluir paciente.");
+    throw new Error(tratarErroSupabase(error, "excluir", "paciente"));
   }
 
+  revalidatePath("/pacientes");
+  revalidatePath("/");
   redirect("/pacientes?success=Paciente+exclu%C3%ADdo");
 }

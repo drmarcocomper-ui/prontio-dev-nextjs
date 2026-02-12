@@ -38,6 +38,7 @@ export function DeleteButton({
         <button
           onClick={() => setOpen(true)}
           title="Excluir"
+          aria-label="Excluir"
           className="text-gray-400 transition-colors hover:text-red-500"
         >
           <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

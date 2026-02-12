@@ -5,7 +5,21 @@ import { createClient } from "@/lib/supabase/server";
 import { ReceitaForm } from "../../novo/receita-form";
 import type { ReceitaComPaciente } from "../../types";
 
-export const metadata: Metadata = { title: "Editar Receita" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("receitas")
+    .select("pacientes(nome)")
+    .eq("id", id)
+    .single();
+  const nome = (data as unknown as { pacientes: { nome: string } } | null)?.pacientes?.nome;
+  return { title: nome ? `Editar Receita - ${nome}` : "Editar Receita" };
+}
 
 export default async function EditarReceitaPage({
   params,

@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { tratarErroSupabase } from "@/lib/supabase-errors";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura } from "@/lib/validators";
 import { TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH } from "./types";
 
 export type ProntuarioFormState = {
@@ -23,40 +26,21 @@ function validarCamposProntuario(formData: FormData) {
 
   const fieldErrors: Record<string, string> = {};
 
-  if (!paciente_id) fieldErrors.paciente_id = "Selecione um paciente.";
-  if (!data) {
-    fieldErrors.data = "Data é obrigatória.";
-  } else {
-    const today = new Date().toISOString().split("T")[0];
-    if (data > today) {
-      fieldErrors.data = "A data não pode ser no futuro.";
-    }
+  campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
+  if (campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.")) {
+    dataNaoFutura(fieldErrors, "data", data);
   }
   if (!queixa_principal && !conduta) {
     fieldErrors.queixa_principal = "Preencha ao menos a queixa principal ou a conduta.";
   }
 
-  if (cid && cid.length > CID_MAX_LENGTH) {
-    fieldErrors.cid = `Máximo de ${CID_MAX_LENGTH} caracteres.`;
-  }
-  if (queixa_principal && queixa_principal.length > TEXTO_MAX_LENGTH) {
-    fieldErrors.queixa_principal = `Máximo de ${TEXTO_MAX_LENGTH} caracteres.`;
-  }
-  if (historia_doenca && historia_doenca.length > TEXTO_MAX_LENGTH) {
-    fieldErrors.historia_doenca = `Máximo de ${TEXTO_MAX_LENGTH} caracteres.`;
-  }
-  if (exame_fisico && exame_fisico.length > TEXTO_MAX_LENGTH) {
-    fieldErrors.exame_fisico = `Máximo de ${TEXTO_MAX_LENGTH} caracteres.`;
-  }
-  if (hipotese_diagnostica && hipotese_diagnostica.length > TEXTO_MAX_LENGTH) {
-    fieldErrors.hipotese_diagnostica = `Máximo de ${TEXTO_MAX_LENGTH} caracteres.`;
-  }
-  if (conduta && conduta.length > TEXTO_MAX_LENGTH) {
-    fieldErrors.conduta = `Máximo de ${TEXTO_MAX_LENGTH} caracteres.`;
-  }
-  if (observacoes && observacoes.length > OBSERVACOES_MAX_LENGTH) {
-    fieldErrors.observacoes = `Máximo de ${OBSERVACOES_MAX_LENGTH} caracteres.`;
-  }
+  tamanhoMaximo(fieldErrors, "cid", cid, CID_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "queixa_principal", queixa_principal, TEXTO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "historia_doenca", historia_doenca, TEXTO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "exame_fisico", exame_fisico, TEXTO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "hipotese_diagnostica", hipotese_diagnostica, TEXTO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "conduta", conduta, TEXTO_MAX_LENGTH);
+  tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   return {
     paciente_id, data, tipo, cid,
@@ -101,9 +85,11 @@ export async function criarProntuario(
     .single();
 
   if (error) {
-    return { error: "Erro ao salvar prontuário. Tente novamente." };
+    return { error: tratarErroSupabase(error, "criar", "prontuário") };
   }
 
+  revalidatePath("/prontuarios");
+  revalidatePath("/");
   redirect(`/prontuarios/${inserted.id}?success=Prontu%C3%A1rio+registrado`);
 }
 
@@ -143,9 +129,11 @@ export async function atualizarProntuario(
     .eq("id", id);
 
   if (error) {
-    return { error: "Erro ao atualizar prontuário. Tente novamente." };
+    return { error: tratarErroSupabase(error, "atualizar", "prontuário") };
   }
 
+  revalidatePath("/prontuarios");
+  revalidatePath("/");
   redirect(`/prontuarios/${id}?success=Prontu%C3%A1rio+atualizado`);
 }
 
@@ -155,8 +143,10 @@ export async function excluirProntuario(id: string): Promise<void> {
   const { error } = await supabase.from("prontuarios").delete().eq("id", id);
 
   if (error) {
-    throw new Error("Erro ao excluir prontuário.");
+    throw new Error(tratarErroSupabase(error, "excluir", "prontuário"));
   }
 
+  revalidatePath("/prontuarios");
+  revalidatePath("/");
   redirect("/prontuarios?success=Prontu%C3%A1rio+exclu%C3%ADdo");
 }

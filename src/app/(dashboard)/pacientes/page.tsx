@@ -95,10 +95,10 @@ export default async function PacientesPage({
                   basePath="/pacientes"
                   searchParams={sp}
                 />
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   CPF
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Telefone
                 </th>
                 <SortableHeader
@@ -109,7 +109,9 @@ export default async function PacientesPage({
                   basePath="/pacientes"
                   searchParams={sp}
                 />
-                <th className="w-12" />
+                <th scope="col" className="w-12">
+                  <span className="sr-only">Ações</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">

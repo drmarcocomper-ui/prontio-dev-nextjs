@@ -1,0 +1,49 @@
+type FieldErrors = Record<string, string>;
+
+export function campoObrigatorio(
+  errors: FieldErrors,
+  campo: string,
+  valor: string | null | undefined,
+  mensagem?: string
+): boolean {
+  if (!valor || valor.trim() === "") {
+    errors[campo] = mensagem ?? "Campo obrigatório.";
+    return false;
+  }
+  return true;
+}
+
+export function tamanhoMaximo(
+  errors: FieldErrors,
+  campo: string,
+  valor: string | null | undefined,
+  max: number
+): void {
+  if (valor && valor.length > max) {
+    errors[campo] = `Máximo de ${max} caracteres.`;
+  }
+}
+
+export function dataNaoFutura(
+  errors: FieldErrors,
+  campo: string,
+  valor: string | null | undefined,
+  mensagem?: string
+): void {
+  if (!valor) return;
+  const today = new Date().toISOString().split("T")[0];
+  if (valor > today) {
+    errors[campo] = mensagem ?? "A data não pode ser no futuro.";
+  }
+}
+
+export function emailValido(
+  errors: FieldErrors,
+  campo: string,
+  valor: string | null | undefined
+): void {
+  if (!valor) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) {
+    errors[campo] = "E-mail inválido.";
+  }
+}

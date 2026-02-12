@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { tratarErroSupabase } from "@/lib/supabase-errors";
+import { campoObrigatorio, tamanhoMaximo } from "@/lib/validators";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH } from "./types";
 
 export type AgendamentoFormState = {
@@ -59,10 +62,10 @@ function validarCamposAgendamento(formData: FormData) {
 
   const fieldErrors: Record<string, string> = {};
 
-  if (!paciente_id) fieldErrors.paciente_id = "Selecione um paciente.";
-  if (!data) fieldErrors.data = "Data é obrigatória.";
-  if (!hora_inicio) fieldErrors.hora_inicio = "Horário de início é obrigatório.";
-  if (!hora_fim) fieldErrors.hora_fim = "Horário de término é obrigatório.";
+  campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
+  campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.");
+  campoObrigatorio(fieldErrors, "hora_inicio", hora_inicio, "Horário de início é obrigatório.");
+  campoObrigatorio(fieldErrors, "hora_fim", hora_fim, "Horário de término é obrigatório.");
   if (hora_inicio && hora_fim && hora_inicio >= hora_fim) {
     fieldErrors.hora_fim = "Horário de término deve ser após o início.";
   }
@@ -74,9 +77,7 @@ function validarCamposAgendamento(formData: FormData) {
   ) {
     fieldErrors.hora_fim = "A consulta deve ter no mínimo 15 minutos.";
   }
-  if (observacoes && observacoes.length > OBSERVACOES_MAX_LENGTH) {
-    fieldErrors.observacoes = `Máximo de ${OBSERVACOES_MAX_LENGTH} caracteres.`;
-  }
+  tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   return { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors };
 }
@@ -110,9 +111,11 @@ export async function criarAgendamento(
   });
 
   if (error) {
-    return { error: "Erro ao criar agendamento. Tente novamente." };
+    return { error: tratarErroSupabase(error, "criar", "agendamento") };
   }
 
+  revalidatePath("/agenda");
+  revalidatePath("/");
   redirect(`/agenda?data=${data}&success=Agendamento+criado`);
 }
 
@@ -145,8 +148,11 @@ export async function atualizarStatusAgendamento(
     .eq("id", id);
 
   if (error) {
-    throw new Error("Erro ao atualizar status.");
+    throw new Error(tratarErroSupabase(error, "atualizar", "status"));
   }
+
+  revalidatePath("/agenda");
+  revalidatePath("/");
 }
 
 export async function atualizarAgendamento(
@@ -181,9 +187,11 @@ export async function atualizarAgendamento(
     .eq("id", id);
 
   if (error) {
-    return { error: "Erro ao atualizar agendamento. Tente novamente." };
+    return { error: tratarErroSupabase(error, "atualizar", "agendamento") };
   }
 
+  revalidatePath("/agenda");
+  revalidatePath("/");
   redirect(`/agenda/${id}?success=Agendamento+atualizado`);
 }
 
@@ -193,8 +201,10 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
   const { error } = await supabase.from("agendamentos").delete().eq("id", id);
 
   if (error) {
-    throw new Error("Erro ao excluir agendamento.");
+    throw new Error(tratarErroSupabase(error, "excluir", "agendamento"));
   }
 
+  revalidatePath("/agenda");
+  revalidatePath("/");
   redirect(`/agenda?data=${data}&success=Agendamento+exclu%C3%ADdo`);
 }

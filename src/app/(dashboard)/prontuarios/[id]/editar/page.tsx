@@ -5,7 +5,21 @@ import { createClient } from "@/lib/supabase/server";
 import { ProntuarioForm } from "../../novo/prontuario-form";
 import { type Prontuario } from "../../types";
 
-export const metadata: Metadata = { title: "Editar Prontuário" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("prontuarios")
+    .select("pacientes(nome)")
+    .eq("id", id)
+    .single();
+  const nome = (data as unknown as { pacientes: { nome: string } } | null)?.pacientes?.nome;
+  return { title: nome ? `Editar Prontuário - ${nome}` : "Editar Prontuário" };
+}
 
 export default async function EditarProntuarioPage({
   params,

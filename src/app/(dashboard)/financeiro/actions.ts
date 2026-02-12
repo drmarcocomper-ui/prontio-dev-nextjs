@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { tratarErroSupabase } from "@/lib/supabase-errors";
+import { campoObrigatorio, tamanhoMaximo } from "@/lib/validators";
 import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./constants";
 
 export type TransacaoFormState = {
@@ -23,20 +26,13 @@ function validarCamposTransacao(formData: FormData) {
 
   const fieldErrors: Record<string, string> = {};
 
-  if (!tipo) fieldErrors.tipo = "Selecione o tipo.";
-
-  if (!descricao) {
-    fieldErrors.descricao = "Descrição é obrigatória.";
-  } else if (descricao.length > DESCRICAO_MAX_LENGTH) {
-    fieldErrors.descricao = `Máximo de ${DESCRICAO_MAX_LENGTH} caracteres.`;
-  }
+  campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo.");
+  campoObrigatorio(fieldErrors, "descricao", descricao, "Descrição é obrigatória.");
+  tamanhoMaximo(fieldErrors, "descricao", descricao, DESCRICAO_MAX_LENGTH);
 
   if (!valorRaw || isNaN(valor) || valor <= 0) fieldErrors.valor = "Informe um valor válido.";
-  if (!data) fieldErrors.data = "Data é obrigatória.";
-
-  if (observacoes && observacoes.length > OBSERVACOES_MAX_LENGTH) {
-    fieldErrors.observacoes = `Máximo de ${OBSERVACOES_MAX_LENGTH} caracteres.`;
-  }
+  campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.");
+  tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   return { tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, fieldErrors };
 }
@@ -66,9 +62,12 @@ export async function criarTransacao(
   });
 
   if (error) {
-    return { error: "Erro ao registrar transação. Tente novamente." };
+    return { error: tratarErroSupabase(error, "criar", "transação") };
   }
 
+  revalidatePath("/financeiro");
+  revalidatePath("/");
+  revalidatePath("/relatorios/financeiro");
   redirect("/financeiro?success=Transa%C3%A7%C3%A3o+registrada");
 }
 
@@ -101,9 +100,12 @@ export async function atualizarTransacao(
     .eq("id", id);
 
   if (error) {
-    return { error: "Erro ao atualizar transação. Tente novamente." };
+    return { error: tratarErroSupabase(error, "atualizar", "transação") };
   }
 
+  revalidatePath("/financeiro");
+  revalidatePath("/");
+  revalidatePath("/relatorios/financeiro");
   redirect(`/financeiro/${id}?success=Transa%C3%A7%C3%A3o+atualizada`);
 }
 
@@ -113,8 +115,11 @@ export async function excluirTransacao(id: string): Promise<void> {
   const { error } = await supabase.from("transacoes").delete().eq("id", id);
 
   if (error) {
-    throw new Error("Erro ao excluir transação.");
+    throw new Error(tratarErroSupabase(error, "excluir", "transação"));
   }
 
+  revalidatePath("/financeiro");
+  revalidatePath("/");
+  revalidatePath("/relatorios/financeiro");
   redirect("/financeiro?success=Transa%C3%A7%C3%A3o+exclu%C3%ADda");
 }

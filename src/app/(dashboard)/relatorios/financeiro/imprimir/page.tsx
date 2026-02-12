@@ -142,10 +142,10 @@ export default async function ImprimirRelatorioPage({
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead>
                 <tr className="border-b border-gray-300">
-                  <th className="py-2 text-left font-medium text-gray-500">Categoria</th>
-                  <th className="py-2 text-right font-medium text-gray-500">Receitas</th>
-                  <th className="py-2 text-right font-medium text-gray-500">Despesas</th>
-                  <th className="py-2 text-right font-medium text-gray-500">Saldo</th>
+                  <th scope="col" className="py-2 text-left font-medium text-gray-500">Categoria</th>
+                  <th scope="col" className="py-2 text-right font-medium text-gray-500">Receitas</th>
+                  <th scope="col" className="py-2 text-right font-medium text-gray-500">Despesas</th>
+                  <th scope="col" className="py-2 text-right font-medium text-gray-500">Saldo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -175,9 +175,9 @@ export default async function ImprimirRelatorioPage({
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead>
                 <tr className="border-b border-gray-300">
-                  <th className="py-2 text-left font-medium text-gray-500">Forma</th>
-                  <th className="py-2 text-right font-medium text-gray-500">Qtd</th>
-                  <th className="py-2 text-right font-medium text-gray-500">Total</th>
+                  <th scope="col" className="py-2 text-left font-medium text-gray-500">Forma</th>
+                  <th scope="col" className="py-2 text-right font-medium text-gray-500">Qtd</th>
+                  <th scope="col" className="py-2 text-right font-medium text-gray-500">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -200,11 +200,11 @@ export default async function ImprimirRelatorioPage({
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead>
                 <tr className="border-b border-gray-300">
-                  <th className="py-2 text-left font-medium text-gray-500">Data</th>
-                  <th className="py-2 text-left font-medium text-gray-500">Descrição</th>
-                  <th className="py-2 text-left font-medium text-gray-500">Categoria</th>
-                  <th className="py-2 text-left font-medium text-gray-500">Status</th>
-                  <th className="py-2 text-right font-medium text-gray-500">Valor</th>
+                  <th scope="col" className="py-2 text-left font-medium text-gray-500">Data</th>
+                  <th scope="col" className="py-2 text-left font-medium text-gray-500">Descrição</th>
+                  <th scope="col" className="py-2 text-left font-medium text-gray-500">Categoria</th>
+                  <th scope="col" className="py-2 text-left font-medium text-gray-500">Status</th>
+                  <th scope="col" className="py-2 text-right font-medium text-gray-500">Valor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

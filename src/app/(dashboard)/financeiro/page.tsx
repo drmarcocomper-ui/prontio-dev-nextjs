@@ -173,13 +173,13 @@ export default async function FinanceiroPage({
                   searchParams={sp}
                   className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                 />
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Categoria
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Pagamento
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th scope="col" className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Status
                 </th>
                 <SortableHeader
@@ -191,7 +191,9 @@ export default async function FinanceiroPage({
                   searchParams={sp}
                   className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
                 />
-                <th className="w-10 px-3 py-3" />
+                <th scope="col" className="w-10 px-3 py-3">
+                  <span className="sr-only">Ações</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">

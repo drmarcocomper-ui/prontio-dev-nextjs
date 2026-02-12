@@ -5,7 +5,21 @@ import { createClient } from "@/lib/supabase/server";
 import { AgendamentoForm } from "../../novo/agendamento-form";
 import { type Agendamento } from "../../types";
 
-export const metadata: Metadata = { title: "Editar Agendamento" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("agendamentos")
+    .select("pacientes(nome)")
+    .eq("id", id)
+    .single();
+  const nome = (data as unknown as { pacientes: { nome: string } } | null)?.pacientes?.nome;
+  return { title: nome ? `Editar Agendamento - ${nome}` : "Editar Agendamento" };
+}
 
 export default async function EditarAgendamentoPage({
   params,

@@ -26,6 +26,7 @@ export function PacienteFilters({ currentSexo }: { currentSexo: string }) {
       <select
         value={currentSexo}
         onChange={(e) => updateParam("sexo", e.target.value)}
+        aria-label="Filtrar por sexo"
         className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
       >
         <option value="">Todos os sexos</option>
@@ -35,7 +36,7 @@ export function PacienteFilters({ currentSexo }: { currentSexo: string }) {
       </select>
 
       {isPending && (
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-sky-600" />
+        <div role="status" aria-label="Carregando" className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-sky-600" />
       )}
     </div>
   );

@@ -20,6 +20,13 @@ export const metadata: Metadata = {
   },
   description:
     "Sistema de gestão para consultório médico. Gerencie pacientes, agendamentos, prontuários e muito mais.",
+  robots: { index: false, follow: false },
+  openGraph: {
+    title: "Prontio - Gestão de Consultório Médico",
+    description:
+      "Sistema de gestão para consultório médico. Gerencie pacientes, agendamentos, prontuários e muito mais.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

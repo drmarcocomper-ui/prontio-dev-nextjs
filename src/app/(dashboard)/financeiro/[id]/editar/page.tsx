@@ -5,7 +5,21 @@ import { createClient } from "@/lib/supabase/server";
 import { TransacaoForm } from "../../novo/transacao-form";
 import { maskCurrency, type TransacaoFull } from "../../constants";
 
-export const metadata: Metadata = { title: "Editar Transação" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("transacoes")
+    .select("descricao")
+    .eq("id", id)
+    .single();
+  const descricao = (data as { descricao: string } | null)?.descricao;
+  return { title: descricao ? `Editar - ${descricao}` : "Editar Transação" };
+}
 
 export default async function EditarTransacaoPage({
   params,

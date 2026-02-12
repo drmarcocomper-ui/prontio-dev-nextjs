@@ -1,6 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { tratarErroSupabase } from "@/lib/supabase-errors";
 import {
   NOME_CONSULTORIO_MAX,
   ENDERECO_MAX,
@@ -64,9 +66,10 @@ export async function salvarConfiguracoes(
   });
 
   if (error) {
-    return { error: "Erro ao salvar configurações. Tente novamente." };
+    return { error: tratarErroSupabase(error, "salvar", "configurações") };
   }
 
+  revalidatePath("/configuracoes");
   return { success: true };
 }
 

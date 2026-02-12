@@ -89,7 +89,7 @@ export function ConfirmModal({
             className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
           >
             {isPending ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <div role="status" aria-label="Carregando" className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             ) : null}
             {confirmLabel}
           </button>
