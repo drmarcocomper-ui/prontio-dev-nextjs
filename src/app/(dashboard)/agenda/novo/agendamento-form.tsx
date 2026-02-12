@@ -132,17 +132,17 @@ export function AgendamentoForm({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end border-t border-gray-200 pt-6">
         <Link
           href={cancelHref}
-          className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 w-full sm:w-auto text-center"
         >
           Cancelar
         </Link>
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-50 w-full sm:w-auto"
         >
           {isPending && (
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />

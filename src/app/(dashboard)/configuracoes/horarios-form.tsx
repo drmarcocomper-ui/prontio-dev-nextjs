@@ -56,11 +56,11 @@ export function HorariosForm({
           {DIAS.map((dia, i) => (
             <div
               key={dia.key}
-              className={`flex items-center gap-4 px-4 py-3 ${
+              className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 ${
                 i > 0 ? "border-t border-gray-200" : ""
               }`}
             >
-              <span className="w-36 text-sm font-medium text-gray-700">
+              <span className="w-full sm:w-36 text-sm font-medium text-gray-700">
                 {dia.label}
               </span>
               <input
@@ -86,7 +86,7 @@ export function HorariosForm({
       {/* Intervalo de almoço */}
       <div>
         <p className="text-sm font-medium text-gray-700">Intervalo</p>
-        <div className="mt-2 flex items-center gap-4">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
           <input
             name="config_intervalo_inicio"
             type="time"

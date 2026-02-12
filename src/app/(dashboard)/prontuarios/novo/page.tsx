@@ -34,7 +34,7 @@ export default async function NovoProntuarioPage({
       </div>
 
       {/* Form Card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
         <ProntuarioForm
           defaults={
             paciente_id

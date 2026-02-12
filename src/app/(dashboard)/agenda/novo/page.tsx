@@ -31,7 +31,7 @@ export default async function NovoAgendamentoPage({
       </div>
 
       {/* Form Card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
         <AgendamentoForm defaultDate={defaultDate} />
       </div>
     </div>

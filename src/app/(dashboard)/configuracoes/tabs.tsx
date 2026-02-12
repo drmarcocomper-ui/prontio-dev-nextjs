@@ -15,7 +15,7 @@ export function Tabs() {
   const current = searchParams.get("tab") || "consultorio";
 
   return (
-    <div className="border-b border-gray-200">
+    <div className="overflow-x-auto border-b border-gray-200">
       <nav className="-mb-px flex gap-6" aria-label="Tabs">
         {TABS.map((tab) => (
           <Link
