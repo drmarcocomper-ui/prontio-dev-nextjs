@@ -16,17 +16,27 @@ const securityHeaders = [
     key: "X-DNS-Prefetch-Control",
     value: "on",
   },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; "),
+  },
 ];
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: [
-    "friendly-guide-97r947pxv75w3p5r4-3000.app.github.dev",
-  ],
   experimental: {
     serverActions: {
       allowedOrigins: [
         "localhost:3000",
-        "friendly-guide-97r947pxv75w3p5r4-3000.app.github.dev",
       ],
     },
   },

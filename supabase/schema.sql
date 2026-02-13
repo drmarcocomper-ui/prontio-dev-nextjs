@@ -26,7 +26,8 @@ create table pacientes (
   estado      text,
   convenio    text,
   observacoes text,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz
 );
 
 create unique index pacientes_cpf_unique on pacientes (cpf) where cpf is not null;
@@ -47,6 +48,7 @@ create table agendamentos (
                check (status in ('agendado', 'confirmado', 'em_atendimento', 'atendido', 'cancelado', 'faltou')),
   observacoes  text,
   created_at   timestamptz not null default now(),
+  updated_at   timestamptz,
 
   constraint agendamentos_hora_check check (hora_fim > hora_inicio)
 );
@@ -70,7 +72,8 @@ create table prontuarios (
   hipotese_diagnostica  text,
   conduta               text,
   observacoes           text,
-  created_at            timestamptz not null default now()
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz
 );
 
 create index prontuarios_paciente_idx on prontuarios (paciente_id);
@@ -95,7 +98,8 @@ create table transacoes (
   status           text not null default 'pago'
                    check (status in ('pago', 'pendente', 'cancelado')),
   observacoes      text,
-  created_at       timestamptz not null default now()
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz
 );
 
 create index transacoes_data_idx on transacoes (data desc);
@@ -113,7 +117,8 @@ create table receitas (
   tipo          text not null check (tipo in ('simples', 'especial', 'controle_especial')),
   medicamentos  text not null,
   observacoes   text,
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz
 );
 
 create index receitas_paciente_idx on receitas (paciente_id);
