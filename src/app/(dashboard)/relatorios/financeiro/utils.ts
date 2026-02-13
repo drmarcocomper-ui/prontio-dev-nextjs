@@ -24,10 +24,13 @@ export interface PagamentoBreakdownRow {
 export const REPORT_SELECT =
   "id, tipo, categoria, descricao, valor, data, forma_pagamento, status, pacientes(nome)";
 
+const MES_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
 export function getMonthDateRange(mes?: string) {
   const now = new Date();
+  const safeMes = mes && MES_RE.test(mes) ? mes : undefined;
   const currentMonth =
-    mes || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    safeMes || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const [year, month] = currentMonth.split("-").map(Number);
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endDate = toDateString(new Date(year, month, 0));

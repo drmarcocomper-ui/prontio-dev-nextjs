@@ -41,8 +41,10 @@ export default async function FinanceiroPage({
   const sortDir = dir === "asc" ? "asc" : "desc";
   const ascending = sortDir === "asc";
 
+  const MES_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
   const now = new Date();
-  const currentMonth = mes || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const safeMes = mes && MES_RE.test(mes) ? mes : undefined;
+  const currentMonth = safeMes || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const [year, month] = currentMonth.split("-").map(Number);
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const lastDay = new Date(year, month, 0).getDate();

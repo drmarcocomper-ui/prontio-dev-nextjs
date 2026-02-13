@@ -18,7 +18,8 @@ export default async function AgendaPage({
   searchParams: Promise<{ data?: string }>;
 }) {
   const { data: dataParam } = await searchParams;
-  const currentDate = dataParam || todayLocal();
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const currentDate = dataParam && DATE_RE.test(dataParam) ? dataParam : todayLocal();
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();

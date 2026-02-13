@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { getMedicoId } from "@/lib/clinica";
+import { uuidValido } from "@/lib/validators";
 import { ReceitaForm } from "./receita-form";
 
 export const metadata: Metadata = { title: "Nova Receita" };
@@ -10,9 +11,10 @@ export default async function NovaReceitaPage({
 }: {
   searchParams: Promise<{ paciente_id?: string; paciente_nome?: string }>;
 }) {
-  const { paciente_id, paciente_nome } = await searchParams;
+  const { paciente_id: rawPacienteId, paciente_nome } = await searchParams;
   const medicoId = await getMedicoId();
 
+  const paciente_id = rawPacienteId && uuidValido(rawPacienteId) ? rawPacienteId : undefined;
   const fromPaciente = !!paciente_id;
 
   return (

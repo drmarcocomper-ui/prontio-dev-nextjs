@@ -48,27 +48,27 @@ describe("NovaReceitaPage", () => {
   });
 
   it("renderiza o ReceitaForm com paciente padrão", async () => {
-    await renderPage({ paciente_id: "p-1", paciente_nome: "Maria" });
+    await renderPage({ paciente_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", paciente_nome: "Maria" });
     const form = screen.getByTestId("receita-form");
-    expect(form).toHaveAttribute("data-patient-id", "p-1");
+    expect(form).toHaveAttribute("data-patient-id", "a1b2c3d4-e5f6-7890-abcd-ef1234567890");
   });
 
   it("breadcrumb aponta para paciente quando vem do contexto do paciente", async () => {
-    await renderPage({ paciente_id: "p-1", paciente_nome: "Maria" });
+    await renderPage({ paciente_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", paciente_nome: "Maria" });
     const link = screen.getByText("Maria").closest("a");
-    expect(link).toHaveAttribute("href", "/pacientes/p-1");
+    expect(link).toHaveAttribute("href", "/pacientes/a1b2c3d4-e5f6-7890-abcd-ef1234567890");
   });
 
   it("passa cancelHref do paciente quando fornecido", async () => {
-    await renderPage({ paciente_id: "p-1", paciente_nome: "Maria" });
+    await renderPage({ paciente_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", paciente_nome: "Maria" });
     const form = screen.getByTestId("receita-form");
-    expect(form).toHaveAttribute("data-cancel-href", "/pacientes/p-1");
+    expect(form).toHaveAttribute("data-cancel-href", "/pacientes/a1b2c3d4-e5f6-7890-abcd-ef1234567890");
   });
 
   it("usa 'Paciente' como fallback quando paciente_nome não é fornecido", async () => {
-    await renderPage({ paciente_id: "p-1" });
+    await renderPage({ paciente_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" });
     expect(screen.getByText("Paciente")).toBeInTheDocument();
     const link = screen.getByText("Paciente").closest("a");
-    expect(link).toHaveAttribute("href", "/pacientes/p-1");
+    expect(link).toHaveAttribute("href", "/pacientes/a1b2c3d4-e5f6-7890-abcd-ef1234567890");
   });
 });

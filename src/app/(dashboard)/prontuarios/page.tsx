@@ -7,6 +7,7 @@ import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
 import { getMedicoId } from "@/lib/clinica";
+import { uuidValido } from "@/lib/validators";
 import { ProntuarioFilters } from "./filters";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
 
@@ -54,6 +55,20 @@ export default async function ProntuariosPage({
   query = query.order("created_at", { ascending: false });
 
   if (paciente_id) {
+    if (!uuidValido(paciente_id)) {
+      return (
+        <div className="animate-fade-in space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Prontuários</h1>
+            </div>
+          </div>
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Paciente inválido.
+          </div>
+        </div>
+      );
+    }
     query = query.eq("paciente_id", paciente_id);
   }
 
@@ -66,11 +81,13 @@ export default async function ProntuariosPage({
     query = query.eq("tipo", tipo);
   }
 
-  if (de) {
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (de && DATE_RE.test(de)) {
     query = query.gte("data", de);
   }
 
-  if (ate) {
+  if (ate && DATE_RE.test(ate)) {
     query = query.lte("data", ate);
   }
 
@@ -105,6 +122,7 @@ export default async function ProntuariosPage({
       .from("pacientes")
       .select("nome")
       .eq("id", paciente_id)
+      .eq("medico_id", medicoId)
       .single();
     pacienteNome = pacienteData?.nome ?? "";
   }
