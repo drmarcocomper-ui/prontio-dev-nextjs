@@ -61,6 +61,7 @@ export function SearchInput({ basePath, placeholder, ariaLabel, defaultValue }: 
         ref={inputRef}
         type="search"
         aria-label={ariaLabel}
+        maxLength={100}
         placeholder={placeholder}
         value={value}
         onChange={(e) => handleSearch(e.target.value)}

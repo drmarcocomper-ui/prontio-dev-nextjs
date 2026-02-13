@@ -138,6 +138,7 @@ export function PatientSearch({
           }}
           onFocus={() => results.length > 0 && setIsOpen(true)}
           onKeyDown={handleKeyDown}
+          maxLength={100}
           placeholder="Buscar paciente por nome..."
           role="combobox"
           aria-expanded={isOpen && results.length > 0}
