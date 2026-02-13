@@ -115,7 +115,7 @@ export default async function ProntuariosPage({
   if (paciente_id) sp.paciente_id = paciente_id;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -167,7 +167,7 @@ export default async function ProntuariosPage({
             <Link
               key={p.id}
               href={`/prontuarios/${p.id}`}
-              className="block rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-300"
+              className="block rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 sm:p-5"
             >
               <div className="flex items-start gap-4">
                 {/* Avatar */}

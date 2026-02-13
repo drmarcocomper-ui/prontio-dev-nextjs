@@ -72,7 +72,7 @@ export default async function PacientesPage({
   if (sexo) sp.sexo = sexo;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

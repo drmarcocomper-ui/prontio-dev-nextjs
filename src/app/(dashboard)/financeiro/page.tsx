@@ -120,7 +120,7 @@ export default async function FinanceiroPage({
   if (dir) sp.dir = dir;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -140,19 +140,19 @@ export default async function FinanceiroPage({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Receitas</p>
           <p className="mt-2 text-2xl font-bold text-emerald-600">
             {formatCurrency(totalReceitas)}
           </p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Despesas</p>
           <p className="mt-2 text-2xl font-bold text-red-600">
             {formatCurrency(totalDespesas)}
           </p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Saldo</p>
           <p
             className={`mt-2 text-2xl font-bold ${
