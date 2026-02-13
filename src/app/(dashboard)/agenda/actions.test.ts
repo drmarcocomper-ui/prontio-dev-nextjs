@@ -7,7 +7,7 @@ const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
 const mockDeleteEq = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 
-/* ── mock da query select (conflito + single) ──────────────────────── */
+/* ── mock da query select (conflito + single + configuracoes) ─────── */
 
 let conflitoResult: { data: unknown[] | null; error: unknown } = {
   data: [],
@@ -19,6 +19,11 @@ let singleResult: { data: unknown | null; error: unknown } = {
   error: null,
 };
 
+let configResult: { data: unknown[] | null; error: unknown } = {
+  data: [],
+  error: null,
+};
+
 function createSelectChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   chain.eq = vi.fn().mockReturnValue(chain);
@@ -26,12 +31,21 @@ function createSelectChain() {
   chain.gt = vi.fn().mockReturnValue(chain);
   chain.not = vi.fn().mockReturnValue(chain);
   chain.neq = vi.fn().mockReturnValue(chain);
+  chain.in = vi.fn().mockReturnValue(chain);
   chain.limit = vi.fn().mockImplementation(() => conflitoResult);
   chain.single = vi.fn().mockImplementation(() => singleResult);
   return chain;
 }
 
+function createConfigChain() {
+  const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+  chain.eq = vi.fn().mockReturnValue(chain);
+  chain.in = vi.fn().mockImplementation(() => configResult);
+  return chain;
+}
+
 let selectChain = createSelectChain();
+let configChain = createConfigChain();
 
 /* ── mock do Supabase ──────────────────────────────────────────────── */
 
@@ -47,16 +61,21 @@ vi.mock("@/lib/clinica", () => ({
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
-      from: () => ({
-        select: () => selectChain,
-        insert: (data: unknown) => mockInsert(data),
-        update: (data: unknown) => ({
-          eq: (_col: string, val: string) => mockUpdateEq(data, val),
-        }),
-        delete: () => ({
-          eq: (_col: string, val: string) => mockDeleteEq(val),
-        }),
-      }),
+      from: (table: string) => {
+        if (table === "configuracoes") {
+          return { select: () => configChain };
+        }
+        return {
+          select: () => selectChain,
+          insert: (data: unknown) => mockInsert(data),
+          update: (data: unknown) => ({
+            eq: (_col: string, val: string) => mockUpdateEq(data, val),
+          }),
+          delete: () => ({
+            eq: (_col: string, val: string) => mockDeleteEq(val),
+          }),
+        };
+      },
     }),
 }));
 
@@ -105,7 +124,9 @@ describe("criarAgendamento", () => {
     mockInsert.mockResolvedValue({ error: null });
     mockUpdateEq.mockResolvedValue({ error: null });
     conflitoResult = { data: [], error: null };
+    configResult = { data: [], error: null };
     selectChain = createSelectChain();
+    configChain = createConfigChain();
   });
 
   it("retorna fieldErrors quando paciente não selecionado", async () => {
@@ -226,6 +247,62 @@ describe("criarAgendamento", () => {
     const result = await criarAgendamento({}, makeFormData(validCreate));
     expect(result.error).toBe("Erro ao criar agendamento. Tente novamente.");
   });
+
+  it("bloqueia agendamento fora do horário comercial configurado", async () => {
+    configResult = {
+      data: [
+        { chave: "horario_sab_inicio", valor: "09:00" },
+        { chave: "horario_sab_fim", valor: "12:00" },
+      ],
+      error: null,
+    };
+
+    // 2024-06-15 is Saturday, configured 09:00-12:00, trying 14:00-14:30
+    const result = await criarAgendamento(
+      {},
+      makeFormData({ ...validCreate, hora_inicio: "14:00", hora_fim: "14:30" })
+    );
+    expect(result.fieldErrors?.hora_inicio).toBe(
+      "Horário fora do expediente de sábado (09:00–12:00)."
+    );
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia agendamento aos domingos", async () => {
+    // 2024-06-16 is Sunday
+    const result = await criarAgendamento(
+      {},
+      makeFormData({ ...validCreate, data: "2024-06-16" })
+    );
+    expect(result.fieldErrors?.hora_inicio).toBe("Não há expediente aos domingos.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("usa horário padrão 08:00-18:00 quando não há configuração", async () => {
+    configResult = { data: [], error: null };
+
+    // 2024-06-15 is Saturday, default 08:00-18:00, trying 07:00-07:30
+    const result = await criarAgendamento(
+      {},
+      makeFormData({ ...validCreate, hora_inicio: "07:00", hora_fim: "07:30" })
+    );
+    expect(result.fieldErrors?.hora_inicio).toBe(
+      "Horário fora do expediente de sábado (08:00–18:00)."
+    );
+  });
+
+  it("permite agendamento dentro do horário comercial", async () => {
+    configResult = {
+      data: [
+        { chave: "horario_sab_inicio", valor: "08:00" },
+        { chave: "horario_sab_fim", valor: "18:00" },
+      ],
+      error: null,
+    };
+
+    await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
+    expect(mockInsert).toHaveBeenCalled();
+  });
 });
 
 /* ── atualizarAgendamento ──────────────────────────────────────────── */
@@ -236,7 +313,9 @@ describe("atualizarAgendamento", () => {
     mockInsert.mockResolvedValue({ error: null });
     mockUpdateEq.mockResolvedValue({ error: null });
     conflitoResult = { data: [], error: null };
+    configResult = { data: [], error: null };
     selectChain = createSelectChain();
+    configChain = createConfigChain();
   });
 
   it("retorna fieldErrors quando paciente não selecionado", async () => {
@@ -326,6 +405,25 @@ describe("atualizarAgendamento", () => {
     mockUpdateEq.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await atualizarAgendamento({}, makeFormData(validUpdate));
     expect(result.error).toBe("Erro ao atualizar agendamento. Tente novamente.");
+  });
+
+  it("bloqueia atualização fora do horário comercial", async () => {
+    configResult = {
+      data: [
+        { chave: "horario_sab_inicio", valor: "09:00" },
+        { chave: "horario_sab_fim", valor: "12:00" },
+      ],
+      error: null,
+    };
+
+    const result = await atualizarAgendamento(
+      {},
+      makeFormData({ ...validUpdate, hora_inicio: "14:00", hora_fim: "14:30" })
+    );
+    expect(result.fieldErrors?.hora_inicio).toBe(
+      "Horário fora do expediente de sábado (09:00–12:00)."
+    );
+    expect(mockUpdateEq).not.toHaveBeenCalled();
   });
 });
 

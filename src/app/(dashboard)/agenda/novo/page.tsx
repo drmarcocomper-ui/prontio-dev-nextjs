@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { todayLocal } from "@/lib/date";
+import { getMedicoId } from "@/lib/clinica";
 import { AgendamentoForm } from "./agendamento-form";
 
 export const metadata: Metadata = { title: "Novo Agendamento" };
@@ -12,6 +13,7 @@ export default async function NovoAgendamentoPage({
 }) {
   const { data } = await searchParams;
   const defaultDate = data || todayLocal();
+  const medicoId = await getMedicoId();
 
   return (
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">
@@ -28,7 +30,7 @@ export default async function NovoAgendamentoPage({
 
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
-        <AgendamentoForm defaultDate={defaultDate} />
+        <AgendamentoForm defaultDate={defaultDate} medicoId={medicoId} />
       </div>
     </div>
   );

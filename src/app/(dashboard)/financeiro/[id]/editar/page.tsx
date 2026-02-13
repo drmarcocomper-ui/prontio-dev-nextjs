@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { getMedicoId } from "@/lib/clinica";
 import { TransacaoForm } from "../../novo/transacao-form";
 import { maskCurrency, type TransacaoFull } from "../../constants";
 
@@ -42,6 +43,7 @@ export default async function EditarTransacaoPage({
   }
 
   const t = transacao as unknown as TransacaoFull;
+  const medicoId = await getMedicoId();
 
   return (
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">
@@ -60,6 +62,7 @@ export default async function EditarTransacaoPage({
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <TransacaoForm
+          medicoId={medicoId}
           defaults={{
             id: t.id,
             tipo: t.tipo,

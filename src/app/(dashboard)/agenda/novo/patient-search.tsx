@@ -13,9 +13,11 @@ interface Paciente {
 export function PatientSearch({
   defaultPatientId,
   defaultPatientName,
+  medicoId,
 }: {
   defaultPatientId?: string;
   defaultPatientName?: string;
+  medicoId: string;
 }) {
   const [query, setQuery] = useState(defaultPatientName ?? "");
   const [results, setResults] = useState<Paciente[]>([]);
@@ -49,6 +51,7 @@ export function PatientSearch({
       const { data, error } = await supabase
         .from("pacientes")
         .select("id, nome, cpf")
+        .eq("medico_id", medicoId)
         .ilike("nome", `%${escapeLikePattern(query)}%`)
         .order("nome")
         .limit(8);
@@ -65,7 +68,7 @@ export function PatientSearch({
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [query]);
+  }, [query, medicoId]);
 
   function selectPatient(p: Paciente) {
     setSelectedId(p.id);

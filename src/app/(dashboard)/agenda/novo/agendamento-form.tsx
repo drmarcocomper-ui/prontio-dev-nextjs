@@ -10,9 +10,11 @@ import { PatientSearch } from "./patient-search";
 export function AgendamentoForm({
   defaultDate,
   defaults,
+  medicoId,
 }: {
   defaultDate?: string;
   defaults?: AgendamentoDefaults;
+  medicoId: string;
 }) {
   const isEditing = !!defaults?.id;
   const action = isEditing ? atualizarAgendamento : criarAgendamento;
@@ -40,6 +42,7 @@ export function AgendamentoForm({
           <PatientSearch
             defaultPatientId={defaults?.paciente_id}
             defaultPatientName={defaults?.paciente_nome}
+            medicoId={medicoId}
           />
         </div>
         <FieldError message={state.fieldErrors?.paciente_id} />

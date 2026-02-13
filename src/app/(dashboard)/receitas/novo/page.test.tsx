@@ -17,6 +17,8 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("@/lib/clinica", () => ({ getMedicoId: vi.fn().mockResolvedValue("doc-1") }));
+
 vi.mock("./receita-form", () => ({
   ReceitaForm: (props: Record<string, unknown>) => {
     const defaults = props.defaults as Record<string, string> | undefined;

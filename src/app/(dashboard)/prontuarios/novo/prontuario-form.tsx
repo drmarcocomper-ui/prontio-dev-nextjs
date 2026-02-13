@@ -9,9 +9,11 @@ import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import { useFormDraft } from "@/hooks/use-form-draft";
 
 export function ProntuarioForm({
+  medicoId,
   defaults,
   cancelHref,
 }: {
+  medicoId: string;
   defaults?: ProntuarioDefaults;
   cancelHref?: string;
 }) {
@@ -77,6 +79,7 @@ export function ProntuarioForm({
             <PatientSearch
               defaultPatientId={defaults?.paciente_id}
               defaultPatientName={defaults?.paciente_nome}
+              medicoId={medicoId}
             />
           </div>
           <FieldError message={state.fieldErrors?.paciente_id} />

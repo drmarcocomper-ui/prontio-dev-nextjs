@@ -25,6 +25,8 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("@/lib/clinica", () => ({ getMedicoId: vi.fn().mockResolvedValue("doc-1") }));
+
 vi.mock("../../novo/receita-form", () => ({
   ReceitaForm: ({ defaults }: { defaults: Record<string, unknown> }) => (
     <form data-testid="receita-form" data-defaults={JSON.stringify(defaults)} />

@@ -25,6 +25,10 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("@/lib/clinica", () => ({
+  getMedicoId: vi.fn().mockResolvedValue("doc-1"),
+}));
+
 vi.mock("../../novo/agendamento-form", () => ({
   AgendamentoForm: ({ defaults }: { defaults: Record<string, unknown> }) => (
     <form data-testid="agendamento-form" data-defaults={JSON.stringify(defaults)} />

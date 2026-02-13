@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { getMedicoId } from "@/lib/clinica";
 import { ProntuarioForm } from "./prontuario-form";
 
 export const metadata: Metadata = { title: "Nova Evolução" };
@@ -10,6 +11,7 @@ export default async function NovoProntuarioPage({
   searchParams: Promise<{ paciente_id?: string; paciente_nome?: string }>;
 }) {
   const { paciente_id, paciente_nome } = await searchParams;
+  const medicoId = await getMedicoId();
 
   const fromPaciente = !!paciente_id;
 
@@ -37,6 +39,7 @@ export default async function NovoProntuarioPage({
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <ProntuarioForm
+          medicoId={medicoId}
           defaults={
             paciente_id
               ? { paciente_id, paciente_nome }

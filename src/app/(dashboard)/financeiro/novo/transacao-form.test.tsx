@@ -51,13 +51,13 @@ describe("TransacaoForm", () => {
   });
 
   it("renderiza os radio buttons de tipo", () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     expect(screen.getByText("Receita")).toBeInTheDocument();
     expect(screen.getByText("Despesa")).toBeInTheDocument();
   });
 
   it("renderiza os campos do formulário", () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     expect(screen.getByLabelText(/Descrição/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Valor/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Data/)).toBeInTheDocument();
@@ -68,14 +68,14 @@ describe("TransacaoForm", () => {
   });
 
   it("campos obrigatórios estão marcados", () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     expect(screen.getByLabelText(/Descrição/)).toBeRequired();
     expect(screen.getByLabelText(/Valor/)).toBeRequired();
     expect(screen.getByLabelText(/Data/)).toBeRequired();
   });
 
   it("exibe categorias de receita por padrão", () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     const select = screen.getByLabelText("Categoria");
     expect(select).toBeInTheDocument();
     expect(screen.getByText("Consulta")).toBeInTheDocument();
@@ -83,7 +83,7 @@ describe("TransacaoForm", () => {
   });
 
   it("muda categorias ao selecionar despesa", async () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     await userEvent.click(screen.getByText("Despesa"));
     expect(screen.getByText("Aluguel")).toBeInTheDocument();
     expect(screen.getByText("Salário")).toBeInTheDocument();
@@ -91,14 +91,14 @@ describe("TransacaoForm", () => {
   });
 
   it("exibe PatientSearch apenas para receita", async () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     expect(screen.getByTestId("patient-search")).toBeInTheDocument();
     await userEvent.click(screen.getByText("Despesa"));
     expect(screen.queryByTestId("patient-search")).not.toBeInTheDocument();
   });
 
   it("volta para categorias de receita ao clicar em Receita após Despesa", async () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     await userEvent.click(screen.getByText("Despesa"));
     expect(screen.getByText("Aluguel")).toBeInTheDocument();
     await userEvent.click(screen.getByText("Receita"));
@@ -107,25 +107,25 @@ describe("TransacaoForm", () => {
   });
 
   it("renderiza o botão Registrar", () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     expect(screen.getByRole("button", { name: "Registrar" })).toBeInTheDocument();
   });
 
   it("link Cancelar aponta para /financeiro", () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     const link = screen.getByText("Cancelar").closest("a");
     expect(link).toHaveAttribute("href", "/financeiro");
   });
 
   it("aplica máscara de moeda ao digitar", async () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     const input = screen.getByLabelText(/Valor/);
     await userEvent.type(input, "35000");
     expect(input).toHaveValue("350,00");
   });
 
   it("máscara de moeda retorna vazio para entrada sem dígitos", async () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     const input = screen.getByLabelText(/Valor/) as HTMLInputElement;
     await userEvent.type(input, "abc");
     expect(input.value).toBe("");
@@ -133,19 +133,19 @@ describe("TransacaoForm", () => {
 
   it("exibe mensagem de erro quando state.error está definido", () => {
     formState.current = { error: "Erro ao registrar transação." };
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     expect(screen.getByText("Erro ao registrar transação.")).toBeInTheDocument();
   });
 
   it("exibe erro de campo quando fieldErrors está definido", () => {
     formState.current = { fieldErrors: { descricao: "Descrição é obrigatória." } };
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     expect(screen.getByText("Descrição é obrigatória.")).toBeInTheDocument();
   });
 
   it("desabilita botão quando isPending", () => {
     formPending.current = true;
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     const button = screen.getByRole("button", { name: /Registrar/ });
     expect(button).toBeDisabled();
   });
@@ -154,6 +154,7 @@ describe("TransacaoForm", () => {
   it("renderiza botão 'Salvar alterações' no modo edição", () => {
     render(
       <TransacaoForm
+        medicoId="doc-1"
         defaults={{
           id: "t-1",
           tipo: "receita",
@@ -169,6 +170,7 @@ describe("TransacaoForm", () => {
   it("link Cancelar aponta para o detalhe no modo edição", () => {
     render(
       <TransacaoForm
+        medicoId="doc-1"
         defaults={{
           id: "t-1",
           tipo: "receita",
@@ -185,6 +187,7 @@ describe("TransacaoForm", () => {
   it("preenche campos com defaults no modo edição", () => {
     render(
       <TransacaoForm
+        medicoId="doc-1"
         defaults={{
           id: "t-1",
           tipo: "receita",
@@ -204,6 +207,7 @@ describe("TransacaoForm", () => {
   it("inclui hidden input com id no modo edição", () => {
     const { container } = render(
       <TransacaoForm
+        medicoId="doc-1"
         defaults={{
           id: "t-1",
           tipo: "receita",
@@ -219,13 +223,13 @@ describe("TransacaoForm", () => {
   });
 
   it("campo descrição tem maxLength de 255", () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     const input = screen.getByLabelText(/Descrição/) as HTMLInputElement;
     expect(input.maxLength).toBe(255);
   });
 
   it("campo observações tem maxLength de 1000", () => {
-    render(<TransacaoForm />);
+    render(<TransacaoForm medicoId="doc-1" />);
     const textarea = screen.getByLabelText("Observações") as HTMLTextAreaElement;
     expect(textarea.maxLength).toBe(1000);
   });
@@ -233,6 +237,7 @@ describe("TransacaoForm", () => {
   it("passa defaults de paciente para PatientSearch no modo edição", () => {
     render(
       <TransacaoForm
+        medicoId="doc-1"
         defaults={{
           id: "t-1",
           tipo: "receita",

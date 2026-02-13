@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { getMedicoId } from "@/lib/clinica";
 import { TransacaoForm } from "./transacao-form";
 
 export const metadata: Metadata = { title: "Nova Transação" };
 
-export default function NovaTransacaoPage() {
+export default async function NovaTransacaoPage() {
+  const medicoId = await getMedicoId();
+
   return (
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">
       {/* Header */}
@@ -20,7 +23,7 @@ export default function NovaTransacaoPage() {
 
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
-        <TransacaoForm />
+        <TransacaoForm medicoId={medicoId} />
       </div>
     </div>
   );

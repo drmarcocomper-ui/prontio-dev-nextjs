@@ -16,7 +16,7 @@ import {
   maskCurrency,
 } from "../constants";
 
-export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
+export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefaults; medicoId: string }) {
   const isEditing = !!defaults?.id;
   const today = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
   const [tipo, setTipo] = useState(defaults?.tipo ?? "receita");
@@ -202,6 +202,7 @@ export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
             <PatientSearch
               defaultPatientId={defaults?.paciente_id ?? undefined}
               defaultPatientName={defaults?.paciente_nome ?? undefined}
+              medicoId={medicoId}
             />
           </div>
         </div>

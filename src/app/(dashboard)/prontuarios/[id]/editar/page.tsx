@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { getMedicoId } from "@/lib/clinica";
 import { ProntuarioForm } from "../../novo/prontuario-form";
 import { type Prontuario } from "../../types";
 
@@ -42,6 +43,7 @@ export default async function EditarProntuarioPage({
   }
 
   const p = prontuario as unknown as Prontuario;
+  const medicoId = await getMedicoId();
 
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
@@ -60,6 +62,7 @@ export default async function EditarProntuarioPage({
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <ProntuarioForm
+          medicoId={medicoId}
           defaults={{
             id: p.id,
             paciente_id: p.pacientes.id,

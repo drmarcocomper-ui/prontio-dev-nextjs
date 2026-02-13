@@ -38,9 +38,11 @@ function saveTemplates(templates: Template[]) {
 }
 
 export function ReceitaForm({
+  medicoId,
   defaults,
   cancelHref,
 }: {
+  medicoId: string;
   defaults?: ReceitaDefaults;
   cancelHref?: string;
 }) {
@@ -109,6 +111,7 @@ export function ReceitaForm({
             <PatientSearch
               defaultPatientId={defaults?.paciente_id}
               defaultPatientName={defaults?.paciente_nome}
+              medicoId={medicoId}
             />
           </div>
           <FieldError message={state.fieldErrors?.paciente_id} />

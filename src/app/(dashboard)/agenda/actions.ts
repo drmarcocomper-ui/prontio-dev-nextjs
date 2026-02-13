@@ -55,6 +55,51 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
+const DIAS_SEMANA: Record<number, { key: string; label: string }> = {
+  1: { key: "seg", label: "segunda-feira" },
+  2: { key: "ter", label: "terça-feira" },
+  3: { key: "qua", label: "quarta-feira" },
+  4: { key: "qui", label: "quinta-feira" },
+  5: { key: "sex", label: "sexta-feira" },
+  6: { key: "sab", label: "sábado" },
+};
+
+async function validarHorarioComercial(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clinicaId: string,
+  data: string,
+  horaInicio: string,
+  horaFim: string,
+): Promise<string | null> {
+  const date = new Date(data + "T00:00:00");
+  const dayOfWeek = date.getDay();
+
+  const dia = DIAS_SEMANA[dayOfWeek];
+  if (!dia) {
+    return "Não há expediente aos domingos.";
+  }
+
+  const { data: rows } = await supabase
+    .from("configuracoes")
+    .select("chave, valor")
+    .eq("clinica_id", clinicaId)
+    .in("chave", [`horario_${dia.key}_inicio`, `horario_${dia.key}_fim`]);
+
+  const config: Record<string, string> = {};
+  (rows ?? []).forEach((r: { chave: string; valor: string }) => {
+    config[r.chave] = r.valor;
+  });
+
+  const inicio = config[`horario_${dia.key}_inicio`] || "08:00";
+  const fim = config[`horario_${dia.key}_fim`] || "18:00";
+
+  if (horaInicio < inicio || horaFim > fim) {
+    return `Horário fora do expediente de ${dia.label} (${inicio}–${fim}).`;
+  }
+
+  return null;
+}
+
 function validarCamposAgendamento(formData: FormData) {
   const paciente_id = (formData.get("paciente_id") as string) || null;
   const data = formData.get("data") as string;
@@ -132,12 +177,23 @@ export async function criarAgendamento(
   if (!ctx) return { error: "Clínica não selecionada." };
   const clinicaId = ctx.clinicaId;
 
+  // Validar horário comercial
+  const foraExpediente = await validarHorarioComercial(supabase, clinicaId, data, hora_inicio, hora_fim);
+  if (foraExpediente) {
+    return { fieldErrors: { hora_inicio: foraExpediente } };
+  }
+
   if (recorrencia && ["semanal", "quinzenal", "mensal"].includes(recorrencia)) {
     // Recurring appointment
     const dates = getRecurrenceDates(data, recorrencia, recorrenciaVezes);
 
-    // Check conflicts for all dates
+    // Check business hours + conflicts for all dates
     for (const d of dates) {
+      const foraExp = await validarHorarioComercial(supabase, clinicaId, d, hora_inicio, hora_fim);
+      if (foraExp) {
+        const dateFmt = new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+        return { fieldErrors: { hora_inicio: `${dateFmt}: ${foraExp}` } };
+      }
       const conflito = await verificarConflito(supabase, d, hora_inicio, hora_fim, clinicaId);
       if (conflito) {
         const dateFmt = new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
@@ -166,7 +222,7 @@ export async function criarAgendamento(
     redirect(`/agenda?data=${data}&success=${dates.length}+agendamentos+criados`);
   }
 
-  // Single appointment
+  // Single appointment — business hours already validated above
   const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, clinicaId);
   if (conflito) {
     return { fieldErrors: { hora_inicio: conflito } };
@@ -247,6 +303,11 @@ export async function atualizarAgendamento(
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
+
+  const foraExpediente = await validarHorarioComercial(supabase, ctx.clinicaId, data, hora_inicio, hora_fim);
+  if (foraExpediente) {
+    return { fieldErrors: { hora_inicio: foraExpediente } };
+  }
 
   const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, ctx.clinicaId, id);
   if (conflito) {

@@ -30,6 +30,8 @@ vi.mock("../../types", async () => {
   return { ...actual };
 });
 
+vi.mock("@/lib/clinica", () => ({ getMedicoId: vi.fn().mockResolvedValue("doc-1") }));
+
 vi.mock("../../novo/prontuario-form", () => ({
   ProntuarioForm: ({ defaults }: { defaults: Record<string, unknown> }) => (
     <form data-testid="prontuario-form" data-defaults={JSON.stringify(defaults)} />

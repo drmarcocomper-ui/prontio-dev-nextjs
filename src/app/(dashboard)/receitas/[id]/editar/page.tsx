@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { getMedicoId } from "@/lib/clinica";
 import { ReceitaForm } from "../../novo/receita-form";
 import type { ReceitaComPaciente } from "../../types";
 
@@ -42,6 +43,7 @@ export default async function EditarReceitaPage({
   }
 
   const r = receita as unknown as ReceitaComPaciente;
+  const medicoId = await getMedicoId();
 
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
@@ -60,6 +62,7 @@ export default async function EditarReceitaPage({
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <ReceitaForm
+          medicoId={medicoId}
           defaults={{
             id: r.id,
             paciente_id: r.pacientes.id,
