@@ -287,6 +287,9 @@ export async function convidarSecretaria(
   if (!ctx || ctx.papel !== "medico") {
     return { error: "Apenas médicos podem convidar secretárias." };
   }
+  if (clinicaId !== ctx.clinicaId) {
+    return { error: "Você não tem permissão para gerenciar esta clínica." };
+  }
 
   // Look up user by email using admin (we use a workaround since we can't search auth.users from client)
   // For now, we'll create the link assuming the user already has an account
