@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido, uuidValido } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido, valorPermitido, uuidValido } from "@/lib/validators";
 import {
   NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
   ENDERECO_MAX_LENGTH, NUMERO_MAX_LENGTH, COMPLEMENTO_MAX_LENGTH,
   BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH, CONVENIO_MAX_LENGTH,
   OBSERVACOES_MAX_LENGTH, validarCPF,
+  SEXO_LABELS, ESTADO_CIVIL_LABELS, ESTADOS_UF,
 } from "./types";
 import { getMedicoId } from "@/lib/clinica";
 
@@ -57,6 +58,8 @@ function validarCamposPaciente(formData: FormData) {
     fieldErrors.cep = "CEP deve ter 8 dígitos.";
   }
 
+  valorPermitido(fieldErrors, "sexo", sexo, Object.keys(SEXO_LABELS));
+  valorPermitido(fieldErrors, "estado_civil", estado_civil, Object.keys(ESTADO_CIVIL_LABELS));
   dataNaoFutura(fieldErrors, "data_nascimento", data_nascimento, "A data de nascimento não pode ser no futuro.");
 
   tamanhoMaximo(fieldErrors, "rg", rg, RG_MAX_LENGTH);
@@ -65,6 +68,7 @@ function validarCamposPaciente(formData: FormData) {
   tamanhoMaximo(fieldErrors, "complemento", complemento, COMPLEMENTO_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "bairro", bairro, BAIRRO_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "cidade", cidade, CIDADE_MAX_LENGTH);
+  valorPermitido(fieldErrors, "estado", estado, ESTADOS_UF);
   tamanhoMaximo(fieldErrors, "convenio", convenio, CONVENIO_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 

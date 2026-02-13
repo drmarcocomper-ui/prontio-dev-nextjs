@@ -62,7 +62,12 @@ export default async function PacienteDetalhesPage({
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   const isMedico = ctx?.papel === "medico";
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    notFound();
+  }
 
   const { data: paciente } = await supabase
     .from("pacientes")

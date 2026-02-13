@@ -49,6 +49,19 @@ export function emailValido(
   }
 }
 
+export function valorPermitido(
+  errors: FieldErrors,
+  campo: string,
+  valor: string | null | undefined,
+  permitidos: readonly string[],
+  mensagem?: string
+): void {
+  if (!valor) return;
+  if (!permitidos.includes(valor)) {
+    errors[campo] = mensagem ?? "Valor inválido.";
+  }
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function uuidValido(valor: string | null | undefined): boolean {

@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, uuidValido } from "@/lib/validators";
-import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX } from "./constants";
-import { getClinicaAtual } from "@/lib/clinica";
+import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido } from "@/lib/validators";
+import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS } from "./constants";
+import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 
 export type TransacaoFormState = {
   error?: string;
@@ -28,6 +28,7 @@ function validarCamposTransacao(formData: FormData) {
   const fieldErrors: Record<string, string> = {};
 
   campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo.");
+  valorPermitido(fieldErrors, "tipo", tipo, ["receita", "despesa"]);
   campoObrigatorio(fieldErrors, "descricao", descricao, "Descrição é obrigatória.");
   tamanhoMaximo(fieldErrors, "descricao", descricao, DESCRICAO_MAX_LENGTH);
 
@@ -37,6 +38,11 @@ function validarCamposTransacao(formData: FormData) {
     fieldErrors.valor = `Valor máximo é R$ ${VALOR_MAX.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`;
   }
   campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.");
+  if (paciente_id && !uuidValido(paciente_id)) {
+    fieldErrors.paciente_id = "Paciente inválido.";
+  }
+  valorPermitido(fieldErrors, "forma_pagamento", forma_pagamento, Object.keys(PAGAMENTO_LABELS));
+  valorPermitido(fieldErrors, "status", status, Object.keys(STATUS_LABELS));
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   return { tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, fieldErrors };
@@ -55,6 +61,24 @@ export async function criarTransacao(
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
+
+  if (fields.paciente_id) {
+    let medicoId: string;
+    try {
+      medicoId = await getMedicoId();
+    } catch {
+      return { error: "Não foi possível identificar o médico responsável." };
+    }
+    const { data: paciente } = await supabase
+      .from("pacientes")
+      .select("id")
+      .eq("id", fields.paciente_id)
+      .eq("medico_id", medicoId)
+      .single();
+    if (!paciente) {
+      return { fieldErrors: { paciente_id: "Paciente não encontrado." } };
+    }
+  }
 
   const { error } = await supabase.from("transacoes").insert({
     clinica_id: ctx.clinicaId,
@@ -97,6 +121,24 @@ export async function atualizarTransacao(
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
+
+  if (fields.paciente_id) {
+    let medicoId: string;
+    try {
+      medicoId = await getMedicoId();
+    } catch {
+      return { error: "Não foi possível identificar o médico responsável." };
+    }
+    const { data: paciente } = await supabase
+      .from("pacientes")
+      .select("id")
+      .eq("id", fields.paciente_id)
+      .eq("medico_id", medicoId)
+      .single();
+    if (!paciente) {
+      return { fieldErrors: { paciente_id: "Paciente não encontrado." } };
+    }
+  }
 
   const { error } = await supabase
     .from("transacoes")

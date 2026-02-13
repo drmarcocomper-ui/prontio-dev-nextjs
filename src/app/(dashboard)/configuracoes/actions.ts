@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { getClinicaAtual } from "@/lib/clinica";
+import { emailValido as validarEmail } from "@/lib/validators";
 import {
   NOME_CONSULTORIO_MAX,
   ENDERECO_MAX,
@@ -134,18 +135,32 @@ export async function salvarProfissional(
   if (!ctx) return { error: "Contexto não encontrado." };
 
   const entries: { chave: string; valor: string; user_id: string }[] = [];
+  let validationError: string | null = null;
 
   formData.forEach((value, key) => {
+    if (validationError) return;
     if (key.startsWith("config_")) {
       const configKey = key.replace("config_", "");
       if (!PROFISSIONAL_KEYS.has(configKey)) return;
       const val = (value as string).trim();
       const limit = FIELD_LIMITS[configKey];
-      if (limit && val.length > limit) return;
+      if (limit && val.length > limit) {
+        validationError = `Campo excede ${limit} caracteres.`;
+        return;
+      }
+      if (configKey === "email_profissional" && val) {
+        const erros: Record<string, string> = {};
+        validarEmail(erros, "email", val);
+        if (erros.email) {
+          validationError = erros.email;
+          return;
+        }
+      }
       entries.push({ chave: configKey, valor: val, user_id: ctx.userId });
     }
   });
 
+  if (validationError) return { error: validationError };
   if (entries.length === 0) return { success: true };
 
   const supabase = await createClient();
@@ -256,6 +271,9 @@ export async function convidarSecretaria(
   const clinicaId = formData.get("clinica_id") as string;
 
   if (!email) return { error: "E-mail é obrigatório." };
+  const emailErros: Record<string, string> = {};
+  validarEmail(emailErros, "email", email);
+  if (emailErros.email) return { error: emailErros.email };
   if (!clinicaId) return { error: "Selecione uma clínica." };
 
   const supabase = await createClient();

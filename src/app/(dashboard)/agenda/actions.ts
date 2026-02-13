@@ -4,10 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, uuidValido } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido } from "@/lib/validators";
 import { parseLocalDate, toDateString } from "@/lib/date";
 import { formatDate } from "@/lib/format";
-import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, type AgendaStatus } from "./types";
+import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
 import { getClinicaAtual } from "@/lib/clinica";
 
 export type AgendamentoFormState = {
@@ -127,6 +127,7 @@ function validarCamposAgendamento(formData: FormData) {
   ) {
     fieldErrors.hora_fim = "A consulta deve ter no mínimo 15 minutos.";
   }
+  valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   return { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido, uuidValido } from "./validators";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido, valorPermitido, uuidValido } from "./validators";
 
 describe("campoObrigatorio", () => {
   it("adiciona erro quando valor é vazio", () => {
@@ -139,6 +139,34 @@ describe("emailValido", () => {
     const errors: Record<string, string> = {};
     emailValido(errors, "email", undefined);
     expect(errors).not.toHaveProperty("email");
+  });
+});
+
+describe("valorPermitido", () => {
+  const permitidos = ["a", "b", "c"] as const;
+
+  it("não adiciona erro quando valor está na lista", () => {
+    const errors: Record<string, string> = {};
+    valorPermitido(errors, "campo", "a", permitidos);
+    expect(errors).not.toHaveProperty("campo");
+  });
+
+  it("adiciona erro quando valor não está na lista", () => {
+    const errors: Record<string, string> = {};
+    valorPermitido(errors, "campo", "x", permitidos);
+    expect(errors.campo).toBe("Valor inválido.");
+  });
+
+  it("não adiciona erro quando valor é null", () => {
+    const errors: Record<string, string> = {};
+    valorPermitido(errors, "campo", null, permitidos);
+    expect(errors).not.toHaveProperty("campo");
+  });
+
+  it("usa mensagem customizada quando fornecida", () => {
+    const errors: Record<string, string> = {};
+    valorPermitido(errors, "tipo", "x", permitidos, "Tipo inválido.");
+    expect(errors.tipo).toBe("Tipo inválido.");
   });
 });
 

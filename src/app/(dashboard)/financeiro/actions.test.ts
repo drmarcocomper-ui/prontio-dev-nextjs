@@ -5,6 +5,8 @@ const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
 const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 
+const mockMedicoId = vi.fn().mockResolvedValue("user-1");
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
@@ -12,27 +14,43 @@ vi.mock("@/lib/clinica", () => ({
     papel: "medico",
     userId: "user-1",
   }),
+  getMedicoId: (...args: unknown[]) => mockMedicoId(...args),
 }));
+
+const mockPacienteCheck = vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000001" } });
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
-      from: () => ({
-        insert: (data: unknown) => {
-          mockInsert(data);
-          return mockInsert.mock.results[mockInsert.mock.results.length - 1].value;
-        },
-        update: (data: unknown) => ({
-          eq: (_col: string, val: string) => ({
-            eq: () => mockUpdateEq(data, val),
+      from: (table: string) => {
+        if (table === "pacientes") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  single: () => mockPacienteCheck(),
+                }),
+              }),
+            }),
+          };
+        }
+        return {
+          insert: (data: unknown) => {
+            mockInsert(data);
+            return mockInsert.mock.results[mockInsert.mock.results.length - 1].value;
+          },
+          update: (data: unknown) => ({
+            eq: (_col: string, val: string) => ({
+              eq: () => mockUpdateEq(data, val),
+            }),
           }),
-        }),
-        delete: () => ({
-          eq: (_col: string, val: string) => ({
-            eq: () => mockDelete(val),
+          delete: () => ({
+            eq: (_col: string, val: string) => ({
+              eq: () => mockDelete(val),
+            }),
           }),
-        }),
-      }),
+        };
+      },
     }),
 }));
 
@@ -116,6 +134,18 @@ describe("criarTransacao", () => {
     mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
     expect(result.error).toBe("Erro ao criar transação. Tente novamente.");
+  });
+
+  it("retorna fieldErrors quando paciente_id é UUID inválido", async () => {
+    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15", paciente_id: "invalido" }));
+    expect(result.fieldErrors?.paciente_id).toBe("Paciente inválido.");
+  });
+
+  it("retorna fieldErrors quando paciente não pertence ao médico", async () => {
+    mockPacienteCheck.mockResolvedValueOnce({ data: null });
+    await expect(
+      criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15", paciente_id: "00000000-0000-0000-0000-000000000001" }))
+    ).resolves.toEqual({ fieldErrors: { paciente_id: "Paciente não encontrado." } });
   });
 });
 

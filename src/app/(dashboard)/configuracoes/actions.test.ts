@@ -41,7 +41,7 @@ vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("user-456"),
 }));
 
-import { salvarConsultorio, salvarHorarios, salvarProfissional, alterarSenha } from "./actions";
+import { salvarConsultorio, salvarHorarios, salvarProfissional, alterarSenha, convidarSecretaria } from "./actions";
 import { getClinicaAtual } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
@@ -190,6 +190,31 @@ describe("salvarProfissional", () => {
     }));
     expect(result.error).toContain("Erro ao salvar profissional");
   });
+
+  it("retorna erro quando campo excede max length", async () => {
+    const longName = "a".repeat(256);
+    const result = await salvarProfissional({}, makeFormData({
+      config_nome_profissional: longName,
+    }));
+    expect(result.error).toBe("Campo excede 255 caracteres.");
+  });
+
+  it("retorna erro quando email_profissional é inválido", async () => {
+    const result = await salvarProfissional({}, makeFormData({
+      config_email_profissional: "email-invalido",
+    }));
+    expect(result.error).toBe("E-mail inválido.");
+  });
+
+  it("aceita email_profissional válido", async () => {
+    const result = await salvarProfissional({}, makeFormData({
+      config_email_profissional: "dr@clinica.com",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith([
+      { chave: "email_profissional", valor: "dr@clinica.com", user_id: "user-456" },
+    ]);
+  });
 });
 
 describe("alterarSenha", () => {
@@ -221,5 +246,24 @@ describe("alterarSenha", () => {
     mockUpdateUser.mockResolvedValueOnce({ error: { message: "Auth error" } });
     const result = await alterarSenha({}, makeFormData({ new_password: "novaSenha123", confirm_password: "novaSenha123" }));
     expect(result.error).toBe("Erro ao alterar senha. Tente novamente.");
+  });
+});
+
+describe("convidarSecretaria", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("retorna erro quando email está vazio", async () => {
+    const result = await convidarSecretaria({}, makeFormData({ email: "", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("E-mail é obrigatório.");
+  });
+
+  it("retorna erro quando email é inválido", async () => {
+    const result = await convidarSecretaria({}, makeFormData({ email: "invalido", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("E-mail inválido.");
+  });
+
+  it("retorna erro quando clinica_id está vazio", async () => {
+    const result = await convidarSecretaria({}, makeFormData({ email: "sec@email.com", clinica_id: "" }));
+    expect(result.error).toBe("Selecione uma clínica.");
   });
 });

@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido } from "@/lib/validators";
-import { TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH } from "./types";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido } from "@/lib/validators";
+import { TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH, TIPO_LABELS } from "./types";
 import { getMedicoId } from "@/lib/clinica";
 
 export type ProntuarioFormState = {
@@ -35,6 +35,7 @@ function validarCamposProntuario(formData: FormData) {
     fieldErrors.queixa_principal = "Preencha ao menos a queixa principal ou a conduta.";
   }
 
+  valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
   tamanhoMaximo(fieldErrors, "cid", cid, CID_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "queixa_principal", queixa_principal, TEXTO_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "historia_doenca", historia_doenca, TEXTO_MAX_LENGTH);

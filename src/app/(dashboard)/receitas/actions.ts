@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido } from "@/lib/validators";
-import { MEDICAMENTOS_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./types";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido } from "@/lib/validators";
+import { MEDICAMENTOS_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "./types";
 import { getMedicoId } from "@/lib/clinica";
 
 export type ReceitaFormState = {
@@ -29,6 +29,7 @@ function validarCamposReceita(formData: FormData) {
   }
 
   campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo da receita.");
+  valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
   campoObrigatorio(fieldErrors, "medicamentos", medicamentos, "Medicamentos é obrigatório.");
   tamanhoMaximo(fieldErrors, "medicamentos", medicamentos, MEDICAMENTOS_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
@@ -83,6 +84,7 @@ export async function criarReceita(
   }
 
   revalidatePath("/receitas");
+  revalidatePath("/");
   redirect(`/receitas/${inserted.id}?success=Receita+registrada`);
 }
 
@@ -126,6 +128,7 @@ export async function atualizarReceita(
   }
 
   revalidatePath("/receitas");
+  revalidatePath("/");
   redirect(`/receitas/${id}?success=Receita+atualizada`);
 }
 
@@ -154,6 +157,7 @@ export async function excluirReceita(id: string): Promise<void> {
   }
 
   revalidatePath("/receitas");
+  revalidatePath("/");
   if (pacienteId) {
     revalidatePath(`/pacientes/${pacienteId}`);
     redirect(`/pacientes/${pacienteId}?success=Receita+exclu%C3%ADda`);

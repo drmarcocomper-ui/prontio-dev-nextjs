@@ -28,7 +28,12 @@ export default async function EditarPacientePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    notFound();
+  }
 
   const { data: paciente } = await supabase
     .from("pacientes")

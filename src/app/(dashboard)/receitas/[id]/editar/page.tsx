@@ -29,7 +29,12 @@ export default async function EditarReceitaPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    notFound();
+  }
 
   const { data: receita } = await supabase
     .from("receitas")

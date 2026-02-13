@@ -55,7 +55,12 @@ export default async function ProntuarioDetalhesPage({
   const { id } = await params;
   const { from } = await searchParams;
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    notFound();
+  }
 
   const { data: prontuario } = await supabase
     .from("prontuarios")

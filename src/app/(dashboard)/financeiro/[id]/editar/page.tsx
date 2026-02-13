@@ -30,6 +30,7 @@ export default async function EditarTransacaoPage({
   const { id } = await params;
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
+  if (!ctx) notFound();
 
   const { data: transacao } = await supabase
     .from("transacoes")
@@ -37,7 +38,7 @@ export default async function EditarTransacaoPage({
       "id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
-    .eq("clinica_id", ctx?.clinicaId ?? "")
+    .eq("clinica_id", ctx.clinicaId)
     .single();
 
   if (!transacao) {
@@ -45,7 +46,12 @@ export default async function EditarTransacaoPage({
   }
 
   const t = transacao as unknown as TransacaoFull;
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    notFound();
+  }
 
   return (
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">

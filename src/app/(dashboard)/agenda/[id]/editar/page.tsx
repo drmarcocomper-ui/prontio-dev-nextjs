@@ -30,6 +30,7 @@ export default async function EditarAgendamentoPage({
   const { id } = await params;
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
+  if (!ctx) notFound();
 
   const { data: agendamento } = await supabase
     .from("agendamentos")
@@ -37,7 +38,7 @@ export default async function EditarAgendamentoPage({
       "id, data, hora_inicio, hora_fim, tipo, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
-    .eq("clinica_id", ctx?.clinicaId ?? "")
+    .eq("clinica_id", ctx.clinicaId)
     .single();
 
   if (!agendamento) {
@@ -45,7 +46,12 @@ export default async function EditarAgendamentoPage({
   }
 
   const ag = agendamento as unknown as Agendamento;
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    notFound();
+  }
 
   return (
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">

@@ -38,10 +38,10 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
       <FormError message={state.error} />
 
       {/* Tipo */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
+      <fieldset>
+        <legend className="block text-sm font-medium text-gray-700">
           Tipo <span className="text-red-500">*</span>
-        </label>
+        </legend>
         <div className="mt-2 flex gap-3">
           <label
             className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-semibold transition-colors ${
@@ -87,7 +87,7 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
           </label>
         </div>
         <FieldError message={state.fieldErrors?.tipo} />
-      </div>
+      </fieldset>
 
       {/* Descrição e Valor */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -40,6 +40,7 @@ export default async function TransacaoDetalhesPage({
   const { id } = await params;
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
+  if (!ctx) notFound();
 
   const { data: transacao } = await supabase
     .from("transacoes")
@@ -47,7 +48,7 @@ export default async function TransacaoDetalhesPage({
       "id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, created_at, pacientes(id, nome)"
     )
     .eq("id", id)
-    .eq("clinica_id", ctx?.clinicaId ?? "")
+    .eq("clinica_id", ctx.clinicaId)
     .single();
 
   if (!transacao) {
