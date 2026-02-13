@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Clinica, Papel } from "@/lib/clinica";
 
 let mockPathname = "/";
 
@@ -27,7 +28,28 @@ vi.mock("@/components/logout-button", () => ({
   LogoutButton: () => <button>Sair</button>,
 }));
 
+vi.mock("@/components/clinic-selector", () => ({
+  ClinicSelector: ({ clinicas, clinicaAtualId }: { clinicas: Clinica[]; clinicaAtualId: string }) => {
+    const current = clinicas.find((c: Clinica) => c.id === clinicaAtualId) ?? clinicas[0];
+    return <div>{current?.nome}</div>;
+  },
+}));
+
 import { Sidebar } from "./sidebar";
+
+const defaultClinicas: Clinica[] = [
+  { id: "clinic-1", nome: "Clínica Teste", papel: "medico" as const },
+];
+const defaultClinicaAtualId = "clinic-1";
+const defaultPapel: Papel = "medico" as const;
+
+const defaultProps = {
+  profissionalNome: "Dr. João Silva",
+  userEmail: "joao@test.com",
+  clinicas: defaultClinicas,
+  clinicaAtualId: defaultClinicaAtualId,
+  papel: defaultPapel,
+};
 
 const navItems = [
   { label: "Início", href: "/" },
@@ -44,21 +66,21 @@ describe("Sidebar", () => {
   });
 
   it("renderiza o logo e nome Prontio", () => {
-    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
+    render(<Sidebar {...defaultProps} />);
     // Mobile top bar + desktop sidebar both render logo
     expect(screen.getAllByText("P").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renderiza todos os 6 links de navegação", () => {
-    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
+  it("renderiza todos os 6 links de navegação quando papel é medico", () => {
+    render(<Sidebar {...defaultProps} />);
     for (const item of navItems) {
       expect(screen.getByText(item.label)).toBeInTheDocument();
     }
   });
 
   it("cada link aponta para o href correto", () => {
-    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
+    render(<Sidebar {...defaultProps} />);
     for (const item of navItems) {
       const link = screen.getByText(item.label).closest("a");
       expect(link).toHaveAttribute("href", item.href);
@@ -67,7 +89,7 @@ describe("Sidebar", () => {
 
   it("destaca o link Início quando pathname é /", () => {
     mockPathname = "/";
-    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
+    render(<Sidebar {...defaultProps} />);
     const link = screen.getByText("Início").closest("a");
     expect(link?.className).toContain("bg-primary-50");
     expect(link?.className).toContain("text-primary-700");
@@ -75,7 +97,7 @@ describe("Sidebar", () => {
 
   it("destaca links de seções quando pathname começa com o href", () => {
     mockPathname = "/pacientes/123";
-    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
+    render(<Sidebar {...defaultProps} />);
     const link = screen.getByText("Pacientes").closest("a");
     expect(link?.className).toContain("bg-primary-50");
     expect(link?.className).toContain("text-primary-700");
@@ -83,14 +105,35 @@ describe("Sidebar", () => {
 
   it("não destaca Início quando está em outra rota", () => {
     mockPathname = "/agenda";
-    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
+    render(<Sidebar {...defaultProps} />);
     const link = screen.getByText("Início").closest("a");
     expect(link?.className).not.toContain("bg-primary-50");
     expect(link?.className).toContain("text-gray-600");
   });
 
   it("renderiza o LogoutButton", () => {
-    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
+    render(<Sidebar {...defaultProps} />);
     expect(screen.getByText("Sair")).toBeInTheDocument();
+  });
+
+  describe("visibilidade por papel", () => {
+    it("quando papel=medico, exibe todos os itens de navegação", () => {
+      render(<Sidebar {...defaultProps} papel={"medico" as const} />);
+      for (const item of navItems) {
+        expect(screen.getByText(item.label)).toBeInTheDocument();
+      }
+    });
+
+    it("quando papel=secretaria, oculta Financeiro, Relatórios e Configurações", () => {
+      render(<Sidebar {...defaultProps} papel={"secretaria" as const} />);
+
+      expect(screen.getByText("Início")).toBeInTheDocument();
+      expect(screen.getByText("Agenda")).toBeInTheDocument();
+      expect(screen.getByText("Pacientes")).toBeInTheDocument();
+
+      expect(screen.queryByText("Financeiro")).not.toBeInTheDocument();
+      expect(screen.queryByText("Relatórios")).not.toBeInTheDocument();
+      expect(screen.queryByText("Configurações")).not.toBeInTheDocument();
+    });
   });
 });

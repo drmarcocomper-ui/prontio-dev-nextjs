@@ -2,12 +2,12 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("./tabs", () => ({
-  Tabs: () => <div data-testid="tabs" />,
+  Tabs: ({ papel }: { papel: string }) => <div data-testid="tabs" data-papel={papel} />,
 }));
 
 vi.mock("./consultorio-form", () => ({
-  ConsultorioForm: ({ defaults }: { defaults: Record<string, string> }) => (
-    <form data-testid="consultorio-form" data-defaults={JSON.stringify(defaults)} />
+  ConsultorioForm: ({ clinica }: { clinica: Record<string, unknown> }) => (
+    <form data-testid="consultorio-form" data-clinica={JSON.stringify(clinica)} />
   ),
 }));
 
@@ -25,13 +25,38 @@ vi.mock("./conta-form", () => ({
   ),
 }));
 
+vi.mock("./aparencia-form", () => ({
+  AparenciaForm: () => <form data-testid="aparencia-form" />,
+}));
+
+vi.mock("./dados-form", () => ({
+  DadosForm: () => <form data-testid="dados-form" />,
+}));
+
+vi.mock("./clinicas-form", () => ({
+  ClinicasForm: () => <form data-testid="clinicas-form" />,
+}));
+
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "medico",
+    userId: "user-1",
+  }),
+  getClinicasDoUsuario: vi.fn().mockResolvedValue([
+    { id: "clinic-1", nome: "Clínica Teste", papel: "medico" },
+  ]),
+}));
+
+const mockClinica = {
+  data: { nome: "Clínica Teste", cnpj: "12345678000100", telefone: null, endereco: null, cidade: null, estado: null },
+};
 const mockConfigData: { data: { chave: string; valor: string }[] | null } = {
   data: [
-    { chave: "nome_consultorio", valor: "Clínica Teste" },
-    { chave: "cnpj", valor: "12345678000100" },
+    { chave: "duracao_consulta", valor: "30" },
   ],
 };
-
 const mockUser: { data: { user: { email: string } | null } } = {
   data: { user: { email: "doc@test.com" } },
 };
@@ -39,7 +64,20 @@ const mockUser: { data: { user: { email: string } | null } } = {
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
-      from: () => ({ select: () => Promise.resolve(mockConfigData) }),
+      from: (table: string) => ({
+        select: () => {
+          if (table === "clinicas") {
+            return {
+              eq: () => ({ single: () => Promise.resolve(mockClinica) }),
+            };
+          }
+          if (table === "usuarios_clinicas") {
+            return { in: () => Promise.resolve({ data: [] }) };
+          }
+          // configuracoes
+          return Promise.resolve(mockConfigData);
+        },
+      }),
       auth: { getUser: () => Promise.resolve(mockUser) },
     }),
 }));
@@ -57,9 +95,11 @@ describe("ConfiguracoesPage", () => {
     expect(screen.getByText("Configurações")).toBeInTheDocument();
   });
 
-  it("renderiza o componente Tabs", async () => {
+  it("renderiza o componente Tabs com papel", async () => {
     await renderPage();
-    expect(screen.getByTestId("tabs")).toBeInTheDocument();
+    const tabs = screen.getByTestId("tabs");
+    expect(tabs).toBeInTheDocument();
+    expect(tabs).toHaveAttribute("data-papel", "medico");
   });
 
   it("renderiza ConsultorioForm por padrão", async () => {
@@ -67,12 +107,12 @@ describe("ConfiguracoesPage", () => {
     expect(screen.getByTestId("consultorio-form")).toBeInTheDocument();
   });
 
-  it("passa config como defaults para ConsultorioForm", async () => {
+  it("passa clinica data para ConsultorioForm", async () => {
     await renderPage();
     const form = screen.getByTestId("consultorio-form");
-    const defaults = JSON.parse(form.getAttribute("data-defaults") || "{}");
-    expect(defaults.nome_consultorio).toBe("Clínica Teste");
-    expect(defaults.cnpj).toBe("12345678000100");
+    const clinica = JSON.parse(form.getAttribute("data-clinica") || "{}");
+    expect(clinica.nome).toBe("Clínica Teste");
+    expect(clinica.cnpj).toBe("12345678000100");
   });
 
   it("renderiza ProfissionalForm quando tab=profissional", async () => {
@@ -99,15 +139,26 @@ describe("ConfiguracoesPage", () => {
     mockUser.data = { user: { email: "doc@test.com" } };
   });
 
+  it("renderiza AparenciaForm quando tab=aparencia", async () => {
+    await renderPage({ tab: "aparencia" });
+    expect(screen.getByTestId("aparencia-form")).toBeInTheDocument();
+  });
+
+  it("renderiza ClinicasForm quando tab=clinicas", async () => {
+    await renderPage({ tab: "clinicas" });
+    expect(screen.getByTestId("clinicas-form")).toBeInTheDocument();
+  });
+
+  it("renderiza DadosForm quando tab=dados", async () => {
+    await renderPage({ tab: "dados" });
+    expect(screen.getByTestId("dados-form")).toBeInTheDocument();
+  });
+
   it("transforma rows null em config vazio", async () => {
     mockConfigData.data = null;
-    await renderPage();
-    const form = screen.getByTestId("consultorio-form");
-    const defaults = JSON.parse(form.getAttribute("data-defaults") || "{}");
-    expect(Object.keys(defaults).length).toBe(0);
-    mockConfigData.data = [
-      { chave: "nome_consultorio", valor: "Clínica Teste" },
-      { chave: "cnpj", valor: "12345678000100" },
-    ];
+    await renderPage({ tab: "profissional" });
+    // Should render without errors even with null config data
+    expect(screen.getByTestId("profissional-form")).toBeInTheDocument();
+    mockConfigData.data = [{ chave: "duracao_consulta", valor: "30" }];
   });
 });

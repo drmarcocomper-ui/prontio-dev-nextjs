@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
+import { getClinicaAtual } from "@/lib/clinica";
 import {
   NOME_CONSULTORIO_MAX,
   ENDERECO_MAX,
@@ -21,13 +22,13 @@ export type ConfigFormState = {
   error?: string;
 };
 
-const ALLOWED_CONFIG_KEYS = new Set([
-  "nome_consultorio", "cnpj", "telefone_consultorio",
-  "endereco_consultorio", "cidade_consultorio", "estado_consultorio",
-  "nome_profissional", "especialidade", "crm", "rqe", "email_profissional",
+const HORARIO_KEYS = new Set([
   "duracao_consulta", "intervalo_inicio", "intervalo_fim",
-  "cor_primaria",
   ...["seg", "ter", "qua", "qui", "sex", "sab"].flatMap(d => [`horario_${d}_inicio`, `horario_${d}_fim`]),
+]);
+
+const PROFISSIONAL_KEYS = new Set([
+  "nome_profissional", "especialidade", "crm", "rqe", "email_profissional", "cor_primaria",
 ]);
 
 const FIELD_LIMITS: Record<string, number> = {
@@ -41,43 +42,126 @@ const FIELD_LIMITS: Record<string, number> = {
   email_profissional: EMAIL_MAX,
 };
 
-export async function salvarConfiguracoes(
+/**
+ * Salvar dados do consultório (tabela clinicas)
+ */
+export async function salvarConsultorio(
   _prev: ConfigFormState,
   formData: FormData
 ): Promise<ConfigFormState> {
-  const entries: Record<string, string> = {};
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Clínica não selecionada." };
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome do consultório é obrigatório." };
+  if (nome.length > NOME_CONSULTORIO_MAX) return { error: `Nome excede ${NOME_CONSULTORIO_MAX} caracteres.` };
+
+  const cnpj = (formData.get("cnpj") as string)?.replace(/\D/g, "") || null;
+  const telefone = (formData.get("telefone") as string)?.replace(/\D/g, "") || null;
+  const endereco = (formData.get("endereco") as string)?.trim() || null;
+  const cidade = (formData.get("cidade") as string)?.trim() || null;
+  const estado = (formData.get("estado") as string)?.trim().toUpperCase() || null;
+
+  if (endereco && endereco.length > ENDERECO_MAX) return { error: `Endereço excede ${ENDERECO_MAX} caracteres.` };
+  if (cidade && cidade.length > CIDADE_MAX) return { error: `Cidade excede ${CIDADE_MAX} caracteres.` };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("clinicas")
+    .update({ nome, cnpj, telefone, endereco, cidade, estado })
+    .eq("id", ctx.clinicaId);
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "salvar", "consultório") };
+  }
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/**
+ * Salvar horários de atendimento (configuracoes com clinica_id)
+ */
+export async function salvarHorarios(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Clínica não selecionada." };
+
+  const entries: { chave: string; valor: string; clinica_id: string }[] = [];
 
   formData.forEach((value, key) => {
     if (key.startsWith("config_")) {
       const configKey = key.replace("config_", "");
-      if (!ALLOWED_CONFIG_KEYS.has(configKey)) return;
-      entries[configKey] = (value as string).trim();
+      if (!HORARIO_KEYS.has(configKey)) return;
+      entries.push({ chave: configKey, valor: (value as string).trim(), clinica_id: ctx.clinicaId });
     }
   });
 
-  if (!entries.nome_consultorio) {
-    return { error: "Nome do consultório é obrigatório." };
-  }
-
-  for (const [field, max] of Object.entries(FIELD_LIMITS)) {
-    if (entries[field] && entries[field].length > max) {
-      return { error: `Campo excede o limite de ${max} caracteres.` };
-    }
-  }
+  if (entries.length === 0) return { success: true };
 
   const supabase = await createClient();
 
-  const rows = Object.entries(entries).map(([chave, valor]) => ({
-    chave,
-    valor,
-  }));
+  // Delete existing horario configs for this clinic, then insert fresh
+  const chaves = entries.map(e => e.chave);
+  await supabase
+    .from("configuracoes")
+    .delete()
+    .eq("clinica_id", ctx.clinicaId)
+    .in("chave", chaves);
 
-  const { error } = await supabase.from("configuracoes").upsert(rows, {
-    onConflict: "chave",
-  });
+  const { error } = await supabase.from("configuracoes").insert(entries);
 
   if (error) {
-    return { error: tratarErroSupabase(error, "salvar", "configurações") };
+    return { error: tratarErroSupabase(error, "salvar", "horários") };
+  }
+
+  revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Salvar dados do profissional (configuracoes com user_id)
+ */
+export async function salvarProfissional(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Contexto não encontrado." };
+
+  const entries: { chave: string; valor: string; user_id: string }[] = [];
+
+  formData.forEach((value, key) => {
+    if (key.startsWith("config_")) {
+      const configKey = key.replace("config_", "");
+      if (!PROFISSIONAL_KEYS.has(configKey)) return;
+      const val = (value as string).trim();
+      const limit = FIELD_LIMITS[configKey];
+      if (limit && val.length > limit) return;
+      entries.push({ chave: configKey, valor: val, user_id: ctx.userId });
+    }
+  });
+
+  if (entries.length === 0) return { success: true };
+
+  const supabase = await createClient();
+
+  // Delete existing profissional configs for this user, then insert fresh
+  const chaves = entries.map(e => e.chave);
+  await supabase
+    .from("configuracoes")
+    .delete()
+    .eq("user_id", ctx.userId)
+    .in("chave", chaves);
+
+  const { error } = await supabase.from("configuracoes").insert(entries);
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "salvar", "profissional") };
   }
 
   revalidatePath("/configuracoes");
@@ -114,5 +198,109 @@ export async function alterarSenha(
     return { error: "Erro ao alterar senha. Tente novamente." };
   }
 
+  return { success: true };
+}
+
+/**
+ * Criar nova clínica
+ */
+export async function criarClinica(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome é obrigatório." };
+  if (nome.length > NOME_CONSULTORIO_MAX) return { error: `Nome excede ${NOME_CONSULTORIO_MAX} caracteres.` };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Usuário não autenticado." };
+
+  // Create clinic
+  const { data: clinica, error: clinicaError } = await supabase
+    .from("clinicas")
+    .insert({ nome })
+    .select("id")
+    .single();
+
+  if (clinicaError) {
+    return { error: tratarErroSupabase(clinicaError, "criar", "clínica") };
+  }
+
+  // Create user-clinic link
+  const { error: vinculoError } = await supabase
+    .from("usuarios_clinicas")
+    .insert({
+      user_id: user.id,
+      clinica_id: clinica.id,
+      papel: "medico",
+    });
+
+  if (vinculoError) {
+    return { error: tratarErroSupabase(vinculoError, "criar", "vínculo") };
+  }
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/**
+ * Convidar secretária por email
+ */
+export async function convidarSecretaria(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const email = (formData.get("email") as string)?.trim();
+  const clinicaId = formData.get("clinica_id") as string;
+
+  if (!email) return { error: "E-mail é obrigatório." };
+  if (!clinicaId) return { error: "Selecione uma clínica." };
+
+  const supabase = await createClient();
+
+  // Check that caller is medico for this clinic
+  const ctx = await getClinicaAtual();
+  if (!ctx || ctx.papel !== "medico") {
+    return { error: "Apenas médicos podem convidar secretárias." };
+  }
+
+  // Look up user by email using admin (we use a workaround since we can't search auth.users from client)
+  // For now, we'll create the link assuming the user already has an account
+  // In a real app, you'd use an invite flow via Supabase Auth
+  const { data: users } = await supabase.rpc("get_user_id_by_email", { email_input: email }) as { data: { id: string }[] | null };
+
+  if (!users || users.length === 0) {
+    return { error: "Usuário não encontrado. A secretária precisa criar uma conta primeiro." };
+  }
+
+  const secretariaUserId = users[0].id;
+
+  // Check if already linked
+  const { data: existing } = await supabase
+    .from("usuarios_clinicas")
+    .select("id")
+    .eq("user_id", secretariaUserId)
+    .eq("clinica_id", clinicaId)
+    .single();
+
+  if (existing) {
+    return { error: "Este usuário já está vinculado a esta clínica." };
+  }
+
+  const { error } = await supabase
+    .from("usuarios_clinicas")
+    .insert({
+      user_id: secretariaUserId,
+      clinica_id: clinicaId,
+      papel: "secretaria",
+    });
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "criar", "vínculo da secretária") };
+  }
+
+  revalidatePath("/configuracoes");
   return { success: true };
 }

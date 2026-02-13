@@ -5,10 +5,44 @@
 -- Extensão pg_trgm (necessária para busca por nome)
 create extension if not exists pg_trgm;
 
--- 1. Pacientes
+-- 1. Clínicas
+-- --------------------------------------------
+create table clinicas (
+  id         uuid primary key default gen_random_uuid(),
+  nome       text not null,
+  cnpj       text,
+  telefone   text,
+  endereco   text,
+  cidade     text,
+  estado     text check (estado is null or char_length(estado) = 2),
+  ativo      boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+comment on table clinicas is 'Clínicas onde o médico atende';
+
+-- 2. Vínculo usuário ↔ clínica ↔ papel
+-- --------------------------------------------
+create table usuarios_clinicas (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  clinica_id uuid not null references clinicas(id) on delete cascade,
+  papel      text not null check (papel in ('medico', 'secretaria')),
+  created_at timestamptz not null default now(),
+  unique (user_id, clinica_id)
+);
+
+create index usuarios_clinicas_user_idx    on usuarios_clinicas (user_id);
+create index usuarios_clinicas_clinica_idx on usuarios_clinicas (clinica_id);
+
+comment on table usuarios_clinicas is 'Vínculo entre usuários e clínicas com papel (medico/secretaria)';
+
+-- 3. Pacientes
 -- --------------------------------------------
 create table pacientes (
   id          uuid primary key default gen_random_uuid(),
+  medico_id   uuid not null references auth.users(id),
   nome        text not null,
   cpf         text,
   rg          text,
@@ -32,14 +66,16 @@ create table pacientes (
 
 create unique index pacientes_cpf_unique on pacientes (cpf) where cpf is not null;
 create index pacientes_nome_idx on pacientes using gin (nome gin_trgm_ops);
+create index pacientes_medico_idx on pacientes (medico_id);
 
-comment on table pacientes is 'Cadastro de pacientes do consultório';
+comment on table pacientes is 'Cadastro de pacientes do médico (compartilhado entre clínicas)';
 
--- 2. Agendamentos
+-- 4. Agendamentos
 -- --------------------------------------------
 create table agendamentos (
   id           uuid primary key default gen_random_uuid(),
   paciente_id  uuid not null references pacientes (id) on delete cascade,
+  clinica_id   uuid not null references clinicas (id),
   data         date not null,
   hora_inicio  time not null,
   hora_fim     time not null,
@@ -55,14 +91,16 @@ create table agendamentos (
 
 create index agendamentos_data_idx on agendamentos (data);
 create index agendamentos_paciente_idx on agendamentos (paciente_id);
+create index agendamentos_clinica_idx on agendamentos (clinica_id);
 
-comment on table agendamentos is 'Agenda de consultas e procedimentos';
+comment on table agendamentos is 'Agenda de consultas e procedimentos (por clínica)';
 
--- 3. Prontuários
+-- 5. Prontuários
 -- --------------------------------------------
 create table prontuarios (
   id                    uuid primary key default gen_random_uuid(),
   paciente_id           uuid not null references pacientes (id) on delete cascade,
+  medico_id             uuid not null references auth.users(id),
   data                  date not null,
   tipo                  text check (tipo in ('consulta', 'retorno', 'exame', 'procedimento', 'avaliacao')),
   cid                   text,
@@ -78,13 +116,15 @@ create table prontuarios (
 
 create index prontuarios_paciente_idx on prontuarios (paciente_id);
 create index prontuarios_data_idx on prontuarios (data desc);
+create index prontuarios_medico_idx on prontuarios (medico_id);
 
-comment on table prontuarios is 'Evoluções clínicas / prontuário do paciente';
+comment on table prontuarios is 'Evoluções clínicas / prontuário do paciente (por médico)';
 
--- 4. Transações financeiras
+-- 6. Transações financeiras
 -- --------------------------------------------
 create table transacoes (
   id               uuid primary key default gen_random_uuid(),
+  clinica_id       uuid not null references clinicas (id),
   tipo             text not null check (tipo in ('receita', 'despesa')),
   categoria        text,
   descricao        text not null,
@@ -105,14 +145,16 @@ create table transacoes (
 create index transacoes_data_idx on transacoes (data desc);
 create index transacoes_tipo_idx on transacoes (tipo);
 create index transacoes_paciente_idx on transacoes (paciente_id);
+create index transacoes_clinica_idx on transacoes (clinica_id);
 
-comment on table transacoes is 'Receitas e despesas do consultório';
+comment on table transacoes is 'Receitas e despesas (por clínica)';
 
--- 5. Receitas médicas
+-- 7. Receitas médicas
 -- --------------------------------------------
 create table receitas (
   id            uuid primary key default gen_random_uuid(),
   paciente_id   uuid not null references pacientes (id) on delete cascade,
+  medico_id     uuid not null references auth.users(id),
   data          date not null,
   tipo          text not null check (tipo in ('simples', 'especial', 'controle_especial')),
   medicamentos  text not null,
@@ -123,22 +165,34 @@ create table receitas (
 
 create index receitas_paciente_idx on receitas (paciente_id);
 create index receitas_data_idx on receitas (data desc);
+create index receitas_medico_idx on receitas (medico_id);
 
-comment on table receitas is 'Receitas médicas prescritas aos pacientes';
+comment on table receitas is 'Receitas médicas prescritas aos pacientes (por médico)';
 
--- 6. Configurações
+-- 8. Configurações
 -- --------------------------------------------
 create table configuracoes (
-  chave  text primary key,
-  valor  text not null default ''
+  id         uuid primary key default gen_random_uuid(),
+  chave      text not null,
+  valor      text not null default '',
+  clinica_id uuid references clinicas(id),
+  user_id    uuid references auth.users(id)
 );
 
-comment on table configuracoes is 'Configurações do consultório (chave-valor)';
+create unique index configuracoes_scope_idx on configuracoes (
+  chave,
+  coalesce(clinica_id::text, ''),
+  coalesce(user_id::text, '')
+);
+
+comment on table configuracoes is 'Configurações por escopo (clínica, usuário ou global)';
 
 -- ============================================
 -- Row Level Security (RLS)
 -- ============================================
 
+alter table clinicas enable row level security;
+alter table usuarios_clinicas enable row level security;
 alter table pacientes enable row level security;
 alter table agendamentos enable row level security;
 alter table prontuarios enable row level security;
@@ -146,29 +200,59 @@ alter table transacoes enable row level security;
 alter table receitas enable row level security;
 alter table configuracoes enable row level security;
 
--- Política: usuários autenticados têm acesso total
--- (adequado para sistema single-tenant / consultório único)
+-- clinicas: usuário vê clínicas que pertence
+create policy "Acesso clinicas" on clinicas for select to authenticated
+  using (id in (select clinica_id from usuarios_clinicas where user_id = auth.uid()));
 
-create policy "Acesso autenticado" on pacientes
-  for all to authenticated
-  using (true) with check (true);
+create policy "Medico gerencia clinicas" on clinicas for all to authenticated
+  using (id in (select clinica_id from usuarios_clinicas where user_id = auth.uid() and papel = 'medico'))
+  with check (id in (select clinica_id from usuarios_clinicas where user_id = auth.uid() and papel = 'medico'));
 
-create policy "Acesso autenticado" on agendamentos
-  for all to authenticated
-  using (true) with check (true);
+-- usuarios_clinicas
+create policy "Acesso vinculos leitura" on usuarios_clinicas for select to authenticated
+  using (
+    user_id = auth.uid()
+    or clinica_id in (select clinica_id from usuarios_clinicas uc where uc.user_id = auth.uid() and uc.papel = 'medico')
+  );
 
-create policy "Acesso autenticado" on prontuarios
-  for all to authenticated
-  using (true) with check (true);
+create policy "Medico gerencia vinculos" on usuarios_clinicas for all to authenticated
+  using (
+    clinica_id in (select clinica_id from usuarios_clinicas uc where uc.user_id = auth.uid() and uc.papel = 'medico')
+  )
+  with check (
+    clinica_id in (select clinica_id from usuarios_clinicas uc where uc.user_id = auth.uid() and uc.papel = 'medico')
+  );
 
-create policy "Acesso autenticado" on transacoes
-  for all to authenticated
-  using (true) with check (true);
+-- pacientes: médico e suas secretárias
+create policy "Acesso pacientes" on pacientes for all to authenticated
+  using (
+    medico_id = auth.uid()
+    or medico_id in (
+      select uc2.user_id from usuarios_clinicas uc1
+      join usuarios_clinicas uc2 on uc1.clinica_id = uc2.clinica_id and uc2.papel = 'medico'
+      where uc1.user_id = auth.uid()
+    )
+  );
 
-create policy "Acesso autenticado" on receitas
-  for all to authenticated
-  using (true) with check (true);
+-- prontuarios/receitas: somente o médico
+create policy "Medico acessa prontuarios" on prontuarios for all to authenticated
+  using (medico_id = auth.uid()) with check (medico_id = auth.uid());
 
-create policy "Acesso autenticado" on configuracoes
-  for all to authenticated
-  using (true) with check (true);
+create policy "Medico acessa receitas" on receitas for all to authenticated
+  using (medico_id = auth.uid()) with check (medico_id = auth.uid());
+
+-- agendamentos: por clínica (médico e secretária)
+create policy "Acesso agendamentos" on agendamentos for all to authenticated
+  using (clinica_id in (select clinica_id from usuarios_clinicas where user_id = auth.uid()));
+
+-- transacoes: por clínica, somente médico
+create policy "Medico acessa transacoes" on transacoes for all to authenticated
+  using (clinica_id in (select clinica_id from usuarios_clinicas where user_id = auth.uid() and papel = 'medico'));
+
+-- configuracoes
+create policy "Acesso configuracoes" on configuracoes for all to authenticated
+  using (
+    user_id = auth.uid()
+    or clinica_id in (select clinica_id from usuarios_clinicas where user_id = auth.uid())
+    or (user_id is null and clinica_id is null)
+  );

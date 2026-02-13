@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatTime, formatCurrency, getInitials, formatRelativeTime } from "@/lib/format";
 import { FinanceiroChart, AgendamentosSemanaChart } from "./dashboard-charts";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -51,6 +52,9 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  const clinicaId = ctx?.clinicaId ?? "";
+  const isMedico = ctx?.papel === "medico";
 
   const now = new Date();
   const hoje = now.toISOString().split("T")[0];
@@ -85,23 +89,29 @@ export default async function DashboardPage() {
     supabase
       .from("agendamentos")
       .select("*", { count: "exact", head: true })
+      .eq("clinica_id", clinicaId)
       .eq("data", hoje),
     supabase
       .from("agendamentos")
       .select("*", { count: "exact", head: true })
+      .eq("clinica_id", clinicaId)
       .eq("status", "atendido")
       .gte("data", inicioMes)
       .lte("data", fimMes),
-    supabase
-      .from("transacoes")
-      .select("valor")
-      .eq("tipo", "receita")
-      .neq("status", "cancelado")
-      .gte("data", inicioMes)
-      .lte("data", fimMes),
+    isMedico
+      ? supabase
+          .from("transacoes")
+          .select("valor")
+          .eq("clinica_id", clinicaId)
+          .eq("tipo", "receita")
+          .neq("status", "cancelado")
+          .gte("data", inicioMes)
+          .lte("data", fimMes)
+      : { data: [] },
     supabase
       .from("agendamentos")
       .select("id, hora_inicio, hora_fim, tipo, status, pacientes(id, nome)")
+      .eq("clinica_id", clinicaId)
       .eq("data", hoje)
       .not("status", "in", '("atendido","cancelado","faltou")')
       .order("hora_inicio")
@@ -111,15 +121,19 @@ export default async function DashboardPage() {
       .select("id, data, tipo, created_at, pacientes(id, nome)")
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase
-      .from("transacoes")
-      .select("data, tipo, valor")
-      .neq("status", "cancelado")
-      .gte("data", inicioSeisMeses)
-      .lte("data", fimMes),
+    isMedico
+      ? supabase
+          .from("transacoes")
+          .select("data, tipo, valor")
+          .eq("clinica_id", clinicaId)
+          .neq("status", "cancelado")
+          .gte("data", inicioSeisMeses)
+          .lte("data", fimMes)
+      : { data: [] },
     supabase
       .from("agendamentos")
       .select("data, status")
+      .eq("clinica_id", clinicaId)
       .gte("data", inicioSemana)
       .lte("data", hoje),
   ]);
@@ -217,16 +231,20 @@ export default async function DashboardPage() {
         </svg>
       ),
     },
-    {
-      label: "Receita",
-      value: formatCurrency(totalReceita),
-      description: "este mês",
-      icon: (
-        <svg aria-hidden="true" className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-        </svg>
-      ),
-    },
+    ...(isMedico
+      ? [
+          {
+            label: "Receita",
+            value: formatCurrency(totalReceita),
+            description: "este mês",
+            icon: (
+              <svg aria-hidden="true" className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -257,13 +275,13 @@ export default async function DashboardPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-        <FinanceiroChart data={financeiroChartData} />
+      <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${isMedico ? "lg:grid-cols-2" : ""}`}>
+        {isMedico && <FinanceiroChart data={financeiroChartData} />}
         <AgendamentosSemanaChart data={agendaSemanaChartData} />
       </div>
 
       {/* Sections */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+      <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${isMedico ? "lg:grid-cols-2" : ""}`}>
         {/* Próximas consultas */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
@@ -323,8 +341,8 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Atividade recente */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        {/* Atividade recente (médico only) */}
+        {isMedico && <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
             <h2 className="font-semibold text-gray-900">
               Atividade recente
@@ -368,7 +386,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

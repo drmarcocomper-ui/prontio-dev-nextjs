@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { FormError } from "@/components/form-utils";
-import { salvarConfiguracoes, type ConfigFormState } from "./actions";
+import { salvarProfissional, type ConfigFormState } from "./actions";
 import {
   INPUT_CLASS,
   NOME_PROFISSIONAL_MAX,
@@ -19,7 +19,7 @@ export function ProfissionalForm({
   defaults: Record<string, string>;
 }) {
   const [state, formAction, isPending] = useActionState<ConfigFormState, FormData>(
-    salvarConfiguracoes,
+    salvarProfissional,
     {}
   );
 
@@ -30,9 +30,6 @@ export function ProfissionalForm({
   return (
     <form action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
       <FormError message={state.error} />
-
-      {/* Hack: nome_consultorio is required by the action, send it hidden */}
-      <input type="hidden" name="config_nome_consultorio" value={defaults.nome_consultorio ?? "Prontio"} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">

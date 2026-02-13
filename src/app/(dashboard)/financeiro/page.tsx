@@ -16,6 +16,7 @@ import {
   formatDate,
   type TransacaoListItem,
 } from "./constants";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Financeiro" };
 
@@ -47,10 +48,12 @@ export default async function FinanceiroPage({
   const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
 
   let query = supabase
     .from("transacoes")
     .select("id, tipo, categoria, descricao, valor, data, forma_pagamento, status, pacientes(nome)", { count: "exact" })
+    .eq("clinica_id", ctx?.clinicaId ?? "")
     .gte("data", startDate)
     .lte("data", endDate)
     .order(sortColumn, { ascending })
@@ -89,6 +92,7 @@ export default async function FinanceiroPage({
   let summaryQuery = supabase
     .from("transacoes")
     .select("tipo, valor, status")
+    .eq("clinica_id", ctx?.clinicaId ?? "")
     .gte("data", startDate)
     .lte("data", endDate);
 

@@ -13,6 +13,18 @@ vi.mock("@/components/keyboard-shortcuts", () => ({
   KeyboardShortcuts: () => null,
 }));
 
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "medico",
+    userId: "user-1",
+  }),
+  getClinicasDoUsuario: vi.fn().mockResolvedValue([
+    { id: "clinic-1", nome: "Clínica Teste", papel: "medico" },
+  ]),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue({
     from: () => ({
@@ -29,7 +41,8 @@ vi.mock("@/lib/supabase/server", () => ({
 import DashboardLayout from "./layout";
 
 async function renderAsync(ui: React.ReactElement) {
-  const resolved = await ui.type(ui.props);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const resolved = await (ui.type as any)(ui.props);
   return render(resolved);
 }
 

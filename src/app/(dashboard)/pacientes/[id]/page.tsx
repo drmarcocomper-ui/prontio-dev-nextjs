@@ -11,6 +11,7 @@ import {
   SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS,
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export async function generateMetadata({
   params,
@@ -59,6 +60,8 @@ export default async function PacienteDetalhesPage({
   const { tab } = await searchParams;
   const currentTab = tab || "identificacao";
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  const isMedico = ctx?.papel === "medico";
 
   const { data: paciente } = await supabase
     .from("pacientes")
@@ -247,7 +250,7 @@ export default async function PacienteDetalhesPage({
       </div>
       )}
 
-      {currentTab === "prontuario" && (
+      {currentTab === "prontuario" && isMedico && (
       <>
       {/* Evoluções clínicas */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">

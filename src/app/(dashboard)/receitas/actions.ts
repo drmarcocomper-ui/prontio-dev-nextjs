@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura } from "@/lib/validators";
 import { MEDICAMENTOS_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./types";
+import { getMedicoId } from "@/lib/clinica";
 
 export type ReceitaFormState = {
   error?: string;
@@ -46,11 +47,13 @@ export async function criarReceita(
   }
 
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   const { data: inserted, error } = await supabase
     .from("receitas")
     .insert({
       paciente_id: fields.paciente_id,
+      medico_id: medicoId,
       data: fields.data,
       tipo: fields.tipo,
       medicamentos: fields.medicamentos,

@@ -21,6 +21,7 @@ import {
   aggregateByCategoria,
   aggregateByPagamento,
 } from "./utils";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Relatório Financeiro" };
 
@@ -33,10 +34,12 @@ export default async function RelatorioFinanceiroPage({
   const { currentMonth, year, month, startDate, endDate } = getMonthDateRange(mes);
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
 
   const { data: transacoes } = await supabase
     .from("transacoes")
     .select(REPORT_SELECT)
+    .eq("clinica_id", ctx?.clinicaId ?? "")
     .gte("data", startDate)
     .lte("data", endDate)
     .order("data", { ascending: false })

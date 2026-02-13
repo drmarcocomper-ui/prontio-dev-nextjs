@@ -2,19 +2,23 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import type { Papel } from "@/lib/clinica";
 
-const TABS = [
-  { key: "consultorio", label: "Consultório" },
-  { key: "profissional", label: "Profissional" },
-  { key: "horarios", label: "Horários" },
-  { key: "conta", label: "Conta" },
-  { key: "aparencia", label: "Aparência" },
-  { key: "dados", label: "Dados" },
+const ALL_TABS = [
+  { key: "consultorio", label: "Consultório", roles: ["medico"] as Papel[] },
+  { key: "profissional", label: "Profissional", roles: ["medico"] as Papel[] },
+  { key: "horarios", label: "Horários", roles: ["medico"] as Papel[] },
+  { key: "conta", label: "Conta", roles: ["medico", "secretaria"] as Papel[] },
+  { key: "aparencia", label: "Aparência", roles: ["medico"] as Papel[] },
+  { key: "clinicas", label: "Clínicas", roles: ["medico"] as Papel[] },
+  { key: "dados", label: "Dados", roles: ["medico"] as Papel[] },
 ];
 
-export function Tabs() {
+export function Tabs({ papel }: { papel: Papel }) {
   const searchParams = useSearchParams();
   const current = searchParams.get("tab") || "consultorio";
+
+  const tabs = ALL_TABS.filter((t) => t.roles.includes(papel));
 
   return (
     <div className="overflow-x-auto">
@@ -22,7 +26,7 @@ export function Tabs() {
         className="flex gap-1 rounded-lg bg-gray-100 p-1"
         aria-label="Tabs"
       >
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <Link
             key={tab.key}
             href={`/configuracoes?tab=${tab.key}`}

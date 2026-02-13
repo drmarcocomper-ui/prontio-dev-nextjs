@@ -15,7 +15,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("./actions", () => ({
-  salvarConfiguracoes: vi.fn(),
+  salvarProfissional: vi.fn(),
 }));
 
 vi.mock("./constants", async () => {
@@ -28,7 +28,6 @@ import { ProfissionalForm } from "./profissional-form";
 const emptyDefaults: Record<string, string> = {};
 
 const filledDefaults: Record<string, string> = {
-  nome_consultorio: "Clínica Saúde",
   nome_profissional: "Dr. João",
   especialidade: "Cardiologia",
   crm: "CRM/SP 123456",
@@ -69,13 +68,6 @@ describe("ProfissionalForm", () => {
   it("campo email é do tipo email", () => {
     render(<ProfissionalForm defaults={emptyDefaults} />);
     expect(screen.getByLabelText("E-mail profissional")).toHaveAttribute("type", "email");
-  });
-
-  it("inclui campo hidden com nome_consultorio", () => {
-    render(<ProfissionalForm defaults={filledDefaults} />);
-    const hidden = document.querySelector('input[name="config_nome_consultorio"]') as HTMLInputElement;
-    expect(hidden).toBeInTheDocument();
-    expect(hidden.value).toBe("Clínica Saúde");
   });
 
   it("campo nome_profissional tem maxLength de 255", () => {

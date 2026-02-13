@@ -6,6 +6,10 @@ const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockSelectPacienteId = vi.fn().mockResolvedValue({ data: { paciente_id: "p-1" } });
 const mockRedirect = vi.fn();
 
+vi.mock("@/lib/clinica", () => ({
+  getMedicoId: vi.fn().mockResolvedValue("user-1"),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({

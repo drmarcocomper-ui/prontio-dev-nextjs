@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura } from "@/lib/validators";
 import { TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH } from "./types";
+import { getMedicoId } from "@/lib/clinica";
 
 export type ProntuarioFormState = {
   error?: string;
@@ -66,11 +67,13 @@ export async function criarProntuario(
   }
 
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   const { data: inserted, error } = await supabase
     .from("prontuarios")
     .insert({
       paciente_id,
+      medico_id: medicoId,
       data,
       tipo,
       cid,

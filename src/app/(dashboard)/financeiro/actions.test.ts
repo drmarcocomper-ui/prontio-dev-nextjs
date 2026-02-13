@@ -5,6 +5,15 @@ const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
 const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "medico",
+    userId: "user-1",
+  }),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({

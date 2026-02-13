@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo } from "@/lib/validators";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, type AgendaStatus } from "./types";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export type AgendamentoFormState = {
   error?: string;
@@ -17,12 +18,14 @@ async function verificarConflito(
   data: string,
   hora_inicio: string,
   hora_fim: string,
+  clinicaId: string,
   excluirId?: string
 ): Promise<string | null> {
   let query = supabase
     .from("agendamentos")
     .select("id, hora_inicio, hora_fim, pacientes(nome)", { count: "exact" })
     .eq("data", data)
+    .eq("clinica_id", clinicaId)
     .lt("hora_inicio", hora_fim)
     .gt("hora_fim", hora_inicio)
     .not("status", "in", "(cancelado,faltou)");
@@ -125,6 +128,9 @@ export async function criarAgendamento(
   const recorrenciaVezes = Math.min(52, Math.max(2, Number(formData.get("recorrencia_vezes")) || 4));
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Clínica não selecionada." };
+  const clinicaId = ctx.clinicaId;
 
   if (recorrencia && ["semanal", "quinzenal", "mensal"].includes(recorrencia)) {
     // Recurring appointment
@@ -132,7 +138,7 @@ export async function criarAgendamento(
 
     // Check conflicts for all dates
     for (const d of dates) {
-      const conflito = await verificarConflito(supabase, d, hora_inicio, hora_fim);
+      const conflito = await verificarConflito(supabase, d, hora_inicio, hora_fim, clinicaId);
       if (conflito) {
         const dateFmt = new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
         return { fieldErrors: { hora_inicio: `${dateFmt}: ${conflito}` } };
@@ -141,6 +147,7 @@ export async function criarAgendamento(
 
     const rows = dates.map((d) => ({
       paciente_id,
+      clinica_id: clinicaId,
       data: d,
       hora_inicio,
       hora_fim,
@@ -160,13 +167,14 @@ export async function criarAgendamento(
   }
 
   // Single appointment
-  const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim);
+  const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, clinicaId);
   if (conflito) {
     return { fieldErrors: { hora_inicio: conflito } };
   }
 
   const { error } = await supabase.from("agendamentos").insert({
     paciente_id,
+    clinica_id: clinicaId,
     data,
     hora_inicio,
     hora_fim,
@@ -237,8 +245,10 @@ export async function atualizarAgendamento(
   }
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Clínica não selecionada." };
 
-  const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, id);
+  const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, ctx.clinicaId, id);
   if (conflito) {
     return { fieldErrors: { hora_inicio: conflito } };
   }

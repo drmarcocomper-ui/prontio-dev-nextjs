@@ -2,17 +2,29 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockGetUser = vi.fn();
 
+let mockVinculoResult: { data: { clinica_id?: string; papel?: string } | null } = { data: null };
+
 // Capture the cookies config passed to createServerClient
 let capturedCookiesConfig: {
   getAll: () => { name: string; value: string }[];
   setAll: (cookies: { name: string; value: string; options?: Record<string, unknown> }[]) => void;
 } | null = null;
 
+function createFromChain() {
+  const chain: Record<string, unknown> = {};
+  chain.select = vi.fn().mockReturnValue(chain);
+  chain.eq = vi.fn().mockReturnValue(chain);
+  chain.limit = vi.fn().mockReturnValue(chain);
+  chain.single = vi.fn().mockImplementation(() => Promise.resolve(mockVinculoResult));
+  return chain;
+}
+
 vi.mock("@supabase/ssr", () => ({
   createServerClient: (_url: string, _key: string, config: { cookies: typeof capturedCookiesConfig }) => {
     capturedCookiesConfig = config.cookies;
     return {
       auth: { getUser: mockGetUser },
+      from: () => createFromChain(),
     };
   },
 }));
@@ -33,11 +45,20 @@ vi.mock("next/server", () => ({
 
 import { updateSession } from "./middleware";
 
-function createMockRequest(pathname: string) {
+function createMockRequest(pathname: string, cookies?: Record<string, string>) {
   const url = new URL(`http://localhost:3000${pathname}`);
+  const cookieStore: { name: string; value: string }[] = [
+    { name: "sb-token", value: "abc123" },
+  ];
+  if (cookies) {
+    Object.entries(cookies).forEach(([name, value]) => {
+      cookieStore.push({ name, value });
+    });
+  }
   return {
     cookies: {
-      getAll: () => [{ name: "sb-token", value: "abc123" }],
+      getAll: () => cookieStore,
+      get: (name: string) => cookieStore.find((c) => c.name === name),
       set: vi.fn(),
     },
     nextUrl: {
@@ -51,13 +72,14 @@ describe("updateSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedCookiesConfig = null;
+    mockVinculoResult = { data: null };
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
   });
 
   it("permite acesso quando usuário está autenticado", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
-    const result = await updateSession(createMockRequest("/"));
+    const result = await updateSession(createMockRequest("/", { prontio_clinica_id: "clinic-1" }));
     expect(mockRedirect).not.toHaveBeenCalled();
     expect(result).toBeDefined();
   });
@@ -82,15 +104,18 @@ describe("updateSession", () => {
 
   it("cookies.getAll delega para request.cookies.getAll", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
-    await updateSession(createMockRequest("/"));
+    await updateSession(createMockRequest("/", { prontio_clinica_id: "clinic-1" }));
     expect(capturedCookiesConfig).not.toBeNull();
     const cookies = capturedCookiesConfig!.getAll();
-    expect(cookies).toEqual([{ name: "sb-token", value: "abc123" }]);
+    expect(cookies).toEqual([
+      { name: "sb-token", value: "abc123" },
+      { name: "prontio_clinica_id", value: "clinic-1" },
+    ]);
   });
 
   it("cookies.setAll seta cookies no request e na response", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
-    const mockRequest = createMockRequest("/");
+    const mockRequest = createMockRequest("/", { prontio_clinica_id: "clinic-1" });
     await updateSession(mockRequest);
     expect(capturedCookiesConfig).not.toBeNull();
 
@@ -110,6 +135,37 @@ describe("updateSession", () => {
     // Should have set cookies on the response
     expect(mockNextCookiesSet).toHaveBeenCalledWith("sb-token", "new-value", { path: "/" });
     expect(mockNextCookiesSet).toHaveBeenCalledWith("sb-refresh", "refresh-value", { path: "/" });
+  });
+
+  it("auto-sets prontio_clinica_id cookie when missing", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    mockVinculoResult = { data: { clinica_id: "clinic-auto" } };
+    await updateSession(createMockRequest("/"));
+    expect(mockNextCookiesSet).toHaveBeenCalledWith(
+      "prontio_clinica_id",
+      "clinic-auto",
+      expect.objectContaining({ path: "/" })
+    );
+  });
+
+  it("redireciona secretária de rotas do médico para /agenda", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "secretaria" } };
+    await updateSession(createMockRequest("/financeiro", { prontio_clinica_id: "clinic-1" }));
+    expect(mockRedirect).toHaveBeenCalled();
+    const redirectCall = mockRedirect.mock.calls[0][0];
+    expect(redirectCall.pathname).toBe("/agenda");
+  });
+
+  it("permite médico acessar rotas protegidas", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "medico" } };
+    await updateSession(createMockRequest("/financeiro", { prontio_clinica_id: "clinic-1" }));
+    // Should not redirect to /agenda
+    const agendaRedirects = mockRedirect.mock.calls.filter(
+      (call: unknown[]) => (call[0] as { pathname: string }).pathname === "/agenda"
+    );
+    expect(agendaRedirects.length).toBe(0);
   });
 
   describe("sem variáveis de ambiente", () => {

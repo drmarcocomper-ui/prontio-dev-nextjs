@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { FormError } from "@/components/form-utils";
-import { salvarConfiguracoes, type ConfigFormState } from "./actions";
+import { salvarProfissional, type ConfigFormState } from "./actions";
 import { THEME_OPTIONS, type ThemeName } from "@/lib/theme";
 
 const SWATCH_COLORS: Record<ThemeName, string> = {
@@ -21,7 +21,7 @@ export function AparenciaForm({
   defaults: Record<string, string>;
 }) {
   const [state, formAction, isPending] = useActionState<ConfigFormState, FormData>(
-    salvarConfiguracoes,
+    salvarProfissional,
     {}
   );
 
@@ -37,8 +37,6 @@ export function AparenciaForm({
   return (
     <form action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
       <FormError message={state.error} />
-
-      <input type="hidden" name="config_nome_consultorio" value={defaults.nome_consultorio ?? ""} />
 
       <fieldset>
         <legend className="text-sm font-medium text-gray-700">Cor primária</legend>

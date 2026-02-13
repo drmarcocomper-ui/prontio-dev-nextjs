@@ -7,6 +7,7 @@ import { StatusSelect } from "./status-select";
 import { StatusBadge } from "./status-badge";
 import { todayLocal } from "@/lib/date";
 import { type Agendamento, TIPO_LABELS, formatTime, getInitials } from "./types";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Agenda" };
 
@@ -19,11 +20,13 @@ export default async function AgendaPage({
   const currentDate = dataParam || todayLocal();
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
 
   const { data: agendamentos, error } = await supabase
     .from("agendamentos")
     .select("id, paciente_id, data, hora_inicio, hora_fim, tipo, status, observacoes, pacientes(id, nome, telefone)")
     .eq("data", currentDate)
+    .eq("clinica_id", ctx?.clinicaId ?? "")
     .order("hora_inicio");
 
   if (error) {

@@ -49,6 +49,15 @@ let mockPaciente: Record<string, unknown> | null = null;
 let mockProntuarios: Record<string, unknown>[] = [];
 let mockReceitas: Record<string, unknown>[] = [];
 
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "medico",
+    userId: "user-1",
+  }),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({

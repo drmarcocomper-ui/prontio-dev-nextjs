@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockUpsert = vi.fn().mockResolvedValue({ error: null });
+const mockUpdate = vi.fn().mockReturnValue({ error: null });
+const mockEq = vi.fn().mockReturnValue({ error: null });
+const mockInsert = vi.fn().mockResolvedValue({ error: null });
+const mockDelete = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ in: vi.fn().mockResolvedValue({ error: null }) }) });
 const mockUpdateUser = vi.fn().mockResolvedValue({ error: null });
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -8,16 +11,38 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
-      from: () => ({
-        upsert: (rows: unknown, opts: unknown) => mockUpsert(rows, opts),
-      }),
+      from: (table: string) => {
+        if (table === "clinicas") {
+          return {
+            update: (data: unknown) => {
+              mockUpdate(data);
+              return { eq: (col: string, val: string) => { mockEq(col, val); return { error: null }; } };
+            },
+          };
+        }
+        return {
+          insert: (rows: unknown) => mockInsert(rows),
+          delete: () => mockDelete(),
+        };
+      },
       auth: {
         updateUser: (data: unknown) => mockUpdateUser(data),
       },
     }),
 }));
 
-import { salvarConfiguracoes, alterarSenha } from "./actions";
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinica-123",
+    clinicaNome: "Clínica Teste",
+    papel: "medico",
+    userId: "user-456",
+  }),
+  getMedicoId: vi.fn().mockResolvedValue("user-456"),
+}));
+
+import { salvarConsultorio, salvarHorarios, salvarProfissional, alterarSenha } from "./actions";
+import { getClinicaAtual } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -25,67 +50,145 @@ function makeFormData(data: Record<string, string>) {
   return fd;
 }
 
-describe("salvarConfiguracoes", () => {
+describe("salvarConsultorio", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("retorna erro quando nome_consultorio está vazio", async () => {
-    const result = await salvarConfiguracoes({}, makeFormData({ config_nome_consultorio: "" }));
+  it("retorna erro quando nome está vazio", async () => {
+    const result = await salvarConsultorio({}, makeFormData({ nome: "" }));
     expect(result.error).toBe("Nome do consultório é obrigatório.");
   });
 
-  it("salva configurações com sucesso", async () => {
-    const result = await salvarConfiguracoes({}, makeFormData({
-      config_nome_consultorio: "Clínica Teste",
-      config_cnpj: "12345678000100",
+  it("salva consultório com sucesso", async () => {
+    const result = await salvarConsultorio({}, makeFormData({
+      nome: "Clínica Teste",
+      cnpj: "12345678000100",
     }));
     expect(result.success).toBe(true);
-    expect(mockUpsert).toHaveBeenCalledWith(
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nome: "Clínica Teste",
+        cnpj: "12345678000100",
+      })
+    );
+  });
+
+  it("retorna erro quando nome excede max length", async () => {
+    const longName = "a".repeat(256);
+    const result = await salvarConsultorio({}, makeFormData({ nome: longName }));
+    expect(result.error).toBe("Nome excede 255 caracteres.");
+  });
+
+  it("retorna erro quando clínica não está selecionada", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await salvarConsultorio({}, makeFormData({ nome: "Clínica" }));
+    expect(result.error).toBe("Clínica não selecionada.");
+  });
+});
+
+describe("salvarHorarios", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("salva horários com sucesso", async () => {
+    const result = await salvarHorarios({}, makeFormData({
+      config_duracao_consulta: "30",
+      config_horario_seg_inicio: "08:00",
+      config_horario_seg_fim: "18:00",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith(
       expect.arrayContaining([
-        { chave: "nome_consultorio", valor: "Clínica Teste" },
-        { chave: "cnpj", valor: "12345678000100" },
-      ]),
-      { onConflict: "chave" }
+        { chave: "duracao_consulta", valor: "30", clinica_id: "clinica-123" },
+        { chave: "horario_seg_inicio", valor: "08:00", clinica_id: "clinica-123" },
+        { chave: "horario_seg_fim", valor: "18:00", clinica_id: "clinica-123" },
+      ])
     );
   });
 
   it("ignora campos que não começam com config_", async () => {
-    const result = await salvarConfiguracoes({}, makeFormData({
-      config_nome_consultorio: "Clínica",
+    const result = await salvarHorarios({}, makeFormData({
+      config_duracao_consulta: "30",
       outro_campo: "valor",
     }));
     expect(result.success).toBe(true);
-    expect(mockUpsert).toHaveBeenCalledWith(
-      [{ chave: "nome_consultorio", valor: "Clínica" }],
-      { onConflict: "chave" }
-    );
+    expect(mockInsert).toHaveBeenCalledWith([
+      { chave: "duracao_consulta", valor: "30", clinica_id: "clinica-123" },
+    ]);
   });
 
-  it("retorna erro quando campo excede max length", async () => {
-    const longName = "a".repeat(256);
-    const result = await salvarConfiguracoes({}, makeFormData({
-      config_nome_consultorio: longName,
-    }));
-    expect(result.error).toBe("Campo excede o limite de 255 caracteres.");
-  });
-
-  it("ignora chaves fora do allowlist", async () => {
-    const result = await salvarConfiguracoes({}, makeFormData({
-      config_nome_consultorio: "Clínica",
+  it("ignora chaves fora do allowlist de horários", async () => {
+    const result = await salvarHorarios({}, makeFormData({
+      config_duracao_consulta: "30",
       config_chave_maliciosa: "hacked",
     }));
     expect(result.success).toBe(true);
-    expect(mockUpsert).toHaveBeenCalledWith(
-      [{ chave: "nome_consultorio", valor: "Clínica" }],
-      { onConflict: "chave" }
+    expect(mockInsert).toHaveBeenCalledWith([
+      { chave: "duracao_consulta", valor: "30", clinica_id: "clinica-123" },
+    ]);
+  });
+
+  it("retorna sucesso quando não há entradas", async () => {
+    const result = await salvarHorarios({}, makeFormData({}));
+    expect(result.success).toBe(true);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("retorna erro quando clínica não está selecionada", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await salvarHorarios({}, makeFormData({ config_duracao_consulta: "30" }));
+    expect(result.error).toBe("Clínica não selecionada.");
+  });
+
+  it("retorna erro quando insert falha", async () => {
+    mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await salvarHorarios({}, makeFormData({
+      config_duracao_consulta: "30",
+    }));
+    expect(result.error).toContain("Erro ao salvar horários");
+  });
+});
+
+describe("salvarProfissional", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("salva dados profissionais com sucesso", async () => {
+    const result = await salvarProfissional({}, makeFormData({
+      config_nome_profissional: "Dr. João",
+      config_especialidade: "Cardiologia",
+      config_crm: "CRM/SP 123456",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        { chave: "nome_profissional", valor: "Dr. João", user_id: "user-456" },
+        { chave: "especialidade", valor: "Cardiologia", user_id: "user-456" },
+        { chave: "crm", valor: "CRM/SP 123456", user_id: "user-456" },
+      ])
     );
   });
 
-  it("retorna erro quando upsert falha", async () => {
-    mockUpsert.mockResolvedValueOnce({ error: { message: "DB error" } });
-    const result = await salvarConfiguracoes({}, makeFormData({
-      config_nome_consultorio: "Clínica",
+  it("ignora chaves fora do allowlist de profissional", async () => {
+    const result = await salvarProfissional({}, makeFormData({
+      config_nome_profissional: "Dr. João",
+      config_chave_maliciosa: "hacked",
     }));
-    expect(result.error).toBe("Erro ao salvar configurações. Tente novamente.");
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith([
+      { chave: "nome_profissional", valor: "Dr. João", user_id: "user-456" },
+    ]);
+  });
+
+  it("retorna erro quando contexto não encontrado", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await salvarProfissional({}, makeFormData({ config_nome_profissional: "Dr." }));
+    expect(result.error).toBe("Contexto não encontrado.");
+  });
+
+  it("retorna erro quando insert falha", async () => {
+    mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await salvarProfissional({}, makeFormData({
+      config_nome_profissional: "Dr. João",
+    }));
+    expect(result.error).toContain("Erro ao salvar profissional");
   });
 });
 

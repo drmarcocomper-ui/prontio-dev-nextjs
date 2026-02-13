@@ -15,10 +15,19 @@ vi.mock("../../../financeiro/constants", async () => {
   return { ...actual };
 });
 
-const mockTransacoes: { data: unknown[] | null } = { data: [] };
-const mockConfigs: { data: unknown[] | null } = { data: [] };
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "medico",
+    userId: "user-1",
+  }),
+}));
 
-function createQueryResult(mockRef: { data: unknown[] | null }) {
+const mockTransacoes: { data: unknown[] | null } = { data: [] };
+let mockClinica: { data: { nome: string; endereco: string | null; telefone: string | null } | null } = { data: null };
+
+function createQueryResult(mockRef: { data: unknown }) {
   const result = {
     then: (resolve: (value: typeof mockRef) => void) => resolve(mockRef),
     eq: () => createQueryResult(mockRef),
@@ -26,6 +35,7 @@ function createQueryResult(mockRef: { data: unknown[] | null }) {
     lte: () => createQueryResult(mockRef),
     order: () => createQueryResult(mockRef),
     in: () => createQueryResult(mockRef),
+    single: () => Promise.resolve(mockRef),
   };
   return result;
 }
@@ -38,7 +48,7 @@ vi.mock("@/lib/supabase/server", () => ({
           if (table === "transacoes") {
             return createQueryResult(mockTransacoes);
           }
-          return createQueryResult(mockConfigs);
+          return createQueryResult(mockClinica);
         },
       }),
     }),
@@ -77,12 +87,6 @@ const transacoesMock = [
   },
 ];
 
-const configsMock = [
-  { chave: "nome_consultorio", valor: "Clínica Saúde Total" },
-  { chave: "endereco_consultorio", valor: "Rua das Flores, 123" },
-  { chave: "telefone_consultorio", valor: "(11) 3456-7890" },
-];
-
 async function renderPage(searchParams: { mes?: string } = {}) {
   const jsx = await ImprimirRelatorioPage({ searchParams: Promise.resolve(searchParams) });
   return render(jsx);
@@ -91,7 +95,7 @@ async function renderPage(searchParams: { mes?: string } = {}) {
 describe("ImprimirRelatorioPage", () => {
   beforeEach(() => {
     mockTransacoes.data = [];
-    mockConfigs.data = [];
+    mockClinica = { data: null };
   });
 
   it("renderiza o título Relatório Financeiro", async () => {
@@ -100,7 +104,7 @@ describe("ImprimirRelatorioPage", () => {
   });
 
   it("renderiza header do consultório quando configurado", async () => {
-    mockConfigs.data = configsMock;
+    mockClinica = { data: { nome: "Clínica Saúde Total", endereco: "Rua das Flores, 123", telefone: "(11) 3456-7890" } };
     await renderPage();
     expect(screen.getByText("Clínica Saúde Total")).toBeInTheDocument();
     expect(screen.getByText("Rua das Flores, 123")).toBeInTheDocument();

@@ -15,7 +15,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("./actions", () => ({
-  salvarConfiguracoes: vi.fn(),
+  salvarHorarios: vi.fn(),
 }));
 
 vi.mock("./constants", async () => {

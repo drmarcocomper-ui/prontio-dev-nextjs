@@ -11,6 +11,7 @@ import {
   BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH, CONVENIO_MAX_LENGTH,
   OBSERVACOES_MAX_LENGTH, validarCPF,
 } from "./types";
+import { getMedicoId } from "@/lib/clinica";
 
 export type PacienteFormState = {
   error?: string;
@@ -91,8 +92,10 @@ export async function criarPaciente(
   }
 
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   const { error } = await supabase.from("pacientes").insert({
+    medico_id: medicoId,
     nome, cpf, rg, data_nascimento, sexo, estado_civil,
     telefone, email, cep, endereco, numero, complemento,
     bairro, cidade, estado, convenio, observacoes,

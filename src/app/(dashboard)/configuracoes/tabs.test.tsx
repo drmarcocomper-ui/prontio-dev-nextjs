@@ -26,9 +26,9 @@ vi.mock("next/link", () => ({
 import { Tabs } from "./tabs";
 
 describe("Tabs", () => {
-  it("renderiza as 5 abas", () => {
+  it("renderiza as abas para papel medico", () => {
     mockTab = "";
-    render(<Tabs />);
+    render(<Tabs papel="medico" />);
     expect(screen.getByText("Consultório")).toBeInTheDocument();
     expect(screen.getByText("Profissional")).toBeInTheDocument();
     expect(screen.getByText("Horários")).toBeInTheDocument();
@@ -36,9 +36,19 @@ describe("Tabs", () => {
     expect(screen.getByText("Aparência")).toBeInTheDocument();
   });
 
+  it("renderiza apenas abas permitidas para secretaria", () => {
+    mockTab = "";
+    render(<Tabs papel="secretaria" />);
+    expect(screen.getByText("Conta")).toBeInTheDocument();
+    expect(screen.queryByText("Consultório")).not.toBeInTheDocument();
+    expect(screen.queryByText("Profissional")).not.toBeInTheDocument();
+    expect(screen.queryByText("Horários")).not.toBeInTheDocument();
+    expect(screen.queryByText("Aparência")).not.toBeInTheDocument();
+  });
+
   it("cada aba aponta para o href correto", () => {
     mockTab = "";
-    render(<Tabs />);
+    render(<Tabs papel="medico" />);
     expect(screen.getByText("Consultório").closest("a")).toHaveAttribute("href", "/configuracoes?tab=consultorio");
     expect(screen.getByText("Profissional").closest("a")).toHaveAttribute("href", "/configuracoes?tab=profissional");
     expect(screen.getByText("Horários").closest("a")).toHaveAttribute("href", "/configuracoes?tab=horarios");
@@ -48,7 +58,7 @@ describe("Tabs", () => {
 
   it("destaca a aba consultorio por padrão", () => {
     mockTab = "";
-    render(<Tabs />);
+    render(<Tabs papel="medico" />);
     const link = screen.getByText("Consultório");
     expect(link.className).toContain("bg-white");
     expect(link.className).toContain("text-primary-600");
@@ -56,7 +66,7 @@ describe("Tabs", () => {
 
   it("destaca a aba selecionada via searchParams", () => {
     mockTab = "horarios";
-    render(<Tabs />);
+    render(<Tabs papel="medico" />);
     const active = screen.getByText("Horários");
     expect(active.className).toContain("bg-white");
     expect(active.className).toContain("text-primary-600");
@@ -66,7 +76,7 @@ describe("Tabs", () => {
 
   it("renderiza nav com aria-label", () => {
     mockTab = "";
-    render(<Tabs />);
+    render(<Tabs papel="medico" />);
     expect(screen.getByRole("navigation", { name: "Tabs" })).toBeInTheDocument();
   });
 });

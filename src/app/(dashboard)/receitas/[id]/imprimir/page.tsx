@@ -9,6 +9,7 @@ import {
   formatDateMedium,
   formatCPF,
 } from "../../types";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export async function generateMetadata({
   params,
@@ -47,20 +48,30 @@ export default async function ImprimirReceitaPage({
 
   const r = receita as unknown as ReceitaImpressao;
 
-  const { data: configs } = await supabase
-    .from("configuracoes")
-    .select("chave, valor")
-    .in("chave", [
-      "nome_consultorio",
-      "endereco_consultorio",
-      "telefone_consultorio",
-      "nome_profissional",
-      "especialidade",
-      "crm",
-    ]);
+  const ctx = await getClinicaAtual();
+
+  const [{ data: clinica }, { data: profConfigs }] = await Promise.all([
+    ctx?.clinicaId
+      ? supabase
+          .from("clinicas")
+          .select("nome, endereco, telefone")
+          .eq("id", ctx.clinicaId)
+          .single()
+      : { data: null },
+    supabase
+      .from("configuracoes")
+      .select("chave, valor")
+      .in("chave", ["nome_profissional", "especialidade", "crm"]),
+  ]);
 
   const cfg: Record<string, string> = {};
-  (configs ?? []).forEach((c: { chave: string; valor: string }) => {
+  if (clinica) {
+    const c = clinica as { nome: string; endereco: string | null; telefone: string | null };
+    cfg.nome_consultorio = c.nome;
+    cfg.endereco_consultorio = c.endereco ?? "";
+    cfg.telefone_consultorio = c.telefone ?? "";
+  }
+  (profConfigs ?? []).forEach((c: { chave: string; valor: string }) => {
     cfg[c.chave] = c.valor;
   });
 

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo } from "@/lib/validators";
 import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./constants";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export type TransacaoFormState = {
   error?: string;
@@ -48,8 +49,11 @@ export async function criarTransacao(
   }
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Clínica não selecionada." };
 
   const { error } = await supabase.from("transacoes").insert({
+    clinica_id: ctx.clinicaId,
     tipo: fields.tipo,
     categoria: fields.categoria,
     descricao: fields.descricao,

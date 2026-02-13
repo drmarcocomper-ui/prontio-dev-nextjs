@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { FormError } from "@/components/form-utils";
-import { salvarConfiguracoes, type ConfigFormState } from "./actions";
+import { salvarConsultorio, type ConfigFormState } from "./actions";
 import {
   INPUT_CLASS,
   NOME_CONSULTORIO_MAX,
@@ -16,13 +16,22 @@ import {
   maskPhone,
 } from "./constants";
 
+interface ClinicaData {
+  nome: string;
+  cnpj: string | null;
+  telefone: string | null;
+  endereco: string | null;
+  cidade: string | null;
+  estado: string | null;
+}
+
 export function ConsultorioForm({
-  defaults,
+  clinica,
 }: {
-  defaults: Record<string, string>;
+  clinica: ClinicaData;
 }) {
   const [state, formAction, isPending] = useActionState<ConfigFormState, FormData>(
-    salvarConfiguracoes,
+    salvarConsultorio,
     {}
   );
 
@@ -36,17 +45,17 @@ export function ConsultorioForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label htmlFor="nome_consultorio" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="nome" className="block text-sm font-medium text-gray-700">
             Nome do consultório <span className="text-red-500">*</span>
           </label>
           <input
-            id="nome_consultorio"
-            name="config_nome_consultorio"
+            id="nome"
+            name="nome"
             type="text"
             required
             disabled={isPending}
             maxLength={NOME_CONSULTORIO_MAX}
-            defaultValue={defaults.nome_consultorio ?? ""}
+            defaultValue={clinica.nome}
             className={INPUT_CLASS}
           />
         </div>
@@ -57,78 +66,78 @@ export function ConsultorioForm({
           </label>
           <input
             id="cnpj"
-            name="config_cnpj"
+            name="cnpj"
             type="text"
             inputMode="numeric"
             disabled={isPending}
             maxLength={CNPJ_MAX}
             placeholder="00.000.000/0000-00"
-            defaultValue={defaults.cnpj ? maskCNPJ(defaults.cnpj) : ""}
+            defaultValue={clinica.cnpj ? maskCNPJ(clinica.cnpj) : ""}
             onChange={(e) => (e.target.value = maskCNPJ(e.target.value))}
             className={INPUT_CLASS}
           />
         </div>
 
         <div>
-          <label htmlFor="telefone_consultorio" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="telefone" className="block text-sm font-medium text-gray-700">
             Telefone
           </label>
           <input
-            id="telefone_consultorio"
-            name="config_telefone_consultorio"
+            id="telefone"
+            name="telefone"
             type="tel"
             inputMode="numeric"
             disabled={isPending}
             maxLength={TELEFONE_MAX}
             placeholder="(00) 00000-0000"
-            defaultValue={defaults.telefone_consultorio ? maskPhone(defaults.telefone_consultorio) : ""}
+            defaultValue={clinica.telefone ? maskPhone(clinica.telefone) : ""}
             onChange={(e) => (e.target.value = maskPhone(e.target.value))}
             className={INPUT_CLASS}
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label htmlFor="endereco_consultorio" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="endereco" className="block text-sm font-medium text-gray-700">
             Endereço
           </label>
           <input
-            id="endereco_consultorio"
-            name="config_endereco_consultorio"
+            id="endereco"
+            name="endereco"
             type="text"
             disabled={isPending}
             maxLength={ENDERECO_MAX}
-            defaultValue={defaults.endereco_consultorio ?? ""}
+            defaultValue={clinica.endereco ?? ""}
             className={INPUT_CLASS}
           />
         </div>
 
         <div>
-          <label htmlFor="cidade_consultorio" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="cidade" className="block text-sm font-medium text-gray-700">
             Cidade
           </label>
           <input
-            id="cidade_consultorio"
-            name="config_cidade_consultorio"
+            id="cidade"
+            name="cidade"
             type="text"
             disabled={isPending}
             maxLength={CIDADE_MAX}
-            defaultValue={defaults.cidade_consultorio ?? ""}
+            defaultValue={clinica.cidade ?? ""}
             className={INPUT_CLASS}
           />
         </div>
 
         <div>
-          <label htmlFor="estado_consultorio" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="estado" className="block text-sm font-medium text-gray-700">
             Estado
           </label>
           <input
-            id="estado_consultorio"
-            name="config_estado_consultorio"
+            id="estado"
+            name="estado"
             type="text"
             disabled={isPending}
             maxLength={ESTADO_MAX}
             placeholder="UF"
-            defaultValue={defaults.estado_consultorio ?? ""}
+            defaultValue={clinica.estado ?? ""}
             className={INPUT_CLASS}
           />
         </div>

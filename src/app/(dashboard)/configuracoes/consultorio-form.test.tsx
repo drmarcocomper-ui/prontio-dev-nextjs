@@ -16,7 +16,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("./actions", () => ({
-  salvarConfiguracoes: vi.fn(),
+  salvarConsultorio: vi.fn(),
 }));
 
 vi.mock("./constants", async () => {
@@ -26,15 +26,22 @@ vi.mock("./constants", async () => {
 
 import { ConsultorioForm } from "./consultorio-form";
 
-const emptyDefaults: Record<string, string> = {};
+const emptyClinica = {
+  nome: "",
+  cnpj: null,
+  telefone: null,
+  endereco: null,
+  cidade: null,
+  estado: null,
+};
 
-const filledDefaults: Record<string, string> = {
-  nome_consultorio: "Clínica Saúde",
+const filledClinica = {
+  nome: "Clínica Saúde",
   cnpj: "12345678000100",
-  telefone_consultorio: "11987654321",
-  endereco_consultorio: "Rua Exemplo, 123",
-  cidade_consultorio: "São Paulo",
-  estado_consultorio: "SP",
+  telefone: "11987654321",
+  endereco: "Rua Exemplo, 123",
+  cidade: "São Paulo",
+  estado: "SP",
 };
 
 describe("ConsultorioForm", () => {
@@ -45,7 +52,7 @@ describe("ConsultorioForm", () => {
   });
 
   it("renderiza todos os campos", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText(/Nome do consultório/)).toBeInTheDocument();
     expect(screen.getByLabelText("CNPJ")).toBeInTheDocument();
     expect(screen.getByLabelText("Telefone")).toBeInTheDocument();
@@ -55,12 +62,12 @@ describe("ConsultorioForm", () => {
   });
 
   it("campo nome é obrigatório", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText(/Nome do consultório/)).toBeRequired();
   });
 
   it("preenche valores padrão quando fornecidos", () => {
-    render(<ConsultorioForm defaults={filledDefaults} />);
+    render(<ConsultorioForm clinica={filledClinica} />);
     expect(screen.getByLabelText(/Nome do consultório/)).toHaveValue("Clínica Saúde");
     expect(screen.getByLabelText("Endereço")).toHaveValue("Rua Exemplo, 123");
     expect(screen.getByLabelText("Cidade")).toHaveValue("São Paulo");
@@ -68,69 +75,69 @@ describe("ConsultorioForm", () => {
   });
 
   it("renderiza o botão Salvar", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByRole("button", { name: "Salvar" })).toBeInTheDocument();
   });
 
   it("aplica máscara de CNPJ ao digitar", async () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     const input = screen.getByLabelText("CNPJ");
     await userEvent.type(input, "12345678000100");
     expect(input).toHaveValue("12.345.678/0001-00");
   });
 
   it("aplica máscara de telefone ao digitar", async () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     const input = screen.getByLabelText("Telefone");
     await userEvent.type(input, "11987654321");
     expect(input).toHaveValue("(11) 98765-4321");
   });
 
   it("campo estado tem maxLength 2", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText("Estado")).toHaveAttribute("maxlength", "2");
   });
 
-  it("campo nome_consultorio tem maxLength de 255", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+  it("campo nome tem maxLength de 255", () => {
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText(/Nome do consultório/)).toHaveAttribute("maxlength", "255");
   });
 
   it("campo cnpj tem maxLength de 18", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText("CNPJ")).toHaveAttribute("maxlength", "18");
   });
 
   it("campo telefone tem maxLength de 15", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText("Telefone")).toHaveAttribute("maxlength", "15");
   });
 
   it("campo endereco tem maxLength de 255", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText("Endereço")).toHaveAttribute("maxlength", "255");
   });
 
   it("campo cidade tem maxLength de 100", () => {
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText("Cidade")).toHaveAttribute("maxlength", "100");
   });
 
   it("exibe mensagem de erro quando state.error está definido", () => {
     formState.current = { error: "Erro ao salvar configurações. Tente novamente." };
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByText("Erro ao salvar configurações. Tente novamente.")).toBeInTheDocument();
   });
 
   it("chama toast.success quando state.success é true", () => {
     formState.current = { success: true };
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     expect(mockToastSuccess).toHaveBeenCalledWith("Configurações salvas com sucesso.");
   });
 
   it("desabilita botão quando isPending", () => {
     formPending.current = true;
-    render(<ConsultorioForm defaults={emptyDefaults} />);
+    render(<ConsultorioForm clinica={emptyClinica} />);
     const button = screen.getByRole("button", { name: /Salvar/ });
     expect(button).toBeDisabled();
   });

@@ -17,6 +17,7 @@ import {
   aggregateByCategoria,
   aggregateByPagamento,
 } from "../utils";
+import { getClinicaAtual } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Imprimir Relatório" };
 
@@ -29,34 +30,34 @@ export default async function ImprimirRelatorioPage({
   const { currentMonth, year, month, startDate, endDate } = getMonthDateRange(mes);
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
 
-  const [{ data: transacoes }, { data: configs }] = await Promise.all([
+  const [{ data: transacoes }, { data: clinica }] = await Promise.all([
     supabase
       .from("transacoes")
       .select(REPORT_SELECT)
+      .eq("clinica_id", ctx?.clinicaId ?? "")
       .gte("data", startDate)
       .lte("data", endDate)
       .order("data", { ascending: false })
       .order("created_at", { ascending: false }),
-    supabase
-      .from("configuracoes")
-      .select("chave, valor")
-      .in("chave", [
-        "nome_consultorio",
-        "endereco_consultorio",
-        "telefone_consultorio",
-        "nome_profissional",
-        "especialidade",
-        "crm",
-      ]),
+    ctx?.clinicaId
+      ? supabase
+          .from("clinicas")
+          .select("nome, endereco, telefone")
+          .eq("id", ctx.clinicaId)
+          .single()
+      : { data: null },
   ]);
 
   const items = (transacoes ?? []) as unknown as TransacaoListItem[];
 
   const cfg: Record<string, string> = {};
-  (configs ?? []).forEach((c: { chave: string; valor: string }) => {
-    cfg[c.chave] = c.valor;
-  });
+  if (clinica) {
+    cfg.nome_consultorio = (clinica as { nome: string; endereco: string | null; telefone: string | null }).nome;
+    cfg.endereco_consultorio = (clinica as { endereco: string | null }).endereco ?? "";
+    cfg.telefone_consultorio = (clinica as { telefone: string | null }).telefone ?? "";
+  }
 
   const { totalReceitas, totalDespesas, saldo } = computeKPIs(items);
   const monthLabel = getMonthLabel(year, month);
