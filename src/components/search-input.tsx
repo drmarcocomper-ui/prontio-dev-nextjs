@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 interface SearchInputProps {
   basePath: string;
@@ -14,9 +14,12 @@ export function SearchInput({ basePath, placeholder, ariaLabel, defaultValue }: 
   const router = useRouter();
   const searchParams = useSearchParams();
   const timerRef = useRef<NodeJS.Timeout>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [value, setValue] = useState(defaultValue ?? "");
 
   function handleSearch(term: string) {
+    setValue(term);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
@@ -30,6 +33,12 @@ export function SearchInput({ basePath, placeholder, ariaLabel, defaultValue }: 
         router.replace(`${basePath}?${params.toString()}`);
       });
     }, 300);
+  }
+
+  function handleClear() {
+    setValue("");
+    handleSearch("");
+    inputRef.current?.focus();
   }
 
   return (
@@ -49,18 +58,30 @@ export function SearchInput({ basePath, placeholder, ariaLabel, defaultValue }: 
         />
       </svg>
       <input
+        ref={inputRef}
         type="search"
         aria-label={ariaLabel}
         placeholder={placeholder}
-        defaultValue={defaultValue}
+        value={value}
         onChange={(e) => handleSearch(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       />
-      {isPending && (
+      {isPending ? (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
           <div role="status" aria-label="Carregando" className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
         </div>
-      )}
+      ) : value ? (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 transition-colors hover:text-gray-600"
+          aria-label="Limpar busca"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      ) : null}
     </div>
   );
 }

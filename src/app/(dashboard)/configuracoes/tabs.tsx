@@ -16,16 +16,19 @@ export function Tabs() {
   const current = searchParams.get("tab") || "consultorio";
 
   return (
-    <div className="overflow-x-auto border-b border-gray-200">
-      <nav className="-mb-px flex gap-4 sm:gap-6" aria-label="Tabs">
+    <div className="overflow-x-auto">
+      <nav
+        className="flex gap-1 rounded-lg bg-gray-100 p-1"
+        aria-label="Tabs"
+      >
         {TABS.map((tab) => (
           <Link
             key={tab.key}
             href={`/configuracoes?tab=${tab.key}`}
-            className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
+            className={`rounded-md px-3 py-2 text-sm font-medium transition-all ${
               current === tab.key
-                ? "border-primary-600 text-primary-600"
-                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                ? "bg-white text-primary-600 shadow-sm"
+                : "text-gray-500 hover:bg-white/50 hover:text-gray-700"
             }`}
           >
             {tab.label}

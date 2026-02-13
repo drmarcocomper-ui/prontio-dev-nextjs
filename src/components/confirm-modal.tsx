@@ -61,7 +61,7 @@ export function ConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -70,7 +70,7 @@ export function ConfirmModal({
     >
       <div
         ref={modalRef}
-        className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+        className="mx-4 w-full max-w-md animate-scale-in rounded-xl bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">

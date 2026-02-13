@@ -35,22 +35,26 @@ export function SortableHeader({
     <th scope="col" aria-sort={isActive ? (currentDirection === "asc" ? "ascending" : "descending") : "none"} className={className ?? "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"}>
       <Link
         href={href}
-        className="group inline-flex items-center gap-1 hover:text-gray-900"
+        className="group inline-flex items-center gap-1.5 transition-colors hover:text-gray-900"
       >
         {label}
-        <span
-          aria-hidden="true"
-          className={
-            isActive
-              ? "text-gray-700"
-              : "text-gray-300 group-hover:text-gray-400"
-          }
-        >
-          {isActive
-            ? currentDirection === "asc"
-              ? " \u25B2"
-              : " \u25BC"
-            : " \u25B2"}
+        <span className={`inline-flex flex-col gap-0.5 ${isActive ? "text-primary-600" : "text-gray-300 group-hover:text-gray-400"}`}>
+          <svg
+            aria-hidden="true"
+            className={`h-3 w-3 transition-colors ${isActive && currentDirection === "asc" ? "text-primary-600" : ""}`}
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          >
+            <path d="M8 3l5 5H3l5-5z" />
+          </svg>
+          <svg
+            aria-hidden="true"
+            className={`-mt-1 h-3 w-3 transition-colors ${isActive && currentDirection === "desc" ? "text-primary-600" : ""}`}
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          >
+            <path d="M8 13l5-5H3l5 5z" />
+          </svg>
         </span>
       </Link>
     </th>

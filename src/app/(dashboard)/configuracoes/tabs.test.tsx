@@ -50,7 +50,7 @@ describe("Tabs", () => {
     mockTab = "";
     render(<Tabs />);
     const link = screen.getByText("Consultório");
-    expect(link.className).toContain("border-primary-600");
+    expect(link.className).toContain("bg-white");
     expect(link.className).toContain("text-primary-600");
   });
 
@@ -58,9 +58,10 @@ describe("Tabs", () => {
     mockTab = "horarios";
     render(<Tabs />);
     const active = screen.getByText("Horários");
-    expect(active.className).toContain("border-primary-600");
+    expect(active.className).toContain("bg-white");
+    expect(active.className).toContain("text-primary-600");
     const inactive = screen.getByText("Consultório");
-    expect(inactive.className).toContain("border-transparent");
+    expect(inactive.className).toContain("text-gray-500");
   });
 
   it("renderiza nav com aria-label", () => {

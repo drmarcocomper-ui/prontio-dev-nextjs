@@ -28,11 +28,15 @@ export function DatePicker({ currentDate }: { currentDate: string }) {
   const isToday = currentDate === today;
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center rounded-lg border border-gray-300 bg-white shadow-sm" role="group" aria-label="Navegação de data">
+    <div className="flex flex-wrap items-center gap-3">
+      <div
+        className="inline-flex items-center rounded-lg border border-gray-200 bg-white shadow-sm"
+        role="group"
+        aria-label="Navegação de data"
+      >
         <button
           onClick={() => navigate(addDays(currentDate, -1))}
-          className="px-3 py-2 text-gray-600 transition-colors hover:bg-gray-50"
+          className="rounded-l-lg px-3 py-2 text-gray-500 transition-all hover:bg-gray-50 hover:text-gray-700"
           aria-label="Dia anterior"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
@@ -42,13 +46,17 @@ export function DatePicker({ currentDate }: { currentDate: string }) {
         <button
           onClick={() => navigate(today)}
           disabled={isToday}
-          className="border-x border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:text-gray-400"
+          className={`border-x border-gray-200 px-4 py-2 text-sm font-medium transition-all ${
+            isToday
+              ? "bg-primary-50 text-primary-600"
+              : "text-gray-700 hover:bg-gray-50"
+          }`}
         >
           Hoje
         </button>
         <button
           onClick={() => navigate(addDays(currentDate, 1))}
-          className="px-3 py-2 text-gray-600 transition-colors hover:bg-gray-50"
+          className="rounded-r-lg px-3 py-2 text-gray-500 transition-all hover:bg-gray-50 hover:text-gray-700"
           aria-label="Próximo dia"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
@@ -62,7 +70,7 @@ export function DatePicker({ currentDate }: { currentDate: string }) {
         value={currentDate}
         onChange={(e) => e.target.value && navigate(e.target.value)}
         aria-label="Selecionar data"
-        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       />
 
       <h2 className="text-sm font-medium capitalize text-gray-700">
