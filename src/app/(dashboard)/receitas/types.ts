@@ -30,6 +30,7 @@ export interface ReceitaImpressao {
   medicamentos: string;
   observacoes: string | null;
   pacientes: {
+    id: string;
     nome: string;
     cpf: string | null;
   };

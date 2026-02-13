@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockInsert = vi.fn().mockResolvedValue({ data: { id: "rec-new" }, error: null });
 const mockUpdate = vi.fn().mockResolvedValue({ error: null });
 const mockDelete = vi.fn().mockResolvedValue({ error: null });
+const mockSelectPacienteId = vi.fn().mockResolvedValue({ data: { paciente_id: "p-1" } });
 const mockRedirect = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -16,6 +17,11 @@ vi.mock("@/lib/supabase/server", () => ({
         }),
         update: (data: unknown) => ({
           eq: (_col: string, val: string) => mockUpdate({ data, id: val }),
+        }),
+        select: () => ({
+          eq: (_col: string, val: string) => ({
+            single: () => mockSelectPacienteId(val),
+          }),
         }),
         delete: () => ({
           eq: (_col: string, val: string) => mockDelete(val),
@@ -157,13 +163,21 @@ describe("atualizarReceita", () => {
 describe("excluirReceita", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("redireciona após exclusão com sucesso", async () => {
+  it("redireciona para paciente após exclusão com sucesso", async () => {
+    mockSelectPacienteId.mockResolvedValueOnce({ data: { paciente_id: "p-1" } });
     await expect(excluirReceita("rec-1")).rejects.toThrow("REDIRECT");
     expect(mockDelete).toHaveBeenCalledWith("rec-1");
-    expect(mockRedirect).toHaveBeenCalledWith("/receitas?success=Receita+exclu%C3%ADda");
+    expect(mockRedirect).toHaveBeenCalledWith("/pacientes/p-1?success=Receita+exclu%C3%ADda");
+  });
+
+  it("redireciona para prontuários quando paciente_id não encontrado", async () => {
+    mockSelectPacienteId.mockResolvedValueOnce({ data: null });
+    await expect(excluirReceita("rec-1")).rejects.toThrow("REDIRECT");
+    expect(mockRedirect).toHaveBeenCalledWith("/prontuarios?success=Receita+exclu%C3%ADda");
   });
 
   it("lança erro quando exclusão falha", async () => {
+    mockSelectPacienteId.mockResolvedValueOnce({ data: { paciente_id: "p-1" } });
     mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
     await expect(excluirReceita("rec-1")).rejects.toThrow("Erro ao excluir receita.");
   });

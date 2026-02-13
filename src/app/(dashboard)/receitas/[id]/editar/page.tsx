@@ -48,9 +48,9 @@ export default async function EditarReceitaPage({
       {/* Header */}
       <div>
         <Breadcrumb items={[
-          { label: "Receitas", href: "/receitas" },
-          { label: r.pacientes.nome, href: `/receitas/${r.id}` },
-          { label: "Editar" },
+          { label: "Pacientes", href: "/pacientes" },
+          { label: r.pacientes.nome, href: `/pacientes/${r.pacientes.id}` },
+          { label: "Editar receita" },
         ]} />
         <h1 className="mt-2 text-2xl font-bold text-gray-900">
           Editar receita

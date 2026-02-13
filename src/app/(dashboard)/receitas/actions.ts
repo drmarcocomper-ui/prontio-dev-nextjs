@@ -110,6 +110,15 @@ export async function excluirReceita(id: string): Promise<void> {
 
   const supabase = await createClient();
 
+  // Buscar paciente_id antes de deletar para redirecionar corretamente
+  const { data: receita } = await supabase
+    .from("receitas")
+    .select("paciente_id")
+    .eq("id", id)
+    .single();
+
+  const pacienteId = receita?.paciente_id;
+
   const { error } = await supabase.from("receitas").delete().eq("id", id);
 
   if (error) {
@@ -117,5 +126,9 @@ export async function excluirReceita(id: string): Promise<void> {
   }
 
   revalidatePath("/receitas");
-  redirect("/receitas?success=Receita+exclu%C3%ADda");
+  if (pacienteId) {
+    revalidatePath(`/pacientes/${pacienteId}`);
+    redirect(`/pacientes/${pacienteId}?success=Receita+exclu%C3%ADda`);
+  }
+  redirect("/prontuarios?success=Receita+exclu%C3%ADda");
 }

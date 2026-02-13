@@ -39,10 +39,10 @@ describe("NovaReceitaPage", () => {
     expect(screen.getByRole("heading", { name: "Nova receita" })).toBeInTheDocument();
   });
 
-  it("renderiza o breadcrumb para receitas", async () => {
+  it("renderiza o breadcrumb para prontuários", async () => {
     await renderPage();
-    const link = screen.getByText("Receitas").closest("a");
-    expect(link).toHaveAttribute("href", "/receitas");
+    const link = screen.getByText("Prontuários").closest("a");
+    expect(link).toHaveAttribute("href", "/prontuarios");
   });
 
   it("renderiza o ReceitaForm com paciente padrão", async () => {

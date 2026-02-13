@@ -37,7 +37,7 @@ export default async function ImprimirReceitaPage({
 
   const { data: receita } = await supabase
     .from("receitas")
-    .select("id, data, tipo, medicamentos, observacoes, pacientes(nome, cpf)")
+    .select("id, data, tipo, medicamentos, observacoes, pacientes(id, nome, cpf)")
     .eq("id", id)
     .single();
 
@@ -81,9 +81,9 @@ export default async function ImprimirReceitaPage({
       {/* Print Button */}
       <div className="no-print mb-6 flex items-center justify-between">
         <Breadcrumb items={[
-          { label: "Receitas", href: "/receitas" },
-          { label: r.pacientes.nome, href: `/receitas/${r.id}` },
-          { label: "Imprimir" },
+          { label: "Pacientes", href: "/pacientes" },
+          { label: r.pacientes.nome, href: `/pacientes/${r.pacientes.id}` },
+          { label: "Imprimir receita" },
         ]} />
         <PrintButton />
       </div>

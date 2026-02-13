@@ -55,8 +55,9 @@ export default async function ReceitaDetalhesPage({
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
       <Breadcrumb items={[
-        { label: "Receitas", href: "/receitas" },
-        { label: r.pacientes.nome },
+        { label: "Pacientes", href: "/pacientes" },
+        { label: r.pacientes.nome, href: `/pacientes/${r.pacientes.id}` },
+        { label: "Receita" },
       ]} />
 
       {/* Header Card */}

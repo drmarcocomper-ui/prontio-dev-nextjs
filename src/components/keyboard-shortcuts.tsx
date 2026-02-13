@@ -46,7 +46,6 @@ export function KeyboardShortcuts() {
                 case "a": router.push("/agenda"); break;
                 case "e": router.push("/prontuarios"); break;
                 case "f": router.push("/financeiro"); break;
-                case "r": router.push("/receitas"); break;
                 case "c": router.push("/configuracoes"); break;
               }
             });
@@ -121,10 +120,6 @@ export function KeyboardShortcuts() {
             <div class="flex items-center justify-between text-sm">
               <span class="text-gray-600">Financeiro</span>
               <span class="flex gap-1"><kbd class="rounded bg-gray-100 px-2 py-0.5 text-xs font-mono text-gray-700">g</kbd><kbd class="rounded bg-gray-100 px-2 py-0.5 text-xs font-mono text-gray-700">f</kbd></span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Receitas</span>
-              <span class="flex gap-1"><kbd class="rounded bg-gray-100 px-2 py-0.5 text-xs font-mono text-gray-700">g</kbd><kbd class="rounded bg-gray-100 px-2 py-0.5 text-xs font-mono text-gray-700">r</kbd></span>
             </div>
             <div class="flex items-center justify-between text-sm">
               <span class="text-gray-600">Configurações</span>

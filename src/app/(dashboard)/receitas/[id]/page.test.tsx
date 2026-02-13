@@ -80,10 +80,13 @@ describe("ReceitaDetalhesPage", () => {
     expect(mockNotFound).toHaveBeenCalled();
   });
 
-  it("renderiza o breadcrumb para receitas", async () => {
+  it("renderiza o breadcrumb para pacientes", async () => {
     await renderPage();
-    const link = screen.getByText("Receitas").closest("a");
-    expect(link).toHaveAttribute("href", "/receitas");
+    const link = screen.getByText("Pacientes").closest("a");
+    expect(link).toHaveAttribute("href", "/pacientes");
+    const pacienteLink = screen.getAllByText("Maria Silva").find((el) => el.closest("a")?.getAttribute("href") === "/pacientes/p-1");
+    expect(pacienteLink).toBeTruthy();
+    expect(screen.getByText("Receita")).toBeInTheDocument();
   });
 
   it("renderiza o nome do paciente com link", async () => {
