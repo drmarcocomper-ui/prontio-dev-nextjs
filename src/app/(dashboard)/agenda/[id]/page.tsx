@@ -148,7 +148,7 @@ export default async function AgendamentoDetalhesPage({
       </div>
 
       {/* Registrar evolução */}
-      {["atendido", "em_atendimento", "aguardando"].includes(ag.status) && (
+      {["atendido", "em_atendimento"].includes(ag.status) && (
         <Link
           href={`/prontuarios/novo?paciente_id=${ag.pacientes.id}&paciente_nome=${encodeURIComponent(ag.pacientes.nome)}`}
           className="flex items-center justify-between rounded-xl border border-violet-200 bg-violet-50 p-4 transition-colors hover:border-violet-300 hover:bg-violet-100 sm:p-5"
