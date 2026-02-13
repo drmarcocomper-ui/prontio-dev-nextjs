@@ -30,6 +30,12 @@ vi.mock("../types", async () => {
   return { ...actual };
 });
 
+vi.mock("./tabs", () => ({
+  Tabs: ({ pacienteId }: { pacienteId: string }) => (
+    <div data-testid="tabs" data-paciente-id={pacienteId} />
+  ),
+}));
+
 vi.mock("@/components/delete-button", () => ({
   DeleteButton: ({ onDelete, title }: { onDelete: () => void; title: string }) => (
     <button data-testid="delete-button" data-title={title} onClick={onDelete}>
@@ -116,8 +122,11 @@ const pacienteMinimo = {
   created_at: "2024-01-01T00:00:00Z",
 };
 
-async function renderPage(id = "abc-123") {
-  const jsx = await PacienteDetalhesPage({ params: Promise.resolve({ id }) });
+async function renderPage(id = "abc-123", searchParams: { tab?: string } = {}) {
+  const jsx = await PacienteDetalhesPage({
+    params: Promise.resolve({ id }),
+    searchParams: Promise.resolve(searchParams),
+  });
   return render(jsx);
 }
 
@@ -246,7 +255,7 @@ describe("PacienteDetalhesPage", () => {
 
   it("exibe empty state de evoluções quando não há prontuários", async () => {
     mockProntuarios = [];
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("Nenhuma evolução registrada.")).toBeInTheDocument();
   });
 
@@ -255,7 +264,7 @@ describe("PacienteDetalhesPage", () => {
       { id: "pr-1", data: "2024-06-15", tipo: "consulta", cid: "J06.9", queixa_principal: "Dor de garganta" },
       { id: "pr-2", data: "2024-06-10", tipo: null, cid: null, queixa_principal: null },
     ];
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("Consulta")).toBeInTheDocument();
     expect(screen.getByText("CID: J06.9")).toBeInTheDocument();
     expect(screen.getByText("Dor de garganta")).toBeInTheDocument();
@@ -264,7 +273,7 @@ describe("PacienteDetalhesPage", () => {
   });
 
   it("renderiza link Nova evolução com paciente_id", async () => {
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     const link = screen.getByText("Nova evolução").closest("a");
     expect(link).toHaveAttribute(
       "href",
@@ -274,7 +283,7 @@ describe("PacienteDetalhesPage", () => {
 
   it("exibe empty state de receitas quando não há receitas", async () => {
     mockReceitas = [];
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("Nenhuma receita emitida.")).toBeInTheDocument();
   });
 
@@ -283,7 +292,7 @@ describe("PacienteDetalhesPage", () => {
       { id: "rec-1", data: "2024-06-15", tipo: "simples", medicamentos: "Amoxicilina 500mg" },
       { id: "rec-2", data: "2024-06-10", tipo: "controle_especial", medicamentos: "Ritalina 10mg" },
     ];
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("Amoxicilina 500mg")).toBeInTheDocument();
     expect(screen.getByText("Ritalina 10mg")).toBeInTheDocument();
     expect(screen.getByText("Simples")).toBeInTheDocument();
@@ -293,7 +302,7 @@ describe("PacienteDetalhesPage", () => {
   });
 
   it("renderiza link Nova receita com paciente_id", async () => {
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     const link = screen.getByText("Nova receita").closest("a");
     expect(link).toHaveAttribute(
       "href",
@@ -302,12 +311,12 @@ describe("PacienteDetalhesPage", () => {
   });
 
   it("renderiza seção Receitas médicas", async () => {
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("Receitas médicas")).toBeInTheDocument();
   });
 
   it("renderiza seção Evoluções clínicas", async () => {
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("Evoluções clínicas")).toBeInTheDocument();
   });
 
@@ -328,7 +337,7 @@ describe("PacienteDetalhesPage", () => {
     mockProntuarios = [
       { id: "pr-x", data: "2024-06-15", tipo: "tipo_desconhecido", cid: null, queixa_principal: null },
     ];
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
   });
 
@@ -358,7 +367,33 @@ describe("PacienteDetalhesPage", () => {
     mockReceitas = [
       { id: "rec-x", data: "2024-06-15", tipo: "tipo_desconhecido", medicamentos: "Med X" },
     ];
-    await renderPage();
+    await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
+  });
+
+  it("renderiza o componente Tabs com pacienteId", async () => {
+    await renderPage();
+    const tabs = screen.getByTestId("tabs");
+    expect(tabs).toHaveAttribute("data-paciente-id", "abc-123");
+  });
+
+  it("exibe aba identificacao por padrão", async () => {
+    await renderPage();
+    expect(screen.getByText("Dados pessoais")).toBeInTheDocument();
+    expect(screen.queryByText("Evoluções clínicas")).not.toBeInTheDocument();
+  });
+
+  it("aba prontuario mostra evoluções e receitas", async () => {
+    await renderPage("abc-123", { tab: "prontuario" });
+    expect(screen.getByText("Evoluções clínicas")).toBeInTheDocument();
+    expect(screen.getByText("Receitas médicas")).toBeInTheDocument();
+    expect(screen.queryByText("Dados pessoais")).not.toBeInTheDocument();
+  });
+
+  it("aba identificacao não mostra conteúdo de prontuário", async () => {
+    await renderPage("abc-123", { tab: "identificacao" });
+    expect(screen.getByText("Dados pessoais")).toBeInTheDocument();
+    expect(screen.queryByText("Evoluções clínicas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Receitas médicas")).not.toBeInTheDocument();
   });
 });

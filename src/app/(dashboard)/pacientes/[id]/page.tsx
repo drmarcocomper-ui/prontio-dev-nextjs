@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteButton } from "@/components/delete-button";
 import { excluirPaciente } from "../actions";
+import { Tabs } from "./tabs";
 import {
   type Paciente,
   SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS,
@@ -36,10 +37,14 @@ function InfoItem({ label, value }: { label: string; value: string | null | unde
 
 export default async function PacienteDetalhesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab } = await searchParams;
+  const currentTab = tab || "identificacao";
   const supabase = await createClient();
 
   const { data: paciente } = await supabase
@@ -128,7 +133,9 @@ export default async function PacienteDetalhesPage({
         </div>
       </div>
 
-      {/* Info Sections */}
+      <Tabs pacienteId={id} />
+
+      {currentTab === "identificacao" && (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Dados pessoais */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
@@ -212,7 +219,10 @@ export default async function PacienteDetalhesPage({
           </dl>
         </div>
       </div>
+      )}
 
+      {currentTab === "prontuario" && (
+      <>
       {/* Evoluções clínicas */}
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
@@ -341,6 +351,8 @@ export default async function PacienteDetalhesPage({
           </p>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
