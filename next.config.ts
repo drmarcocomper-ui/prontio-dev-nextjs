@@ -37,6 +37,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: [
         "localhost:3000",
+        "prontio.com.br",
+        "www.prontio.com.br",
       ],
     },
   },
