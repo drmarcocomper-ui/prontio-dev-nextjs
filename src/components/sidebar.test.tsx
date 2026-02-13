@@ -33,7 +33,6 @@ const navItems = [
   { label: "Início", href: "/" },
   { label: "Agenda", href: "/agenda" },
   { label: "Pacientes", href: "/pacientes" },
-  { label: "Prontuários", href: "/prontuarios" },
   { label: "Financeiro", href: "/financeiro" },
   { label: "Relatórios", href: "/relatorios" },
   { label: "Configurações", href: "/configuracoes" },
@@ -51,7 +50,7 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renderiza todos os 7 links de navegação", () => {
+  it("renderiza todos os 6 links de navegação", () => {
     render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
     for (const item of navItems) {
       expect(screen.getByText(item.label)).toBeInTheDocument();
