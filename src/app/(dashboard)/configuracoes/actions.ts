@@ -17,6 +17,7 @@ import {
   SENHA_MIN,
   SENHA_MAX,
 } from "./constants";
+import { ESTADOS_UF } from "../pacientes/types";
 
 export type ConfigFormState = {
   success?: boolean;
@@ -63,8 +64,11 @@ export async function salvarConsultorio(
   const cidade = (formData.get("cidade") as string)?.trim() || null;
   const estado = (formData.get("estado") as string)?.trim().toUpperCase() || null;
 
+  if (cnpj && cnpj.length !== 14) return { error: "CNPJ deve ter 14 dígitos." };
+  if (telefone && (telefone.length < 10 || telefone.length > 11)) return { error: "Telefone deve ter 10 ou 11 dígitos." };
   if (endereco && endereco.length > ENDERECO_MAX) return { error: `Endereço excede ${ENDERECO_MAX} caracteres.` };
   if (cidade && cidade.length > CIDADE_MAX) return { error: `Cidade excede ${CIDADE_MAX} caracteres.` };
+  if (estado && !ESTADOS_UF.includes(estado)) return { error: "Estado inválido." };
 
   const supabase = await createClient();
 

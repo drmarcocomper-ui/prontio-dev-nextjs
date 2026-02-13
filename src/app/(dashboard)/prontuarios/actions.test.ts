@@ -212,6 +212,13 @@ describe("atualizarProntuario", () => {
     const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", conduta: "Prescrição" }));
     expect(result.error).toBe("Erro ao atualizar prontuário. Tente novamente.");
   });
+
+  it("retorna fieldError quando paciente não pertence ao médico", async () => {
+    mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
+    const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe("excluirProntuario", () => {

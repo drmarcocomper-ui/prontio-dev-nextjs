@@ -111,6 +111,17 @@ export async function atualizarReceita(
     return { error: "Não foi possível identificar o médico responsável." };
   }
 
+  const { data: paciente } = await supabase
+    .from("pacientes")
+    .select("id")
+    .eq("id", fields.paciente_id)
+    .eq("medico_id", medicoId)
+    .single();
+
+  if (!paciente) {
+    return { fieldErrors: { paciente_id: "Paciente não encontrado." } };
+  }
+
   const { error } = await supabase
     .from("receitas")
     .update({

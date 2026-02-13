@@ -194,6 +194,13 @@ describe("atualizarReceita", () => {
     const result = await atualizarReceita({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", tipo: "simples", medicamentos: "Amoxicilina" }));
     expect(result.error).toBe("Erro ao atualizar receita. Tente novamente.");
   });
+
+  it("retorna fieldError quando paciente não pertence ao médico", async () => {
+    mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
+    const result = await atualizarReceita({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", tipo: "simples", medicamentos: "Amoxicilina" }));
+    expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe("excluirReceita", () => {

@@ -83,6 +83,26 @@ describe("salvarConsultorio", () => {
     const result = await salvarConsultorio({}, makeFormData({ nome: "Clínica" }));
     expect(result.error).toBe("Clínica não selecionada.");
   });
+
+  it("retorna erro quando CNPJ tem menos de 14 dígitos", async () => {
+    const result = await salvarConsultorio({}, makeFormData({ nome: "Clínica", cnpj: "1234567" }));
+    expect(result.error).toBe("CNPJ deve ter 14 dígitos.");
+  });
+
+  it("retorna erro quando telefone é inválido", async () => {
+    const result = await salvarConsultorio({}, makeFormData({ nome: "Clínica", telefone: "123" }));
+    expect(result.error).toBe("Telefone deve ter 10 ou 11 dígitos.");
+  });
+
+  it("retorna erro quando estado é inválido", async () => {
+    const result = await salvarConsultorio({}, makeFormData({ nome: "Clínica", estado: "XX" }));
+    expect(result.error).toBe("Estado inválido.");
+  });
+
+  it("aceita estado válido", async () => {
+    const result = await salvarConsultorio({}, makeFormData({ nome: "Clínica", estado: "SP" }));
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("salvarHorarios", () => {
