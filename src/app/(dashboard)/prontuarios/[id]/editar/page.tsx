@@ -44,7 +44,7 @@ export default async function EditarProntuarioPage({
   const p = prontuario as unknown as Prontuario;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
         <Link
@@ -62,7 +62,7 @@ export default async function EditarProntuarioPage({
       </div>
 
       {/* Form Card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
         <ProntuarioForm
           defaults={{
             id: p.id,

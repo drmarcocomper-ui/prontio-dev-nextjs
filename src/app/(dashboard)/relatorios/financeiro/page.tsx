@@ -61,7 +61,7 @@ export default async function RelatorioFinanceiroPage({
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -85,19 +85,19 @@ export default async function RelatorioFinanceiroPage({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Total Receitas</p>
           <p className="mt-2 text-2xl font-bold text-emerald-600">
             {formatCurrency(totalReceitas)}
           </p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Total Despesas</p>
           <p className="mt-2 text-2xl font-bold text-red-600">
             {formatCurrency(totalDespesas)}
           </p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Saldo</p>
           <p
             className={`mt-2 text-2xl font-bold ${
@@ -107,7 +107,7 @@ export default async function RelatorioFinanceiroPage({
             {formatCurrency(saldo)}
           </p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Transações</p>
           <p className="mt-2 text-2xl font-bold text-gray-900">{items.length}</p>
         </div>
@@ -116,7 +116,7 @@ export default async function RelatorioFinanceiroPage({
       {/* Breakdown por categoria */}
       {categoriaBreakdown.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <div className="border-b border-gray-200 px-5 py-4">
+          <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
             <h2 className="text-sm font-semibold text-gray-900">Por categoria</h2>
           </div>
           <table className="min-w-full divide-y divide-gray-200">
@@ -165,7 +165,7 @@ export default async function RelatorioFinanceiroPage({
       {/* Breakdown por forma de pagamento */}
       {pagamentoBreakdown.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <div className="border-b border-gray-200 px-5 py-4">
+          <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
             <h2 className="text-sm font-semibold text-gray-900">Por forma de pagamento</h2>
           </div>
           <table className="min-w-full divide-y divide-gray-200">
@@ -204,7 +204,7 @@ export default async function RelatorioFinanceiroPage({
       {/* Lista de transações */}
       {items.length > 0 ? (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <div className="border-b border-gray-200 px-5 py-4">
+          <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
             <h2 className="text-sm font-semibold text-gray-900">Transações do período</h2>
           </div>
           <table className="min-w-full divide-y divide-gray-200">

@@ -16,7 +16,7 @@ export default async function NovaReceitaPage({
   const backLabel = fromPaciente ? (paciente_nome ?? "Paciente") : "Receitas";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
         <Link

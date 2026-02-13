@@ -14,7 +14,7 @@ export default async function NovoAgendamentoPage({
   const defaultDate = data || todayLocal();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
         <Link
