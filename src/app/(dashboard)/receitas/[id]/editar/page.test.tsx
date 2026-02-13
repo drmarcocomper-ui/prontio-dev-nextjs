@@ -79,13 +79,13 @@ describe("EditarReceitaPage", () => {
 
   it("renderiza o título Editar receita", async () => {
     await renderPage();
-    expect(screen.getByText("Editar receita")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Editar receita" })).toBeInTheDocument();
   });
 
-  it("renderiza o breadcrumb para a receita", async () => {
+  it("renderiza o breadcrumb para o paciente", async () => {
     await renderPage();
     const link = screen.getByText("Maria Silva").closest("a");
-    expect(link).toHaveAttribute("href", "/receitas/rec-123");
+    expect(link).toHaveAttribute("href", "/pacientes/pac-456");
   });
 
   it("renderiza o ReceitaForm com defaults", async () => {
