@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DatePicker } from "./date-picker";
 import { StatusSelect } from "./status-select";
 import { StatusBadge } from "./status-badge";
+import { todayLocal } from "@/lib/date";
 import { type Agendamento, TIPO_LABELS, formatTime, getInitials } from "./types";
 
 export const metadata: Metadata = { title: "Agenda" };
@@ -14,7 +15,7 @@ export default async function AgendaPage({
   searchParams: Promise<{ data?: string }>;
 }) {
   const { data: dataParam } = await searchParams;
-  const currentDate = dataParam || new Date().toISOString().split("T")[0];
+  const currentDate = dataParam || todayLocal();
 
   const supabase = await createClient();
 

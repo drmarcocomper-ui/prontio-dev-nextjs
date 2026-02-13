@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { todayLocal } from "@/lib/date";
 import { AgendamentoForm } from "./agendamento-form";
 
 export const metadata: Metadata = { title: "Novo Agendamento" };
@@ -10,7 +11,7 @@ export default async function NovoAgendamentoPage({
   searchParams: Promise<{ data?: string }>;
 }) {
   const { data } = await searchParams;
-  const defaultDate = data || new Date().toISOString().split("T")[0];
+  const defaultDate = data || todayLocal();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

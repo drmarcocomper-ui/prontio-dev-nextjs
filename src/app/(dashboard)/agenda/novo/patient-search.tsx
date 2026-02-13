@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { escapeLikePattern } from "@/lib/sanitize";
 
 interface Paciente {
   id: string;
@@ -48,7 +49,7 @@ export function PatientSearch({
       const { data, error } = await supabase
         .from("pacientes")
         .select("id, nome, cpf")
-        .ilike("nome", `%${query}%`)
+        .ilike("nome", `%${escapeLikePattern(query)}%`)
         .order("nome")
         .limit(8);
 

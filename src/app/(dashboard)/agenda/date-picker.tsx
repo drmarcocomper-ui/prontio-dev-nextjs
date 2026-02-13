@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { todayLocal } from "@/lib/date";
 import { formatDateBR } from "./types";
 
 function addDays(dateStr: string, days: number) {
@@ -23,7 +24,7 @@ export function DatePicker({ currentDate }: { currentDate: string }) {
     router.push(`/agenda?${params.toString()}`);
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayLocal();
   const isToday = currentDate === today;
 
   return (

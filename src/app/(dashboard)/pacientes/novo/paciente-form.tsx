@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { FieldError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import {
   criarPaciente,
   atualizarPaciente,
@@ -28,7 +28,7 @@ export function PacienteForm({
   const isEditing = !!defaults?.id;
   const action = isEditing ? atualizarPaciente : criarPaciente;
   const cancelHref = isEditing ? `/pacientes/${defaults.id}` : "/pacientes";
-  const today = new Date().toISOString().split("T")[0];
+  const today = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
 
   const [state, formAction, isPending] = useActionState<PacienteFormState, FormData>(
     action,
@@ -39,11 +39,7 @@ export function PacienteForm({
     <form action={formAction} className="space-y-8" aria-busy={isPending}>
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
-      {state.error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {state.error}
-        </div>
-      )}
+      <FormError message={state.error} />
 
       {/* Dados pessoais */}
       <fieldset className="space-y-4">

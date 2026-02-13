@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
+import { FormError } from "@/components/form-utils";
 import { alterarSenha, type ConfigFormState } from "./actions";
 import { INPUT_CLASS, SENHA_MIN, SENHA_MAX } from "./constants";
 
@@ -27,11 +28,7 @@ export function ContaForm({ email }: { email: string }) {
       <form action={formAction} className="space-y-4" aria-busy={isPending}>
         <h3 className="text-sm font-semibold text-gray-900">Alterar senha</h3>
 
-        {state.error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {state.error}
-          </div>
-        )}
+        <FormError message={state.error} />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>

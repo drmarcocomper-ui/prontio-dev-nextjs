@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortableHeader } from "@/components/sortable-header";
 import { SearchInput } from "@/components/search-input";
+import { escapeLikePattern } from "@/lib/sanitize";
 import { PacienteFilters } from "./filters";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
 
@@ -31,7 +32,8 @@ export default async function PacientesPage({
     .order(sortColumn, { ascending });
 
   if (q) {
-    query = query.or(`nome.ilike.%${q}%,cpf.ilike.%${q}%,telefone.ilike.%${q}%`);
+    const escaped = escapeLikePattern(q);
+    query = query.or(`nome.ilike.%${escaped}%,cpf.ilike.%${escaped}%,telefone.ilike.%${escaped}%`);
   }
 
   if (sexo) {

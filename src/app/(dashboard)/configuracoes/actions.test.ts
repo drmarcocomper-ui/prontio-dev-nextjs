@@ -68,6 +68,18 @@ describe("salvarConfiguracoes", () => {
     expect(result.error).toBe("Campo excede o limite de 255 caracteres.");
   });
 
+  it("ignora chaves fora do allowlist", async () => {
+    const result = await salvarConfiguracoes({}, makeFormData({
+      config_nome_consultorio: "Clínica",
+      config_chave_maliciosa: "hacked",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockUpsert).toHaveBeenCalledWith(
+      [{ chave: "nome_consultorio", valor: "Clínica" }],
+      { onConflict: "chave" }
+    );
+  });
+
   it("retorna erro quando upsert falha", async () => {
     mockUpsert.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await salvarConfiguracoes({}, makeFormData({

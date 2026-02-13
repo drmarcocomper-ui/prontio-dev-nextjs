@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortSelect } from "@/components/sort-select";
 import { SearchInput } from "@/components/search-input";
+import { escapeLikePattern } from "@/lib/sanitize";
 import { ReceitaFilters } from "./filters";
 import {
   type ReceitaListItem,
@@ -48,7 +49,8 @@ export default async function ReceitasPage({
   query = query.order("created_at", { ascending: false });
 
   if (q) {
-    query = query.or(`medicamentos.ilike.%${q}%,pacientes.nome.ilike.%${q}%`);
+    const escaped = escapeLikePattern(q);
+    query = query.or(`medicamentos.ilike.%${escaped}%,pacientes.nome.ilike.%${escaped}%`);
   }
 
   if (tipo) {

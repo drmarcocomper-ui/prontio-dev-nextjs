@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
+import { FormError } from "@/components/form-utils";
 import { salvarConfiguracoes, type ConfigFormState } from "./actions";
 import {
   INPUT_CLASS,
@@ -31,11 +32,7 @@ export function ConsultorioForm({
 
   return (
     <form action={formAction} className="space-y-6" aria-busy={isPending}>
-      {state.error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {state.error}
-        </div>
-      )}
+      <FormError message={state.error} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">

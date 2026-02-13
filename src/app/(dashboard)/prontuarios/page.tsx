@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortSelect } from "@/components/sort-select";
 import { SearchInput } from "@/components/search-input";
+import { escapeLikePattern } from "@/lib/sanitize";
 import { ProntuarioFilters } from "./filters";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
 
@@ -48,7 +49,8 @@ export default async function ProntuariosPage({
   query = query.order("created_at", { ascending: false });
 
   if (q) {
-    query = query.or(`cid.ilike.%${q}%,queixa_principal.ilike.%${q}%,pacientes.nome.ilike.%${q}%`);
+    const escaped = escapeLikePattern(q);
+    query = query.or(`cid.ilike.%${escaped}%,queixa_principal.ilike.%${escaped}%,pacientes.nome.ilike.%${escaped}%`);
   }
 
   if (tipo) {

@@ -21,6 +21,14 @@ export type ConfigFormState = {
   error?: string;
 };
 
+const ALLOWED_CONFIG_KEYS = new Set([
+  "nome_consultorio", "cnpj", "telefone_consultorio",
+  "endereco_consultorio", "cidade_consultorio", "estado_consultorio",
+  "nome_profissional", "especialidade", "crm", "rqe", "email_profissional",
+  "duracao_consulta", "intervalo_inicio", "intervalo_fim",
+  ...["seg", "ter", "qua", "qui", "sex", "sab"].flatMap(d => [`horario_${d}_inicio`, `horario_${d}_fim`]),
+]);
+
 const FIELD_LIMITS: Record<string, number> = {
   nome_consultorio: NOME_CONSULTORIO_MAX,
   endereco_consultorio: ENDERECO_MAX,
@@ -40,7 +48,9 @@ export async function salvarConfiguracoes(
 
   formData.forEach((value, key) => {
     if (key.startsWith("config_")) {
-      entries[key.replace("config_", "")] = (value as string).trim();
+      const configKey = key.replace("config_", "");
+      if (!ALLOWED_CONFIG_KEYS.has(configKey)) return;
+      entries[configKey] = (value as string).trim();
     }
   });
 

@@ -31,7 +31,8 @@ export function dataNaoFutura(
   mensagem?: string
 ): void {
   if (!valor) return;
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   if (valor > today) {
     errors[campo] = mensagem ?? "A data não pode ser no futuro.";
   }

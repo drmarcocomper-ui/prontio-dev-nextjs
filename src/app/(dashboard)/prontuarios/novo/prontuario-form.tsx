@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { FieldError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
 import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
@@ -15,7 +15,7 @@ export function ProntuarioForm({
   cancelHref?: string;
 }) {
   const isEditing = !!defaults?.id;
-  const today = new Date().toISOString().split("T")[0];
+  const today = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
 
   const action = isEditing ? atualizarProntuario : criarProntuario;
 
@@ -30,11 +30,7 @@ export function ProntuarioForm({
     <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
-      {state.error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {state.error}
-        </div>
-      )}
+      <FormError message={state.error} />
 
       {/* Paciente e Data */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

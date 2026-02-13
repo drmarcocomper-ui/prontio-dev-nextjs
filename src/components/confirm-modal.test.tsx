@@ -76,6 +76,41 @@ describe("ConfirmModal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("aplica scroll lock no body quando aberto", () => {
+    render(<ConfirmModal {...defaultProps} />);
+    expect(document.body.style.overflow).toBe("hidden");
+  });
+
+  it("restaura scroll do body ao fechar", () => {
+    document.body.style.overflow = "auto";
+    const { unmount } = render(<ConfirmModal {...defaultProps} />);
+    expect(document.body.style.overflow).toBe("hidden");
+    unmount();
+    expect(document.body.style.overflow).toBe("auto");
+  });
+
+  it("mantém foco dentro do modal com Tab", async () => {
+    render(<ConfirmModal {...defaultProps} />);
+    const cancelButton = screen.getByText("Cancelar");
+    const confirmButton = screen.getByText("Excluir").closest("button")!;
+
+    // Focus the last button (Excluir), then tab should wrap to first (Cancelar)
+    (confirmButton as HTMLElement).focus();
+    await userEvent.tab();
+    expect(document.activeElement).toBe(cancelButton);
+  });
+
+  it("mantém foco dentro do modal com Shift+Tab", async () => {
+    render(<ConfirmModal {...defaultProps} />);
+    const cancelButton = screen.getByText("Cancelar");
+    const confirmButton = screen.getByText("Excluir").closest("button")!;
+
+    // Focus the first button (Cancelar), then shift+tab should wrap to last (Excluir)
+    cancelButton.focus();
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(confirmButton);
+  });
+
   it("não responde ao Escape quando modal está fechado", async () => {
     const onClose = vi.fn();
     const { rerender } = render(<ConfirmModal {...defaultProps} open={true} onClose={onClose} />);
