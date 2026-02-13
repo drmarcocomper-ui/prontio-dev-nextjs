@@ -109,14 +109,14 @@ function makeFormData(data: Record<string, string>) {
 }
 
 const validCreate = {
-  paciente_id: "p-1",
+  paciente_id: "00000000-0000-0000-0000-000000000001",
   data: "2024-06-15",
   hora_inicio: "09:00",
   hora_fim: "09:30",
 };
 
 const validUpdate = {
-  id: "ag-1",
+  id: "00000000-0000-0000-0000-000000000007",
   ...validCreate,
 };
 
@@ -144,7 +144,7 @@ describe("criarAgendamento", () => {
   it("retorna fieldErrors quando data está vazia", async () => {
     const result = await criarAgendamento(
       {},
-      makeFormData({ paciente_id: "p-1", data: "", hora_inicio: "09:00", hora_fim: "09:30" })
+      makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "", hora_inicio: "09:00", hora_fim: "09:30" })
     );
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
   });
@@ -153,7 +153,7 @@ describe("criarAgendamento", () => {
     const result = await criarAgendamento(
       {},
       makeFormData({
-        paciente_id: "p-1",
+        paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "2024-06-15",
         hora_inicio: "10:00",
         hora_fim: "09:00",
@@ -165,7 +165,7 @@ describe("criarAgendamento", () => {
   it("retorna fieldErrors quando hora_inicio está vazia", async () => {
     const result = await criarAgendamento(
       {},
-      makeFormData({ paciente_id: "p-1", data: "2024-06-15", hora_inicio: "", hora_fim: "09:30" })
+      makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", hora_inicio: "", hora_fim: "09:30" })
     );
     expect(result.fieldErrors?.hora_inicio).toBe("Horário de início é obrigatório.");
   });
@@ -173,7 +173,7 @@ describe("criarAgendamento", () => {
   it("retorna fieldErrors quando hora_fim está vazia", async () => {
     const result = await criarAgendamento(
       {},
-      makeFormData({ paciente_id: "p-1", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "" })
+      makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "" })
     );
     expect(result.fieldErrors?.hora_fim).toBe("Horário de término é obrigatório.");
   });
@@ -182,7 +182,7 @@ describe("criarAgendamento", () => {
     conflitoResult = {
       data: [
         {
-          id: "ag-existente",
+          id: "00000000-0000-0000-0000-000000000008",
           hora_inicio: "09:00:00",
           hora_fim: "09:30:00",
           pacientes: { nome: "Maria Silva" },
@@ -205,7 +205,7 @@ describe("criarAgendamento", () => {
     conflitoResult = {
       data: [
         {
-          id: "ag-x",
+          id: "00000000-0000-0000-0000-00000000000a",
           hora_inicio: "08:00:00",
           hora_fim: "08:30:00",
           pacientes: null,
@@ -227,7 +227,7 @@ describe("criarAgendamento", () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        paciente_id: "p-1",
+        paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "2024-06-15",
         status: "agendado",
       })
@@ -322,10 +322,18 @@ describe("atualizarAgendamento", () => {
     configChain = createConfigChain();
   });
 
+  it("retorna erro quando ID é inválido", async () => {
+    const result = await atualizarAgendamento(
+      {},
+      makeFormData({ id: "invalido", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30" })
+    );
+    expect(result.error).toBe("ID inválido.");
+  });
+
   it("retorna fieldErrors quando paciente não selecionado", async () => {
     const result = await atualizarAgendamento(
       {},
-      makeFormData({ id: "ag-1", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30" })
+      makeFormData({ id: "00000000-0000-0000-0000-000000000007", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30" })
     );
     expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
   });
@@ -334,8 +342,8 @@ describe("atualizarAgendamento", () => {
     const result = await atualizarAgendamento(
       {},
       makeFormData({
-        id: "ag-1",
-        paciente_id: "p-1",
+        id: "00000000-0000-0000-0000-000000000007",
+        paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "",
         hora_inicio: "09:00",
         hora_fim: "09:30",
@@ -348,8 +356,8 @@ describe("atualizarAgendamento", () => {
     const result = await atualizarAgendamento(
       {},
       makeFormData({
-        id: "ag-1",
-        paciente_id: "p-1",
+        id: "00000000-0000-0000-0000-000000000007",
+        paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "2024-06-15",
         hora_inicio: "10:00",
         hora_fim: "09:00",
@@ -362,7 +370,7 @@ describe("atualizarAgendamento", () => {
     conflitoResult = {
       data: [
         {
-          id: "ag-outro",
+          id: "00000000-0000-0000-0000-000000000009",
           hora_inicio: "09:00:00",
           hora_fim: "10:00:00",
           pacientes: { nome: "João Santos" },
@@ -383,7 +391,7 @@ describe("atualizarAgendamento", () => {
 
   it("exclui o próprio agendamento da verificação de conflito (neq)", async () => {
     await expect(atualizarAgendamento({}, makeFormData(validUpdate))).rejects.toThrow("REDIRECT");
-    expect(selectChain.neq).toHaveBeenCalledWith("id", "ag-1");
+    expect(selectChain.neq).toHaveBeenCalledWith("id", "00000000-0000-0000-0000-000000000007");
   });
 
   it("não usa neq na criação (sem excluirId)", async () => {
@@ -395,14 +403,14 @@ describe("atualizarAgendamento", () => {
     await expect(atualizarAgendamento({}, makeFormData(validUpdate))).rejects.toThrow("REDIRECT");
     expect(mockUpdateEq).toHaveBeenCalledWith(
       expect.objectContaining({
-        paciente_id: "p-1",
+        paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "2024-06-15",
         hora_inicio: "09:00",
         hora_fim: "09:30",
       }),
-      "ag-1"
+      "00000000-0000-0000-0000-000000000007"
     );
-    expect(mockRedirect).toHaveBeenCalledWith("/agenda/ag-1?success=Agendamento+atualizado");
+    expect(mockRedirect).toHaveBeenCalledWith("/agenda/00000000-0000-0000-0000-000000000007?success=Agendamento+atualizado");
   });
 
   it("retorna erro quando supabase falha", async () => {
@@ -443,37 +451,37 @@ describe("atualizarStatusAgendamento", () => {
 
   it("permite transição agendado → confirmado", async () => {
     singleResult = { data: { status: "agendado" }, error: null };
-    await atualizarStatusAgendamento("ag-1", "confirmado");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "confirmado" }, "ag-1");
+    await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado");
+    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "confirmado" }, "00000000-0000-0000-0000-000000000007");
   });
 
   it("permite transição confirmado → em_atendimento", async () => {
     singleResult = { data: { status: "confirmado" }, error: null };
-    await atualizarStatusAgendamento("ag-1", "em_atendimento");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "em_atendimento" }, "ag-1");
+    await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "em_atendimento");
+    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "em_atendimento" }, "00000000-0000-0000-0000-000000000007");
   });
 
   it("permite transição em_atendimento → atendido", async () => {
     singleResult = { data: { status: "em_atendimento" }, error: null };
-    await atualizarStatusAgendamento("ag-1", "atendido");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "atendido" }, "ag-1");
+    await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "atendido");
+    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "atendido" }, "00000000-0000-0000-0000-000000000007");
   });
 
   it("permite transição cancelado → agendado (reagendar)", async () => {
     singleResult = { data: { status: "cancelado" }, error: null };
-    await atualizarStatusAgendamento("ag-1", "agendado");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "agendado" }, "ag-1");
+    await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "agendado");
+    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "agendado" }, "00000000-0000-0000-0000-000000000007");
   });
 
   it("permite transição faltou → agendado (reagendar)", async () => {
     singleResult = { data: { status: "faltou" }, error: null };
-    await atualizarStatusAgendamento("ag-1", "agendado");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "agendado" }, "ag-1");
+    await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "agendado");
+    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "agendado" }, "00000000-0000-0000-0000-000000000007");
   });
 
   it("bloqueia transição atendido → confirmado (status terminal)", async () => {
     singleResult = { data: { status: "atendido" }, error: null };
-    await expect(atualizarStatusAgendamento("ag-1", "confirmado")).rejects.toThrow(
+    await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")).rejects.toThrow(
       "Transição de status não permitida."
     );
     expect(mockUpdateEq).not.toHaveBeenCalled();
@@ -481,7 +489,7 @@ describe("atualizarStatusAgendamento", () => {
 
   it("bloqueia transição faltou → confirmado", async () => {
     singleResult = { data: { status: "faltou" }, error: null };
-    await expect(atualizarStatusAgendamento("ag-1", "confirmado")).rejects.toThrow(
+    await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")).rejects.toThrow(
       "Transição de status não permitida."
     );
     expect(mockUpdateEq).not.toHaveBeenCalled();
@@ -489,7 +497,7 @@ describe("atualizarStatusAgendamento", () => {
 
   it("bloqueia transição agendado → atendido (pula etapas)", async () => {
     singleResult = { data: { status: "agendado" }, error: null };
-    await expect(atualizarStatusAgendamento("ag-1", "atendido")).rejects.toThrow(
+    await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "atendido")).rejects.toThrow(
       "Transição de status não permitida."
     );
     expect(mockUpdateEq).not.toHaveBeenCalled();
@@ -497,7 +505,7 @@ describe("atualizarStatusAgendamento", () => {
 
   it("lança erro quando agendamento não encontrado", async () => {
     singleResult = { data: null, error: null };
-    await expect(atualizarStatusAgendamento("ag-x", "confirmado")).rejects.toThrow(
+    await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-00000000000a", "confirmado")).rejects.toThrow(
       "Agendamento não encontrado."
     );
     expect(mockUpdateEq).not.toHaveBeenCalled();
@@ -506,7 +514,7 @@ describe("atualizarStatusAgendamento", () => {
   it("lança erro quando atualização no banco falha", async () => {
     singleResult = { data: { status: "agendado" }, error: null };
     mockUpdateEq.mockResolvedValueOnce({ error: { message: "DB error" } });
-    await expect(atualizarStatusAgendamento("ag-1", "confirmado")).rejects.toThrow(
+    await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")).rejects.toThrow(
       "Erro ao atualizar status."
     );
   });
@@ -548,9 +556,13 @@ describe("excluirAgendamento", () => {
     mockDeleteEq.mockResolvedValue({ error: null });
   });
 
+  it("lança erro quando ID é inválido", async () => {
+    await expect(excluirAgendamento("invalido", "2024-06-15")).rejects.toThrow("ID inválido.");
+  });
+
   it("redireciona após exclusão com sucesso", async () => {
-    await expect(excluirAgendamento("ag-1", "2024-06-15")).rejects.toThrow("REDIRECT");
-    expect(mockDeleteEq).toHaveBeenCalledWith("ag-1");
+    await expect(excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")).rejects.toThrow("REDIRECT");
+    expect(mockDeleteEq).toHaveBeenCalledWith("00000000-0000-0000-0000-000000000007");
     expect(mockRedirect).toHaveBeenCalledWith(
       "/agenda?data=2024-06-15&success=Agendamento+exclu%C3%ADdo"
     );
@@ -558,7 +570,7 @@ describe("excluirAgendamento", () => {
 
   it("lança erro quando exclusão no banco falha", async () => {
     mockDeleteEq.mockResolvedValueOnce({ error: { message: "DB error" } });
-    await expect(excluirAgendamento("ag-1", "2024-06-15")).rejects.toThrow(
+    await expect(excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")).rejects.toThrow(
       "Erro ao excluir agendamento."
     );
   });

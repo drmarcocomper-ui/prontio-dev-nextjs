@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido } from "@/lib/validators";
 import { TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH } from "./types";
 import { getMedicoId } from "@/lib/clinica";
 
@@ -74,6 +74,17 @@ export async function criarProntuario(
     return { error: "Não foi possível identificar o médico responsável." };
   }
 
+  const { data: paciente } = await supabase
+    .from("pacientes")
+    .select("id")
+    .eq("id", paciente_id)
+    .eq("medico_id", medicoId)
+    .single();
+
+  if (!paciente) {
+    return { fieldErrors: { paciente_id: "Paciente não encontrado." } };
+  }
+
   const { data: inserted, error } = await supabase
     .from("prontuarios")
     .insert({
@@ -106,7 +117,7 @@ export async function atualizarProntuario(
   formData: FormData
 ): Promise<ProntuarioFormState> {
   const id = formData.get("id") as string;
-  if (!id) {
+  if (!uuidValido(id)) {
     return { error: "ID inválido." };
   }
 
@@ -157,7 +168,7 @@ export async function atualizarProntuario(
 }
 
 export async function excluirProntuario(id: string): Promise<void> {
-  if (!id) {
+  if (!uuidValido(id)) {
     throw new Error("ID inválido.");
   }
 

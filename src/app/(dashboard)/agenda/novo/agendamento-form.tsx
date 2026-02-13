@@ -114,6 +114,7 @@ export function AgendamentoForm({
             </option>
           ))}
         </select>
+        <FieldError message={state.fieldErrors?.tipo} />
       </div>
 
       {/* Recorrência (only for new appointments) */}
@@ -129,6 +130,7 @@ export function AgendamentoForm({
               <option value="quinzenal">Quinzenalmente</option>
               <option value="mensal">Mensalmente</option>
             </select>
+            <FieldError message={state.fieldErrors?.recorrencia} />
           </div>
           <div>
             <label htmlFor="recorrencia_vezes" className="block text-sm font-medium text-gray-700">

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido, uuidValido } from "@/lib/validators";
 import {
   NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
   ENDERECO_MAX_LENGTH, NUMERO_MAX_LENGTH, COMPLEMENTO_MAX_LENGTH,
@@ -123,7 +123,7 @@ export async function atualizarPaciente(
   formData: FormData
 ): Promise<PacienteFormState> {
   const id = formData.get("id") as string;
-  if (!id) {
+  if (!uuidValido(id)) {
     return { error: "ID inválido." };
   }
 
@@ -169,7 +169,7 @@ export async function atualizarPaciente(
 }
 
 export async function excluirPaciente(id: string): Promise<void> {
-  if (!id) {
+  if (!uuidValido(id)) {
     throw new Error("ID inválido.");
   }
 

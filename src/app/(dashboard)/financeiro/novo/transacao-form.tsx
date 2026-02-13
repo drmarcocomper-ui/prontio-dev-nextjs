@@ -159,6 +159,7 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
               </option>
             ))}
           </select>
+          <FieldError message={state.fieldErrors?.categoria} />
         </div>
 
         <div>
@@ -173,6 +174,7 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
               </option>
             ))}
           </select>
+          <FieldError message={state.fieldErrors?.forma_pagamento} />
         </div>
       </div>
 
@@ -189,6 +191,7 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
               </option>
             ))}
           </select>
+          <FieldError message={state.fieldErrors?.status} />
         </div>
       </div>
 

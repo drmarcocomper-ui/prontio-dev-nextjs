@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, uuidValido } from "@/lib/validators";
 import { parseLocalDate, toDateString } from "@/lib/date";
 import { formatDate } from "@/lib/format";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, type AgendaStatus } from "./types";
@@ -295,7 +295,7 @@ export async function atualizarAgendamento(
   formData: FormData
 ): Promise<AgendamentoFormState> {
   const id = formData.get("id") as string;
-  if (!id) {
+  if (!uuidValido(id)) {
     return { error: "ID inválido." };
   }
 
@@ -343,7 +343,7 @@ export async function atualizarAgendamento(
 }
 
 export async function excluirAgendamento(id: string, data: string): Promise<void> {
-  if (!id) {
+  if (!uuidValido(id)) {
     throw new Error("ID inválido.");
   }
 

@@ -60,6 +60,7 @@ export interface TransacaoDefaults {
 
 export const DESCRICAO_MAX_LENGTH = 255;
 export const OBSERVACOES_MAX_LENGTH = 1000;
+export const VALOR_MAX = 999999.99;
 
 export const CATEGORIA_LABELS: Record<string, string> = {
   consulta: "Consulta",

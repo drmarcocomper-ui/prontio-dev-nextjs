@@ -169,6 +169,7 @@ export function PacienteForm({
                 </option>
               ))}
             </select>
+            <FieldError message={state.fieldErrors?.sexo} />
           </div>
 
           <div>
@@ -189,6 +190,7 @@ export function PacienteForm({
                 </option>
               ))}
             </select>
+            <FieldError message={state.fieldErrors?.estado_civil} />
           </div>
         </div>
       </fieldset>
@@ -352,6 +354,7 @@ export function PacienteForm({
                 </option>
               ))}
             </select>
+            <FieldError message={state.fieldErrors?.estado} />
           </div>
         </div>
       </fieldset>

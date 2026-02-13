@@ -71,6 +71,11 @@ describe("criarTransacao", () => {
     expect(result.fieldErrors?.valor).toBe("Informe um valor válido.");
   });
 
+  it("retorna fieldErrors quando valor excede limite", async () => {
+    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Teste", valor: "1.000.000,00", data: "2024-06-15" }));
+    expect(result.fieldErrors?.valor).toBe("Valor máximo é R$ 999.999,99.");
+  });
+
   it("retorna fieldErrors quando data está vazia", async () => {
     const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Teste", valor: "100,00", data: "" }));
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
@@ -117,29 +122,34 @@ describe("criarTransacao", () => {
 describe("atualizarTransacao", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("retorna erro quando ID é inválido", async () => {
+    const result = await atualizarTransacao({}, makeFormData({ id: "invalido", tipo: "receita", descricao: "Teste", valor: "100,00", data: "2024-06-15" }));
+    expect(result.error).toBe("ID inválido.");
+  });
+
   it("retorna fieldErrors quando tipo está vazio", async () => {
-    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", descricao: "Teste", valor: "100,00", data: "2024-06-15" }));
+    const result = await atualizarTransacao({}, makeFormData({ id: "00000000-0000-0000-0000-000000000006", descricao: "Teste", valor: "100,00", data: "2024-06-15" }));
     expect(result.fieldErrors?.tipo).toBe("Selecione o tipo.");
   });
 
   it("retorna fieldErrors quando descrição está vazia", async () => {
-    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "", valor: "100,00", data: "2024-06-15" }));
+    const result = await atualizarTransacao({}, makeFormData({ id: "00000000-0000-0000-0000-000000000006", tipo: "receita", descricao: "", valor: "100,00", data: "2024-06-15" }));
     expect(result.fieldErrors?.descricao).toBe("Descrição é obrigatória.");
   });
 
   it("retorna fieldErrors quando valor é inválido", async () => {
-    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "Teste", valor: "0", data: "2024-06-15" }));
+    const result = await atualizarTransacao({}, makeFormData({ id: "00000000-0000-0000-0000-000000000006", tipo: "receita", descricao: "Teste", valor: "0", data: "2024-06-15" }));
     expect(result.fieldErrors?.valor).toBe("Informe um valor válido.");
   });
 
   it("retorna fieldErrors quando data está vazia", async () => {
-    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "Teste", valor: "100,00", data: "" }));
+    const result = await atualizarTransacao({}, makeFormData({ id: "00000000-0000-0000-0000-000000000006", tipo: "receita", descricao: "Teste", valor: "100,00", data: "" }));
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
   });
 
   it("redireciona após atualização com sucesso", async () => {
     await expect(
-      atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "Consulta", valor: "350,00", data: "2024-06-15" }))
+      atualizarTransacao({}, makeFormData({ id: "00000000-0000-0000-0000-000000000006", tipo: "receita", descricao: "Consulta", valor: "350,00", data: "2024-06-15" }))
     ).rejects.toThrow("REDIRECT");
     expect(mockUpdateEq).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -147,14 +157,14 @@ describe("atualizarTransacao", () => {
         descricao: "Consulta",
         valor: 350,
       }),
-      "t-1"
+      "00000000-0000-0000-0000-000000000006"
     );
-    expect(mockRedirect).toHaveBeenCalledWith("/financeiro/t-1?success=Transa%C3%A7%C3%A3o+atualizada");
+    expect(mockRedirect).toHaveBeenCalledWith("/financeiro/00000000-0000-0000-0000-000000000006?success=Transa%C3%A7%C3%A3o+atualizada");
   });
 
   it("retorna erro quando supabase falha", async () => {
     mockUpdateEq.mockResolvedValueOnce({ error: { message: "DB error" } });
-    const result = await atualizarTransacao({}, makeFormData({ id: "t-1", tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
+    const result = await atualizarTransacao({}, makeFormData({ id: "00000000-0000-0000-0000-000000000006", tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
     expect(result.error).toBe("Erro ao atualizar transação. Tente novamente.");
   });
 });
@@ -162,14 +172,18 @@ describe("atualizarTransacao", () => {
 describe("excluirTransacao", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("lança erro quando ID é inválido", async () => {
+    await expect(excluirTransacao("invalido")).rejects.toThrow("ID inválido.");
+  });
+
   it("redireciona após exclusão com sucesso", async () => {
-    await expect(excluirTransacao("t-1")).rejects.toThrow("REDIRECT");
-    expect(mockDelete).toHaveBeenCalledWith("t-1");
+    await expect(excluirTransacao("00000000-0000-0000-0000-000000000006")).rejects.toThrow("REDIRECT");
+    expect(mockDelete).toHaveBeenCalledWith("00000000-0000-0000-0000-000000000006");
     expect(mockRedirect).toHaveBeenCalledWith("/financeiro?success=Transa%C3%A7%C3%A3o+exclu%C3%ADda");
   });
 
   it("lança erro quando exclusão falha", async () => {
     mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
-    await expect(excluirTransacao("t-1")).rejects.toThrow("Erro ao excluir transação.");
+    await expect(excluirTransacao("00000000-0000-0000-0000-000000000006")).rejects.toThrow("Erro ao excluir transação.");
   });
 });

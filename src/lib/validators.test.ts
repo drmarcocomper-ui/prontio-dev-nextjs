@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido } from "./validators";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido, uuidValido } from "./validators";
 
 describe("campoObrigatorio", () => {
   it("adiciona erro quando valor é vazio", () => {
@@ -139,5 +139,39 @@ describe("emailValido", () => {
     const errors: Record<string, string> = {};
     emailValido(errors, "email", undefined);
     expect(errors).not.toHaveProperty("email");
+  });
+});
+
+describe("uuidValido", () => {
+  it("retorna true para UUID v4 válido", () => {
+    expect(uuidValido("550e8400-e29b-41d4-a716-446655440000")).toBe(true);
+  });
+
+  it("retorna true para UUID com letras maiúsculas", () => {
+    expect(uuidValido("550E8400-E29B-41D4-A716-446655440000")).toBe(true);
+  });
+
+  it("retorna false para string curta", () => {
+    expect(uuidValido("p-1")).toBe(false);
+  });
+
+  it("retorna false para string vazia", () => {
+    expect(uuidValido("")).toBe(false);
+  });
+
+  it("retorna false para null", () => {
+    expect(uuidValido(null)).toBe(false);
+  });
+
+  it("retorna false para undefined", () => {
+    expect(uuidValido(undefined)).toBe(false);
+  });
+
+  it("retorna false para UUID sem hífens", () => {
+    expect(uuidValido("550e8400e29b41d4a716446655440000")).toBe(false);
+  });
+
+  it("retorna false para UUID com caracteres inválidos", () => {
+    expect(uuidValido("550e8400-e29b-41d4-a716-44665544000g")).toBe(false);
   });
 });

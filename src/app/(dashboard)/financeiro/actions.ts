@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo } from "@/lib/validators";
-import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./constants";
+import { campoObrigatorio, tamanhoMaximo, uuidValido } from "@/lib/validators";
+import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX } from "./constants";
 import { getClinicaAtual } from "@/lib/clinica";
 
 export type TransacaoFormState = {
@@ -31,7 +31,11 @@ function validarCamposTransacao(formData: FormData) {
   campoObrigatorio(fieldErrors, "descricao", descricao, "Descrição é obrigatória.");
   tamanhoMaximo(fieldErrors, "descricao", descricao, DESCRICAO_MAX_LENGTH);
 
-  if (!valorRaw || isNaN(valor) || valor <= 0) fieldErrors.valor = "Informe um valor válido.";
+  if (!valorRaw || isNaN(valor) || valor <= 0) {
+    fieldErrors.valor = "Informe um valor válido.";
+  } else if (valor > VALOR_MAX) {
+    fieldErrors.valor = `Valor máximo é R$ ${VALOR_MAX.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`;
+  }
   campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.");
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
@@ -80,7 +84,7 @@ export async function atualizarTransacao(
   formData: FormData
 ): Promise<TransacaoFormState> {
   const id = formData.get("id") as string;
-  if (!id) {
+  if (!uuidValido(id)) {
     return { error: "ID inválido." };
   }
 
@@ -121,7 +125,7 @@ export async function atualizarTransacao(
 }
 
 export async function excluirTransacao(id: string): Promise<void> {
-  if (!id) {
+  if (!uuidValido(id)) {
     throw new Error("ID inválido.");
   }
 

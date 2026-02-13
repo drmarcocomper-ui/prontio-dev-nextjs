@@ -117,6 +117,7 @@ export function ProntuarioForm({
               </option>
             ))}
           </select>
+          <FieldError message={state.fieldErrors?.tipo} />
         </div>
 
         <div>
