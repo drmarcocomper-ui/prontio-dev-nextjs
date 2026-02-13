@@ -41,7 +41,9 @@ vi.mock("@/lib/supabase/server", () => ({
       from: () => ({
         select: () => ({
           eq: () => ({
-            single: () => Promise.resolve({ data: mockReceita }),
+            eq: () => ({
+              single: () => Promise.resolve({ data: mockReceita }),
+            }),
           }),
         }),
       }),

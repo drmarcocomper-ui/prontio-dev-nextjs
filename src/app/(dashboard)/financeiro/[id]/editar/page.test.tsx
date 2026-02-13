@@ -32,6 +32,12 @@ vi.mock("../../constants", async () => {
 
 vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("doc-1"),
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "medico",
+    userId: "user-1",
+  }),
 }));
 
 vi.mock("../../novo/transacao-form", () => ({
@@ -48,7 +54,9 @@ vi.mock("@/lib/supabase/server", () => ({
       from: () => ({
         select: () => ({
           eq: () => ({
-            single: () => Promise.resolve({ data: mockTransacao }),
+            eq: () => ({
+              single: () => Promise.resolve({ data: mockTransacao }),
+            }),
           }),
         }),
       }),

@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo } from "@/lib/validators";
+import { parseLocalDate, toDateString } from "@/lib/date";
+import { formatDate } from "@/lib/format";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, type AgendaStatus } from "./types";
 import { getClinicaAtual } from "@/lib/clinica";
 
@@ -71,7 +73,7 @@ async function validarHorarioComercial(
   horaInicio: string,
   horaFim: string,
 ): Promise<string | null> {
-  const date = new Date(data + "T00:00:00");
+  const date = parseLocalDate(data);
   const dayOfWeek = date.getDay();
 
   const dia = DIAS_SEMANA[dayOfWeek];
@@ -131,9 +133,9 @@ function validarCamposAgendamento(formData: FormData) {
 }
 
 function addDaysToDate(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = parseLocalDate(dateStr);
   d.setDate(d.getDate() + days);
-  return d.toISOString().split("T")[0];
+  return toDateString(d);
 }
 
 function getRecurrenceDates(
@@ -147,9 +149,9 @@ function getRecurrenceDates(
 
   for (let i = 1; i < vezes; i++) {
     if (recorrencia === "mensal") {
-      const base = new Date(baseDate + "T00:00:00");
+      const base = parseLocalDate(baseDate);
       const next = new Date(base.getFullYear(), base.getMonth() + i, base.getDate());
-      dates.push(next.toISOString().split("T")[0]);
+      dates.push(toDateString(next));
     } else if (intervalDays > 0) {
       dates.push(addDaysToDate(baseDate, intervalDays * i));
     }
@@ -191,12 +193,12 @@ export async function criarAgendamento(
     for (const d of dates) {
       const foraExp = await validarHorarioComercial(supabase, clinicaId, d, hora_inicio, hora_fim);
       if (foraExp) {
-        const dateFmt = new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+        const dateFmt = formatDate(d);
         return { fieldErrors: { hora_inicio: `${dateFmt}: ${foraExp}` } };
       }
       const conflito = await verificarConflito(supabase, d, hora_inicio, hora_fim, clinicaId);
       if (conflito) {
-        const dateFmt = new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+        const dateFmt = formatDate(d);
         return { fieldErrors: { hora_inicio: `${dateFmt}: ${conflito}` } };
       }
     }
@@ -253,11 +255,14 @@ export async function atualizarStatusAgendamento(
   novoStatus: AgendaStatus
 ): Promise<void> {
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) throw new Error("Clínica não selecionada.");
 
   const { data: agendamento } = await supabase
     .from("agendamentos")
     .select("status")
     .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId)
     .single();
 
   if (!agendamento) {
@@ -274,7 +279,8 @@ export async function atualizarStatusAgendamento(
   const { error } = await supabase
     .from("agendamentos")
     .update({ status: novoStatus })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "atualizar", "status"));
@@ -324,7 +330,8 @@ export async function atualizarAgendamento(
       tipo,
       observacoes,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "agendamento") };
@@ -341,8 +348,10 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
   }
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) throw new Error("Clínica não selecionada.");
 
-  const { error } = await supabase.from("agendamentos").delete().eq("id", id);
+  const { error } = await supabase.from("agendamentos").delete().eq("id", id).eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "agendamento"));

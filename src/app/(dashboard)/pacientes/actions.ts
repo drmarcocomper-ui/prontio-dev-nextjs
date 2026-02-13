@@ -92,7 +92,12 @@ export async function criarPaciente(
   }
 
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { error: "Não foi possível identificar o médico responsável." };
+  }
 
   const { error } = await supabase.from("pacientes").insert({
     medico_id: medicoId,
@@ -134,6 +139,12 @@ export async function atualizarPaciente(
   }
 
   const supabase = await createClient();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { error: "Não foi possível identificar o médico responsável." };
+  }
 
   const { error } = await supabase
     .from("pacientes")
@@ -142,7 +153,8 @@ export async function atualizarPaciente(
       telefone, email, cep, endereco, numero, complemento,
       bairro, cidade, estado, convenio, observacoes,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("medico_id", medicoId);
 
   if (error) {
     if (error.code === "23505") {
@@ -162,8 +174,9 @@ export async function excluirPaciente(id: string): Promise<void> {
   }
 
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
-  const { error } = await supabase.from("pacientes").delete().eq("id", id);
+  const { error } = await supabase.from("pacientes").delete().eq("id", id).eq("medico_id", medicoId);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "paciente"));

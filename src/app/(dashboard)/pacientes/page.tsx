@@ -6,6 +6,7 @@ import { SortableHeader } from "@/components/sortable-header";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
+import { getMedicoId } from "@/lib/clinica";
 import { PacienteFilters } from "./filters";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
 
@@ -26,10 +27,12 @@ export default async function PacientesPage({
   const ascending = sortDir === "asc";
 
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   let query = supabase
     .from("pacientes")
     .select("id, nome, cpf, telefone, email, data_nascimento", { count: "exact" })
+    .eq("medico_id", medicoId)
     .order(sortColumn, { ascending });
 
   if (q) {

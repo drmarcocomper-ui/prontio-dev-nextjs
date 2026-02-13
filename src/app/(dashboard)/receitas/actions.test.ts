@@ -20,15 +20,21 @@ vi.mock("@/lib/supabase/server", () => ({
           }),
         }),
         update: (data: unknown) => ({
-          eq: (_col: string, val: string) => mockUpdate({ data, id: val }),
+          eq: (_col: string, val: string) => ({
+            eq: () => mockUpdate({ data, id: val }),
+          }),
         }),
         select: () => ({
           eq: (_col: string, val: string) => ({
-            single: () => mockSelectPacienteId(val),
+            eq: () => ({
+              single: () => mockSelectPacienteId(val),
+            }),
           }),
         }),
         delete: () => ({
-          eq: (_col: string, val: string) => mockDelete(val),
+          eq: (_col: string, val: string) => ({
+            eq: () => mockDelete(val),
+          }),
         }),
       }),
     }),
@@ -174,10 +180,10 @@ describe("excluirReceita", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/pacientes/p-1?success=Receita+exclu%C3%ADda");
   });
 
-  it("redireciona para prontuários quando paciente_id não encontrado", async () => {
+  it("redireciona para receitas quando paciente_id não encontrado", async () => {
     mockSelectPacienteId.mockResolvedValueOnce({ data: null });
     await expect(excluirReceita("rec-1")).rejects.toThrow("REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith("/prontuarios?success=Receita+exclu%C3%ADda");
+    expect(mockRedirect).toHaveBeenCalledWith("/receitas?success=Receita+exclu%C3%ADda");
   });
 
   it("lança erro quando exclusão falha", async () => {

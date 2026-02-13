@@ -39,13 +39,24 @@ vi.mock("@/components/delete-button", () => ({
 
 let mockAgendamento: Record<string, unknown> | null = null;
 
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "medico",
+    userId: "user-1",
+  }),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: () => ({
         select: () => ({
           eq: () => ({
-            single: () => Promise.resolve({ data: mockAgendamento }),
+            eq: () => ({
+              single: () => Promise.resolve({ data: mockAgendamento }),
+            }),
           }),
         }),
       }),

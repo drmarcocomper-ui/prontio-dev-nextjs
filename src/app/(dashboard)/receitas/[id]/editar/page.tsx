@@ -29,6 +29,7 @@ export default async function EditarReceitaPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   const { data: receita } = await supabase
     .from("receitas")
@@ -36,6 +37,7 @@ export default async function EditarReceitaPage({
       "id, data, tipo, medicamentos, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
 
   if (!receita) {
@@ -43,7 +45,6 @@ export default async function EditarReceitaPage({
   }
 
   const r = receita as unknown as ReceitaComPaciente;
-  const medicoId = await getMedicoId();
 
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">

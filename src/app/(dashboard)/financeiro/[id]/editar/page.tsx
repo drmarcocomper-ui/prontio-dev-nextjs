@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getMedicoId } from "@/lib/clinica";
+import { getMedicoId, getClinicaAtual } from "@/lib/clinica";
 import { TransacaoForm } from "../../novo/transacao-form";
 import { maskCurrency, type TransacaoFull } from "../../constants";
 
@@ -29,6 +29,7 @@ export default async function EditarTransacaoPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
 
   const { data: transacao } = await supabase
     .from("transacoes")
@@ -36,6 +37,7 @@ export default async function EditarTransacaoPage({
       "id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
+    .eq("clinica_id", ctx?.clinicaId ?? "")
     .single();
 
   if (!transacao) {

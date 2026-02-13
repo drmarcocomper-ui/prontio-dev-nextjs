@@ -6,6 +6,7 @@ import { SortSelect } from "@/components/sort-select";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
+import { getMedicoId } from "@/lib/clinica";
 import { ProntuarioFilters } from "./filters";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
 
@@ -35,13 +36,15 @@ export default async function ProntuariosPage({
   const ascending = sortDir === "asc";
 
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   let query = supabase
     .from("prontuarios")
     .select(
       "id, data, tipo, cid, queixa_principal, conduta, pacientes(id, nome)",
       { count: "exact" }
-    );
+    )
+    .eq("medico_id", medicoId);
 
   if (sortColumn === "paciente") {
     query = query.order("pacientes(nome)", { ascending });

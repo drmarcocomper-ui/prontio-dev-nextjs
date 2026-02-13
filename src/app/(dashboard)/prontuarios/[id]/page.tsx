@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { DeleteButton } from "@/components/delete-button";
+import { getMedicoId } from "@/lib/clinica";
 import { excluirProntuario } from "../actions";
 import { type Prontuario, TIPO_LABELS, formatDateLong, getInitials } from "../types";
 
@@ -54,6 +55,7 @@ export default async function ProntuarioDetalhesPage({
   const { id } = await params;
   const { from } = await searchParams;
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   const { data: prontuario } = await supabase
     .from("prontuarios")
@@ -61,6 +63,7 @@ export default async function ProntuarioDetalhesPage({
       "id, data, tipo, cid, queixa_principal, historia_doenca, exame_fisico, hipotese_diagnostica, conduta, observacoes, created_at, updated_at, pacientes(id, nome)"
     )
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
 
   if (!prontuario) {

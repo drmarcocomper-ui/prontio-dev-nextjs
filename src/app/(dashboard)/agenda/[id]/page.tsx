@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { StatusBadge } from "../status-badge";
 import { DeleteButton } from "@/components/delete-button";
+import { getClinicaAtual } from "@/lib/clinica";
 import { excluirAgendamento } from "../actions";
 import { type Agendamento, TIPO_LABELS, formatTime, formatDateBR, getInitials } from "../types";
 
@@ -32,6 +33,7 @@ export default async function AgendamentoDetalhesPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
 
   const { data: agendamento } = await supabase
     .from("agendamentos")
@@ -39,6 +41,7 @@ export default async function AgendamentoDetalhesPage({
       "id, data, hora_inicio, hora_fim, tipo, status, observacoes, created_at, pacientes(id, nome, telefone)"
     )
     .eq("id", id)
+    .eq("clinica_id", ctx?.clinicaId ?? "")
     .single();
 
   if (!agendamento) {

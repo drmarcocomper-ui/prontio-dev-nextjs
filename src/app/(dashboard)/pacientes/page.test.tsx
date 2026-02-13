@@ -17,6 +17,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("@/lib/clinica", () => ({
+  getMedicoId: vi.fn().mockResolvedValue("doc-1"),
+}));
+
 vi.mock("./types", async () => {
   const actual = await vi.importActual("./types");
   return { ...actual };

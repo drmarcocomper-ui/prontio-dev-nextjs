@@ -38,13 +38,17 @@ vi.mock("@/components/delete-button", () => ({
 
 let mockReceita: Record<string, unknown> | null = null;
 
+vi.mock("@/lib/clinica", () => ({ getMedicoId: vi.fn().mockResolvedValue("doc-1") }));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: () => ({
         select: () => ({
           eq: () => ({
-            single: () => Promise.resolve({ data: mockReceita }),
+            eq: () => ({
+              single: () => Promise.resolve({ data: mockReceita }),
+            }),
           }),
         }),
       }),

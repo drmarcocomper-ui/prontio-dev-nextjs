@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { getMedicoId } from "@/lib/clinica";
 import { PacienteForm } from "../../novo/paciente-form";
 import { type PacienteDefaults } from "../../types";
 
@@ -27,6 +28,7 @@ export default async function EditarPacientePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   const { data: paciente } = await supabase
     .from("pacientes")
@@ -34,6 +36,7 @@ export default async function EditarPacientePage({
       "id, nome, cpf, rg, data_nascimento, sexo, estado_civil, telefone, email, cep, endereco, numero, complemento, bairro, cidade, estado, convenio, observacoes"
     )
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single<PacienteDefaults>();
 
   if (!paciente) {

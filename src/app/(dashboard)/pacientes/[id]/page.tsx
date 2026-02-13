@@ -11,7 +11,7 @@ import {
   SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS,
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
-import { getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 
 export async function generateMetadata({
   params,
@@ -62,11 +62,13 @@ export default async function PacienteDetalhesPage({
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   const isMedico = ctx?.papel === "medico";
+  const medicoId = await getMedicoId();
 
   const { data: paciente } = await supabase
     .from("pacientes")
     .select("*")
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single<Paciente>();
 
   if (!paciente) {

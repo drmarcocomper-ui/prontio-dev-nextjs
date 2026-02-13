@@ -73,51 +73,34 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user) {
-    // Auto-set cookie de clínica se não existe
     const clinicaCookie = request.cookies.get("prontio_clinica_id")?.value;
-
-    if (!clinicaCookie) {
-      const { data: vinculo } = await supabase
-        .from("usuarios_clinicas")
-        .select("clinica_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .single();
-
-      if (vinculo) {
-        supabaseResponse.cookies.set("prontio_clinica_id", vinculo.clinica_id, {
-          path: "/",
-          httpOnly: false,
-          sameSite: "lax",
-          maxAge: 60 * 60 * 24 * 365,
-        });
-      }
-    }
-
-    // Proteção por papel: secretária não acessa rotas do médico
     const pathname = request.nextUrl.pathname;
     const isMedicoOnlyRoute = MEDICO_ONLY_ROUTES.some((r) => pathname.startsWith(r));
 
-    if (isMedicoOnlyRoute) {
-      const currentClinicaId = clinicaCookie || (await (async () => {
-        const { data } = await supabase
-          .from("usuarios_clinicas")
-          .select("clinica_id")
-          .eq("user_id", user.id)
-          .limit(1)
-          .single();
-        return data?.clinica_id;
-      })());
+    // Uma única query quando precisamos do vínculo (cookie ausente ou rota protegida)
+    if (!clinicaCookie || isMedicoOnlyRoute) {
+      let query = supabase
+        .from("usuarios_clinicas")
+        .select("clinica_id, papel")
+        .eq("user_id", user.id);
 
-      if (currentClinicaId) {
-        const { data: vinculo } = await supabase
-          .from("usuarios_clinicas")
-          .select("papel")
-          .eq("user_id", user.id)
-          .eq("clinica_id", currentClinicaId)
-          .single();
+      if (clinicaCookie) {
+        query = query.eq("clinica_id", clinicaCookie);
+      }
 
-        if (vinculo?.papel === "secretaria") {
+      const { data: vinculo } = await query.limit(1).single();
+
+      if (vinculo) {
+        if (!clinicaCookie) {
+          supabaseResponse.cookies.set("prontio_clinica_id", vinculo.clinica_id, {
+            path: "/",
+            httpOnly: false,
+            sameSite: "lax",
+            maxAge: 60 * 60 * 24 * 365,
+          });
+        }
+
+        if (isMedicoOnlyRoute && vinculo.papel === "secretaria") {
           const url = request.nextUrl.clone();
           url.pathname = "/agenda";
           return NextResponse.redirect(url);

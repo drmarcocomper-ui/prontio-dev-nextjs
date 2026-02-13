@@ -50,26 +50,41 @@ export default async function FinanceiroPage({
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
 
-  let query = supabase
+  const clinicaId = ctx?.clinicaId ?? "";
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  // Build queries
+  let listQuery = supabase
     .from("transacoes")
     .select("id, tipo, categoria, descricao, valor, data, forma_pagamento, status, pacientes(nome)", { count: "exact" })
-    .eq("clinica_id", ctx?.clinicaId ?? "")
+    .eq("clinica_id", clinicaId)
     .gte("data", startDate)
     .lte("data", endDate)
     .order(sortColumn, { ascending })
     .order("created_at", { ascending: false });
 
+  let summaryQuery = supabase
+    .from("transacoes")
+    .select("tipo, valor, status")
+    .eq("clinica_id", clinicaId)
+    .gte("data", startDate)
+    .lte("data", endDate);
+
   if (tipo) {
-    query = query.eq("tipo", tipo);
+    listQuery = listQuery.eq("tipo", tipo);
+    summaryQuery = summaryQuery.eq("tipo", tipo);
   }
 
-  const from = (currentPage - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-  query = query.range(from, to);
+  listQuery = listQuery.range(from, to);
 
-  const { data: transacoes, count, error } = await query;
+  // Run both queries in parallel
+  const [listResult, summaryResult] = await Promise.all([
+    listQuery,
+    summaryQuery,
+  ]);
 
-  if (error) {
+  if (listResult.error) {
     return (
       <div className="animate-fade-in space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -84,24 +99,11 @@ export default async function FinanceiroPage({
     );
   }
 
-  const items = (transacoes ?? []) as unknown as TransacaoListItem[];
-  const totalItems = count ?? 0;
+  const items = (listResult.data ?? []) as unknown as TransacaoListItem[];
+  const totalItems = listResult.count ?? 0;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
-  // Summary query (all items for the month, not just current page)
-  let summaryQuery = supabase
-    .from("transacoes")
-    .select("tipo, valor, status")
-    .eq("clinica_id", ctx?.clinicaId ?? "")
-    .gte("data", startDate)
-    .lte("data", endDate);
-
-  if (tipo) {
-    summaryQuery = summaryQuery.eq("tipo", tipo);
-  }
-
-  const { data: allTransacoes, error: summaryError } = await summaryQuery;
-  const allItems = summaryError ? [] : (allTransacoes ?? []);
+  const allItems = summaryResult.error ? [] : (summaryResult.data ?? []);
 
   const totalReceitas = allItems
     .filter((t) => t.tipo === "receita" && t.status !== "cancelado")

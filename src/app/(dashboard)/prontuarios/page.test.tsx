@@ -17,6 +17,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("@/lib/clinica", () => ({
+  getMedicoId: vi.fn().mockResolvedValue("doc-1"),
+}));
+
 vi.mock("@/components/search-input", () => ({
   SearchInput: ({ defaultValue }: { defaultValue?: string }) => (
     <input data-testid="search-input" defaultValue={defaultValue} />

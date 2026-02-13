@@ -47,7 +47,12 @@ export async function criarReceita(
   }
 
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { error: "Não foi possível identificar o médico responsável." };
+  }
 
   const { data: inserted, error } = await supabase
     .from("receitas")
@@ -86,6 +91,12 @@ export async function atualizarReceita(
   }
 
   const supabase = await createClient();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { error: "Não foi possível identificar o médico responsável." };
+  }
 
   const { error } = await supabase
     .from("receitas")
@@ -96,7 +107,8 @@ export async function atualizarReceita(
       medicamentos: fields.medicamentos,
       observacoes: fields.observacoes,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("medico_id", medicoId);
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "receita") };
@@ -112,17 +124,19 @@ export async function excluirReceita(id: string): Promise<void> {
   }
 
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   // Buscar paciente_id antes de deletar para redirecionar corretamente
   const { data: receita } = await supabase
     .from("receitas")
     .select("paciente_id")
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
 
   const pacienteId = receita?.paciente_id;
 
-  const { error } = await supabase.from("receitas").delete().eq("id", id);
+  const { error } = await supabase.from("receitas").delete().eq("id", id).eq("medico_id", medicoId);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "receita"));
@@ -133,5 +147,5 @@ export async function excluirReceita(id: string): Promise<void> {
     revalidatePath(`/pacientes/${pacienteId}`);
     redirect(`/pacientes/${pacienteId}?success=Receita+exclu%C3%ADda`);
   }
-  redirect("/prontuarios?success=Receita+exclu%C3%ADda");
+  redirect("/receitas?success=Receita+exclu%C3%ADda");
 }

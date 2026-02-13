@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getMedicoId } from "@/lib/clinica";
+import { getMedicoId, getClinicaAtual } from "@/lib/clinica";
 import { AgendamentoForm } from "../../novo/agendamento-form";
 import { type Agendamento } from "../../types";
 
@@ -29,6 +29,7 @@ export default async function EditarAgendamentoPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
 
   const { data: agendamento } = await supabase
     .from("agendamentos")
@@ -36,6 +37,7 @@ export default async function EditarAgendamentoPage({
       "id, data, hora_inicio, hora_fim, tipo, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
+    .eq("clinica_id", ctx?.clinicaId ?? "")
     .single();
 
   if (!agendamento) {

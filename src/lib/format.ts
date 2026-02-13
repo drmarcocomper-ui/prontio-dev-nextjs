@@ -1,11 +1,13 @@
 // --- Helpers de formatação ---
 
+import { parseLocalDate } from "./date";
+
 export function formatDate(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
+  return parseLocalDate(dateStr).toLocaleDateString("pt-BR");
 }
 
 export function formatDateLong(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
+  return parseLocalDate(dateStr).toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -14,7 +16,7 @@ export function formatDateLong(dateStr: string) {
 }
 
 export function formatDateMedium(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
+  return parseLocalDate(dateStr).toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -22,9 +24,7 @@ export function formatDateMedium(dateStr: string) {
 }
 
 export function formatDateBR(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d, 12);
-  return date.toLocaleDateString("pt-BR", {
+  return parseLocalDate(dateStr).toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "numeric",
     month: "long",

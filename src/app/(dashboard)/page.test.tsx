@@ -53,6 +53,7 @@ vi.mock("@/lib/clinica", () => ({
     papel: "medico",
     userId: "user-1",
   }),
+  getMedicoId: vi.fn().mockResolvedValue("user-1"),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({

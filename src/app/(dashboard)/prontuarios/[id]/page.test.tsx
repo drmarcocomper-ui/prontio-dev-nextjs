@@ -38,13 +38,17 @@ vi.mock("../types", async () => {
 
 let mockProntuario: Record<string, unknown> | null = null;
 
+vi.mock("@/lib/clinica", () => ({ getMedicoId: vi.fn().mockResolvedValue("doc-1") }));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: () => ({
         select: () => ({
           eq: () => ({
-            single: () => Promise.resolve({ data: mockProntuario }),
+            eq: () => ({
+              single: () => Promise.resolve({ data: mockProntuario }),
+            }),
           }),
         }),
       }),

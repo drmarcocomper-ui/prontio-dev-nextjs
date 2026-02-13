@@ -56,6 +56,7 @@ vi.mock("@/lib/clinica", () => ({
     papel: "medico",
     userId: "user-1",
   }),
+  getMedicoId: vi.fn().mockResolvedValue("user-1"),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -66,7 +67,9 @@ vi.mock("@/lib/supabase/server", () => ({
           eq: () => {
             if (table === "pacientes") {
               return {
-                single: () => Promise.resolve({ data: mockPaciente }),
+                eq: () => ({
+                  single: () => Promise.resolve({ data: mockPaciente }),
+                }),
               };
             }
             if (table === "receitas") {

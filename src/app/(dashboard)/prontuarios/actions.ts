@@ -67,7 +67,12 @@ export async function criarProntuario(
   }
 
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { error: "Não foi possível identificar o médico responsável." };
+  }
 
   const { data: inserted, error } = await supabase
     .from("prontuarios")
@@ -117,6 +122,12 @@ export async function atualizarProntuario(
   }
 
   const supabase = await createClient();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { error: "Não foi possível identificar o médico responsável." };
+  }
 
   const { error } = await supabase
     .from("prontuarios")
@@ -133,7 +144,8 @@ export async function atualizarProntuario(
       observacoes,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("medico_id", medicoId);
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "prontuário") };
@@ -150,8 +162,9 @@ export async function excluirProntuario(id: string): Promise<void> {
   }
 
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
-  const { error } = await supabase.from("prontuarios").delete().eq("id", id);
+  const { error } = await supabase.from("prontuarios").delete().eq("id", id).eq("medico_id", medicoId);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "prontuário"));

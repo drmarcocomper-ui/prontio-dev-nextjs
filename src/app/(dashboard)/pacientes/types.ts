@@ -1,3 +1,5 @@
+import { parseLocalDate } from "@/lib/date";
+
 export interface PacienteListItem {
   id: string;
   nome: string;
@@ -124,7 +126,7 @@ export { formatCPF, formatPhone, formatCEP, formatDate, getInitials } from "@/li
 export { maskCPF, maskPhone, maskCEP } from "@/lib/masks";
 
 export function calcAge(dateStr: string) {
-  const birth = new Date(dateStr + "T00:00:00");
+  const birth = parseLocalDate(dateStr);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const m = today.getMonth() - birth.getMonth();

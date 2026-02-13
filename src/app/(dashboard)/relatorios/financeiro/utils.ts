@@ -4,6 +4,7 @@ import {
   type TransacaoListItem,
   type FormaPagamento,
 } from "../../financeiro/constants";
+import { toDateString } from "@/lib/date";
 
 export interface CategoriaBreakdownRow {
   categoria: string;
@@ -29,7 +30,7 @@ export function getMonthDateRange(mes?: string) {
     mes || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const [year, month] = currentMonth.split("-").map(Number);
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+  const endDate = toDateString(new Date(year, month, 0));
   return { currentMonth, year, month, startDate, endDate };
 }
 

@@ -91,6 +91,8 @@ export async function atualizarTransacao(
   }
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Clínica não selecionada." };
 
   const { error } = await supabase
     .from("transacoes")
@@ -105,7 +107,8 @@ export async function atualizarTransacao(
       status: fields.status,
       observacoes: fields.observacoes,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "transação") };
@@ -123,8 +126,10 @@ export async function excluirTransacao(id: string): Promise<void> {
   }
 
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) throw new Error("Clínica não selecionada.");
 
-  const { error } = await supabase.from("transacoes").delete().eq("id", id);
+  const { error } = await supabase.from("transacoes").delete().eq("id", id).eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "transação"));

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatTime, formatCurrency, getInitials, formatRelativeTime } from "@/lib/format";
+import { formatTime, formatCurrency, getInitials, formatRelativeTime, formatDate } from "@/lib/format";
+import { toDateString, parseLocalDate } from "@/lib/date";
 import { FinanceiroChart, AgendamentosSemanaChart } from "./dashboard-charts";
-import { getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -55,22 +56,21 @@ export default async function DashboardPage() {
   const ctx = await getClinicaAtual();
   const clinicaId = ctx?.clinicaId ?? "";
   const isMedico = ctx?.papel === "medico";
+  const medicoId = await getMedicoId();
 
   const now = new Date();
-  const hoje = now.toISOString().split("T")[0];
+  const hoje = toDateString(now);
   const inicioMes = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const fimMes = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
+  const fimMes = toDateString(new Date(now.getFullYear(), now.getMonth() + 1, 0));
 
   // Last 6 months range for chart
   const seisAtras = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-  const inicioSeisMeses = seisAtras.toISOString().split("T")[0];
+  const inicioSeisMeses = toDateString(seisAtras);
 
   // Last 7 days range for weekly chart
   const seteDiasAtras = new Date(now);
   seteDiasAtras.setDate(seteDiasAtras.getDate() - 6);
-  const inicioSemana = seteDiasAtras.toISOString().split("T")[0];
+  const inicioSemana = toDateString(seteDiasAtras);
 
   // Queries paralelas para os cards
   const [
@@ -85,7 +85,8 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("pacientes")
-      .select("*", { count: "exact", head: true }),
+      .select("*", { count: "exact", head: true })
+      .eq("medico_id", medicoId),
     supabase
       .from("agendamentos")
       .select("*", { count: "exact", head: true })
@@ -119,6 +120,7 @@ export default async function DashboardPage() {
     supabase
       .from("prontuarios")
       .select("id, data, tipo, created_at, pacientes(id, nome)")
+      .eq("medico_id", medicoId)
       .order("created_at", { ascending: false })
       .limit(5),
     isMedico
@@ -171,7 +173,7 @@ export default async function DashboardPage() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(seteDiasAtras);
     d.setDate(d.getDate() + i);
-    const key = d.toISOString().split("T")[0];
+    const key = toDateString(d);
     semanaMap.set(key, { total: 0, atendidos: 0 });
   }
   for (const a of (agendamentosSemana ?? []) as { data: string; status: string }[]) {
@@ -182,7 +184,7 @@ export default async function DashboardPage() {
     }
   }
   const agendaSemanaChartData = Array.from(semanaMap.entries()).map(([key, val]) => {
-    const d = new Date(key + "T00:00:00");
+    const d = parseLocalDate(key);
     return {
       dia: DIAS_CURTOS[d.getDay()],
       total: val.total,
@@ -361,7 +363,7 @@ export default async function DashboardPage() {
                     </span>
                     <p className="text-xs text-gray-500">
                       {p.tipo ? (TIPO_LABELS[p.tipo] ?? p.tipo) : "Evolução"} &middot;{" "}
-                      {new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR")}
+                      {formatDate(p.data)}
                     </p>
                   </div>
                   <span className="shrink-0 text-xs text-gray-400">

@@ -29,6 +29,7 @@ export default async function EditarProntuarioPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   const { data: prontuario } = await supabase
     .from("prontuarios")
@@ -36,6 +37,7 @@ export default async function EditarProntuarioPage({
       "id, data, tipo, cid, queixa_principal, historia_doenca, exame_fisico, hipotese_diagnostica, conduta, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
 
   if (!prontuario) {
@@ -43,7 +45,6 @@ export default async function EditarProntuarioPage({
   }
 
   const p = prontuario as unknown as Prontuario;
-  const medicoId = await getMedicoId();
 
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">

@@ -46,7 +46,9 @@ vi.mock("@/lib/supabase/server", () => ({
       from: () => ({
         select: () => ({
           eq: () => ({
-            single: () => Promise.resolve({ data: mockProntuario }),
+            eq: () => ({
+              single: () => Promise.resolve({ data: mockProntuario }),
+            }),
           }),
         }),
       }),

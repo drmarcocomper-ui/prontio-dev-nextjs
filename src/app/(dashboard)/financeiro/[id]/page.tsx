@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { DeleteButton } from "@/components/delete-button";
+import { getClinicaAtual } from "@/lib/clinica";
 import { excluirTransacao } from "../actions";
 import {
   CATEGORIA_LABELS,
@@ -38,6 +39,7 @@ export default async function TransacaoDetalhesPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
 
   const { data: transacao } = await supabase
     .from("transacoes")
@@ -45,6 +47,7 @@ export default async function TransacaoDetalhesPage({
       "id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, created_at, pacientes(id, nome)"
     )
     .eq("id", id)
+    .eq("clinica_id", ctx?.clinicaId ?? "")
     .single();
 
   if (!transacao) {

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { DeleteButton } from "@/components/delete-button";
+import { getMedicoId } from "@/lib/clinica";
 import { excluirReceita } from "../actions";
 import {
   type Receita,
@@ -36,6 +37,7 @@ export default async function ReceitaDetalhesPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const medicoId = await getMedicoId();
 
   const { data: receita } = await supabase
     .from("receitas")
@@ -43,6 +45,7 @@ export default async function ReceitaDetalhesPage({
       "id, data, tipo, medicamentos, observacoes, created_at, pacientes(id, nome)"
     )
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
 
   if (!receita) {
