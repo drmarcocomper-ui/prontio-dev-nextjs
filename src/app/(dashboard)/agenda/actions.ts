@@ -258,6 +258,7 @@ export async function atualizarStatusAgendamento(
   id: string,
   novoStatus: AgendaStatus
 ): Promise<void> {
+  if (!uuidValido(id)) throw new Error("ID inválido.");
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) throw new Error("Clínica não selecionada.");
