@@ -16,6 +16,7 @@ import {
   formatDate,
   type TransacaoListItem,
 } from "./constants";
+import { redirect } from "next/navigation";
 import { getClinicaAtual } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Financeiro" };
@@ -49,8 +50,9 @@ export default async function FinanceiroPage({
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
+  if (!ctx) redirect("/login");
 
-  const clinicaId = ctx?.clinicaId ?? "";
+  const clinicaId = ctx.clinicaId;
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 

@@ -4,6 +4,12 @@ import { useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 
+const MAX_MSG_LENGTH = 100;
+
+function sanitizeMessage(raw: string): string {
+  return raw.replace(/<[^>]*>/g, "").slice(0, MAX_MSG_LENGTH);
+}
+
 export function ToastHandler() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -12,7 +18,7 @@ export function ToastHandler() {
 
   useEffect(() => {
     if (success) {
-      toast.success(success);
+      toast.success(sanitizeMessage(success));
       const params = new URLSearchParams(searchParams.toString());
       params.delete("success");
       const query = params.toString();

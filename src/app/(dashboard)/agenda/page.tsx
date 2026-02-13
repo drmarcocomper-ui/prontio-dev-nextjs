@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { DatePicker } from "./date-picker";
@@ -21,12 +22,13 @@ export default async function AgendaPage({
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
+  if (!ctx) redirect("/login");
 
   const { data: agendamentos, error } = await supabase
     .from("agendamentos")
     .select("id, paciente_id, data, hora_inicio, hora_fim, tipo, status, observacoes, pacientes(id, nome, telefone)")
     .eq("data", currentDate)
-    .eq("clinica_id", ctx?.clinicaId ?? "")
+    .eq("clinica_id", ctx.clinicaId)
     .order("hora_inicio");
 
   if (error) {

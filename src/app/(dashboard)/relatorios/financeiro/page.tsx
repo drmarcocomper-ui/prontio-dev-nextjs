@@ -21,6 +21,7 @@ import {
   aggregateByCategoria,
   aggregateByPagamento,
 } from "./utils";
+import { redirect } from "next/navigation";
 import { getClinicaAtual } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Relatório Financeiro" };
@@ -35,11 +36,12 @@ export default async function RelatorioFinanceiroPage({
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
+  if (!ctx) redirect("/login");
 
   const { data: transacoes } = await supabase
     .from("transacoes")
     .select(REPORT_SELECT)
-    .eq("clinica_id", ctx?.clinicaId ?? "")
+    .eq("clinica_id", ctx.clinicaId)
     .gte("data", startDate)
     .lte("data", endDate)
     .order("data", { ascending: false })

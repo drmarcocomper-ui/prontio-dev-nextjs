@@ -94,7 +94,7 @@ export async function updateSession(request: NextRequest) {
         if (!clinicaCookie) {
           supabaseResponse.cookies.set("prontio_clinica_id", vinculo.clinica_id, {
             path: "/",
-            httpOnly: false,
+            httpOnly: true,
             sameSite: "lax",
             maxAge: 60 * 60 * 24 * 365,
           });

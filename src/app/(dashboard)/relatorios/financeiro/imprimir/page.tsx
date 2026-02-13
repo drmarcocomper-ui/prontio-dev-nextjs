@@ -17,6 +17,7 @@ import {
   aggregateByCategoria,
   aggregateByPagamento,
 } from "../utils";
+import { redirect } from "next/navigation";
 import { getClinicaAtual } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Imprimir Relatório" };
@@ -31,23 +32,22 @@ export default async function ImprimirRelatorioPage({
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
+  if (!ctx) redirect("/login");
 
   const [{ data: transacoes }, { data: clinica }] = await Promise.all([
     supabase
       .from("transacoes")
       .select(REPORT_SELECT)
-      .eq("clinica_id", ctx?.clinicaId ?? "")
+      .eq("clinica_id", ctx.clinicaId)
       .gte("data", startDate)
       .lte("data", endDate)
       .order("data", { ascending: false })
       .order("created_at", { ascending: false }),
-    ctx?.clinicaId
-      ? supabase
-          .from("clinicas")
-          .select("nome, endereco, telefone")
-          .eq("id", ctx.clinicaId)
-          .single()
-      : { data: null },
+    supabase
+      .from("clinicas")
+      .select("nome, endereco, telefone")
+      .eq("id", ctx.clinicaId)
+      .single(),
   ]);
 
   const items = (transacoes ?? []) as unknown as TransacaoListItem[];

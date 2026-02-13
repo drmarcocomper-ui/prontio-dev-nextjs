@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatTime, formatCurrency, getInitials, formatRelativeTime, formatDate } from "@/lib/format";
 import { toDateString, parseLocalDate } from "@/lib/date";
@@ -54,9 +55,15 @@ const STATUS_LABELS: Record<string, string> = {
 export default async function DashboardPage() {
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
-  const clinicaId = ctx?.clinicaId ?? "";
-  const isMedico = ctx?.papel === "medico";
-  const medicoId = await getMedicoId();
+  if (!ctx) redirect("/login");
+  const clinicaId = ctx.clinicaId;
+  const isMedico = ctx.papel === "medico";
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    redirect("/login");
+  }
 
   const now = new Date();
   const hoje = toDateString(now);
