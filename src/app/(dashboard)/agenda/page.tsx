@@ -45,7 +45,7 @@ export default async function AgendaPage({
   const atendidos = items.filter((a) => a.status === "atendido").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
