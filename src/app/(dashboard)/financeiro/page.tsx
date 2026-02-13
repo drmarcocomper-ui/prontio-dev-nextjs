@@ -5,6 +5,7 @@ import { Pagination } from "@/components/pagination";
 import { SortableHeader } from "@/components/sortable-header";
 import { Filters } from "./filters";
 import { DeleteButton } from "@/components/delete-button";
+import { EmptyStateIllustration } from "@/components/empty-state";
 import { excluirTransacao } from "./actions";
 import {
   CATEGORIA_LABELS,
@@ -67,7 +68,7 @@ export default async function FinanceiroPage({
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="animate-fade-in space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
@@ -120,7 +121,7 @@ export default async function FinanceiroPage({
   if (dir) sp.dir = dir;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="animate-fade-in space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -140,19 +141,19 @@ export default async function FinanceiroPage({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Receitas</p>
           <p className="mt-2 text-2xl font-bold text-emerald-600">
             {formatCurrency(totalReceitas)}
           </p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Despesas</p>
           <p className="mt-2 text-2xl font-bold text-red-600">
             {formatCurrency(totalDespesas)}
           </p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5">
           <p className="text-sm font-medium text-gray-500">Saldo</p>
           <p
             className={`mt-2 text-2xl font-bold ${
@@ -169,7 +170,7 @@ export default async function FinanceiroPage({
 
       {/* Transactions Table */}
       {items.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -216,7 +217,7 @@ export default async function FinanceiroPage({
             </thead>
             <tbody className="divide-y divide-gray-200">
               {items.map((t) => (
-                <tr key={t.id} className="transition-colors hover:bg-gray-50">
+                <tr key={t.id} className="transition-colors even:bg-gray-50/50 hover:bg-primary-50/50">
                   <td className="whitespace-nowrap px-5 py-3.5 text-sm text-gray-600">
                     {formatDate(t.data)}
                   </td>
@@ -265,11 +266,9 @@ export default async function FinanceiroPage({
           </table>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <svg aria-hidden="true" className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-          </svg>
-          <h3 className="mt-4 text-sm font-semibold text-gray-900">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm px-6 py-16 text-center">
+          <EmptyStateIllustration type="financeiro" />
+          <h3 className="mt-6 text-sm font-semibold text-gray-900">
             Nenhuma transação neste período
           </h3>
           <p className="mt-1 text-sm text-gray-500">

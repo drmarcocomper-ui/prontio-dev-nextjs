@@ -14,7 +14,7 @@ export default async function NovoAgendamentoPage({
   const defaultDate = data || todayLocal();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 sm:space-y-6">
+    <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
         <Link
@@ -32,7 +32,7 @@ export default async function NovoAgendamentoPage({
       </div>
 
       {/* Form Card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <AgendamentoForm defaultDate={defaultDate} />
       </div>
     </div>

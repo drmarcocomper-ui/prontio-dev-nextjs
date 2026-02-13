@@ -5,7 +5,7 @@ export default function ReceitaDetalhesLoading() {
       <div className="h-4 w-24 rounded bg-gray-200" />
 
       {/* Header card */}
-      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white p-6">
+      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-full bg-gray-200" />
           <div className="space-y-2">
@@ -24,7 +24,7 @@ export default function ReceitaDetalhesLoading() {
       </div>
 
       {/* Medicamentos */}
-      <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-6">
+      <div className="space-y-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="h-4 w-28 rounded bg-gray-200" />
         <div className="space-y-2 rounded-lg bg-gray-50 p-4">
           <div className="h-4 w-full rounded bg-gray-200" />
@@ -34,7 +34,7 @@ export default function ReceitaDetalhesLoading() {
       </div>
 
       {/* Observações */}
-      <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-6">
+      <div className="space-y-3 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="h-4 w-24 rounded bg-gray-200" />
         <div className="h-4 w-full rounded bg-gray-200" />
       </div>

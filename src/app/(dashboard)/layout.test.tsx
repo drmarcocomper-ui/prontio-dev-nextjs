@@ -9,23 +9,41 @@ vi.mock("@/components/toast-handler", () => ({
   ToastHandler: () => null,
 }));
 
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn().mockResolvedValue({
+    from: () => ({
+      select: () => ({
+        in: () => Promise.resolve({ data: [] }),
+      }),
+    }),
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: { email: "test@test.com" } } }),
+    },
+  }),
+}));
+
 import DashboardLayout from "./layout";
 
+async function renderAsync(ui: React.ReactElement) {
+  const resolved = await ui.type(ui.props);
+  return render(resolved);
+}
+
 describe("DashboardLayout", () => {
-  it("renderiza a Sidebar", () => {
-    render(<DashboardLayout><p>conteúdo</p></DashboardLayout>);
+  it("renderiza a Sidebar", async () => {
+    await renderAsync(<DashboardLayout><p>conteúdo</p></DashboardLayout>);
     expect(screen.getByTestId("sidebar")).toBeInTheDocument();
   });
 
-  it("renderiza o conteúdo children dentro do main", () => {
-    render(<DashboardLayout><p>conteúdo de teste</p></DashboardLayout>);
+  it("renderiza o conteúdo children dentro do main", async () => {
+    await renderAsync(<DashboardLayout><p>conteúdo de teste</p></DashboardLayout>);
     const main = screen.getByRole("main");
     expect(main).toBeInTheDocument();
     expect(main).toHaveTextContent("conteúdo de teste");
   });
 
-  it("renderiza o layout com estrutura flex", () => {
-    const { container } = render(
+  it("renderiza o layout com estrutura flex", async () => {
+    const { container } = await renderAsync(
       <DashboardLayout><p>conteúdo</p></DashboardLayout>
     );
     const wrapper = container.firstElementChild;

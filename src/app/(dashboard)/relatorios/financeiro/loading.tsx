@@ -17,7 +17,7 @@ export default function Loading() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-gray-200 bg-white p-5">
+          <div key={i} className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5">
             <div className="h-4 w-24 rounded bg-gray-200" />
             <div className="mt-3 h-7 w-28 rounded bg-gray-200" />
           </div>
@@ -25,7 +25,7 @@ export default function Loading() {
       </div>
 
       {/* Breakdown table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-5 py-4">
           <div className="h-4 w-28 rounded bg-gray-200" />
         </div>
@@ -44,7 +44,7 @@ export default function Loading() {
       </div>
 
       {/* Transactions table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-5 py-4">
           <div className="h-4 w-36 rounded bg-gray-200" />
         </div>

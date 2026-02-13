@@ -38,7 +38,7 @@ export function Pagination({
   return (
     <nav
       aria-label="Paginação"
-      className="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-3 sm:flex-row sm:justify-between"
+      className="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white shadow-sm px-5 py-3 sm:flex-row sm:justify-between"
     >
       <p className="text-sm text-gray-600">
         Mostrando <span className="font-medium">{from}</span>–

@@ -34,7 +34,9 @@ const navItems = [
   { label: "Agenda", href: "/agenda" },
   { label: "Pacientes", href: "/pacientes" },
   { label: "Prontuários", href: "/prontuarios" },
+  { label: "Receitas", href: "/receitas" },
   { label: "Financeiro", href: "/financeiro" },
+  { label: "Relatórios", href: "/relatorios" },
   { label: "Configurações", href: "/configuracoes" },
 ];
 
@@ -44,21 +46,21 @@ describe("Sidebar", () => {
   });
 
   it("renderiza o logo e nome Prontio", () => {
-    render(<Sidebar />);
+    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
     // Mobile top bar + desktop sidebar both render logo
     expect(screen.getAllByText("P").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renderiza todos os 6 links de navegação", () => {
-    render(<Sidebar />);
+  it("renderiza todos os 8 links de navegação", () => {
+    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
     for (const item of navItems) {
       expect(screen.getByText(item.label)).toBeInTheDocument();
     }
   });
 
   it("cada link aponta para o href correto", () => {
-    render(<Sidebar />);
+    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
     for (const item of navItems) {
       const link = screen.getByText(item.label).closest("a");
       expect(link).toHaveAttribute("href", item.href);
@@ -67,7 +69,7 @@ describe("Sidebar", () => {
 
   it("destaca o link Início quando pathname é /", () => {
     mockPathname = "/";
-    render(<Sidebar />);
+    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
     const link = screen.getByText("Início").closest("a");
     expect(link?.className).toContain("bg-primary-50");
     expect(link?.className).toContain("text-primary-700");
@@ -75,7 +77,7 @@ describe("Sidebar", () => {
 
   it("destaca links de seções quando pathname começa com o href", () => {
     mockPathname = "/pacientes/123";
-    render(<Sidebar />);
+    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
     const link = screen.getByText("Pacientes").closest("a");
     expect(link?.className).toContain("bg-primary-50");
     expect(link?.className).toContain("text-primary-700");
@@ -83,14 +85,14 @@ describe("Sidebar", () => {
 
   it("não destaca Início quando está em outra rota", () => {
     mockPathname = "/agenda";
-    render(<Sidebar />);
+    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
     const link = screen.getByText("Início").closest("a");
     expect(link?.className).not.toContain("bg-primary-50");
     expect(link?.className).toContain("text-gray-600");
   });
 
   it("renderiza o LogoutButton", () => {
-    render(<Sidebar />);
+    render(<Sidebar profissionalNome="Dr. João Silva" userEmail="joao@test.com" />);
     expect(screen.getByText("Sair")).toBeInTheDocument();
   });
 });

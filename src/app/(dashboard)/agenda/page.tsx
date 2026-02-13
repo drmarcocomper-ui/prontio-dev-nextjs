@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { EmptyStateIllustration } from "@/components/empty-state";
 import { DatePicker } from "./date-picker";
 import { StatusSelect } from "./status-select";
 import { StatusBadge } from "./status-badge";
@@ -27,7 +28,7 @@ export default async function AgendaPage({
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="animate-fade-in space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
@@ -45,7 +46,7 @@ export default async function AgendaPage({
   const atendidos = items.filter((a) => a.status === "atendido").length;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="animate-fade-in space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -75,7 +76,7 @@ export default async function AgendaPage({
           {items.map((ag) => (
             <div
               key={ag.id}
-              className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 transition-colors hover:border-gray-300 sm:gap-4 sm:p-4"
+              className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white shadow-sm p-3 transition-all hover:border-gray-300 hover:shadow-md sm:gap-4 sm:p-4"
             >
               {/* Time */}
               <Link href={`/agenda/${ag.id}`} className="w-20 shrink-0 text-center sm:w-24">
@@ -124,11 +125,9 @@ export default async function AgendaPage({
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
-          </svg>
-          <h3 className="mt-4 text-sm font-semibold text-gray-900">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm px-6 py-16 text-center">
+          <EmptyStateIllustration type="agenda" />
+          <h3 className="mt-6 text-sm font-semibold text-gray-900">
             Nenhum agendamento para este dia
           </h3>
           <p className="mt-1 text-sm text-gray-500">

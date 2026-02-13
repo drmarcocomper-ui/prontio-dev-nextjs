@@ -91,7 +91,7 @@ export default async function ImprimirRelatorioPage({
       </div>
 
       {/* Report Content */}
-      <div className="space-y-6 rounded-xl border border-gray-200 bg-white p-8">
+      <div className="space-y-6 rounded-xl border border-gray-200 bg-white shadow-sm p-8">
         {/* Header Consultório */}
         <div className="border-b border-gray-300 pb-6 text-center">
           {cfg.nome_consultorio && (

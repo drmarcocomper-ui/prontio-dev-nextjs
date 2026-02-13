@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatTime, formatCurrency, getInitials, formatRelativeTime } from "@/lib/format";
+import { FinanceiroChart, AgendamentosSemanaChart } from "./dashboard-charts";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -58,6 +59,15 @@ export default async function DashboardPage() {
     .toISOString()
     .split("T")[0];
 
+  // Last 6 months range for chart
+  const seisAtras = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const inicioSeisMeses = seisAtras.toISOString().split("T")[0];
+
+  // Last 7 days range for weekly chart
+  const seteDiasAtras = new Date(now);
+  seteDiasAtras.setDate(seteDiasAtras.getDate() - 6);
+  const inicioSemana = seteDiasAtras.toISOString().split("T")[0];
+
   // Queries paralelas para os cards
   const [
     { count: totalPacientes },
@@ -66,6 +76,8 @@ export default async function DashboardPage() {
     { data: receitasMes },
     { data: proximasConsultas },
     { data: ultimosProntuarios },
+    { data: transacoes6m },
+    { data: agendamentosSemana },
   ] = await Promise.all([
     supabase
       .from("pacientes")
@@ -99,12 +111,70 @@ export default async function DashboardPage() {
       .select("id, data, tipo, created_at, pacientes(id, nome)")
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("transacoes")
+      .select("data, tipo, valor")
+      .neq("status", "cancelado")
+      .gte("data", inicioSeisMeses)
+      .lte("data", fimMes),
+    supabase
+      .from("agendamentos")
+      .select("data, status")
+      .gte("data", inicioSemana)
+      .lte("data", hoje),
   ]);
 
   const totalReceita = (receitasMes ?? []).reduce(
     (sum: number, t: { valor: number }) => sum + t.valor,
     0
   );
+
+  // Build financial chart data (last 6 months)
+  const mesesMap = new Map<string, { receitas: number; despesas: number }>();
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    mesesMap.set(key, { receitas: 0, despesas: 0 });
+  }
+  for (const t of (transacoes6m ?? []) as { data: string; tipo: string; valor: number }[]) {
+    const key = t.data.slice(0, 7);
+    const entry = mesesMap.get(key);
+    if (entry) {
+      if (t.tipo === "receita") entry.receitas += t.valor;
+      else entry.despesas += t.valor;
+    }
+  }
+  const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  const financeiroChartData = Array.from(mesesMap.entries()).map(([key, val]) => ({
+    mes: MESES_CURTOS[parseInt(key.split("-")[1]) - 1],
+    receitas: Math.round(val.receitas * 100) / 100,
+    despesas: Math.round(val.despesas * 100) / 100,
+  }));
+
+  // Build weekly appointments chart data
+  const DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const semanaMap = new Map<string, { total: number; atendidos: number }>();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(seteDiasAtras);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().split("T")[0];
+    semanaMap.set(key, { total: 0, atendidos: 0 });
+  }
+  for (const a of (agendamentosSemana ?? []) as { data: string; status: string }[]) {
+    const entry = semanaMap.get(a.data);
+    if (entry) {
+      entry.total++;
+      if (a.status === "atendido") entry.atendidos++;
+    }
+  }
+  const agendaSemanaChartData = Array.from(semanaMap.entries()).map(([key, val]) => {
+    const d = new Date(key + "T00:00:00");
+    return {
+      dia: DIAS_CURTOS[d.getDay()],
+      total: val.total,
+      atendidos: val.atendidos,
+    };
+  });
 
   const proximas = (proximasConsultas ?? []) as unknown as ProximaConsulta[];
   const atividades = (ultimosProntuarios ?? []) as unknown as AtividadeRecente[];
@@ -160,7 +230,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="animate-fade-in space-y-6 sm:space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Painel</h1>
@@ -169,10 +239,10 @@ export default async function DashboardPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
+        {stats.map((stat, i) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6"
+            className={`animate-slide-up rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6 stagger-${i + 1}`}
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-gray-500">{stat.label}</p>
@@ -186,10 +256,16 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+        <FinanceiroChart data={financeiroChartData} />
+        <AgendamentosSemanaChart data={agendaSemanaChartData} />
+      </div>
+
       {/* Sections */}
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Próximas consultas */}
-        <div className="rounded-xl border border-gray-200 bg-white">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
             <h2 className="font-semibold text-gray-900">
               Próximas consultas
@@ -242,7 +318,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Atividade recente */}
-        <div className="rounded-xl border border-gray-200 bg-white">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
             <h2 className="font-semibold text-gray-900">
               Atividade recente

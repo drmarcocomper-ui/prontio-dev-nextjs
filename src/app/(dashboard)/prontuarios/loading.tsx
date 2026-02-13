@@ -18,7 +18,7 @@ export default function ProntuariosLoading() {
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-5"
+            className="flex items-start gap-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5"
           >
             <div className="h-10 w-10 shrink-0 rounded-full bg-gray-200" />
             <div className="min-w-0 flex-1 space-y-2">

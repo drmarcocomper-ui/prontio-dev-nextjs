@@ -22,7 +22,7 @@ export default function AgendaLoading() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4"
+            className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4"
           >
             <div className="w-24 space-y-2 text-center">
               <div className="mx-auto h-6 w-14 rounded bg-gray-200" />

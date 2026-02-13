@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
 
-const navigation = [
+const mainNavigation = [
   {
     label: "Início",
     href: "/",
@@ -60,6 +60,9 @@ const navigation = [
       </svg>
     ),
   },
+];
+
+const secondaryNavigation = [
   {
     label: "Relatórios",
     href: "/relatorios",
@@ -81,8 +84,52 @@ const navigation = [
   },
 ];
 
-function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
+function getInitials(name: string): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+interface SidebarContentProps {
+  onNavClick?: () => void;
+  profissionalNome: string;
+  userEmail: string;
+}
+
+function NavItem({
+  item,
+  isActive,
+  onClick,
+}: {
+  item: { label: string; href: string; icon: React.ReactNode };
+  isActive: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        isActive
+          ? "bg-primary-50 text-primary-700"
+          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      }`}
+    >
+      {item.icon}
+      {item.label}
+    </Link>
+  );
+}
+
+function SidebarContent({ onNavClick, profissionalNome, userEmail }: SidebarContentProps) {
   const pathname = usePathname();
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  const displayName = profissionalNome || userEmail || "Usuário";
+  const initials = getInitials(profissionalNome || userEmail);
 
   return (
     <>
@@ -97,40 +144,65 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navigation.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-
-          return (
-            <Link
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        {/* Main */}
+        <div className="space-y-1">
+          {mainNavigation.map((item) => (
+            <NavItem
               key={item.href}
-              href={item.href}
+              item={item}
+              isActive={isActive(item.href)}
               onClick={onNavClick}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-primary-50 text-primary-700"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </Link>
-          );
-        })}
+            />
+          ))}
+        </div>
+
+        {/* Separator */}
+        <div className="my-4 border-t border-gray-200" />
+
+        {/* Secondary */}
+        <div className="space-y-1">
+          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Gestão
+          </p>
+          {secondaryNavigation.map((item) => (
+            <NavItem
+              key={item.href}
+              item={item}
+              isActive={isActive(item.href)}
+              onClick={onNavClick}
+            />
+          ))}
+        </div>
       </nav>
 
-      {/* Footer */}
+      {/* Footer — user profile + logout */}
       <div className="border-t border-gray-200 px-3 py-4">
+        <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-gray-900">
+              {displayName}
+            </p>
+            {profissionalNome && userEmail && (
+              <p className="truncate text-xs text-gray-500">{userEmail}</p>
+            )}
+          </div>
+        </div>
         <LogoutButton />
       </div>
     </>
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  profissionalNome: string;
+  userEmail: string;
+}
+
+export function Sidebar({ profissionalNome, userEmail }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
@@ -188,7 +260,11 @@ export function Sidebar() {
               </svg>
             </button>
 
-            <SidebarContent onNavClick={() => setIsOpen(false)} />
+            <SidebarContent
+              onNavClick={() => setIsOpen(false)}
+              profissionalNome={profissionalNome}
+              userEmail={userEmail}
+            />
           </aside>
         </div>
       )}
@@ -198,7 +274,7 @@ export function Sidebar() {
         aria-label="Navegação principal"
         className="hidden h-screen w-64 flex-col border-r border-gray-200 bg-white md:flex"
       >
-        <SidebarContent />
+        <SidebarContent profissionalNome={profissionalNome} userEmail={userEmail} />
       </aside>
     </>
   );

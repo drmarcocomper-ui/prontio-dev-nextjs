@@ -35,12 +35,12 @@ export default async function ConfiguracoesPage({
   } = await supabase.auth.getUser();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
+    <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
 
       <Tabs />
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         {currentTab === "consultorio" && (
           <ConsultorioForm defaults={config} />
         )}

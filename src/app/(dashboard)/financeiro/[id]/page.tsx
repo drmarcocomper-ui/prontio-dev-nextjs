@@ -53,7 +53,7 @@ export default async function TransacaoDetalhesPage({
   const t = transacao as unknown as Transacao;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
+    <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
       <Link
         href="/financeiro"
@@ -66,7 +66,7 @@ export default async function TransacaoDetalhesPage({
       </Link>
 
       {/* Header Card */}
-      <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+      <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6">
         <div>
           <div className="flex items-center gap-3">
             <span
@@ -105,7 +105,7 @@ export default async function TransacaoDetalhesPage({
       </div>
 
       {/* Details */}
-      <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+      <div className="space-y-5 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
           <svg aria-hidden="true" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />

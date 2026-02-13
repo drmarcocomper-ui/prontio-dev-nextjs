@@ -8,7 +8,7 @@ export default function NovoAgendamentoLoading() {
       <div className="h-8 w-56 rounded bg-gray-200" />
 
       {/* Card */}
-      <div className="space-y-6 rounded-xl border border-gray-200 bg-white p-6">
+      <div className="space-y-6 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         {/* Paciente */}
         <div className="space-y-2">
           <div className="h-4 w-20 rounded bg-gray-200" />

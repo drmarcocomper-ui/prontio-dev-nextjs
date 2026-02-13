@@ -1,6 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+vi.mock("./dashboard-charts", () => ({
+  FinanceiroChart: () => <div data-testid="financeiro-chart">Chart</div>,
+  AgendamentosSemanaChart: () => <div data-testid="agendamentos-chart">Chart</div>,
+}));
+
 vi.mock("next/link", () => ({
   default: ({
     href,
@@ -114,6 +119,8 @@ function setMockResults(overrides: Partial<{
     { data: overrides.receitas ?? [] },
     { data: overrides.proximas ?? [] },
     { data: overrides.atividades ?? [] },
+    { data: [] }, // transacoes6m (chart)
+    { data: [] }, // agendamentosSemana (chart)
   ];
 }
 
@@ -318,6 +325,8 @@ describe("DashboardPage", () => {
       { count: null },
       { count: null },
       { count: null },
+      { data: null },
+      { data: null },
       { data: null },
       { data: null },
       { data: null },

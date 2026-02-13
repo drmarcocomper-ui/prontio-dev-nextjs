@@ -8,7 +8,7 @@ export default function NovaTransacaoLoading() {
       </div>
 
       {/* Form card */}
-      <div className="space-y-6 rounded-xl border border-gray-200 bg-white p-6">
+      <div className="space-y-6 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         {/* Tipo */}
         <div className="space-y-2">
           <div className="h-4 w-10 rounded bg-gray-200" />

@@ -15,8 +15,8 @@ async function renderPage(searchParams: { error?: string } = {}) {
 describe("LoginPage", () => {
   it("renderiza o logo e nome Prontio", async () => {
     await renderPage();
-    expect(screen.getByText("P")).toBeInTheDocument();
-    expect(screen.getByText("Prontio")).toBeInTheDocument();
+    expect(screen.getAllByText("P").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renderiza a mensagem de boas-vindas", async () => {

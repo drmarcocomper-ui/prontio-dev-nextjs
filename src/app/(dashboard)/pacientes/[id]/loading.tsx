@@ -5,7 +5,7 @@ export default function PacienteDetalhesLoading() {
       <div className="h-4 w-20 rounded bg-gray-200" />
 
       {/* Header card */}
-      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white p-6">
+      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="flex items-center gap-4">
           <div className="h-14 w-14 rounded-full bg-gray-200" />
           <div className="space-y-2">
@@ -25,7 +25,7 @@ export default function PacienteDetalhesLoading() {
       {/* Info sections */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-gray-200 bg-white p-6">
+          <div key={i} className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
             <div className="mb-4 h-4 w-28 rounded bg-gray-200" />
             <div className="grid grid-cols-2 gap-4">
               {Array.from({ length: 3 }).map((_, j) => (
@@ -40,7 +40,7 @@ export default function PacienteDetalhesLoading() {
       </div>
 
       {/* Prontuarios section */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="mb-4 flex justify-between">
           <div className="h-4 w-32 rounded bg-gray-200" />
           <div className="h-7 w-28 rounded-lg bg-gray-200" />

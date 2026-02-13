@@ -14,7 +14,7 @@ export default function PacientesLoading() {
       <div className="h-11 w-full rounded-lg bg-gray-200" />
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="bg-gray-50 px-6 py-3">
           <div className="flex gap-6">
             <div className="h-4 w-20 rounded bg-gray-200" />

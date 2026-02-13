@@ -8,7 +8,7 @@ export default function NovoProntuarioLoading() {
       </div>
 
       {/* Form card */}
-      <div className="space-y-6 rounded-xl border border-gray-200 bg-white p-6">
+      <div className="space-y-6 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         {/* Paciente + Data */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="sm:col-span-2 space-y-2">

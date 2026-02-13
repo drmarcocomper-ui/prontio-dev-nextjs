@@ -5,7 +5,7 @@ export default function ProntuarioDetalhesLoading() {
       <div className="h-4 w-24 rounded bg-gray-200" />
 
       {/* Header card */}
-      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white p-6">
+      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-full bg-gray-200" />
           <div className="space-y-2">
@@ -24,7 +24,7 @@ export default function ProntuarioDetalhesLoading() {
       </div>
 
       {/* Evolução clínica */}
-      <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-6">
+      <div className="space-y-5 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="h-4 w-32 rounded bg-gray-200" />
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="space-y-2 border-t border-gray-100 pt-4 first:border-0 first:pt-0">

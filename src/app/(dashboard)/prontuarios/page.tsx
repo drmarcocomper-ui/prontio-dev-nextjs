@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortSelect } from "@/components/sort-select";
 import { SearchInput } from "@/components/search-input";
+import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
 import { ProntuarioFilters } from "./filters";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
@@ -78,7 +79,7 @@ export default async function ProntuariosPage({
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="animate-fade-in space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Prontuários</h1>
@@ -115,7 +116,7 @@ export default async function ProntuariosPage({
   if (paciente_id) sp.paciente_id = paciente_id;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="animate-fade-in space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -167,7 +168,7 @@ export default async function ProntuariosPage({
             <Link
               key={p.id}
               href={`/prontuarios/${p.id}`}
-              className="block rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 sm:p-5"
+              className="block rounded-xl border border-gray-200 bg-white shadow-sm p-4 transition-all hover:border-gray-300 hover:shadow-md sm:p-5"
             >
               <div className="flex items-start gap-4">
                 {/* Avatar */}
@@ -224,11 +225,9 @@ export default async function ProntuariosPage({
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-          <svg aria-hidden="true" className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-          </svg>
-          <h3 className="mt-4 text-sm font-semibold text-gray-900">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm px-6 py-16 text-center">
+          <EmptyStateIllustration type="prontuarios" />
+          <h3 className="mt-6 text-sm font-semibold text-gray-900">
             Nenhum prontuário encontrado
           </h3>
           <p className="mt-1 text-sm text-gray-500">

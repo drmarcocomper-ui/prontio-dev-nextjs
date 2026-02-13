@@ -13,7 +13,7 @@ export default function FinanceiroLoading() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-gray-200 bg-white p-5">
+          <div key={i} className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5">
             <div className="h-4 w-20 rounded bg-gray-200" />
             <div className="mt-3 h-7 w-28 rounded bg-gray-200" />
           </div>
@@ -27,7 +27,7 @@ export default function FinanceiroLoading() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="bg-gray-50 px-5 py-3">
           <div className="flex gap-8">
             {Array.from({ length: 6 }).map((_, i) => (

@@ -12,7 +12,7 @@ export default function DashboardLoading() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-xl border border-gray-200 bg-white p-6"
+            className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6"
           >
             <div className="flex items-center justify-between">
               <div className="h-4 w-24 rounded bg-gray-200" />
@@ -27,7 +27,7 @@ export default function DashboardLoading() {
       {/* Sections */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Próximas consultas */}
-        <div className="rounded-xl border border-gray-200 bg-white">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-6 py-4">
             <div className="h-5 w-40 rounded bg-gray-200" />
           </div>
@@ -46,7 +46,7 @@ export default function DashboardLoading() {
         </div>
 
         {/* Atividade recente */}
-        <div className="rounded-xl border border-gray-200 bg-white">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-6 py-4">
             <div className="h-5 w-36 rounded bg-gray-200" />
           </div>

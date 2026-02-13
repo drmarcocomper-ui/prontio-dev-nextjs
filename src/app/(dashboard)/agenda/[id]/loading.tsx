@@ -5,7 +5,7 @@ export default function AgendamentoDetalhesLoading() {
       <div className="h-5 w-20 rounded bg-gray-200" />
 
       {/* Header Card */}
-      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white p-6">
+      <div className="flex items-start justify-between rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-full bg-gray-200" />
           <div className="space-y-2">
@@ -20,7 +20,7 @@ export default function AgendamentoDetalhesLoading() {
       </div>
 
       {/* Details Card */}
-      <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-6">
+      <div className="space-y-5 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <div className="h-5 w-48 rounded bg-gray-200" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
