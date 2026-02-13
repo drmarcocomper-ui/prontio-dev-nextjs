@@ -34,13 +34,20 @@ const securityHeaders = [
   },
 ];
 
+const codespaceName = process.env.CODESPACE_NAME;
+const codespaceOrigin = codespaceName
+  ? `${codespaceName}-3000.app.github.dev`
+  : null;
+
 const nextConfig: NextConfig = {
+  ...(codespaceOrigin ? { allowedDevOrigins: [codespaceOrigin] } : {}),
   experimental: {
     serverActions: {
       allowedOrigins: [
         "localhost:3000",
         "prontio.com.br",
         "www.prontio.com.br",
+        ...(codespaceOrigin ? [codespaceOrigin] : []),
       ],
     },
   },
