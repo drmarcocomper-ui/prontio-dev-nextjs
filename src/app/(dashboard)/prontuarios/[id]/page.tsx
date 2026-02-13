@@ -45,10 +45,13 @@ function Section({
 
 export default async function ProntuarioDetalhesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
   const supabase = await createClient();
 
   const { data: prontuario } = await supabase
@@ -69,13 +72,13 @@ export default async function ProntuarioDetalhesPage({
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Breadcrumb */}
       <Link
-        href="/prontuarios"
+        href={from === "paciente" ? `/pacientes/${p.pacientes.id}` : "/prontuarios"}
         className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
       >
         <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
-        Prontuários
+        {from === "paciente" ? p.pacientes.nome : "Prontuários"}
       </Link>
 
       {/* Header Card */}

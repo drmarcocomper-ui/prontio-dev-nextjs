@@ -251,17 +251,14 @@ export default async function DashboardPage() {
           {atividades.length > 0 ? (
             <div className="divide-y divide-gray-100">
               {atividades.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 px-6 py-3">
+                <Link key={p.id} href={`/prontuarios/${p.id}`} className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-gray-50">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">
                     {getInitials(p.pacientes.nome)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/pacientes/${p.pacientes.id}`}
-                      className="block truncate text-sm font-medium text-gray-900 hover:text-sky-600"
-                    >
+                    <span className="block truncate text-sm font-medium text-gray-900">
                       {p.pacientes.nome}
-                    </Link>
+                    </span>
                     <p className="text-xs text-gray-500">
                       {p.tipo ? (TIPO_LABELS[p.tipo] ?? p.tipo) : "Evolução"} &middot;{" "}
                       {new Date(p.data + "T00:00:00").toLocaleDateString("pt-BR")}
@@ -270,7 +267,7 @@ export default async function DashboardPage() {
                   <span className="shrink-0 text-xs text-gray-400">
                     {formatRelativeTime(p.created_at)}
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (

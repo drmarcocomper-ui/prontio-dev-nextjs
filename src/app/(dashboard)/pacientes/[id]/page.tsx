@@ -52,11 +52,12 @@ export default async function PacienteDetalhesPage({
     notFound();
   }
 
-  const { data: prontuarios } = await supabase
+  const { data: prontuarios, count: totalProntuarios } = await supabase
     .from("prontuarios")
-    .select("id, data, tipo, cid, queixa_principal")
+    .select("id, data, tipo, cid, queixa_principal", { count: "exact" })
     .eq("paciente_id", id)
-    .order("data", { ascending: false });
+    .order("data", { ascending: false })
+    .limit(5);
 
   const { data: receitas } = await supabase
     .from("receitas")
@@ -237,7 +238,7 @@ export default async function PacienteDetalhesPage({
             {prontuarios.map((pront) => (
               <Link
                 key={pront.id}
-                href={`/prontuarios/${pront.id}`}
+                href={`/prontuarios/${pront.id}?from=paciente`}
                 className="block rounded-lg border border-gray-100 p-4 transition-colors hover:border-gray-200 hover:bg-gray-50"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -269,6 +270,14 @@ export default async function PacienteDetalhesPage({
                 </div>
               </Link>
             ))}
+            {(totalProntuarios ?? 0) > 5 && (
+              <Link
+                href={`/prontuarios?paciente_id=${paciente.id}`}
+                className="block py-2 text-center text-sm font-medium text-violet-600 transition-colors hover:text-violet-700"
+              >
+                Ver todas as evoluções ({totalProntuarios}) →
+              </Link>
+            )}
           </div>
         ) : (
           <p className="py-6 text-center text-sm text-gray-400">

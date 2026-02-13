@@ -147,6 +147,24 @@ export default async function AgendamentoDetalhesPage({
         )}
       </div>
 
+      {/* Registrar evolução */}
+      {["atendido", "em_atendimento", "aguardando"].includes(ag.status) && (
+        <Link
+          href={`/prontuarios/novo?paciente_id=${ag.pacientes.id}&paciente_nome=${encodeURIComponent(ag.pacientes.nome)}`}
+          className="flex items-center justify-between rounded-xl border border-violet-200 bg-violet-50 p-5 transition-colors hover:border-violet-300 hover:bg-violet-100"
+        >
+          <div className="flex items-center gap-3">
+            <svg aria-hidden="true" className="h-5 w-5 text-violet-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            <span className="text-sm font-semibold text-violet-700">Registrar evolução</span>
+          </div>
+          <svg aria-hidden="true" className="h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+          </svg>
+        </Link>
+      )}
+
       {/* Footer info */}
       <p className="text-xs text-gray-400">
         Registro criado em{" "}

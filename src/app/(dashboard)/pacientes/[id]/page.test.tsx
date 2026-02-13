@@ -60,7 +60,9 @@ vi.mock("@/lib/supabase/server", () => ({
               };
             }
             return {
-              order: () => Promise.resolve({ data: mockProntuarios }),
+              order: () => ({
+                limit: () => Promise.resolve({ data: mockProntuarios, count: mockProntuarios.length }),
+              }),
             };
           },
         }),
@@ -258,7 +260,7 @@ describe("PacienteDetalhesPage", () => {
     expect(screen.getByText("CID: J06.9")).toBeInTheDocument();
     expect(screen.getByText("Dor de garganta")).toBeInTheDocument();
     const link = screen.getByText("Dor de garganta").closest("a");
-    expect(link).toHaveAttribute("href", "/prontuarios/pr-1");
+    expect(link).toHaveAttribute("href", "/prontuarios/pr-1?from=paciente");
   });
 
   it("renderiza link Nova evolução com paciente_id", async () => {

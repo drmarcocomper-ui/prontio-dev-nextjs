@@ -23,9 +23,10 @@ export default async function ProntuariosPage({
     tipo?: string;
     de?: string;
     ate?: string;
+    paciente_id?: string;
   }>;
 }) {
-  const { q, pagina, ordem, dir, tipo, de, ate } = await searchParams;
+  const { q, pagina, ordem, dir, tipo, de, ate, paciente_id } = await searchParams;
   const currentPage = Math.max(1, Number(pagina) || 1);
   const VALID_SORT_COLUMNS = ["data", "paciente"];
   const sortColumn = VALID_SORT_COLUMNS.includes(ordem ?? "") ? ordem! : "data";
@@ -47,6 +48,10 @@ export default async function ProntuariosPage({
     query = query.order(sortColumn, { ascending });
   }
   query = query.order("created_at", { ascending: false });
+
+  if (paciente_id) {
+    query = query.eq("paciente_id", paciente_id);
+  }
 
   if (q) {
     const escaped = escapeLikePattern(q);
@@ -90,6 +95,16 @@ export default async function ProntuariosPage({
   const totalItems = count ?? 0;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
+  let pacienteNome = "";
+  if (paciente_id) {
+    const { data: pacienteData } = await supabase
+      .from("pacientes")
+      .select("nome")
+      .eq("id", paciente_id)
+      .single();
+    pacienteNome = pacienteData?.nome ?? "";
+  }
+
   const sp: Record<string, string> = {};
   if (q) sp.q = q;
   if (ordem) sp.ordem = ordem;
@@ -97,6 +112,7 @@ export default async function ProntuariosPage({
   if (tipo) sp.tipo = tipo;
   if (de) sp.de = de;
   if (ate) sp.ate = ate;
+  if (paciente_id) sp.paciente_id = paciente_id;
 
   return (
     <div className="space-y-6">
@@ -128,6 +144,8 @@ export default async function ProntuariosPage({
           currentTipo={tipo ?? ""}
           currentDe={de ?? ""}
           currentAte={ate ?? ""}
+          pacienteId={paciente_id ?? ""}
+          pacienteNome={pacienteNome}
         />
         <SortSelect
           options={[

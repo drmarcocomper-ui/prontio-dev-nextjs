@@ -7,10 +7,14 @@ export function ProntuarioFilters({
   currentTipo,
   currentDe,
   currentAte,
+  pacienteId,
+  pacienteNome,
 }: {
   currentTipo: string;
   currentDe: string;
   currentAte: string;
+  pacienteId: string;
+  pacienteNome: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -29,8 +33,32 @@ export function ProntuarioFilters({
     });
   }
 
+  function removerFiltroPaciente() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("paciente_id");
+    params.delete("pagina");
+    startTransition(() => {
+      router.replace(`/prontuarios?${params.toString()}`);
+    });
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-3">
+      {pacienteId && pacienteNome && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-3 py-1 text-sm text-violet-700">
+          {pacienteNome}
+          <button
+            type="button"
+            onClick={removerFiltroPaciente}
+            className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-violet-200"
+            aria-label={`Remover filtro por ${pacienteNome}`}
+          >
+            <svg aria-hidden="true" className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </span>
+      )}
       <select
         value={currentTipo}
         onChange={(e) => updateParam("tipo", e.target.value)}

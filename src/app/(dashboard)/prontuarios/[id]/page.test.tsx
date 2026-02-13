@@ -69,8 +69,8 @@ const prontuarioCompleto = {
   pacientes: { id: "p-1", nome: "Maria Silva" },
 };
 
-async function renderPage(id = "pr-1") {
-  const jsx = await ProntuarioDetalhesPage({ params: Promise.resolve({ id }) });
+async function renderPage(id = "pr-1", from?: string) {
+  const jsx = await ProntuarioDetalhesPage({ params: Promise.resolve({ id }), searchParams: Promise.resolve({ from }) });
   return render(jsx);
 }
 
