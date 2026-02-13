@@ -17,12 +17,15 @@ import {
   type TransacaoFull as Transacao,
 } from "../constants";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+  if (!UUID_RE.test(id)) return { title: "Transação" };
   const supabase = await createClient();
   const { data } = await supabase
     .from("transacoes")

@@ -173,7 +173,10 @@ export async function criarAgendamento(
   }
 
   const recorrencia = (formData.get("recorrencia") as string) || "";
-  const recorrenciaVezes = Math.min(52, Math.max(2, Number(formData.get("recorrencia_vezes")) || 4));
+  const recorrenciaVezesRaw = Number(formData.get("recorrencia_vezes"));
+  const recorrenciaVezes = Number.isFinite(recorrenciaVezesRaw)
+    ? Math.min(52, Math.max(2, Math.floor(recorrenciaVezesRaw)))
+    : 4;
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
