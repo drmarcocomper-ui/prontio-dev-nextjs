@@ -142,6 +142,7 @@ export function ClinicasForm({
               name="email"
               type="email"
               required
+              maxLength={254}
               disabled={isInviting}
               placeholder="email@exemplo.com"
               className={INPUT_CLASS}

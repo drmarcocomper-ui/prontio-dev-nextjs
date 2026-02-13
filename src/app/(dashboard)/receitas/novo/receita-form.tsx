@@ -191,6 +191,7 @@ export function ReceitaForm({
               type="text"
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
+              maxLength={50}
               placeholder="Nome do template..."
               className="flex-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />

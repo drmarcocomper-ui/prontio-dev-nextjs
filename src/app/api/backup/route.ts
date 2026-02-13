@@ -36,7 +36,7 @@ export async function GET() {
       .select("*")
       .eq("medico_id", medicoId);
     if (error) {
-      errors.push(`Erro ao exportar ${table}: ${error.message}`);
+      errors.push(`Erro ao exportar ${table}. Tente novamente.`);
     } else {
       backup[table] = data ?? [];
     }
@@ -49,7 +49,7 @@ export async function GET() {
       .select("*")
       .eq("clinica_id", ctx.clinicaId);
     if (error) {
-      errors.push(`Erro ao exportar ${table}: ${error.message}`);
+      errors.push(`Erro ao exportar ${table}. Tente novamente.`);
     } else {
       backup[table] = data ?? [];
     }

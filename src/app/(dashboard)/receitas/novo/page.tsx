@@ -29,7 +29,7 @@ export default async function NovaReceitaPage({
                 { label: "Nova receita" },
               ]
             : [
-                { label: "Prontuários", href: "/prontuarios" },
+                { label: "Receitas", href: "/receitas" },
                 { label: "Nova receita" },
               ]
         } />

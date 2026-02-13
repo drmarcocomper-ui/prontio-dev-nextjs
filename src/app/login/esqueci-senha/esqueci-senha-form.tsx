@@ -46,6 +46,7 @@ export function EsqueciSenhaForm() {
             type="email"
             autoComplete="email"
             required
+            maxLength={254}
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="seu@email.com"

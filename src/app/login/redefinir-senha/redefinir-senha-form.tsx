@@ -44,6 +44,7 @@ export function RedefinirSenhaForm() {
             autoComplete="new-password"
             required
             minLength={6}
+            maxLength={100}
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="Mínimo 6 caracteres"
@@ -61,6 +62,7 @@ export function RedefinirSenhaForm() {
             autoComplete="new-password"
             required
             minLength={6}
+            maxLength={100}
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="Repita a senha"

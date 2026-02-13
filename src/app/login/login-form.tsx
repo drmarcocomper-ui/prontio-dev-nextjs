@@ -30,6 +30,7 @@ export default function LoginForm() {
             type="email"
             autoComplete="email"
             required
+            maxLength={254}
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="seu@email.com"
@@ -57,6 +58,7 @@ export default function LoginForm() {
             type="password"
             autoComplete="current-password"
             required
+            maxLength={100}
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="••••••••"

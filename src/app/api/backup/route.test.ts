@@ -121,7 +121,7 @@ describe("GET /api/backup", () => {
 
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]).toContain("pacientes");
-    expect(body.errors[0]).toContain("permission denied");
+    expect(body.errors[0]).toContain("Tente novamente");
   });
 
   it("retorna Content-Disposition com filename de backup", async () => {

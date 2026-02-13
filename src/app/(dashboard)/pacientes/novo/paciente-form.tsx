@@ -110,6 +110,7 @@ export function PacienteForm({
               name="cpf"
               type="text"
               inputMode="numeric"
+              maxLength={14}
               disabled={isPending}
               placeholder="000.000.000-00"
               defaultValue={defaults?.cpf ? maskCPF(defaults.cpf) : ""}
