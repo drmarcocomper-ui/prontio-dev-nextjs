@@ -291,10 +291,12 @@ export async function convidarSecretaria(
     return { error: "Você não tem permissão para gerenciar esta clínica." };
   }
 
-  // Look up user by email using admin (we use a workaround since we can't search auth.users from client)
-  // For now, we'll create the link assuming the user already has an account
-  // In a real app, you'd use an invite flow via Supabase Auth
-  const { data: users } = await supabase.rpc("get_user_id_by_email", { email_input: email }) as { data: { id: string }[] | null };
+  // Look up user by email via RPC (requires get_user_id_by_email function in Supabase)
+  const { data: users, error: rpcError } = await supabase.rpc("get_user_id_by_email", { email_input: email }) as { data: { id: string }[] | null; error: unknown };
+
+  if (rpcError) {
+    return { error: "Erro ao buscar usuário. Tente novamente." };
+  }
 
   if (!users || users.length === 0) {
     return { error: "Usuário não encontrado. A secretária precisa criar uma conta primeiro." };
