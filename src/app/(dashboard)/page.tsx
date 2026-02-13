@@ -160,7 +160,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Painel</h1>
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-gray-200 bg-white p-6"
+            className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6"
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-gray-500">{stat.label}</p>
@@ -187,10 +187,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* Sections */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Próximas consultas */}
         <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="border-b border-gray-200 px-6 py-4">
+          <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
             <h2 className="font-semibold text-gray-900">
               Próximas consultas
             </h2>
@@ -198,7 +198,7 @@ export default async function DashboardPage() {
           {proximas.length > 0 ? (
             <div className="divide-y divide-gray-100">
               {proximas.map((ag) => (
-                <div key={ag.id} className="flex items-center gap-3 px-6 py-3">
+                <div key={ag.id} className="flex items-center gap-3 px-4 py-3 sm:px-6">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
                     {getInitials(ag.pacientes.nome)}
                   </div>
@@ -230,7 +230,7 @@ export default async function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+            <div className="flex flex-col items-center justify-center px-4 py-10 text-center sm:px-6 sm:py-12">
               <svg aria-hidden="true" className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
               </svg>
@@ -243,7 +243,7 @@ export default async function DashboardPage() {
 
         {/* Atividade recente */}
         <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="border-b border-gray-200 px-6 py-4">
+          <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
             <h2 className="font-semibold text-gray-900">
               Atividade recente
             </h2>
@@ -251,7 +251,7 @@ export default async function DashboardPage() {
           {atividades.length > 0 ? (
             <div className="divide-y divide-gray-100">
               {atividades.map((p) => (
-                <Link key={p.id} href={`/prontuarios/${p.id}`} className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-gray-50">
+                <Link key={p.id} href={`/prontuarios/${p.id}`} className="flex items-center gap-3 px-4 py-3 sm:px-6 transition-colors hover:bg-gray-50">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">
                     {getInitials(p.pacientes.nome)}
                   </div>
@@ -271,7 +271,7 @@ export default async function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+            <div className="flex flex-col items-center justify-center px-4 py-10 text-center sm:px-6 sm:py-12">
               <svg aria-hidden="true" className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
