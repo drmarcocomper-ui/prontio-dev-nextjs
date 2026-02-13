@@ -28,7 +28,7 @@ export function ProfissionalForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-6" aria-busy={isPending}>
+    <form action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
       <FormError message={state.error} />
 
       {/* Hack: nome_consultorio is required by the action, send it hidden */}
@@ -113,7 +113,7 @@ export function ProfissionalForm({
         </div>
       </div>
 
-      <div className="flex justify-end border-t border-gray-200 pt-6">
+      <div className="flex justify-end border-t border-gray-200 pt-4 sm:pt-6">
         <button
           type="submit"
           disabled={isPending}

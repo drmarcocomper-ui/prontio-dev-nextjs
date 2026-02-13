@@ -31,7 +31,7 @@ export function ConsultorioForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-6" aria-busy={isPending}>
+    <form action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
       <FormError message={state.error} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -134,7 +134,7 @@ export function ConsultorioForm({
         </div>
       </div>
 
-      <div className="flex justify-end border-t border-gray-200 pt-6">
+      <div className="flex justify-end border-t border-gray-200 pt-4 sm:pt-6">
         <button
           type="submit"
           disabled={isPending}

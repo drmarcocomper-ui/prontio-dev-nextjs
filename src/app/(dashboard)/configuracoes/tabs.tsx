@@ -16,7 +16,7 @@ export function Tabs() {
 
   return (
     <div className="overflow-x-auto border-b border-gray-200">
-      <nav className="-mb-px flex gap-6" aria-label="Tabs">
+      <nav className="-mb-px flex gap-4 sm:gap-6" aria-label="Tabs">
         {TABS.map((tab) => (
           <Link
             key={tab.key}

@@ -34,7 +34,7 @@ export default async function ConfiguracoesPage({
   } = await supabase.auth.getUser();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
 
       <Tabs />

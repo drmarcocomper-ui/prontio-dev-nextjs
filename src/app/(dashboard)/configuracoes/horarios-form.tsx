@@ -21,7 +21,7 @@ export function HorariosForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-6" aria-busy={isPending}>
+    <form action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
       <FormError message={state.error} />
 
       <input type="hidden" name="config_nome_consultorio" value={defaults.nome_consultorio ?? "Prontio"} />
@@ -102,7 +102,7 @@ export function HorariosForm({
         </div>
       </div>
 
-      <div className="flex justify-end border-t border-gray-200 pt-6">
+      <div className="flex justify-end border-t border-gray-200 pt-4 sm:pt-6">
         <button
           type="submit"
           disabled={isPending}
