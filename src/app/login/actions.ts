@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function login(formData: FormData) {
+export type LoginFormState = {
+  error?: string;
+};
+
+export async function login(
+  _prev: LoginFormState,
+  formData: FormData
+): Promise<LoginFormState> {
   const supabase = await createClient();
 
   const data = {
@@ -15,7 +22,7 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data);
 
   if (error) {
-    redirect("/login?error=Credenciais+inválidas");
+    return { error: "E-mail ou senha incorretos." };
   }
 
   revalidatePath("/", "layout");
@@ -25,5 +32,6 @@ export async function login(formData: FormData) {
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  revalidatePath("/", "layout");
   redirect("/login");
 }

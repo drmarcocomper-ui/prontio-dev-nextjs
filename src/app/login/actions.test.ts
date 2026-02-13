@@ -42,7 +42,7 @@ describe("login", () => {
   it("redireciona para / em caso de sucesso", async () => {
     mockSignInWithPassword.mockResolvedValue({ error: null });
     await expect(
-      login(makeFormData({ email: "doc@test.com", password: "123456" }))
+      login({}, makeFormData({ email: "doc@test.com", password: "123456" }))
     ).rejects.toThrow("REDIRECT");
     expect(mockSignInWithPassword).toHaveBeenCalledWith({
       email: "doc@test.com",
@@ -52,12 +52,14 @@ describe("login", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/");
   });
 
-  it("redireciona para /login?error em caso de erro", async () => {
+  it("retorna erro no state em caso de falha", async () => {
     mockSignInWithPassword.mockResolvedValue({ error: { message: "Invalid" } });
-    await expect(
-      login(makeFormData({ email: "doc@test.com", password: "wrong" }))
-    ).rejects.toThrow("REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith("/login?error=Credenciais+inválidas");
+    const result = await login(
+      {},
+      makeFormData({ email: "doc@test.com", password: "wrong" })
+    );
+    expect(result).toEqual({ error: "E-mail ou senha incorretos." });
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 });
 
@@ -66,10 +68,11 @@ describe("logout", () => {
     vi.clearAllMocks();
   });
 
-  it("chama signOut e redireciona para /login", async () => {
+  it("chama signOut, revalidatePath e redireciona para /login", async () => {
     mockSignOut.mockResolvedValue({});
     await expect(logout()).rejects.toThrow("REDIRECT");
     expect(mockSignOut).toHaveBeenCalled();
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/", "layout");
     expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 });

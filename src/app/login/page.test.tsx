@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("./actions", () => ({
-  login: vi.fn(),
+vi.mock("./login-form", () => ({
+  default: () => <div data-testid="login-form">LoginForm</div>,
 }));
 
 import LoginPage from "./page";
@@ -24,34 +24,23 @@ describe("LoginPage", () => {
     expect(screen.getByText("Entre para acessar o sistema")).toBeInTheDocument();
   });
 
-  it("renderiza o campo de e-mail", async () => {
+  it("renderiza o LoginForm", async () => {
     await renderPage();
-    const input = screen.getByLabelText("E-mail");
-    expect(input).toHaveAttribute("type", "email");
-    expect(input).toHaveAttribute("name", "email");
-    expect(input).toBeRequired();
+    expect(screen.getByTestId("login-form")).toBeInTheDocument();
   });
 
-  it("renderiza o campo de senha", async () => {
-    await renderPage();
-    const input = screen.getByLabelText("Senha");
-    expect(input).toHaveAttribute("type", "password");
-    expect(input).toHaveAttribute("name", "password");
-    expect(input).toBeRequired();
+  it("exibe mensagem mapeada para código auth_erro", async () => {
+    await renderPage({ error: "auth_erro" });
+    expect(screen.getByRole("alert")).toHaveTextContent("Erro ao autenticar. Tente novamente.");
   });
 
-  it("renderiza o botão Entrar", async () => {
-    await renderPage();
-    expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
+  it("exibe mensagem fallback para código desconhecido", async () => {
+    await renderPage({ error: "unknown_code" });
+    expect(screen.getByRole("alert")).toHaveTextContent("Ocorreu um erro. Tente novamente.");
   });
 
-  it("exibe mensagem de erro quando searchParams.error presente", async () => {
-    await renderPage({ error: "Credenciais inválidas" });
-    expect(screen.getByText("Credenciais inválidas")).toBeInTheDocument();
-  });
-
-  it("não exibe mensagem de erro quando searchParams.error ausente", async () => {
+  it("não exibe alerta quando sem erro", async () => {
     await renderPage();
-    expect(screen.queryByText("Credenciais inválidas")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
