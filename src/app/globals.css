@@ -1,1 +1,51 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary-50: var(--theme-primary-50, #f0f9ff);
+  --color-primary-100: var(--theme-primary-100, #e0f2fe);
+  --color-primary-500: var(--theme-primary-500, #0ea5e9);
+  --color-primary-600: var(--theme-primary-600, #0284c7);
+  --color-primary-700: var(--theme-primary-700, #0369a1);
+}
+
+/* Sky (default) — no overrides needed */
+
+[data-theme="blue"] {
+  --theme-primary-50: #eff6ff;
+  --theme-primary-100: #dbeafe;
+  --theme-primary-500: #3b82f6;
+  --theme-primary-600: #2563eb;
+  --theme-primary-700: #1d4ed8;
+}
+
+[data-theme="violet"] {
+  --theme-primary-50: #f5f3ff;
+  --theme-primary-100: #ede9fe;
+  --theme-primary-500: #8b5cf6;
+  --theme-primary-600: #7c3aed;
+  --theme-primary-700: #6d28d9;
+}
+
+[data-theme="emerald"] {
+  --theme-primary-50: #ecfdf5;
+  --theme-primary-100: #d1fae5;
+  --theme-primary-500: #10b981;
+  --theme-primary-600: #059669;
+  --theme-primary-700: #047857;
+}
+
+[data-theme="rose"] {
+  --theme-primary-50: #fff1f2;
+  --theme-primary-100: #ffe4e6;
+  --theme-primary-500: #f43f5e;
+  --theme-primary-600: #e11d48;
+  --theme-primary-700: #be123c;
+}
+
+[data-theme="amber"] {
+  --theme-primary-50: #fffbeb;
+  --theme-primary-100: #fef3c7;
+  --theme-primary-500: #f59e0b;
+  --theme-primary-600: #d97706;
+  --theme-primary-700: #b45309;
+}

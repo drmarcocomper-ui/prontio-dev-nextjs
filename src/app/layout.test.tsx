@@ -10,25 +10,25 @@ vi.mock("sonner", () => ({
   Toaster: () => <div data-testid="toaster" />,
 }));
 
+vi.mock("@/lib/theme.server", () => ({
+  getTheme: vi.fn().mockResolvedValue("sky"),
+}));
+
 import RootLayout from "./layout";
 
 describe("RootLayout", () => {
-  it("renderiza children", () => {
-    render(
-      <RootLayout>
-        <div data-testid="child">Conteúdo</div>
-      </RootLayout>
-    );
+  it("renderiza children", async () => {
+    const layout = await RootLayout({
+      children: <div data-testid="child">Conteúdo</div>,
+    });
+    render(layout);
     expect(screen.getByTestId("child")).toBeInTheDocument();
     expect(screen.getByText("Conteúdo")).toBeInTheDocument();
   });
 
-  it("renderiza o Toaster", () => {
-    render(
-      <RootLayout>
-        <div />
-      </RootLayout>
-    );
+  it("renderiza o Toaster", async () => {
+    const layout = await RootLayout({ children: <div /> });
+    render(layout);
     expect(screen.getByTestId("toaster")).toBeInTheDocument();
   });
 });

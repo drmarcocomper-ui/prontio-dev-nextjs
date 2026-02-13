@@ -21,7 +21,7 @@ export function Tabs({ pacienteId }: { pacienteId: string }) {
             href={`/pacientes/${pacienteId}?tab=${tab.key}`}
             className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
               current === tab.key
-                ? "border-sky-600 text-sky-600"
+                ? "border-primary-600 text-primary-600"
                 : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
             }`}
           >

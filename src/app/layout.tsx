@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { getTheme } from "@/lib/theme.server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,14 +30,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const theme = await getTheme();
+
   return (
     <html lang="pt-BR">
       <body
+        data-theme={theme}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}

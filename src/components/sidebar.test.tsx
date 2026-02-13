@@ -69,23 +69,23 @@ describe("Sidebar", () => {
     mockPathname = "/";
     render(<Sidebar />);
     const link = screen.getByText("Início").closest("a");
-    expect(link?.className).toContain("bg-sky-50");
-    expect(link?.className).toContain("text-sky-700");
+    expect(link?.className).toContain("bg-primary-50");
+    expect(link?.className).toContain("text-primary-700");
   });
 
   it("destaca links de seções quando pathname começa com o href", () => {
     mockPathname = "/pacientes/123";
     render(<Sidebar />);
     const link = screen.getByText("Pacientes").closest("a");
-    expect(link?.className).toContain("bg-sky-50");
-    expect(link?.className).toContain("text-sky-700");
+    expect(link?.className).toContain("bg-primary-50");
+    expect(link?.className).toContain("text-primary-700");
   });
 
   it("não destaca Início quando está em outra rota", () => {
     mockPathname = "/agenda";
     render(<Sidebar />);
     const link = screen.getByText("Início").closest("a");
-    expect(link?.className).not.toContain("bg-sky-50");
+    expect(link?.className).not.toContain("bg-primary-50");
     expect(link?.className).toContain("text-gray-600");
   });
 

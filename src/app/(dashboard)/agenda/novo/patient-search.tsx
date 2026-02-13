@@ -141,7 +141,7 @@ export function PatientSearch({
           aria-controls={listboxId}
           aria-activedescendant={activeIndex >= 0 ? `patient-option-${activeIndex}` : undefined}
           aria-autocomplete="list"
-          className="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+          className="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
         />
       </div>
 
@@ -165,10 +165,10 @@ export function PatientSearch({
                 onClick={() => selectPatient(p)}
                 onMouseEnter={() => setActiveIndex(index)}
                 className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
-                  index === activeIndex ? "bg-sky-50" : "hover:bg-gray-50"
+                  index === activeIndex ? "bg-primary-50" : "hover:bg-gray-50"
                 }`}
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
                   {p.nome
                     .split(" ")
                     .filter(Boolean)

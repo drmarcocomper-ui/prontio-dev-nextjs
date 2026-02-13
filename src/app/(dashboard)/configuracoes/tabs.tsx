@@ -8,6 +8,7 @@ const TABS = [
   { key: "profissional", label: "Profissional" },
   { key: "horarios", label: "Horários" },
   { key: "conta", label: "Conta" },
+  { key: "aparencia", label: "Aparência" },
 ];
 
 export function Tabs() {
@@ -23,7 +24,7 @@ export function Tabs() {
             href={`/configuracoes?tab=${tab.key}`}
             className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
               current === tab.key
-                ? "border-sky-600 text-sky-600"
+                ? "border-primary-600 text-primary-600"
                 : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
             }`}
           >

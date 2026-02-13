@@ -156,12 +156,12 @@ export default async function TransacaoDetalhesPage({
                 Paciente
               </h3>
               <div className="mt-1 flex items-center gap-2">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
                   {getInitials(t.pacientes.nome)}
                 </div>
                 <Link
                   href={`/pacientes/${t.pacientes.id}`}
-                  className="text-sm font-medium text-gray-900 hover:text-sky-600"
+                  className="text-sm font-medium text-gray-900 hover:text-primary-600"
                 >
                   {t.pacientes.nome}
                 </Link>

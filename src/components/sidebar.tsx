@@ -88,7 +88,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
     <>
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-600 text-sm font-bold text-white">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
           P
         </div>
         <span className="text-lg font-bold tracking-tight text-gray-900">
@@ -111,7 +111,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
               onClick={onNavClick}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-sky-50 text-sky-700"
+                  ? "bg-primary-50 text-primary-700"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
@@ -153,7 +153,7 @@ export function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sky-600 text-xs font-bold text-white">
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-600 text-xs font-bold text-white">
           P
         </div>
         <span className="text-base font-bold tracking-tight text-gray-900">

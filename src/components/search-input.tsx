@@ -54,11 +54,11 @@ export function SearchInput({ basePath, placeholder, ariaLabel, defaultValue }: 
         placeholder={placeholder}
         defaultValue={defaultValue}
         onChange={(e) => handleSearch(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       />
       {isPending && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
-          <div role="status" aria-label="Carregando" className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-sky-600" />
+          <div role="status" aria-label="Carregando" className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600" />
         </div>
       )}
     </div>

@@ -62,7 +62,7 @@ export function DatePicker({ currentDate }: { currentDate: string }) {
         value={currentDate}
         onChange={(e) => e.target.value && navigate(e.target.value)}
         aria-label="Selecionar data"
-        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       />
 
       <h2 className="text-sm font-medium capitalize text-gray-700">

@@ -65,7 +65,7 @@ export function HorariosForm({
                 type="time"
                 disabled={isPending}
                 defaultValue={defaults[`horario_${dia.key}_inicio`] ?? "08:00"}
-                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
               />
               <span className="text-sm text-gray-400">até</span>
               <input
@@ -73,7 +73,7 @@ export function HorariosForm({
                 type="time"
                 disabled={isPending}
                 defaultValue={defaults[`horario_${dia.key}_fim`] ?? "18:00"}
-                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
               />
             </div>
           ))}
@@ -89,7 +89,7 @@ export function HorariosForm({
             type="time"
             disabled={isPending}
             defaultValue={defaults.intervalo_inicio ?? "12:00"}
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
           />
           <span className="text-sm text-gray-400">até</span>
           <input
@@ -97,7 +97,7 @@ export function HorariosForm({
             type="time"
             disabled={isPending}
             defaultValue={defaults.intervalo_fim ?? "13:00"}
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
           />
         </div>
       </div>
@@ -106,7 +106,7 @@ export function HorariosForm({
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:opacity-50"
         >
           {isPending && (
             <div aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />

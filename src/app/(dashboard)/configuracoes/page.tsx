@@ -5,6 +5,7 @@ import { ConsultorioForm } from "./consultorio-form";
 import { ProfissionalForm } from "./profissional-form";
 import { HorariosForm } from "./horarios-form";
 import { ContaForm } from "./conta-form";
+import { AparenciaForm } from "./aparencia-form";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -51,6 +52,9 @@ export default async function ConfiguracoesPage({
         )}
         {currentTab === "conta" && (
           <ContaForm email={user?.email ?? ""} />
+        )}
+        {currentTab === "aparencia" && (
+          <AparenciaForm defaults={config} />
         )}
       </div>
     </div>

@@ -90,7 +90,7 @@ export default async function ProntuarioDetalhesPage({
           <div>
             <Link
               href={`/pacientes/${p.pacientes.id}`}
-              className="text-lg font-bold text-gray-900 hover:text-sky-600"
+              className="text-lg font-bold text-gray-900 hover:text-primary-600"
             >
               {p.pacientes.nome}
             </Link>

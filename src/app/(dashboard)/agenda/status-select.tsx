@@ -56,7 +56,7 @@ export function StatusSelect({
         onChange={(e) => handleChange(e.target.value as AgendaStatus)}
         disabled={isPending}
         aria-label="Alterar status do agendamento"
-        className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium shadow-sm transition-colors focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+        className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium shadow-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
       >
         <option value={currentStatus}>
           {STATUS_LABELS[currentStatus] ?? currentStatus}

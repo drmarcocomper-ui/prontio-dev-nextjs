@@ -26,13 +26,14 @@ vi.mock("next/link", () => ({
 import { Tabs } from "./tabs";
 
 describe("Tabs", () => {
-  it("renderiza as 4 abas", () => {
+  it("renderiza as 5 abas", () => {
     mockTab = "";
     render(<Tabs />);
     expect(screen.getByText("Consultório")).toBeInTheDocument();
     expect(screen.getByText("Profissional")).toBeInTheDocument();
     expect(screen.getByText("Horários")).toBeInTheDocument();
     expect(screen.getByText("Conta")).toBeInTheDocument();
+    expect(screen.getByText("Aparência")).toBeInTheDocument();
   });
 
   it("cada aba aponta para o href correto", () => {
@@ -42,21 +43,22 @@ describe("Tabs", () => {
     expect(screen.getByText("Profissional").closest("a")).toHaveAttribute("href", "/configuracoes?tab=profissional");
     expect(screen.getByText("Horários").closest("a")).toHaveAttribute("href", "/configuracoes?tab=horarios");
     expect(screen.getByText("Conta").closest("a")).toHaveAttribute("href", "/configuracoes?tab=conta");
+    expect(screen.getByText("Aparência").closest("a")).toHaveAttribute("href", "/configuracoes?tab=aparencia");
   });
 
   it("destaca a aba consultorio por padrão", () => {
     mockTab = "";
     render(<Tabs />);
     const link = screen.getByText("Consultório");
-    expect(link.className).toContain("border-sky-600");
-    expect(link.className).toContain("text-sky-600");
+    expect(link.className).toContain("border-primary-600");
+    expect(link.className).toContain("text-primary-600");
   });
 
   it("destaca a aba selecionada via searchParams", () => {
     mockTab = "horarios";
     render(<Tabs />);
     const active = screen.getByText("Horários");
-    expect(active.className).toContain("border-sky-600");
+    expect(active.className).toContain("border-primary-600");
     const inactive = screen.getByText("Consultório");
     expect(inactive.className).toContain("border-transparent");
   });

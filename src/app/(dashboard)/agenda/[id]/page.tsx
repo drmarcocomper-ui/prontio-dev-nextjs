@@ -62,20 +62,20 @@ export default async function AgendamentoDetalhesPage({
       {/* Header Card */}
       <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
             {getInitials(ag.pacientes.nome)}
           </div>
           <div>
             <Link
               href={`/pacientes/${ag.pacientes.id}`}
-              className="text-lg font-bold text-gray-900 hover:text-sky-600"
+              className="text-lg font-bold text-gray-900 hover:text-primary-600"
             >
               {ag.pacientes.nome}
             </Link>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
               <span className="capitalize">{formatDateBR(ag.data)}</span>
               {ag.tipo && (
-                <span className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                <span className="inline-flex items-center rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
                   {TIPO_LABELS[ag.tipo] ?? ag.tipo}
                 </span>
               )}

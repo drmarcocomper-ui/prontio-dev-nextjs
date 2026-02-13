@@ -72,7 +72,7 @@ export default async function ReceitaDetalhesPage({
           <div>
             <Link
               href={`/pacientes/${r.pacientes.id}`}
-              className="text-lg font-bold text-gray-900 hover:text-sky-600"
+              className="text-lg font-bold text-gray-900 hover:text-primary-600"
             >
               {r.pacientes.nome}
             </Link>

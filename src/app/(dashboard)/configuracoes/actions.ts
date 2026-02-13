@@ -26,6 +26,7 @@ const ALLOWED_CONFIG_KEYS = new Set([
   "endereco_consultorio", "cidade_consultorio", "estado_consultorio",
   "nome_profissional", "especialidade", "crm", "rqe", "email_profissional",
   "duracao_consulta", "intervalo_inicio", "intervalo_fim",
+  "cor_primaria",
   ...["seg", "ter", "qua", "qui", "sex", "sab"].flatMap(d => [`horario_${d}_inicio`, `horario_${d}_fim`]),
 ]);
 
@@ -80,6 +81,7 @@ export async function salvarConfiguracoes(
   }
 
   revalidatePath("/configuracoes");
+  revalidatePath("/", "layout");
   return { success: true };
 }
 

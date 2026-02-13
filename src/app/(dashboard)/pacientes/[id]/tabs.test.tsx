@@ -44,15 +44,15 @@ describe("Tabs", () => {
     mockTab = "";
     render(<Tabs pacienteId="abc-123" />);
     const link = screen.getByText("Identificação");
-    expect(link.className).toContain("border-sky-600");
-    expect(link.className).toContain("text-sky-600");
+    expect(link.className).toContain("border-primary-600");
+    expect(link.className).toContain("text-primary-600");
   });
 
   it("destaca a aba selecionada via searchParams", () => {
     mockTab = "prontuario";
     render(<Tabs pacienteId="abc-123" />);
     const active = screen.getByText("Prontuário");
-    expect(active.className).toContain("border-sky-600");
+    expect(active.className).toContain("border-primary-600");
     const inactive = screen.getByText("Identificação");
     expect(inactive.className).toContain("border-transparent");
   });
