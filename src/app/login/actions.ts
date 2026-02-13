@@ -10,6 +10,11 @@ export type LoginFormState = {
   error?: string;
 };
 
+export type ResetSenhaFormState = {
+  success?: boolean;
+  error?: string;
+};
+
 export async function login(
   _prev: LoginFormState,
   formData: FormData
@@ -56,4 +61,58 @@ export async function logout() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");
+}
+
+export async function enviarResetSenha(
+  _prev: ResetSenhaFormState,
+  formData: FormData
+): Promise<ResetSenhaFormState> {
+  const email = (formData.get("email") as string)?.trim();
+
+  if (!email) {
+    return { error: "Informe seu e-mail." };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback?next=/login/redefinir-senha`,
+  });
+
+  if (error) {
+    // Don't reveal if email exists or not
+    return { success: true };
+  }
+
+  return { success: true };
+}
+
+export async function redefinirSenha(
+  _prev: ResetSenhaFormState,
+  formData: FormData
+): Promise<ResetSenhaFormState> {
+  const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirm_password") as string;
+
+  if (!password || password.length < 6) {
+    return { error: "A senha deve ter pelo menos 6 caracteres." };
+  }
+
+  if (password.length > 100) {
+    return { error: "A senha deve ter no máximo 100 caracteres." };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "As senhas não coincidem." };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { error: "Erro ao redefinir senha. O link pode ter expirado. Solicite um novo." };
+  }
+
+  return { success: true };
 }

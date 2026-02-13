@@ -9,6 +9,7 @@ const TABS = [
   { key: "horarios", label: "Horários" },
   { key: "conta", label: "Conta" },
   { key: "aparencia", label: "Aparência" },
+  { key: "dados", label: "Dados" },
 ];
 
 export function Tabs() {

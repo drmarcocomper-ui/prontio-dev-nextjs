@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { login } from "./actions";
 import type { LoginFormState } from "./actions";
 import { FormError, INPUT_CLASS } from "@/components/form-utils";
@@ -36,12 +37,20 @@ export default function LoginForm() {
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Senha
-          </label>
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Senha
+            </label>
+            <Link
+              href="/login/esqueci-senha"
+              className="text-xs font-medium text-primary-600 hover:text-primary-700"
+            >
+              Esqueci minha senha
+            </Link>
+          </div>
           <input
             id="password"
             name="password"
