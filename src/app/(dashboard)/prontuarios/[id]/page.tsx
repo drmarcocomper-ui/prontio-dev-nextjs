@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { DeleteButton } from "@/components/delete-button";
 import { excluirProntuario } from "../actions";
 import { type Prontuario, TIPO_LABELS, formatDateLong, getInitials } from "../types";
@@ -71,15 +72,18 @@ export default async function ProntuarioDetalhesPage({
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
-      <Link
-        href={from === "paciente" ? `/pacientes/${p.pacientes.id}` : "/prontuarios"}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
-      >
-        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-        </svg>
-        {from === "paciente" ? p.pacientes.nome : "Prontuários"}
-      </Link>
+      <Breadcrumb items={
+        from === "paciente"
+          ? [
+              { label: "Pacientes", href: "/pacientes" },
+              { label: p.pacientes.nome, href: `/pacientes/${p.pacientes.id}` },
+              { label: "Prontuário" },
+            ]
+          : [
+              { label: "Prontuários", href: "/prontuarios" },
+              { label: p.pacientes.nome },
+            ]
+      } />
 
       {/* Header Card */}
       <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6">

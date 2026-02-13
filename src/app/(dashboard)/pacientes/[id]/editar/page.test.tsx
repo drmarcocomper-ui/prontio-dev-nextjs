@@ -93,7 +93,7 @@ describe("EditarPacientePage", () => {
 
   it("renderiza o breadcrumb com nome do paciente", async () => {
     await renderPage();
-    const link = screen.getByText("Voltar para Maria Silva").closest("a");
+    const link = screen.getByText("Maria Silva").closest("a");
     expect(link).toHaveAttribute("href", "/pacientes/abc-123");
   });
 

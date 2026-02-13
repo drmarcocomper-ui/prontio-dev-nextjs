@@ -3,6 +3,28 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysAgo(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+function firstOfMonth() {
+  const d = new Date();
+  d.setDate(1);
+  return d.toISOString().slice(0, 10);
+}
+
+const PERIOD_SHORTCUTS = [
+  { label: "Hoje", de: todayStr(), ate: todayStr() },
+  { label: "7 dias", de: daysAgo(7), ate: todayStr() },
+  { label: "Este mês", de: firstOfMonth(), ate: todayStr() },
+];
+
 export function ProntuarioFilters({
   currentTipo,
   currentDe,
@@ -33,6 +55,16 @@ export function ProntuarioFilters({
     });
   }
 
+  function setPeriod(de: string, ate: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("de", de);
+    params.set("ate", ate);
+    params.delete("pagina");
+    startTransition(() => {
+      router.replace(`/prontuarios?${params.toString()}`);
+    });
+  }
+
   function removerFiltroPaciente() {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("paciente_id");
@@ -41,6 +73,9 @@ export function ProntuarioFilters({
       router.replace(`/prontuarios?${params.toString()}`);
     });
   }
+
+  const isShortcutActive = (s: { de: string; ate: string }) =>
+    currentDe === s.de && currentAte === s.ate;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -59,6 +94,24 @@ export function ProntuarioFilters({
           </button>
         </span>
       )}
+
+      <div className="flex gap-1.5">
+        {PERIOD_SHORTCUTS.map((s) => (
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => setPeriod(s.de, s.ate)}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+              isShortcutActive(s)
+                ? "bg-primary-50 text-primary-600"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       <select
         value={currentTipo}
         onChange={(e) => updateParam("tipo", e.target.value)}

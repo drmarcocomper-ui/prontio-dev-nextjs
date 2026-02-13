@@ -88,8 +88,9 @@ describe("ReceitaDetalhesPage", () => {
 
   it("renderiza o nome do paciente com link", async () => {
     await renderPage();
-    const link = screen.getByText("Maria Silva").closest("a");
-    expect(link).toHaveAttribute("href", "/pacientes/p-1");
+    const elements = screen.getAllByText("Maria Silva");
+    const link = elements.find((el) => el.closest("a")?.getAttribute("href") === "/pacientes/p-1");
+    expect(link).toBeTruthy();
   });
 
   it("renderiza as iniciais do paciente", async () => {

@@ -94,7 +94,7 @@ describe("EditarTransacaoPage", () => {
 
   it("renderiza o breadcrumb para a transação", async () => {
     await renderPage();
-    const link = screen.getByText("Voltar para transação").closest("a");
+    const link = screen.getByText("Consulta particular").closest("a");
     expect(link).toHaveAttribute("href", "/financeiro/t-123");
   });
 

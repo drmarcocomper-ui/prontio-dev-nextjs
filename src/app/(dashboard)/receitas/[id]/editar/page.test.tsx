@@ -84,7 +84,7 @@ describe("EditarReceitaPage", () => {
 
   it("renderiza o breadcrumb para a receita", async () => {
     await renderPage();
-    const link = screen.getByText("Voltar para receita").closest("a");
+    const link = screen.getByText("Maria Silva").closest("a");
     expect(link).toHaveAttribute("href", "/receitas/rec-123");
   });
 

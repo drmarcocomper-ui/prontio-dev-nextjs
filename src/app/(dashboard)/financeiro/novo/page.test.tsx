@@ -26,7 +26,7 @@ import NovaTransacaoPage from "./page";
 describe("NovaTransacaoPage", () => {
   it("renderiza o título Nova transação", () => {
     render(<NovaTransacaoPage />);
-    expect(screen.getByText("Nova transação")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Nova transação" })).toBeInTheDocument();
   });
 
   it("renderiza o breadcrumb para financeiro", () => {

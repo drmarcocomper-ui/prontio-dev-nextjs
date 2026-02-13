@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 const TABS = [
   { key: "identificacao", label: "Identificação" },
   { key: "prontuario", label: "Prontuário" },
+  { key: "historico", label: "Histórico" },
 ];
 
 export function Tabs({ pacienteId }: { pacienteId: string }) {

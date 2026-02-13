@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { PrintButton } from "./print-button";
 import {
   type ReceitaImpressao,
@@ -79,15 +80,11 @@ export default async function ImprimirReceitaPage({
 
       {/* Print Button */}
       <div className="no-print mb-6 flex items-center justify-between">
-        <a
-          href={`/receitas/${r.id}`}
-          className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
-        >
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-          </svg>
-          Voltar para receita
-        </a>
+        <Breadcrumb items={[
+          { label: "Receitas", href: "/receitas" },
+          { label: r.pacientes.nome, href: `/receitas/${r.id}` },
+          { label: "Imprimir" },
+        ]} />
         <PrintButton />
       </div>
 

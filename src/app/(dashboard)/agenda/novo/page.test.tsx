@@ -33,7 +33,7 @@ async function renderPage(searchParams: { data?: string } = {}) {
 describe("NovoAgendamentoPage", () => {
   it("renderiza o título Novo agendamento", async () => {
     await renderPage();
-    expect(screen.getByText("Novo agendamento")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Novo agendamento" })).toBeInTheDocument();
   });
 
   it("renderiza o breadcrumb para agenda com data", async () => {

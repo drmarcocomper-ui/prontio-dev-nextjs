@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
 import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
+import { useFormDraft } from "@/hooks/use-form-draft";
 
 export function ProntuarioForm({
   defaults,
@@ -26,8 +27,42 @@ export function ProntuarioForm({
 
   const cancel = cancelHref ?? (isEditing ? `/prontuarios/${defaults?.id}` : "/prontuarios");
 
+  const formRef = useRef<HTMLFormElement>(null);
+  const draftId = isEditing ? `prontuario-edit-${defaults?.id}` : "prontuario-novo";
+  const { restoreDraft, hasDraft, clearDraft } = useFormDraft(draftId, formRef);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing && hasDraft()) {
+      setShowDraftBanner(true);
+    }
+  }, [isEditing, hasDraft]);
+
+  function handleRestore() {
+    restoreDraft();
+    setShowDraftBanner(false);
+  }
+
+  function handleDiscard() {
+    clearDraft();
+    setShowDraftBanner(false);
+  }
+
   return (
-    <form action={formAction} className="space-y-6" aria-busy={isPending}>
+    <form ref={formRef} action={formAction} className="space-y-6" aria-busy={isPending}>
+      {showDraftBanner && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <span>Existe um rascunho salvo. Deseja restaurá-lo?</span>
+          <div className="flex gap-2">
+            <button type="button" onClick={handleRestore} className="font-semibold text-amber-700 hover:text-amber-900">
+              Restaurar
+            </button>
+            <button type="button" onClick={handleDiscard} className="text-amber-600 hover:text-amber-800">
+              Descartar
+            </button>
+          </div>
+        </div>
+      )}
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
       <FormError message={state.error} />

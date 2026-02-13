@@ -26,7 +26,7 @@ import NovoPacientePage from "./page";
 describe("NovoPacientePage", () => {
   it("renderiza o título Novo paciente", () => {
     render(<NovoPacientePage />);
-    expect(screen.getByText("Novo paciente")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Novo paciente" })).toBeInTheDocument();
   });
 
   it("renderiza o breadcrumb para pacientes", () => {

@@ -93,7 +93,7 @@ describe("TransacaoDetalhesPage", () => {
 
   it("renderiza a descrição da transação", async () => {
     await renderPage();
-    expect(screen.getByText("Consulta particular")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Consulta particular" })).toBeInTheDocument();
   });
 
   it("exibe badge de tipo receita", async () => {

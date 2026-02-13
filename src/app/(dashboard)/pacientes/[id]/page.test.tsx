@@ -152,7 +152,7 @@ describe("PacienteDetalhesPage", () => {
 
   it("renderiza o nome do paciente", async () => {
     await renderPage();
-    expect(screen.getByText("Maria Silva Santos")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Maria Silva Santos" })).toBeInTheDocument();
   });
 
   it("renderiza as iniciais do paciente", async () => {

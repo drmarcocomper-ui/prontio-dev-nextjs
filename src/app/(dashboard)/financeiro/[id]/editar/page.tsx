@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { TransacaoForm } from "../../novo/transacao-form";
 import { maskCurrency, type TransacaoFull } from "../../constants";
 
@@ -47,15 +47,11 @@ export default async function EditarTransacaoPage({
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <Link
-          href={`/financeiro/${t.id}`}
-          className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
-        >
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-          </svg>
-          Voltar para transação
-        </Link>
+        <Breadcrumb items={[
+          { label: "Financeiro", href: "/financeiro" },
+          { label: t.descricao, href: `/financeiro/${t.id}` },
+          { label: "Editar" },
+        ]} />
         <h1 className="mt-2 text-2xl font-bold text-gray-900">
           Editar transação
         </h1>

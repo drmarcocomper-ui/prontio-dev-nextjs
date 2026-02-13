@@ -82,6 +82,34 @@ function validarCamposAgendamento(formData: FormData) {
   return { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors };
 }
 
+function addDaysToDate(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+function getRecurrenceDates(
+  baseDate: string,
+  recorrencia: string,
+  vezes: number
+): string[] {
+  const dates: string[] = [baseDate];
+  const intervalDays =
+    recorrencia === "semanal" ? 7 : recorrencia === "quinzenal" ? 14 : 0;
+
+  for (let i = 1; i < vezes; i++) {
+    if (recorrencia === "mensal") {
+      const base = new Date(baseDate + "T00:00:00");
+      const next = new Date(base.getFullYear(), base.getMonth() + i, base.getDate());
+      dates.push(next.toISOString().split("T")[0]);
+    } else if (intervalDays > 0) {
+      dates.push(addDaysToDate(baseDate, intervalDays * i));
+    }
+  }
+
+  return dates;
+}
+
 export async function criarAgendamento(
   _prev: AgendamentoFormState,
   formData: FormData
@@ -93,8 +121,45 @@ export async function criarAgendamento(
     return { fieldErrors };
   }
 
+  const recorrencia = (formData.get("recorrencia") as string) || "";
+  const recorrenciaVezes = Math.min(52, Math.max(2, Number(formData.get("recorrencia_vezes")) || 4));
+
   const supabase = await createClient();
 
+  if (recorrencia && ["semanal", "quinzenal", "mensal"].includes(recorrencia)) {
+    // Recurring appointment
+    const dates = getRecurrenceDates(data, recorrencia, recorrenciaVezes);
+
+    // Check conflicts for all dates
+    for (const d of dates) {
+      const conflito = await verificarConflito(supabase, d, hora_inicio, hora_fim);
+      if (conflito) {
+        const dateFmt = new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+        return { fieldErrors: { hora_inicio: `${dateFmt}: ${conflito}` } };
+      }
+    }
+
+    const rows = dates.map((d) => ({
+      paciente_id,
+      data: d,
+      hora_inicio,
+      hora_fim,
+      tipo,
+      status: "agendado" as const,
+      observacoes,
+    }));
+
+    const { error } = await supabase.from("agendamentos").insert(rows);
+    if (error) {
+      return { error: tratarErroSupabase(error, "criar", "agendamentos") };
+    }
+
+    revalidatePath("/agenda");
+    revalidatePath("/");
+    redirect(`/agenda?data=${data}&success=${dates.length}+agendamentos+criados`);
+  }
+
+  // Single appointment
   const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim);
   if (conflito) {
     return { fieldErrors: { hora_inicio: conflito } };

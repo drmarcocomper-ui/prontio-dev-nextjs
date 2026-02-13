@@ -63,6 +63,7 @@ export function HorariosForm({
               <input
                 name={`config_horario_${dia.key}_inicio`}
                 type="time"
+                step="300"
                 disabled={isPending}
                 defaultValue={defaults[`horario_${dia.key}_inicio`] ?? "08:00"}
                 className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
@@ -71,6 +72,7 @@ export function HorariosForm({
               <input
                 name={`config_horario_${dia.key}_fim`}
                 type="time"
+                step="300"
                 disabled={isPending}
                 defaultValue={defaults[`horario_${dia.key}_fim`] ?? "18:00"}
                 className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
@@ -87,6 +89,7 @@ export function HorariosForm({
           <input
             name="config_intervalo_inicio"
             type="time"
+            step="300"
             disabled={isPending}
             defaultValue={defaults.intervalo_inicio ?? "12:00"}
             className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
@@ -95,6 +98,7 @@ export function HorariosForm({
           <input
             name="config_intervalo_fim"
             type="time"
+            step="300"
             disabled={isPending}
             defaultValue={defaults.intervalo_fim ?? "13:00"}
             className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"

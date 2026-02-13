@@ -3,6 +3,17 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
+function getMonthValue(offset: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + offset);
+  return d.toISOString().slice(0, 7);
+}
+
+const SHORTCUTS = [
+  { label: "Este mês", value: getMonthValue(0) },
+  { label: "Mês anterior", value: getMonthValue(-1) },
+];
+
 export function Filters({
   currentMonth,
   currentType,
@@ -29,6 +40,23 @@ export function Filters({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
+      <div className="flex gap-1.5">
+        {SHORTCUTS.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            onClick={() => updateParam("mes", s.value)}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+              currentMonth === s.value
+                ? "bg-primary-50 text-primary-600"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       <input
         type="month"
         value={currentMonth}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { PacienteForm } from "./paciente-form";
 
 export const metadata: Metadata = { title: "Novo Paciente" };
@@ -9,15 +9,10 @@ export default function NovoPacientePage() {
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <Link
-          href="/pacientes"
-          className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
-        >
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-          </svg>
-          Pacientes
-        </Link>
+        <Breadcrumb items={[
+          { label: "Pacientes", href: "/pacientes" },
+          { label: "Novo paciente" },
+        ]} />
         <h1 className="mt-2 text-2xl font-bold text-gray-900">
           Novo paciente
         </h1>

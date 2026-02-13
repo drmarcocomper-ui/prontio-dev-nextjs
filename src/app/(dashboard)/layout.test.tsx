@@ -9,6 +9,10 @@ vi.mock("@/components/toast-handler", () => ({
   ToastHandler: () => null,
 }));
 
+vi.mock("@/components/keyboard-shortcuts", () => ({
+  KeyboardShortcuts: () => null,
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue({
     from: () => ({

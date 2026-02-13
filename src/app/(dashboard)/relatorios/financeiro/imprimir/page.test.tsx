@@ -112,10 +112,10 @@ describe("ImprimirRelatorioPage", () => {
     expect(screen.getByTestId("print-button")).toBeInTheDocument();
   });
 
-  it("renderiza link Voltar para relatório", async () => {
+  it("renderiza breadcrumb com link para relatório financeiro", async () => {
     await renderPage({ mes: "2024-06" });
-    const link = screen.getByText("Voltar para relatório");
-    expect(link.closest("a")).toHaveAttribute("href", "/relatorios/financeiro?mes=2024-06");
+    const link = screen.getByText("Financeiro").closest("a");
+    expect(link).toHaveAttribute("href", "/relatorios/financeiro?mes=2024-06");
   });
 
   it("renderiza KPIs com dados", async () => {

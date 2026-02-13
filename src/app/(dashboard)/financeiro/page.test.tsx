@@ -136,8 +136,8 @@ describe("FinanceiroPage", () => {
   it("renderiza tabela com transações", async () => {
     mockData.data = transacoesMock;
     await renderPage();
-    expect(screen.getByText("Consulta particular")).toBeInTheDocument();
-    expect(screen.getByText("Material de escritório")).toBeInTheDocument();
+    expect(screen.getAllByText("Consulta particular").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Material de escritório").length).toBeGreaterThanOrEqual(1);
   });
 
   it("exibe nome do paciente quando disponível", async () => {
@@ -149,17 +149,17 @@ describe("FinanceiroPage", () => {
   it("exibe categoria e forma de pagamento", async () => {
     mockData.data = transacoesMock;
     await renderPage();
-    expect(screen.getByText("Consulta")).toBeInTheDocument();
-    expect(screen.getByText("PIX")).toBeInTheDocument();
-    expect(screen.getByText("Material")).toBeInTheDocument();
-    expect(screen.getByText("Cartão de crédito")).toBeInTheDocument();
+    expect(screen.getAllByText("Consulta").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("PIX").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Material").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Cartão de crédito").length).toBeGreaterThanOrEqual(1);
   });
 
   it("exibe status das transações", async () => {
     mockData.data = transacoesMock;
     await renderPage();
-    expect(screen.getByText("Pago")).toBeInTheDocument();
-    expect(screen.getByText("Pendente")).toBeInTheDocument();
+    expect(screen.getAllByText("Pago").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Pendente").length).toBeGreaterThanOrEqual(1);
   });
 
   it("calcula e exibe totais corretamente", async () => {
@@ -180,7 +180,7 @@ describe("FinanceiroPage", () => {
   it("aceita filtro por tipo via searchParams", async () => {
     mockData.data = transacoesMock;
     await renderPage({ tipo: "receita" });
-    expect(screen.getByText("Consulta particular")).toBeInTheDocument();
+    expect(screen.getAllByText("Consulta particular").length).toBeGreaterThanOrEqual(1);
   });
 
   it("exibe traço quando categoria é null", async () => {
@@ -199,14 +199,14 @@ describe("FinanceiroPage", () => {
   it("exibe valor raw quando categoria não está em CATEGORIA_LABELS", async () => {
     mockData.data = [{ ...transacoesMock[0], categoria: "cat_desconhecida", forma_pagamento: "pagamento_desconhecido" }];
     await renderPage();
-    expect(screen.getByText("cat_desconhecida")).toBeInTheDocument();
-    expect(screen.getByText("pagamento_desconhecido")).toBeInTheDocument();
+    expect(screen.getAllByText("cat_desconhecida").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("pagamento_desconhecido").length).toBeGreaterThanOrEqual(1);
   });
 
   it("exibe status Cancelado para transação cancelada", async () => {
     mockData.data = [{ ...transacoesMock[0], status: "cancelado" }];
     await renderPage();
-    expect(screen.getByText("Cancelado")).toBeInTheDocument();
+    expect(screen.getAllByText("Cancelado").length).toBeGreaterThanOrEqual(1);
   });
 
   it("lida com transacoes null do Supabase", async () => {
@@ -218,6 +218,6 @@ describe("FinanceiroPage", () => {
   it("usa estilo padrão quando status não está em STATUS_STYLES", async () => {
     mockData.data = [{ ...transacoesMock[0], status: "desconhecido" }];
     await renderPage();
-    expect(screen.getByText("desconhecido")).toBeInTheDocument();
+    expect(screen.getAllByText("desconhecido").length).toBeGreaterThanOrEqual(1);
   });
 });

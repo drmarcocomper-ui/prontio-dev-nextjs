@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarReceita, atualizarReceita, type ReceitaFormState } from "../actions";
@@ -11,6 +11,31 @@ import {
   OBSERVACOES_MAX_LENGTH,
   TIPO_LABELS,
 } from "../types";
+
+interface Template {
+  id: string;
+  nome: string;
+  medicamentos: string;
+}
+
+const TEMPLATES_KEY = "prontio_receita_templates";
+
+function loadTemplates(): Template[] {
+  try {
+    const stored = localStorage.getItem(TEMPLATES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTemplates(templates: Template[]) {
+  try {
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+  } catch {
+    // ignore
+  }
+}
 
 export function ReceitaForm({
   defaults,
@@ -30,6 +55,43 @@ export function ReceitaForm({
   );
 
   const cancel = cancelHref ?? (isEditing ? `/receitas/${defaults?.id}` : "/receitas");
+  const medRef = useRef<HTMLTextAreaElement>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+
+  useEffect(() => {
+    setTemplates(loadTemplates());
+  }, []);
+
+  const applyTemplate = useCallback((t: Template) => {
+    if (medRef.current) {
+      medRef.current.value = t.medicamentos;
+      medRef.current.focus();
+    }
+  }, []);
+
+  function handleSaveTemplate() {
+    const med = medRef.current?.value?.trim();
+    if (!med || !templateName.trim()) return;
+
+    const newTemplate: Template = {
+      id: Date.now().toString(),
+      nome: templateName.trim(),
+      medicamentos: med,
+    };
+    const updated = [...templates, newTemplate];
+    saveTemplates(updated);
+    setTemplates(updated);
+    setShowSaveTemplate(false);
+    setTemplateName("");
+  }
+
+  function handleDeleteTemplate(id: string) {
+    const updated = templates.filter((t) => t.id !== id);
+    saveTemplates(updated);
+    setTemplates(updated);
+  }
 
   return (
     <form action={formAction} className="space-y-6" aria-busy={isPending}>
@@ -88,10 +150,79 @@ export function ReceitaForm({
 
       {/* Medicamentos */}
       <div>
-        <label htmlFor="medicamentos" className="block text-sm font-medium text-gray-700">
-          Medicamentos <span className="text-red-500">*</span>
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="medicamentos" className="block text-sm font-medium text-gray-700">
+            Medicamentos <span className="text-red-500">*</span>
+          </label>
+          <div className="flex items-center gap-2">
+            {templates.length > 0 && (
+              <select
+                onChange={(e) => {
+                  const t = templates.find((t) => t.id === e.target.value);
+                  if (t) applyTemplate(t);
+                  e.target.value = "";
+                }}
+                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 shadow-sm"
+                aria-label="Usar template"
+                defaultValue=""
+              >
+                <option value="" disabled>Usar template...</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nome}</option>
+                ))}
+              </select>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowSaveTemplate(!showSaveTemplate)}
+              className="text-xs font-medium text-primary-600 hover:text-primary-700"
+            >
+              {showSaveTemplate ? "Cancelar" : "Salvar como template"}
+            </button>
+          </div>
+        </div>
+
+        {showSaveTemplate && (
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="Nome do template..."
+              className="flex-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            />
+            <button
+              type="button"
+              onClick={handleSaveTemplate}
+              className="rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
+            >
+              Salvar
+            </button>
+          </div>
+        )}
+
+        {templates.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {templates.map((t) => (
+              <span key={t.id} className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600">
+                <button type="button" onClick={() => applyTemplate(t)} className="hover:text-primary-600">
+                  {t.nome}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTemplate(t.id)}
+                  className="text-gray-400 hover:text-red-500"
+                  aria-label={`Remover template ${t.nome}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         <textarea
+          ref={medRef}
           id="medicamentos"
           name="medicamentos"
           rows={8}
@@ -100,7 +231,7 @@ export function ReceitaForm({
           maxLength={MEDICAMENTOS_MAX_LENGTH}
           placeholder="Liste os medicamentos, dosagens e posologias..."
           defaultValue={defaults?.medicamentos ?? ""}
-          className={INPUT_CLASS}
+          className={`${INPUT_CLASS} mt-1`}
         />
         <FieldError message={state.fieldErrors?.medicamentos} />
       </div>

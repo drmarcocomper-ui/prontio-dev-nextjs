@@ -36,7 +36,7 @@ async function renderPage(searchParams: { paciente_id?: string; paciente_nome?: 
 describe("NovoProntuarioPage", () => {
   it("renderiza o título Nova evolução", async () => {
     await renderPage();
-    expect(screen.getByText("Nova evolução")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Nova evolução" })).toBeInTheDocument();
   });
 
   it("renderiza o breadcrumb para prontuários", async () => {

@@ -94,7 +94,7 @@ describe("EditarProntuarioPage", () => {
 
   it("renderiza o breadcrumb para o prontuário", async () => {
     await renderPage();
-    const link = screen.getByText("Voltar para prontuário").closest("a");
+    const link = screen.getByText("Maria Silva").closest("a");
     expect(link).toHaveAttribute("href", "/prontuarios/pr-123");
   });
 

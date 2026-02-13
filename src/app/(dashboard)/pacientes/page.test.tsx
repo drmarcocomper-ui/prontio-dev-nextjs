@@ -127,8 +127,8 @@ describe("PacientesPage", () => {
   it("renderiza tabela com pacientes", async () => {
     mockData.data = pacientesMock;
     await renderPage();
-    expect(screen.getByText("Maria Silva")).toBeInTheDocument();
-    expect(screen.getByText("João Santos")).toBeInTheDocument();
+    expect(screen.getAllByText("Maria Silva").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("João Santos").length).toBeGreaterThanOrEqual(1);
   });
 
   it("exibe contagem de pacientes", async () => {
@@ -148,13 +148,13 @@ describe("PacientesPage", () => {
   it("formata CPF corretamente", async () => {
     mockData.data = pacientesMock;
     await renderPage();
-    expect(screen.getByText("123.456.789-01")).toBeInTheDocument();
+    expect(screen.getAllByText("123.456.789-01").length).toBeGreaterThanOrEqual(1);
   });
 
   it("formata telefone corretamente", async () => {
     mockData.data = pacientesMock;
     await renderPage();
-    expect(screen.getByText("(11) 99999-8888")).toBeInTheDocument();
+    expect(screen.getAllByText("(11) 99999-8888").length).toBeGreaterThanOrEqual(1);
   });
 
   it("exibe traço quando dados são nulos", async () => {
@@ -167,8 +167,8 @@ describe("PacientesPage", () => {
   it("exibe iniciais do paciente", async () => {
     mockData.data = pacientesMock;
     await renderPage();
-    expect(screen.getByText("MS")).toBeInTheDocument();
-    expect(screen.getByText("JS")).toBeInTheDocument();
+    expect(screen.getAllByText("MS").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("JS").length).toBeGreaterThanOrEqual(1);
   });
 
   it("exibe email do paciente quando disponível", async () => {
@@ -180,20 +180,21 @@ describe("PacientesPage", () => {
   it("link do paciente aponta para a página de detalhes", async () => {
     mockData.data = [pacientesMock[0]];
     await renderPage();
-    const link = screen.getByText("Maria Silva").closest("a");
-    expect(link).toHaveAttribute("href", "/pacientes/1");
+    const elements = screen.getAllByText("Maria Silva");
+    const link = elements.find((el) => el.closest("a")?.getAttribute("href") === "/pacientes/1");
+    expect(link).toBeTruthy();
   });
 
   it("formata telefone fixo com 10 dígitos", async () => {
     mockData.data = [{ ...pacientesMock[0], telefone: "1133334444" }];
     await renderPage();
-    expect(screen.getByText("(11) 3333-4444")).toBeInTheDocument();
+    expect(screen.getAllByText("(11) 3333-4444").length).toBeGreaterThanOrEqual(1);
   });
 
   it("exibe telefone sem formatação quando formato desconhecido", async () => {
     mockData.data = [{ ...pacientesMock[0], telefone: "123" }];
     await renderPage();
-    expect(screen.getByText("123")).toBeInTheDocument();
+    expect(screen.getAllByText("123").length).toBeGreaterThanOrEqual(1);
   });
 
   it("lida com pacientes null do Supabase", async () => {

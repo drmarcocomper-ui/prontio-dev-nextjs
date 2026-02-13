@@ -71,6 +71,7 @@ export function AgendamentoForm({
             id="hora_inicio"
             name="hora_inicio"
             type="time"
+            step="300"
             required
             disabled={isPending}
             defaultValue={defaults?.hora_inicio ?? ""}
@@ -87,6 +88,7 @@ export function AgendamentoForm({
             id="hora_fim"
             name="hora_fim"
             type="time"
+            step="300"
             required
             disabled={isPending}
             defaultValue={defaults?.hora_fim ?? ""}
@@ -110,6 +112,38 @@ export function AgendamentoForm({
           ))}
         </select>
       </div>
+
+      {/* Recorrência (only for new appointments) */}
+      {!isEditing && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="recorrencia" className="block text-sm font-medium text-gray-700">
+              Repetir
+            </label>
+            <select id="recorrencia" name="recorrencia" defaultValue="" disabled={isPending} className={INPUT_CLASS}>
+              <option value="">Não repetir</option>
+              <option value="semanal">Semanalmente</option>
+              <option value="quinzenal">Quinzenalmente</option>
+              <option value="mensal">Mensalmente</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="recorrencia_vezes" className="block text-sm font-medium text-gray-700">
+              Quantidade de repetições
+            </label>
+            <input
+              id="recorrencia_vezes"
+              name="recorrencia_vezes"
+              type="number"
+              min="2"
+              max="52"
+              defaultValue="4"
+              disabled={isPending}
+              className={INPUT_CLASS}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Observações */}
       <div>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteButton } from "@/components/delete-button";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { excluirPaciente } from "../actions";
 import { Tabs } from "./tabs";
 import {
@@ -26,11 +27,23 @@ export async function generateMetadata({
   return { title: data?.nome ?? "Paciente" };
 }
 
-function InfoItem({ label, value }: { label: string; value: string | null | undefined }) {
+function InfoItem({ label, value, href }: { label: string; value: string | null | undefined; href?: string }) {
   return (
     <div>
       <dt className="text-xs font-medium text-gray-500">{label}</dt>
-      <dd className="mt-0.5 text-sm text-gray-900">{value || "—"}</dd>
+      <dd className="mt-0.5 text-sm text-gray-900">
+        {value ? (
+          href ? (
+            <a href={href} className="text-primary-600 transition-colors hover:text-primary-700 hover:underline">
+              {value}
+            </a>
+          ) : (
+            value
+          )
+        ) : (
+          "—"
+        )}
+      </dd>
     </div>
   );
 }
@@ -70,6 +83,25 @@ export default async function PacienteDetalhesPage({
     .eq("paciente_id", id)
     .order("data", { ascending: false });
 
+  // Timeline data (only fetch when needed)
+  const { data: agendamentos } = currentTab === "historico"
+    ? await supabase
+        .from("agendamentos")
+        .select("id, data, hora_inicio, hora_fim, tipo, status")
+        .eq("paciente_id", id)
+        .order("data", { ascending: false })
+        .limit(50)
+    : { data: null };
+
+  const { data: transacoes } = currentTab === "historico"
+    ? await supabase
+        .from("transacoes")
+        .select("id, data, descricao, tipo, valor, status")
+        .eq("paciente_id", id)
+        .order("data", { ascending: false })
+        .limit(50)
+    : { data: null };
+
   const enderecoCompleto = [
     paciente.endereco,
     paciente.numero ? `nº ${paciente.numero}` : null,
@@ -84,16 +116,10 @@ export default async function PacienteDetalhesPage({
 
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
-      {/* Breadcrumb */}
-      <Link
-        href="/pacientes"
-        className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
-      >
-        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-        </svg>
-        Pacientes
-      </Link>
+      <Breadcrumb items={[
+        { label: "Pacientes", href: "/pacientes" },
+        { label: paciente.nome },
+      ]} />
 
       {/* Header Card */}
       <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6">
@@ -173,8 +199,8 @@ export default async function PacienteDetalhesPage({
             Contato
           </h2>
           <dl className="grid grid-cols-1 gap-4">
-            <InfoItem label="Telefone" value={paciente.telefone ? formatPhone(paciente.telefone) : null} />
-            <InfoItem label="E-mail" value={paciente.email} />
+            <InfoItem label="Telefone" value={paciente.telefone ? formatPhone(paciente.telefone) : null} href={paciente.telefone ? `tel:${paciente.telefone.replace(/\D/g, "")}` : undefined} />
+            <InfoItem label="E-mail" value={paciente.email} href={paciente.email ? `mailto:${paciente.email}` : undefined} />
           </dl>
         </div>
 
@@ -353,6 +379,122 @@ export default async function PacienteDetalhesPage({
       </div>
       </>
       )}
+
+      {currentTab === "historico" && (() => {
+        // Merge all events into timeline
+        type TimelineEvent = {
+          id: string;
+          date: string;
+          type: "prontuario" | "agendamento" | "receita" | "transacao";
+          title: string;
+          subtitle?: string;
+          href: string;
+          color: string;
+        };
+
+        const events: TimelineEvent[] = [];
+
+        for (const p of prontuarios ?? []) {
+          events.push({
+            id: `p-${p.id}`,
+            date: p.data,
+            type: "prontuario",
+            title: p.queixa_principal || "Evolução clínica",
+            subtitle: [p.tipo ? (TIPO_LABELS[p.tipo] ?? p.tipo) : null, p.cid ? `CID: ${p.cid}` : null].filter(Boolean).join(" · "),
+            href: `/prontuarios/${p.id}`,
+            color: "bg-violet-500",
+          });
+        }
+
+        for (const a of agendamentos ?? []) {
+          const ag = a as { id: string; data: string; hora_inicio: string; hora_fim: string; tipo: string | null; status: string };
+          events.push({
+            id: `a-${ag.id}`,
+            date: ag.data,
+            type: "agendamento",
+            title: `${ag.hora_inicio.slice(0, 5)} – ${ag.hora_fim.slice(0, 5)}`,
+            subtitle: [ag.tipo ? (TIPO_LABELS[ag.tipo] ?? ag.tipo) : null, ag.status].filter(Boolean).join(" · "),
+            href: `/agenda/${ag.id}`,
+            color: "bg-blue-500",
+          });
+        }
+
+        for (const r of receitas ?? []) {
+          events.push({
+            id: `r-${r.id}`,
+            date: r.data,
+            type: "receita",
+            title: "Receita médica",
+            subtitle: r.medicamentos?.slice(0, 80),
+            href: `/receitas/${r.id}`,
+            color: "bg-emerald-500",
+          });
+        }
+
+        for (const t of transacoes ?? []) {
+          const tr = t as { id: string; data: string; descricao: string; tipo: string; valor: number; status: string };
+          events.push({
+            id: `t-${tr.id}`,
+            date: tr.data,
+            type: "transacao",
+            title: tr.descricao,
+            subtitle: `R$ ${tr.valor.toFixed(2).replace(".", ",")}`,
+            href: `/financeiro/${tr.id}`,
+            color: tr.tipo === "receita" ? "bg-emerald-500" : "bg-red-500",
+          });
+        }
+
+        events.sort((a, b) => b.date.localeCompare(a.date));
+
+        const TYPE_LABELS: Record<string, string> = {
+          prontuario: "Prontuário",
+          agendamento: "Agendamento",
+          receita: "Receita",
+          transacao: "Financeiro",
+        };
+
+        return (
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
+            <h2 className="mb-4 text-sm font-semibold text-gray-900">Linha do tempo</h2>
+            {events.length > 0 ? (
+              <div className="relative space-y-0">
+                <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-gray-200" />
+                {events.map((event) => (
+                  <Link
+                    key={event.id}
+                    href={event.href}
+                    className="group relative flex gap-4 py-3 pl-6 transition-colors hover:bg-gray-50 rounded-lg"
+                  >
+                    <div className={`absolute left-0 top-[18px] h-3.5 w-3.5 rounded-full border-2 border-white ${event.color}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-400">
+                          {formatDate(event.date)}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                          {TYPE_LABELS[event.type]}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-sm font-medium text-gray-900 group-hover:text-primary-600">
+                        {event.title}
+                      </p>
+                      {event.subtitle && (
+                        <p className="mt-0.5 truncate text-xs text-gray-500">
+                          {event.subtitle}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm text-gray-400">
+                Nenhum registro encontrado.
+              </p>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

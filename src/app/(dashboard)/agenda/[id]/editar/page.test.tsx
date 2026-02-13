@@ -85,7 +85,7 @@ describe("EditarAgendamentoPage", () => {
 
   it("renderiza o breadcrumb para o agendamento", async () => {
     await renderPage();
-    const link = screen.getByText("Voltar para agendamento").closest("a");
+    const link = screen.getByText("Maria Silva").closest("a");
     expect(link).toHaveAttribute("href", "/agenda/ag-123");
   });
 

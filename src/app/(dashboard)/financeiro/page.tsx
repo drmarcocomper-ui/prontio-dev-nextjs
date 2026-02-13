@@ -168,9 +168,59 @@ export default async function FinanceiroPage({
       {/* Filters */}
       <Filters currentMonth={currentMonth} currentType={tipo ?? ""} />
 
-      {/* Transactions Table */}
+      {/* Transactions */}
       {items.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+        <>
+        {/* Mobile Cards */}
+        <div className="space-y-3 lg:hidden">
+          {items.map((t) => (
+            <Link
+              key={t.id}
+              href={`/financeiro/${t.id}`}
+              className="block rounded-xl border border-gray-200 bg-white shadow-sm p-4 transition-all hover:border-gray-300 hover:shadow-md"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900">{t.descricao}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
+                    <span>{formatDate(t.data)}</span>
+                    {t.categoria && (
+                      <>
+                        <span>&middot;</span>
+                        <span>{CATEGORIA_LABELS[t.categoria] ?? t.categoria}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <span
+                  className={`text-sm font-semibold ${
+                    t.tipo === "receita" ? "text-emerald-600" : "text-red-600"
+                  }`}
+                >
+                  {t.tipo === "despesa" && "- "}
+                  {formatCurrency(t.valor)}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    STATUS_STYLES[t.status] ?? "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {STATUS_LABELS[t.status] ?? t.status}
+                </span>
+                {t.forma_pagamento && (
+                  <span className="text-xs text-gray-400">
+                    {PAGAMENTO_LABELS[t.forma_pagamento] ?? t.forma_pagamento}
+                  </span>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -265,6 +315,7 @@ export default async function FinanceiroPage({
             </tbody>
           </table>
         </div>
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm px-6 py-16 text-center">
           <EmptyStateIllustration type="financeiro" />

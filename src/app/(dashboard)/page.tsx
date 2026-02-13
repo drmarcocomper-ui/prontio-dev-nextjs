@@ -313,6 +313,12 @@ export default async function DashboardPage() {
               <p className="mt-3 text-sm text-gray-500">
                 Nenhuma consulta agendada para hoje.
               </p>
+              <Link
+                href={`/agenda/novo?data=${hoje}`}
+                className="mt-3 text-sm font-medium text-primary-600 transition-colors hover:text-primary-700"
+              >
+                Agendar consulta →
+              </Link>
             </div>
           )}
         </div>
@@ -354,6 +360,12 @@ export default async function DashboardPage() {
               <p className="mt-3 text-sm text-gray-500">
                 Nenhuma atividade registrada ainda.
               </p>
+              <Link
+                href="/prontuarios/novo"
+                className="mt-3 text-sm font-medium text-primary-600 transition-colors hover:text-primary-700"
+              >
+                Registrar evolução →
+              </Link>
             </div>
           )}
         </div>

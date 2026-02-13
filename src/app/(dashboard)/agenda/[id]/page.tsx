@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Breadcrumb } from "@/components/breadcrumb";
 import { StatusBadge } from "../status-badge";
 import { DeleteButton } from "@/components/delete-button";
 import { excluirAgendamento } from "../actions";
@@ -49,15 +50,10 @@ export default async function AgendamentoDetalhesPage({
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
-      <Link
-        href={`/agenda?data=${ag.data}`}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-        </svg>
-        Agenda
-      </Link>
+      <Breadcrumb items={[
+        { label: "Agenda", href: `/agenda?data=${ag.data}` },
+        { label: ag.pacientes.nome },
+      ]} />
 
       {/* Header Card */}
       <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6">

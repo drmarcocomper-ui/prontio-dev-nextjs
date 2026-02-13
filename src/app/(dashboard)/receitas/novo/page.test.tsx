@@ -36,7 +36,7 @@ async function renderPage(searchParams: { paciente_id?: string; paciente_nome?: 
 describe("NovaReceitaPage", () => {
   it("renderiza o título Nova receita", async () => {
     await renderPage();
-    expect(screen.getByText("Nova receita")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Nova receita" })).toBeInTheDocument();
   });
 
   it("renderiza o breadcrumb para receitas", async () => {

@@ -101,9 +101,39 @@ export default async function PacientesPage({
         <PacienteFilters currentSexo={sexo ?? ""} />
       </div>
 
-      {/* Table */}
+      {/* Mobile Cards */}
       {items.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+        <>
+        <div className="space-y-3 lg:hidden">
+          {items.map((p) => (
+            <Link
+              key={p.id}
+              href={`/pacientes/${p.id}`}
+              className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white shadow-sm p-4 transition-all hover:border-gray-300 hover:shadow-md"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
+                {getInitials(p.nome)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900">{p.nome}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                  {p.telefone && (
+                    <span>{formatPhone(p.telefone)}</span>
+                  )}
+                  {p.cpf && (
+                    <span>{formatCPF(p.cpf)}</span>
+                  )}
+                </div>
+              </div>
+              <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -156,7 +186,11 @@ export default async function PacientesPage({
                     {p.cpf ? formatCPF(p.cpf) : "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {p.telefone ? formatPhone(p.telefone) : "\u2014"}
+                    {p.telefone ? (
+                      <a href={`tel:${p.telefone.replace(/\D/g, "")}`} className="transition-colors hover:text-primary-600 hover:underline">
+                        {formatPhone(p.telefone)}
+                      </a>
+                    ) : "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
                     {p.data_nascimento ? formatDate(p.data_nascimento) : "\u2014"}
@@ -177,6 +211,7 @@ export default async function PacientesPage({
             </tbody>
           </table>
         </div>
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm px-6 py-16 text-center">
           <EmptyStateIllustration type="pacientes" />
