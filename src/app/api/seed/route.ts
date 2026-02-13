@@ -2,6 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
+  // Bloqueia em produção
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Rota desabilitada em produção" },
+      { status: 403 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const force = searchParams.get("force") === "true";
   const supabase = await createClient();

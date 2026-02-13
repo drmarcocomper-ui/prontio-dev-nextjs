@@ -4,6 +4,7 @@ const mockSignInWithPassword = vi.fn();
 const mockSignOut = vi.fn();
 const mockRedirect = vi.fn();
 const mockRevalidatePath = vi.fn();
+const mockRateLimit = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
@@ -26,6 +27,15 @@ vi.mock("next/cache", () => ({
   revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
 }));
 
+vi.mock("next/headers", () => ({
+  headers: () =>
+    Promise.resolve(new Map([["x-forwarded-for", "127.0.0.1"]])),
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
+
 import { login, logout } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
@@ -37,6 +47,7 @@ function makeFormData(data: Record<string, string>) {
 describe("login", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockReturnValue({ success: true, remaining: 4, resetIn: 900000 });
   });
 
   it("redireciona para / em caso de sucesso", async () => {
@@ -60,6 +71,16 @@ describe("login", () => {
     );
     expect(result).toEqual({ error: "E-mail ou senha incorretos." });
     expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia login quando rate limit é excedido", async () => {
+    mockRateLimit.mockReturnValue({ success: false, remaining: 0, resetIn: 600000 });
+    const result = await login(
+      {},
+      makeFormData({ email: "doc@test.com", password: "123456" })
+    );
+    expect(result.error).toMatch(/Muitas tentativas de login/);
+    expect(mockSignInWithPassword).not.toHaveBeenCalled();
   });
 });
 
