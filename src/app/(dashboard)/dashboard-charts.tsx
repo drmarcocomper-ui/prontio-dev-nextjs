@@ -42,7 +42,7 @@ export function FinanceiroChart({ data }: { data: FinanceiroItem[] }) {
         <p className="mt-0.5 text-xs text-gray-500">Últimos 6 meses</p>
       </div>
       <div className="p-4 sm:p-6">
-        <div className="h-64">
+        <div className="h-64 w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} barCategoryGap="20%">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -107,7 +107,7 @@ export function AgendamentosSemanaChart({
         <p className="mt-0.5 text-xs text-gray-500">Últimos 7 dias</p>
       </div>
       <div className="p-4 sm:p-6">
-        <div className="h-64">
+        <div className="h-64 w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} barCategoryGap="20%">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

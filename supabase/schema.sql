@@ -200,37 +200,38 @@ alter table transacoes enable row level security;
 alter table receitas enable row level security;
 alter table configuracoes enable row level security;
 
+-- Funções SECURITY DEFINER para evitar recursão no RLS de usuarios_clinicas
+create or replace function public.get_my_clinica_ids()
+returns setof uuid language sql security definer set search_path = '' stable
+as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid(); $$;
+
+create or replace function public.get_my_medico_clinica_ids()
+returns setof uuid language sql security definer set search_path = '' stable
+as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid() and papel = 'medico'; $$;
+
 -- clinicas: usuário vê clínicas que pertence
 create policy "Acesso clinicas" on clinicas for select to authenticated
-  using (id in (select clinica_id from usuarios_clinicas where user_id = auth.uid()));
+  using (id in (select public.get_my_clinica_ids()));
 
 create policy "Medico gerencia clinicas" on clinicas for all to authenticated
-  using (id in (select clinica_id from usuarios_clinicas where user_id = auth.uid() and papel = 'medico'))
-  with check (id in (select clinica_id from usuarios_clinicas where user_id = auth.uid() and papel = 'medico'));
+  using (id in (select public.get_my_medico_clinica_ids()))
+  with check (id in (select public.get_my_medico_clinica_ids()));
 
 -- usuarios_clinicas
 create policy "Acesso vinculos leitura" on usuarios_clinicas for select to authenticated
-  using (
-    user_id = auth.uid()
-    or clinica_id in (select clinica_id from usuarios_clinicas uc where uc.user_id = auth.uid() and uc.papel = 'medico')
-  );
+  using (user_id = auth.uid() or clinica_id in (select public.get_my_medico_clinica_ids()));
 
 create policy "Medico gerencia vinculos" on usuarios_clinicas for all to authenticated
-  using (
-    clinica_id in (select clinica_id from usuarios_clinicas uc where uc.user_id = auth.uid() and uc.papel = 'medico')
-  )
-  with check (
-    clinica_id in (select clinica_id from usuarios_clinicas uc where uc.user_id = auth.uid() and uc.papel = 'medico')
-  );
+  using (clinica_id in (select public.get_my_medico_clinica_ids()))
+  with check (clinica_id in (select public.get_my_medico_clinica_ids()));
 
 -- pacientes: médico e suas secretárias
 create policy "Acesso pacientes" on pacientes for all to authenticated
   using (
     medico_id = auth.uid()
     or medico_id in (
-      select uc2.user_id from usuarios_clinicas uc1
-      join usuarios_clinicas uc2 on uc1.clinica_id = uc2.clinica_id and uc2.papel = 'medico'
-      where uc1.user_id = auth.uid()
+      select uc.user_id from public.usuarios_clinicas uc
+      where uc.clinica_id in (select public.get_my_clinica_ids()) and uc.papel = 'medico'
     )
   );
 
@@ -243,16 +244,16 @@ create policy "Medico acessa receitas" on receitas for all to authenticated
 
 -- agendamentos: por clínica (médico e secretária)
 create policy "Acesso agendamentos" on agendamentos for all to authenticated
-  using (clinica_id in (select clinica_id from usuarios_clinicas where user_id = auth.uid()));
+  using (clinica_id in (select public.get_my_clinica_ids()));
 
 -- transacoes: por clínica, somente médico
 create policy "Medico acessa transacoes" on transacoes for all to authenticated
-  using (clinica_id in (select clinica_id from usuarios_clinicas where user_id = auth.uid() and papel = 'medico'));
+  using (clinica_id in (select public.get_my_medico_clinica_ids()));
 
 -- configuracoes
 create policy "Acesso configuracoes" on configuracoes for all to authenticated
   using (
     user_id = auth.uid()
-    or clinica_id in (select clinica_id from usuarios_clinicas where user_id = auth.uid())
+    or clinica_id in (select public.get_my_clinica_ids())
     or (user_id is null and clinica_id is null)
   );
