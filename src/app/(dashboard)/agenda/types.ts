@@ -17,6 +17,7 @@ export interface Agendamento {
   status: AgendaStatus;
   observacoes: string | null;
   created_at: string;
+  updated_at?: string | null;
   pacientes: AgendamentoPaciente;
 }
 

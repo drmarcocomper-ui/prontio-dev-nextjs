@@ -459,31 +459,31 @@ describe("atualizarStatusAgendamento", () => {
   it("permite transição agendado → confirmado", async () => {
     singleResult = { data: { status: "agendado" }, error: null };
     await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "confirmado" }, "00000000-0000-0000-0000-000000000007");
+    expect(mockUpdateEq).toHaveBeenCalledWith(expect.objectContaining({ status: "confirmado" }), "00000000-0000-0000-0000-000000000007");
   });
 
   it("permite transição confirmado → em_atendimento", async () => {
     singleResult = { data: { status: "confirmado" }, error: null };
     await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "em_atendimento");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "em_atendimento" }, "00000000-0000-0000-0000-000000000007");
+    expect(mockUpdateEq).toHaveBeenCalledWith(expect.objectContaining({ status: "em_atendimento" }), "00000000-0000-0000-0000-000000000007");
   });
 
   it("permite transição em_atendimento → atendido", async () => {
     singleResult = { data: { status: "em_atendimento" }, error: null };
     await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "atendido");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "atendido" }, "00000000-0000-0000-0000-000000000007");
+    expect(mockUpdateEq).toHaveBeenCalledWith(expect.objectContaining({ status: "atendido" }), "00000000-0000-0000-0000-000000000007");
   });
 
   it("permite transição cancelado → agendado (reagendar)", async () => {
     singleResult = { data: { status: "cancelado" }, error: null };
     await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "agendado");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "agendado" }, "00000000-0000-0000-0000-000000000007");
+    expect(mockUpdateEq).toHaveBeenCalledWith(expect.objectContaining({ status: "agendado" }), "00000000-0000-0000-0000-000000000007");
   });
 
   it("permite transição faltou → agendado (reagendar)", async () => {
     singleResult = { data: { status: "faltou" }, error: null };
     await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "agendado");
-    expect(mockUpdateEq).toHaveBeenCalledWith({ status: "agendado" }, "00000000-0000-0000-0000-000000000007");
+    expect(mockUpdateEq).toHaveBeenCalledWith(expect.objectContaining({ status: "agendado" }), "00000000-0000-0000-0000-000000000007");
   });
 
   it("bloqueia transição atendido → confirmado (status terminal)", async () => {

@@ -353,7 +353,7 @@ export async function atualizarStatusAgendamento(
 
   const { error } = await supabase
     .from("agendamentos")
-    .update({ status: novoStatus })
+    .update({ status: novoStatus, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("clinica_id", ctx.clinicaId);
 
@@ -412,6 +412,7 @@ export async function atualizarAgendamento(
       hora_fim,
       tipo,
       observacoes,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .eq("clinica_id", ctx.clinicaId);

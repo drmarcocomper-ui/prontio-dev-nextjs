@@ -8,6 +8,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { getClinicaAtual } from "@/lib/clinica";
 import { excluirAgendamento } from "../actions";
 import { type Agendamento, TIPO_LABELS, formatTime, formatDateBR, getInitials } from "../types";
+import { formatDateTime } from "@/lib/format";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -18,10 +19,13 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Agendamento" };
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { title: "Agendamento" };
   const { data } = await supabase
     .from("agendamentos")
     .select("pacientes(nome)")
     .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -41,7 +45,7 @@ export default async function AgendamentoDetalhesPage({
   const { data: agendamento } = await supabase
     .from("agendamentos")
     .select(
-      "id, data, hora_inicio, hora_fim, tipo, status, observacoes, created_at, pacientes(id, nome, telefone)"
+      "id, data, hora_inicio, hora_fim, tipo, status, observacoes, created_at, updated_at, pacientes(id, nome, telefone)"
     )
     .eq("id", id)
     .eq("clinica_id", ctx.clinicaId)
@@ -169,14 +173,10 @@ export default async function AgendamentoDetalhesPage({
 
       {/* Footer info */}
       <p className="text-xs text-gray-400">
-        Registro criado em{" "}
-        {new Date(ag.created_at).toLocaleString("pt-BR", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        Registro criado em {formatDateTime(ag.created_at)}
+        {ag.updated_at && ag.updated_at !== ag.created_at && (
+          <> · Atualizado em {formatDateTime(ag.updated_at)}</>
+        )}
       </p>
     </div>
   );
