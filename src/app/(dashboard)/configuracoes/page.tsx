@@ -60,14 +60,28 @@ export default async function ConfiguracoesPage({
   // Load clinics list for "clinicas" tab
   const clinicas = await getClinicasDoUsuario();
 
-  // Load vinculos for clinicas tab
+  // Load vinculos for clinicas tab (admin client para bypass de RLS e listar todos os usuários)
   const clinicaIds = clinicas.map((c) => c.id);
-  const { data: vinculos } = clinicaIds.length > 0
-    ? await supabase
-        .from("usuarios_clinicas")
-        .select("id:clinica_id, user_id, papel")
-        .in("clinica_id", clinicaIds)
-    : { data: null };
+  let vinculos: { id: string; user_id: string; papel: string; email?: string }[] | null = null;
+  if (clinicaIds.length > 0) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const adminSupabase = createAdminClient();
+    const { data: vinculosData } = await adminSupabase
+      .from("usuarios_clinicas")
+      .select("id:clinica_id, user_id, papel")
+      .in("clinica_id", clinicaIds);
+
+    // Enrich with emails from auth
+    if (vinculosData && vinculosData.length > 0) {
+      const userIds = [...new Set(vinculosData.map((v: { user_id: string }) => v.user_id))];
+      const { data: { users } } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
+      const emailMap = new Map(users.map((u) => [u.id, u.email]));
+      vinculos = vinculosData.map((v: { id: string; user_id: string; papel: string }) => ({
+        ...v,
+        email: emailMap.get(v.user_id),
+      }));
+    }
+  }
 
   // Load ativo status for each clinic
   const { data: clinicasAtivo } = clinicaIds.length > 0
@@ -112,7 +126,7 @@ export default async function ConfiguracoesPage({
         {currentTab === "clinicas" && (
           <ClinicasForm
             clinicas={clinicasList}
-            vinculos={(vinculos ?? []) as unknown as { id: string; user_id: string; papel: string }[]}
+            vinculos={vinculos ?? []}
           />
         )}
         {currentTab === "dados" && (

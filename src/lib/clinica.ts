@@ -80,13 +80,15 @@ export async function getMedicoId(): Promise<string> {
 
   if (ctx.papel === "medico" || ctx.papel === "admin") return ctx.userId;
 
-  // Secretária: buscar o médico da clínica
-  const supabase = await createClient();
-  const { data } = await supabase
+  // Secretária: buscar o médico da clínica (usa admin client para bypass de RLS,
+  // pois a secretária não tem permissão de leitura nos vínculos de outros usuários)
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminSupabase = createAdminClient();
+  const { data } = await adminSupabase
     .from("usuarios_clinicas")
     .select("user_id")
     .eq("clinica_id", ctx.clinicaId)
-    .eq("papel", "medico")
+    .in("papel", ["medico", "admin"])
     .limit(1)
     .single();
 
