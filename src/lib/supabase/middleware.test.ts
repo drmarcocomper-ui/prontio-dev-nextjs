@@ -157,6 +157,25 @@ describe("updateSession", () => {
     expect(redirectCall.pathname).toBe("/");
   });
 
+  it("redireciona secretária de /usuarios para /", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "secretaria" } };
+    await updateSession(createMockRequest("/usuarios", { prontio_clinica_id: "clinic-1" }));
+    expect(mockRedirect).toHaveBeenCalled();
+    const redirectCall = mockRedirect.mock.calls[0][0];
+    expect(redirectCall.pathname).toBe("/");
+  });
+
+  it("permite gestor acessar /usuarios", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "gestor" } };
+    await updateSession(createMockRequest("/usuarios", { prontio_clinica_id: "clinic-1" }));
+    const dashRedirects = mockRedirect.mock.calls.filter(
+      (call: unknown[]) => (call[0] as { pathname: string }).pathname === "/"
+    );
+    expect(dashRedirects.length).toBe(0);
+  });
+
   it("permite profissional_saude acessar rotas protegidas", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
     mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "profissional_saude" } };

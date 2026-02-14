@@ -57,6 +57,7 @@ const navItems = [
   { label: "Pacientes", href: "/pacientes" },
   { label: "Financeiro", href: "/financeiro" },
   { label: "Relatórios", href: "/relatorios" },
+  { label: "Usuários", href: "/usuarios" },
   { label: "Configurações", href: "/configuracoes" },
 ];
 
@@ -72,7 +73,7 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renderiza todos os 6 links de navegação quando papel é superadmin", () => {
+  it("renderiza todos os 7 links de navegação quando papel é superadmin", () => {
     render(<Sidebar {...defaultProps} papel={"superadmin" as const} />);
     for (const item of navItems) {
       expect(screen.getByText(item.label)).toBeInTheDocument();
@@ -124,7 +125,7 @@ describe("Sidebar", () => {
       }
     });
 
-    it("quando papel=profissional_saude, oculta Financeiro e Configurações", () => {
+    it("quando papel=profissional_saude, oculta Financeiro, Usuários e Configurações", () => {
       render(<Sidebar {...defaultProps} papel={"profissional_saude" as const} />);
 
       expect(screen.getByText("Início")).toBeInTheDocument();
@@ -133,10 +134,11 @@ describe("Sidebar", () => {
       expect(screen.getByText("Relatórios")).toBeInTheDocument();
 
       expect(screen.queryByText("Financeiro")).not.toBeInTheDocument();
+      expect(screen.queryByText("Usuários")).not.toBeInTheDocument();
       expect(screen.queryByText("Configurações")).not.toBeInTheDocument();
     });
 
-    it("quando papel=secretaria, oculta Financeiro, Relatórios e Configurações", () => {
+    it("quando papel=secretaria, oculta Financeiro, Relatórios, Usuários e Configurações", () => {
       render(<Sidebar {...defaultProps} papel={"secretaria" as const} />);
 
       expect(screen.getByText("Início")).toBeInTheDocument();
@@ -145,6 +147,7 @@ describe("Sidebar", () => {
 
       expect(screen.queryByText("Financeiro")).not.toBeInTheDocument();
       expect(screen.queryByText("Relatórios")).not.toBeInTheDocument();
+      expect(screen.queryByText("Usuários")).not.toBeInTheDocument();
       expect(screen.queryByText("Configurações")).not.toBeInTheDocument();
     });
   });

@@ -7,6 +7,7 @@ const RESTRICTED_ROUTES: Record<string, string[]> = {
   "/receitas": ["superadmin", "profissional_saude"],
   "/financeiro": ["superadmin", "gestor", "financeiro"],
   "/relatorios": ["superadmin", "gestor", "profissional_saude", "financeiro"],
+  "/usuarios": ["superadmin", "gestor"],
   "/configuracoes": ["superadmin", "gestor"],
 };
 

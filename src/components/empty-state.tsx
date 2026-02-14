@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+export type IllustrationType = "pacientes" | "agenda" | "prontuarios" | "receitas" | "financeiro" | "usuarios";
+
 interface EmptyStateProps {
-  icon: "pacientes" | "agenda" | "prontuarios" | "receitas" | "financeiro";
+  icon: IllustrationType;
   title: string;
   description: string;
   actionLabel?: string;
@@ -79,7 +81,19 @@ function FinanceiroIllustration() {
   );
 }
 
-export type IllustrationType = "pacientes" | "agenda" | "prontuarios" | "receitas" | "financeiro";
+function UsuariosIllustration() {
+  return (
+    <svg aria-hidden="true" className="h-24 w-24" viewBox="0 0 96 96" fill="none">
+      <circle cx="48" cy="48" r="48" className="fill-primary-50" />
+      <circle cx="36" cy="36" r="10" className="stroke-primary-300" strokeWidth="2" fill="none" />
+      <path d="M20 62c0-8.837 7.163-16 16-16s16 8.837 16 16" className="stroke-primary-300" strokeWidth="2" strokeLinecap="round" fill="none" />
+      <circle cx="60" cy="38" r="7" className="stroke-primary-200" strokeWidth="1.5" fill="none" />
+      <path d="M50 58c0-5.523 4.477-10 10-10" className="stroke-primary-200" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+      <circle cx="70" cy="56" r="10" className="fill-white stroke-primary-400" strokeWidth="2" />
+      <path d="M67 56h6M70 53v6" className="stroke-primary-500" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export function EmptyStateIllustration({ type }: { type: IllustrationType }) {
   const Component = illustrations[type];
@@ -92,6 +106,7 @@ const illustrations = {
   prontuarios: ProntuariosIllustration,
   receitas: ReceitasIllustration,
   financeiro: FinanceiroIllustration,
+  usuarios: UsuariosIllustration,
 };
 
 export function EmptyState({

@@ -26,10 +26,15 @@ vi.mock("sonner", () => ({
 
 vi.mock("./actions", () => ({
   criarClinica: vi.fn(),
-  criarUsuario: vi.fn(),
   editarClinica: vi.fn(),
   alternarStatusClinica: mockAlternarStatus,
   excluirClinica: mockExcluirClinica,
+}));
+
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...props }: { href: string; children: React.ReactNode; [key: string]: unknown }) => (
+    <a href={href} {...props}>{children}</a>
+  ),
 }));
 
 vi.mock("./constants", async () => {
@@ -109,7 +114,13 @@ describe("ClinicasForm", () => {
     render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
     expect(screen.getByText("Suas clínicas")).toBeInTheDocument();
     expect(screen.getByText("Nova clínica")).toBeInTheDocument();
-    expect(screen.getAllByText("Criar usuário").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Usuários")).toBeInTheDocument();
+  });
+
+  it("renderiza link para gerenciar usuários", () => {
+    render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
+    const link = screen.getByText("Gerenciar usuários");
+    expect(link.closest("a")).toHaveAttribute("href", "/usuarios");
   });
 
   // --- Nova clínica form ---
@@ -124,46 +135,6 @@ describe("ClinicasForm", () => {
   it("renderiza botão Criar clínica", () => {
     render(<ClinicasForm clinicas={[]} vinculos={[]} />);
     expect(screen.getByRole("button", { name: /Criar clínica/ })).toBeInTheDocument();
-  });
-
-  // --- Criar usuário form ---
-
-  it("renderiza dropdown de clínicas no form de criar usuário", () => {
-    render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
-    const select = screen.getByLabelText("Clínica");
-    expect(select).toBeInTheDocument();
-    expect(select.querySelectorAll("option")).toHaveLength(2);
-  });
-
-  it("renderiza campo de email no form de criar usuário", () => {
-    render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
-    expect(screen.getByLabelText(/E-mail/)).toBeRequired();
-  });
-
-  it("renderiza campo de senha no form de criar usuário", () => {
-    render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
-    const senhaInput = screen.getByLabelText(/Senha/);
-    expect(senhaInput).toBeRequired();
-    expect(senhaInput).toHaveAttribute("type", "password");
-    expect(senhaInput).toHaveAttribute("minlength", "6");
-    expect(senhaInput).toHaveAttribute("maxlength", "128");
-  });
-
-  it("renderiza dropdown de papel no form de criar usuário", () => {
-    render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
-    const papelSelect = screen.getByLabelText("Papel");
-    expect(papelSelect).toBeInTheDocument();
-    const options = papelSelect.querySelectorAll("option");
-    expect(options).toHaveLength(4);
-    expect(options[0]).toHaveTextContent("Secretária");
-    expect(options[1]).toHaveTextContent("Profissional de Saúde");
-    expect(options[2]).toHaveTextContent("Gestor");
-    expect(options[3]).toHaveTextContent("Financeiro");
-  });
-
-  it("renderiza botão Criar usuário", () => {
-    render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
-    expect(screen.getByRole("button", { name: /Criar usuário/ })).toBeInTheDocument();
   });
 
   // --- Action buttons ---
@@ -286,10 +257,9 @@ describe("ClinicasForm", () => {
 
   // --- Pending state ---
 
-  it("desabilita botões quando pendente", () => {
+  it("desabilita botão quando pendente", () => {
     formPending.current = true;
     render(<ClinicasForm clinicas={[]} vinculos={[]} />);
     expect(screen.getByRole("button", { name: /Criar clínica/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Criar usuário/ })).toBeDisabled();
   });
 });

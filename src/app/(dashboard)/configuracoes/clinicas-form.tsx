@@ -1,19 +1,19 @@
 "use client";
 
 import { useActionState, useState, useTransition, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { FormError } from "@/components/form-utils";
 import { DeleteButton } from "@/components/delete-button";
 import { ConfirmModal } from "@/components/confirm-modal";
 import {
   criarClinica,
-  criarUsuario,
   editarClinica,
   alternarStatusClinica,
   excluirClinica,
   type ConfigFormState,
 } from "./actions";
-import { INPUT_CLASS, NOME_CONSULTORIO_MAX, EMAIL_MAX, SENHA_MIN, SENHA_MAX } from "./constants";
+import { INPUT_CLASS, NOME_CONSULTORIO_MAX } from "./constants";
 
 const PAPEL_BADGE: Record<string, { label: string; className: string }> = {
   superadmin: { label: "Superadmin", className: "bg-purple-50 text-purple-700" },
@@ -242,18 +242,9 @@ export function ClinicasForm({
     {}
   );
 
-  const [userState, userAction, isCreatingUser] = useActionState<ConfigFormState, FormData>(
-    criarUsuario,
-    {}
-  );
-
   useEffect(() => {
     if (createState.success) toast.success("Clínica criada com sucesso.");
   }, [createState]);
-
-  useEffect(() => {
-    if (userState.success) toast.success("Usuário criado com sucesso.");
-  }, [userState]);
 
   return (
     <div className="space-y-8">
@@ -300,89 +291,21 @@ export function ClinicasForm({
         </form>
       </div>
 
-      {/* Create User */}
+      {/* Link to Usuarios */}
       <div className="border-t border-gray-200 pt-6">
-        <h3 className="text-sm font-semibold text-gray-900">Criar usuário</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Usuários</h3>
         <p className="mt-1 text-xs text-gray-500">
-          Crie uma conta e vincule à clínica com o papel desejado.
+          Gerencie os usuários vinculados às suas clínicas.
         </p>
-        <form action={userAction} className="mt-3 space-y-3" aria-busy={isCreatingUser}>
-          <FormError message={userState.error} />
-          <div>
-            <label htmlFor="usuario_clinica" className="block text-sm font-medium text-gray-700">
-              Clínica
-            </label>
-            <select
-              id="usuario_clinica"
-              name="clinica_id"
-              required
-              disabled={isCreatingUser}
-              className={INPUT_CLASS}
-            >
-              {clinicas.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="usuario_email" className="block text-sm font-medium text-gray-700">
-              E-mail <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="usuario_email"
-              name="email"
-              type="email"
-              required
-              maxLength={EMAIL_MAX}
-              disabled={isCreatingUser}
-              placeholder="email@exemplo.com"
-              className={INPUT_CLASS}
-            />
-          </div>
-          <div>
-            <label htmlFor="usuario_senha" className="block text-sm font-medium text-gray-700">
-              Senha <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="usuario_senha"
-              name="senha"
-              type="password"
-              required
-              minLength={SENHA_MIN}
-              maxLength={SENHA_MAX}
-              disabled={isCreatingUser}
-              placeholder="Mínimo 6 caracteres"
-              className={INPUT_CLASS}
-            />
-          </div>
-          <div>
-            <label htmlFor="usuario_papel" className="block text-sm font-medium text-gray-700">
-              Papel
-            </label>
-            <select
-              id="usuario_papel"
-              name="papel"
-              required
-              disabled={isCreatingUser}
-              className={INPUT_CLASS}
-            >
-              <option value="secretaria">Secretária</option>
-              <option value="profissional_saude">Profissional de Saúde</option>
-              <option value="gestor">Gestor</option>
-              <option value="financeiro">Financeiro</option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            disabled={isCreatingUser}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:opacity-50"
-          >
-            {isCreatingUser && (
-              <div aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            )}
-            Criar usuário
-          </button>
-        </form>
+        <Link
+          href="/usuarios"
+          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
+        >
+          Gerenciar usuários
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+          </svg>
+        </Link>
       </div>
     </div>
   );
