@@ -16,6 +16,7 @@ import {
   formatDate,
   type TransacaoListItem,
 } from "./constants";
+import { formatMonthYear } from "@/lib/format";
 import { redirect } from "next/navigation";
 import { getClinicaAtual } from "@/lib/clinica";
 
@@ -75,7 +76,8 @@ export default async function FinanceiroPage({
     .gte("data", startDate)
     .lte("data", endDate);
 
-  if (tipo) {
+  const VALID_TIPO = new Set(["receita", "despesa"]);
+  if (tipo && VALID_TIPO.has(tipo)) {
     listQuery = listQuery.eq("tipo", tipo);
     summaryQuery = summaryQuery.eq("tipo", tipo);
   }
@@ -119,10 +121,7 @@ export default async function FinanceiroPage({
 
   const saldo = totalReceitas - totalDespesas;
 
-  const monthLabel = new Date(year, month - 1).toLocaleDateString("pt-BR", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = formatMonthYear(month - 1, year);
 
   const sp: Record<string, string> = {};
   if (mes) sp.mes = mes;

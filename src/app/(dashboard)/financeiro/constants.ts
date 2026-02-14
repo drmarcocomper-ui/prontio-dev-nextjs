@@ -41,6 +41,7 @@ export interface TransacaoFull {
   status: TransacaoStatus;
   observacoes: string | null;
   created_at: string;
+  updated_at: string | null;
   pacientes: { id: string; nome: string } | null;
 }
 

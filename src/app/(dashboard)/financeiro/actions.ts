@@ -152,6 +152,7 @@ export async function atualizarTransacao(
       forma_pagamento: fields.forma_pagamento,
       status: fields.status,
       observacoes: fields.observacoes,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .eq("clinica_id", ctx.clinicaId);

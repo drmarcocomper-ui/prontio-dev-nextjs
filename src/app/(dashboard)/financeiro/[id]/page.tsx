@@ -16,6 +16,7 @@ import {
   getInitials,
   type TransacaoFull as Transacao,
 } from "../constants";
+import { formatDateTime } from "@/lib/format";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -26,10 +27,13 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Transação" };
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { title: "Transação" };
   const { data } = await supabase
     .from("transacoes")
     .select("descricao")
     .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId)
     .single();
   return { title: data?.descricao ?? "Transação" };
 }
@@ -47,7 +51,7 @@ export default async function TransacaoDetalhesPage({
   const { data: transacao } = await supabase
     .from("transacoes")
     .select(
-      "id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, created_at, pacientes(id, nome)"
+      "id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, created_at, updated_at, pacientes(id, nome)"
     )
     .eq("id", id)
     .eq("clinica_id", ctx.clinicaId)
@@ -186,14 +190,13 @@ export default async function TransacaoDetalhesPage({
 
       {/* Footer info */}
       <p className="text-xs text-gray-400">
-        Registro criado em{" "}
-        {new Date(t.created_at).toLocaleString("pt-BR", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        Registro criado em {formatDateTime(t.created_at)}
+        {t.updated_at && (
+          <>
+            {" · Última atualização em "}
+            {formatDateTime(t.updated_at)}
+          </>
+        )}
       </p>
     </div>
   );

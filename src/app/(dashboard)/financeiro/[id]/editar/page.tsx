@@ -15,10 +15,13 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Editar Transação" };
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { title: "Editar Transação" };
   const { data } = await supabase
     .from("transacoes")
     .select("descricao")
     .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId)
     .single();
   const descricao = (data as { descricao: string } | null)?.descricao;
   return { title: descricao ? `Editar - ${descricao}` : "Editar Transação" };

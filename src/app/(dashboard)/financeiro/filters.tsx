@@ -9,11 +9,6 @@ function getMonthValue(offset: number): string {
   return d.toISOString().slice(0, 7);
 }
 
-const SHORTCUTS = [
-  { label: "Este mês", value: getMonthValue(0) },
-  { label: "Mês anterior", value: getMonthValue(-1) },
-];
-
 export function Filters({
   currentMonth,
   currentType,
@@ -24,6 +19,11 @@ export function Filters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+
+  const shortcuts = [
+    { label: "Este mês", value: getMonthValue(0) },
+    { label: "Mês anterior", value: getMonthValue(-1) },
+  ];
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -41,7 +41,7 @@ export function Filters({
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex gap-1.5">
-        {SHORTCUTS.map((s) => (
+        {shortcuts.map((s) => (
           <button
             key={s.value}
             type="button"
