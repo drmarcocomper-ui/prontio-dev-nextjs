@@ -31,6 +31,15 @@ export const EMAIL_MAX = 254;
 export const SENHA_MIN = 6;
 export const SENHA_MAX = 128;
 
+export interface UsuarioDefaults {
+  vinculo_id: string;
+  user_id: string;
+  email: string;
+  papel: string;
+  clinica_id: string;
+  clinica_nome: string;
+}
+
 export type UsuarioFormState = {
   success?: boolean;
   error?: string;

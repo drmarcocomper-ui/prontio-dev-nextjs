@@ -56,7 +56,7 @@ vi.mock("@/lib/clinica", () => ({
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
-import { criarUsuario, atualizarPapel, resetarSenha, removerVinculo } from "./actions";
+import { criarUsuario, atualizarUsuario, atualizarPapel, resetarSenha, removerVinculo } from "./actions";
 import { getClinicaAtual } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
@@ -169,6 +169,45 @@ describe("criarUsuario", () => {
     mockInsert.mockResolvedValueOnce({ error: { code: "23505", message: "duplicate" } });
     const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
     expect(result.error).toBe("Este usuário já está vinculado a esta clínica.");
+  });
+});
+
+describe("atualizarUsuario", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("retorna erro quando vinculo_id está vazio", async () => {
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "", user_id: "u-1", papel: "secretaria" }));
+    expect(result.error).toBe("Vínculo não identificado.");
+  });
+
+  it("retorna erro quando papel é inválido", async () => {
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "v-1", user_id: "u-1", papel: "invalido" }));
+    expect(result.error).toBe("Papel inválido.");
+  });
+
+  it("retorna erro quando não tem permissão", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "secretaria", userId: "u-1",
+    });
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "v-1", user_id: "u-2", papel: "gestor" }));
+    expect(result.error).toBe("Sem permissão para editar usuários.");
+  });
+
+  it("impede auto-edição", async () => {
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "v-1", user_id: "user-456", papel: "secretaria" }));
+    expect(result.error).toBe("Você não pode editar seu próprio vínculo.");
+  });
+
+  it("atualiza usuário com sucesso", async () => {
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "v-1", user_id: "other-user", papel: "gestor" }));
+    expect(result.success).toBe(true);
+    expect(mockUpdate).toHaveBeenCalledWith({ papel: "gestor" });
+  });
+
+  it("retorna erro quando update falha", async () => {
+    mockUpdate.mockReturnValueOnce({ eq: () => ({ error: { message: "DB error" } }) });
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "v-1", user_id: "other-user", papel: "gestor" }));
+    expect(result.error).toContain("Erro ao atualizar usuário");
   });
 });
 

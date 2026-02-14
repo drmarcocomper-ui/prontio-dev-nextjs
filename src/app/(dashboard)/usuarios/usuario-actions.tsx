@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { DeleteButton } from "@/components/delete-button";
 import { FormError } from "@/components/form-utils";
@@ -158,6 +159,16 @@ export function UsuarioRowActions({
   return (
     <div className="flex items-center gap-2">
       <PapelSelect usuario={usuario} />
+      <Link
+        href={`/usuarios/${usuario.vinculo_id}/editar`}
+        title="Editar usuário"
+        aria-label="Editar usuário"
+        className="text-gray-400 transition-colors hover:text-primary-600"
+      >
+        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+        </svg>
+      </Link>
       <ResetSenhaButton usuario={usuario} />
       <RemoverVinculoButton vinculoId={usuario.vinculo_id} />
     </div>

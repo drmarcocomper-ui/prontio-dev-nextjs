@@ -80,6 +80,46 @@ export async function criarUsuario(
 }
 
 /**
+ * Atualizar usuário (papel) via formulário de edição
+ */
+export async function atualizarUsuario(
+  _prev: UsuarioFormState,
+  formData: FormData
+): Promise<UsuarioFormState> {
+  const vinculoId = (formData.get("vinculo_id") as string)?.trim();
+  const userId = (formData.get("user_id") as string)?.trim();
+  const papel = (formData.get("papel") as string)?.trim();
+
+  if (!vinculoId) return { error: "Vínculo não identificado." };
+
+  if (!PAPEIS_VALIDOS.includes(papel as typeof PAPEIS_VALIDOS[number])) {
+    return { error: "Papel inválido." };
+  }
+
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isGestor(ctx.papel)) {
+    return { error: "Sem permissão para editar usuários." };
+  }
+
+  if (userId === ctx.userId) {
+    return { error: "Você não pode editar seu próprio vínculo." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("usuarios_clinicas")
+    .update({ papel })
+    .eq("id", vinculoId);
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "atualizar", "usuário") };
+  }
+
+  revalidatePath("/usuarios");
+  return { success: true };
+}
+
+/**
  * Atualizar papel de um vínculo
  */
 export async function atualizarPapel(

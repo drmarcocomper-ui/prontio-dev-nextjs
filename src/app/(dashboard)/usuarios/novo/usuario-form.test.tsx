@@ -26,14 +26,25 @@ vi.mock("sonner", () => ({
 
 vi.mock("../actions", () => ({
   criarUsuario: vi.fn(),
+  atualizarUsuario: vi.fn(),
 }));
 
 import { UsuarioForm } from "./usuario-form";
+import type { UsuarioDefaults } from "../types";
 
 const clinicas = [
   { id: "c-1", nome: "Clínica Alpha" },
   { id: "c-2", nome: "Clínica Beta" },
 ];
+
+const editDefaults: UsuarioDefaults = {
+  vinculo_id: "vinc-1",
+  user_id: "user-abc",
+  email: "usuario@teste.com",
+  papel: "secretaria",
+  clinica_id: "clinica-123",
+  clinica_nome: "Clínica Alpha",
+};
 
 describe("UsuarioForm", () => {
   beforeEach(() => {
@@ -97,5 +108,49 @@ describe("UsuarioForm", () => {
     formState.current = { error: "E-mail é obrigatório." };
     render(<UsuarioForm clinicas={clinicas} />);
     expect(screen.getByText("E-mail é obrigatório.")).toBeInTheDocument();
+  });
+});
+
+describe("UsuarioForm — modo edição", () => {
+  beforeEach(() => {
+    formState.current = {};
+    formPending.current = false;
+    mockPush.mockClear();
+    mockToastSuccess.mockClear();
+  });
+
+  it("exibe email como texto readonly", () => {
+    render(<UsuarioForm clinicas={[]} defaults={editDefaults} />);
+    expect(screen.getByText("usuario@teste.com")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /E-mail/ })).not.toBeInTheDocument();
+  });
+
+  it("exibe clínica como texto readonly", () => {
+    render(<UsuarioForm clinicas={[]} defaults={editDefaults} />);
+    expect(screen.getByText("Clínica Alpha")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /Clínica/ })).not.toBeInTheDocument();
+  });
+
+  it("não exibe campo de senha", () => {
+    render(<UsuarioForm clinicas={[]} defaults={editDefaults} />);
+    expect(screen.queryByLabelText(/Senha/)).not.toBeInTheDocument();
+  });
+
+  it("exibe select de papel com valor default", () => {
+    render(<UsuarioForm clinicas={[]} defaults={editDefaults} />);
+    const select = screen.getByLabelText(/Papel/) as HTMLSelectElement;
+    expect(select.value).toBe("secretaria");
+  });
+
+  it("renderiza botão Salvar alterações", () => {
+    render(<UsuarioForm clinicas={[]} defaults={editDefaults} />);
+    expect(screen.getByRole("button", { name: /Salvar alterações/ })).toBeInTheDocument();
+  });
+
+  it("redireciona com toast de atualização no sucesso", () => {
+    formState.current = { success: true };
+    render(<UsuarioForm clinicas={[]} defaults={editDefaults} />);
+    expect(mockToastSuccess).toHaveBeenCalledWith("Usuário atualizado com sucesso.");
+    expect(mockPush).toHaveBeenCalledWith("/usuarios");
   });
 });
