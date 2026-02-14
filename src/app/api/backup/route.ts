@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,6 +13,18 @@ export async function GET() {
 
   if (!user) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  }
+
+  const { success: allowed } = rateLimit({
+    key: `backup:${user.id}`,
+    maxAttempts: 5,
+    windowMs: 60 * 60 * 1000, // 1 hora
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Muitas tentativas. Aguarde 1 hora antes de tentar novamente." },
+      { status: 429 }
+    );
   }
 
   const ctx = await getClinicaAtual();

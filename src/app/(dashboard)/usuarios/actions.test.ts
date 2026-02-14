@@ -46,6 +46,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: vi.fn().mockReturnValue({ success: true, remaining: 4, resetIn: 3600000 }),
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinica-123",
@@ -53,11 +57,15 @@ vi.mock("@/lib/clinica", () => ({
     papel: "gestor",
     userId: "user-456",
   }),
+  getClinicasDoUsuario: vi.fn().mockResolvedValue([
+    { id: "clinica-123", nome: "Clínica Teste", papel: "gestor" },
+  ]),
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
 import { criarUsuario, atualizarUsuario, atualizarPapel, resetarSenha, removerVinculo } from "./actions";
-import { getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -122,6 +130,11 @@ describe("criarUsuario", () => {
     });
     const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
     expect(result.error).toBe("Sem permissão para criar usuários.");
+  });
+
+  it("retorna erro quando clinicaId não pertence ao usuário", async () => {
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "outra-clinica" }));
+    expect(result.error).toBe("Você não tem acesso a esta clínica.");
   });
 
   it("retorna erro quando email já existe", async () => {
@@ -286,6 +299,12 @@ describe("resetarSenha", () => {
     const result = await resetarSenha({}, makeFormData({ user_id: "other-user", senha: "novaSenha123" }));
     expect(result.success).toBe(true);
     expect(mockAdminUpdateUser).toHaveBeenCalledWith("other-user", { password: "novaSenha123" });
+  });
+
+  it("retorna erro quando rate limit é atingido", async () => {
+    vi.mocked(rateLimit).mockReturnValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    const result = await resetarSenha({}, makeFormData({ user_id: "other-user", senha: "123456" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
   });
 
   it("retorna erro quando admin API falha", async () => {

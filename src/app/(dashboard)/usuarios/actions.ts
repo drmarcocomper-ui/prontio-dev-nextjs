@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { getClinicaAtual, isGestor } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario, isGestor } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 import { emailValido as validarEmail } from "@/lib/validators";
 import { EMAIL_MAX, SENHA_MIN, SENHA_MAX, PAPEIS_VALIDOS, type UsuarioFormState } from "./types";
 
@@ -41,6 +42,12 @@ export async function criarUsuario(
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     return { error: "Sem permissão para criar usuários." };
+  }
+
+  // Verificar se o usuário tem acesso à clínica informada
+  const clinicas = await getClinicasDoUsuario();
+  if (!clinicas.some((c) => c.id === clinicaId)) {
+    return { error: "Você não tem acesso a esta clínica." };
   }
 
   const { createAdminClient } = await import("@/lib/supabase/admin");
@@ -185,6 +192,15 @@ export async function resetarSenha(
 
   if (userId === ctx.userId) {
     return { error: "Use a aba Conta nas Configurações para alterar sua própria senha." };
+  }
+
+  const { success: allowed } = rateLimit({
+    key: `reset_senha:${ctx.userId}`,
+    maxAttempts: 5,
+    windowMs: 60 * 60 * 1000, // 1 hora
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde 1 hora antes de tentar novamente." };
   }
 
   const { createAdminClient } = await import("@/lib/supabase/admin");

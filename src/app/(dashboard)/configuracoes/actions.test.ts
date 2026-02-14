@@ -61,12 +61,15 @@ vi.mock("@/lib/clinica", () => ({
     papel: "gestor",
     userId: "user-456",
   }),
+  getClinicasDoUsuario: vi.fn().mockResolvedValue([
+    { id: "clinica-123", nome: "Clínica Teste", papel: "gestor" },
+  ]),
   getMedicoId: vi.fn().mockResolvedValue("user-456"),
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
 import { salvarConsultorio, salvarHorarios, salvarProfissional, alterarSenha, editarClinica, alternarStatusClinica, excluirClinica } from "./actions";
-import { getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -297,26 +300,31 @@ describe("editarClinica", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("edita nome da clínica com sucesso", async () => {
-    const result = await editarClinica({}, makeFormData({ clinica_id: "c-1", nome: "Nova Clínica" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "Nova Clínica" }));
     expect(result.success).toBe(true);
     expect(mockUpdate).toHaveBeenCalledWith({ nome: "Nova Clínica" });
-    expect(mockEq).toHaveBeenCalledWith("id", "c-1");
+    expect(mockEq).toHaveBeenCalledWith("id", "clinica-123");
   });
 
   it("retorna erro quando nome está vazio", async () => {
-    const result = await editarClinica({}, makeFormData({ clinica_id: "c-1", nome: "" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "" }));
     expect(result.error).toBe("Nome é obrigatório.");
   });
 
   it("retorna erro quando nome excede max length", async () => {
     const longName = "a".repeat(256);
-    const result = await editarClinica({}, makeFormData({ clinica_id: "c-1", nome: longName }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: longName }));
     expect(result.error).toBe("Nome excede 255 caracteres.");
   });
 
   it("retorna erro quando clinica_id está vazio", async () => {
     const result = await editarClinica({}, makeFormData({ clinica_id: "", nome: "Clínica" }));
     expect(result.error).toBe("Clínica não identificada.");
+  });
+
+  it("retorna erro quando clinicaId não pertence ao usuário", async () => {
+    const result = await editarClinica({}, makeFormData({ clinica_id: "outra-clinica", nome: "Clínica" }));
+    expect(result.error).toBe("Você não tem acesso a esta clínica.");
   });
 
   it("retorna erro quando não tem permissão (secretaria)", async () => {
@@ -335,15 +343,15 @@ describe("editarClinica", () => {
 
   it("permite superadmin editar", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
+      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
     });
-    const result = await editarClinica({}, makeFormData({ clinica_id: "c-1", nome: "Clínica Admin" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "Clínica Admin" }));
     expect(result.success).toBe(true);
   });
 
   it("retorna erro quando update falha", async () => {
     mockUpdate.mockReturnValueOnce({ eq: () => ({ error: { message: "DB error" } }) });
-    const result = await editarClinica({}, makeFormData({ clinica_id: "c-1", nome: "Clínica" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "Clínica" }));
     expect(result.error).toContain("Erro ao atualizar clínica");
   });
 });
@@ -359,7 +367,7 @@ describe("alternarStatusClinica", () => {
   });
 
   it("alterna de ativo para inativo", async () => {
-    await alternarStatusClinica("c-1");
+    await alternarStatusClinica("clinica-123");
     expect(mockSelectClinica).toHaveBeenCalledWith("ativo");
     expect(mockUpdate).toHaveBeenCalledWith({ ativo: false });
   });
@@ -370,7 +378,7 @@ describe("alternarStatusClinica", () => {
         single: vi.fn().mockResolvedValue({ data: { ativo: false }, error: null }),
       }),
     });
-    await alternarStatusClinica("c-1");
+    await alternarStatusClinica("clinica-123");
     expect(mockUpdate).toHaveBeenCalledWith({ ativo: true });
   });
 
@@ -386,25 +394,33 @@ describe("alternarStatusClinica", () => {
     await expect(alternarStatusClinica("c-1")).rejects.toThrow("Sem permissão para alterar status de clínicas.");
   });
 
-  it("lança erro quando clínica não é encontrada", async () => {
+  it("lança erro quando clinicaId não pertence ao usuário", async () => {
+    await expect(alternarStatusClinica("outra-clinica")).rejects.toThrow("Você não tem acesso a esta clínica.");
+  });
+
+  it("lança erro quando clínica não é encontrada no DB", async () => {
+    vi.mocked(getClinicasDoUsuario).mockResolvedValueOnce([
+      { id: "clinica-123", nome: "Clínica Teste", papel: "gestor" },
+      { id: "clinica-inexistente", nome: "Fantasma", papel: "gestor" },
+    ]);
     mockSelectClinica.mockReturnValue({
       eq: vi.fn().mockReturnValue({
         single: vi.fn().mockResolvedValue({ data: null, error: { message: "not found" } }),
       }),
     });
-    await expect(alternarStatusClinica("c-999")).rejects.toThrow("Clínica não encontrada.");
+    await expect(alternarStatusClinica("clinica-inexistente")).rejects.toThrow("Clínica não encontrada.");
   });
 
   it("lança erro quando update falha", async () => {
     mockUpdate.mockReturnValueOnce({ eq: () => ({ error: { message: "DB error" } }) });
-    await expect(alternarStatusClinica("c-1")).rejects.toThrow("Erro ao atualizar clínica");
+    await expect(alternarStatusClinica("clinica-123")).rejects.toThrow("Erro ao atualizar clínica");
   });
 
   it("permite superadmin alternar status", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
+      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
     });
-    await alternarStatusClinica("c-1");
+    await alternarStatusClinica("clinica-123");
     expect(mockUpdate).toHaveBeenCalledWith({ ativo: false });
   });
 });
@@ -418,7 +434,7 @@ describe("excluirClinica", () => {
   });
 
   it("exclui clínica com sucesso", async () => {
-    await excluirClinica("c-1");
+    await excluirClinica("clinica-123");
     expect(mockDeleteClinica).toHaveBeenCalled();
   });
 
@@ -434,18 +450,22 @@ describe("excluirClinica", () => {
     await expect(excluirClinica("c-1")).rejects.toThrow("Sem permissão para excluir clínicas.");
   });
 
+  it("lança erro quando clinicaId não pertence ao usuário", async () => {
+    await expect(excluirClinica("outra-clinica")).rejects.toThrow("Você não tem acesso a esta clínica.");
+  });
+
   it("lança erro quando delete falha", async () => {
     mockDeleteClinica.mockReturnValue({
       eq: vi.fn().mockReturnValue({ error: { message: "FK constraint" } }),
     });
-    await expect(excluirClinica("c-1")).rejects.toThrow("Erro ao excluir clínica");
+    await expect(excluirClinica("clinica-123")).rejects.toThrow("Erro ao excluir clínica");
   });
 
   it("permite superadmin excluir", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
+      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
     });
-    await excluirClinica("c-1");
+    await excluirClinica("clinica-123");
     expect(mockDeleteClinica).toHaveBeenCalled();
   });
 });

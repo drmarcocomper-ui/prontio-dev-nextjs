@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { getClinicaAtual, isGestor } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario, isGestor } from "@/lib/clinica";
 import { emailValido as validarEmail } from "@/lib/validators";
 import {
   NOME_CONSULTORIO_MAX,
@@ -281,6 +281,12 @@ export async function editarClinica(
   const clinicaId = formData.get("clinica_id") as string;
   if (!clinicaId) return { error: "Clínica não identificada." };
 
+  // Verificar se o usuário tem acesso à clínica
+  const clinicas = await getClinicasDoUsuario();
+  if (!clinicas.some((c) => c.id === clinicaId)) {
+    return { error: "Você não tem acesso a esta clínica." };
+  }
+
   const nome = (formData.get("nome") as string)?.trim();
   if (!nome) return { error: "Nome é obrigatório." };
   if (nome.length > NOME_CONSULTORIO_MAX) return { error: `Nome excede ${NOME_CONSULTORIO_MAX} caracteres.` };
@@ -308,6 +314,12 @@ export async function alternarStatusClinica(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para alterar status de clínicas.");
+  }
+
+  // Verificar se o usuário tem acesso à clínica
+  const clinicas = await getClinicasDoUsuario();
+  if (!clinicas.some((c) => c.id === id)) {
+    throw new Error("Você não tem acesso a esta clínica.");
   }
 
   const supabase = await createClient();
@@ -342,6 +354,12 @@ export async function excluirClinica(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para excluir clínicas.");
+  }
+
+  // Verificar se o usuário tem acesso à clínica
+  const clinicas = await getClinicasDoUsuario();
+  if (!clinicas.some((c) => c.id === id)) {
+    throw new Error("Você não tem acesso a esta clínica.");
   }
 
   const supabase = await createClient();
