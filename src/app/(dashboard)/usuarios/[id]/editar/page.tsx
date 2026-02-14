@@ -5,8 +5,7 @@ import { getClinicaAtual, isGestor } from "@/lib/clinica";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { UsuarioForm } from "../../novo/usuario-form";
 import { type UsuarioDefaults } from "../../types";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
   params,

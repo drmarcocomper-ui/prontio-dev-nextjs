@@ -12,8 +12,7 @@ import {
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
 import { getClinicaAtual, getMedicoId, isProfissional } from "@/lib/clinica";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
   params,

@@ -12,8 +12,7 @@ import {
   formatDateLong,
   getInitials,
 } from "../types";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
   params,

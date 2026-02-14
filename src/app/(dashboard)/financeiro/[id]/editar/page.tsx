@@ -5,8 +5,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { getMedicoId, getClinicaAtual } from "@/lib/clinica";
 import { TransacaoForm } from "../../novo/transacao-form";
 import { maskCurrency, type TransacaoFull } from "../../constants";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
   params,

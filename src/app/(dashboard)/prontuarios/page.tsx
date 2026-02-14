@@ -7,7 +7,7 @@ import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
 import { getMedicoId } from "@/lib/clinica";
-import { uuidValido } from "@/lib/validators";
+import { uuidValido, DATE_RE } from "@/lib/validators";
 import { ProntuarioFilters } from "./filters";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
 
@@ -80,8 +80,6 @@ export default async function ProntuariosPage({
   if (tipo) {
     query = query.eq("tipo", tipo);
   }
-
-  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
   if (de && DATE_RE.test(de)) {
     query = query.gte("data", de);

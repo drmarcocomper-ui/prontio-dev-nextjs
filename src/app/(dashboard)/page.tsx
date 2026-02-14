@@ -6,6 +6,15 @@ import { formatTime, formatCurrency, getInitials, formatRelativeTime, formatDate
 import { toDateString, parseLocalDate } from "@/lib/date";
 import { FinanceiroChart, AgendamentosSemanaChart } from "./dashboard-charts";
 import { getClinicaAtual, getMedicoId, isProfissional, isGestor } from "@/lib/clinica";
+import {
+  TIPO_LABELS as _TIPO_LABELS,
+  STATUS_LABELS as _STATUS_LABELS,
+  STATUS_STYLES as _STATUS_STYLES,
+} from "./agenda/types";
+
+const TIPO_LABELS: Record<string, string> = _TIPO_LABELS;
+const STATUS_LABELS: Record<string, string> = _STATUS_LABELS;
+const STATUS_STYLES: Record<string, string> = _STATUS_STYLES;
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -31,26 +40,6 @@ interface AtividadeRecente {
     nome: string;
   };
 }
-
-const TIPO_LABELS: Record<string, string> = {
-  consulta: "Consulta",
-  retorno: "Retorno",
-  exame: "Exame",
-  procedimento: "Procedimento",
-  avaliacao: "Avaliação",
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  agendado: "bg-blue-100 text-blue-700",
-  confirmado: "bg-emerald-100 text-emerald-700",
-  em_atendimento: "bg-amber-100 text-amber-700",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  agendado: "Agendado",
-  confirmado: "Confirmado",
-  em_atendimento: "Em atendimento",
-};
 
 export default async function DashboardPage() {
   const supabase = await createClient();

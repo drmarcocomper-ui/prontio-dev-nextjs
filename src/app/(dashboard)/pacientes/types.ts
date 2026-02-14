@@ -81,13 +81,8 @@ export const ESTADO_CIVIL_LABELS: Record<string, string> = {
   uniao_estavel: "União estável",
 };
 
-export const TIPO_LABELS: Record<string, string> = {
-  consulta: "Consulta",
-  retorno: "Retorno",
-  exame: "Exame",
-  procedimento: "Procedimento",
-  avaliacao: "Avaliação",
-};
+import { TIPO_LABELS as _TIPO_LABELS } from "../agenda/types";
+export const TIPO_LABELS: Record<string, string> = _TIPO_LABELS;
 
 export const RECEITA_TIPO_LABELS: Record<string, string> = {
   simples: "Simples",

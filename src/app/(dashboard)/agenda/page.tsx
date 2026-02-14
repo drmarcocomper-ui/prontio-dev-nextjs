@@ -7,6 +7,7 @@ import { DatePicker } from "./date-picker";
 import { StatusSelect } from "./status-select";
 import { StatusBadge } from "./status-badge";
 import { todayLocal } from "@/lib/date";
+import { DATE_RE } from "@/lib/validators";
 import { type Agendamento, TIPO_LABELS, formatTime, getInitials } from "./types";
 import { getClinicaAtual } from "@/lib/clinica";
 
@@ -18,7 +19,6 @@ export default async function AgendaPage({
   searchParams: Promise<{ data?: string }>;
 }) {
   const { data: dataParam } = await searchParams;
-  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   const currentDate = dataParam && DATE_RE.test(dataParam) ? dataParam : todayLocal();
 
   const supabase = await createClient();
