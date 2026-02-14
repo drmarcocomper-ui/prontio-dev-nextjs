@@ -61,6 +61,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     auth: {
       admin: {
         listUsers: () => Promise.resolve({ data: { users: [{ id: "user-1", email: "doc@test.com" }] } }),
+        getUserById: (id: string) => Promise.resolve({ data: { user: { id, email: "doc@test.com" } } }),
       },
     },
   }),

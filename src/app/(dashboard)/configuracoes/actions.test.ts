@@ -302,7 +302,7 @@ describe("editarClinica", () => {
   it("edita nome da clínica com sucesso", async () => {
     const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "Nova Clínica" }));
     expect(result.success).toBe(true);
-    expect(mockUpdate).toHaveBeenCalledWith({ nome: "Nova Clínica" });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ nome: "Nova Clínica" }));
     expect(mockEq).toHaveBeenCalledWith("id", "clinica-123");
   });
 
@@ -369,7 +369,7 @@ describe("alternarStatusClinica", () => {
   it("alterna de ativo para inativo", async () => {
     await alternarStatusClinica("clinica-123");
     expect(mockSelectClinica).toHaveBeenCalledWith("ativo");
-    expect(mockUpdate).toHaveBeenCalledWith({ ativo: false });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ ativo: false }));
   });
 
   it("alterna de inativo para ativo", async () => {
@@ -379,7 +379,7 @@ describe("alternarStatusClinica", () => {
       }),
     });
     await alternarStatusClinica("clinica-123");
-    expect(mockUpdate).toHaveBeenCalledWith({ ativo: true });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ ativo: true }));
   });
 
   it("lança erro quando não tem permissão (secretaria)", async () => {
@@ -421,7 +421,7 @@ describe("alternarStatusClinica", () => {
       clinicaId: "clinica-123", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
     });
     await alternarStatusClinica("clinica-123");
-    expect(mockUpdate).toHaveBeenCalledWith({ ativo: false });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ ativo: false }));
   });
 });
 

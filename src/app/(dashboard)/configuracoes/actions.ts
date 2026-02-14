@@ -75,7 +75,7 @@ export async function salvarConsultorio(
 
   const { error } = await supabase
     .from("clinicas")
-    .update({ nome, cnpj, telefone, endereco, cidade, estado })
+    .update({ nome, cnpj, telefone, endereco, cidade, estado, updated_at: new Date().toISOString() })
     .eq("id", ctx.clinicaId);
 
   if (error) {
@@ -108,6 +108,25 @@ export async function salvarHorarios(
   });
 
   if (entries.length === 0) return { success: true };
+
+  // Validar que horário de início é anterior ao fim
+  const DIAS = ["seg", "ter", "qua", "qui", "sex", "sab"];
+  const DIA_LABELS: Record<string, string> = { seg: "segunda", ter: "terça", qua: "quarta", qui: "quinta", sex: "sexta", sab: "sábado" };
+  const getValue = (chave: string) => entries.find(e => e.chave === chave)?.valor;
+
+  for (const dia of DIAS) {
+    const inicio = getValue(`horario_${dia}_inicio`);
+    const fim = getValue(`horario_${dia}_fim`);
+    if (inicio && fim && inicio >= fim) {
+      return { error: `Horário de término deve ser posterior ao início (${DIA_LABELS[dia]}).` };
+    }
+  }
+
+  const intervaloInicio = getValue("intervalo_inicio");
+  const intervaloFim = getValue("intervalo_fim");
+  if (intervaloInicio && intervaloFim && intervaloInicio >= intervaloFim) {
+    return { error: "Horário de término do intervalo deve ser posterior ao início." };
+  }
 
   const supabase = await createClient();
 
@@ -297,7 +316,7 @@ export async function editarClinica(
 
   const { error } = await supabase
     .from("clinicas")
-    .update({ nome })
+    .update({ nome, updated_at: new Date().toISOString() })
     .eq("id", clinicaId);
 
   if (error) {
@@ -338,7 +357,7 @@ export async function alternarStatusClinica(id: string): Promise<void> {
 
   const { error } = await supabase
     .from("clinicas")
-    .update({ ativo: !clinica.ativo })
+    .update({ ativo: !clinica.ativo, updated_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) {
