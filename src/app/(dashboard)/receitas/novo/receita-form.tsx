@@ -47,7 +47,13 @@ export function ReceitaForm({
   cancelHref?: string;
 }) {
   const isEditing = !!defaults?.id;
-  const today = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+  const getToday = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; };
+  const [today, setToday] = useState(getToday);
+
+  useEffect(() => {
+    const interval = setInterval(() => setToday(getToday()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const action = isEditing ? atualizarReceita : criarReceita;
 

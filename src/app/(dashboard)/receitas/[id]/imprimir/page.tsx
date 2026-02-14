@@ -20,10 +20,17 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Imprimir Receita" };
   const supabase = await createClient();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { title: "Imprimir Receita" };
+  }
   const { data } = await supabase
     .from("receitas")
     .select("pacientes(nome)")
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;

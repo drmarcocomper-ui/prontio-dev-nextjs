@@ -12,6 +12,7 @@ import {
   formatDateLong,
   getInitials,
 } from "../types";
+import { formatDateTime } from "@/lib/format";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -22,10 +23,17 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Receita" };
   const supabase = await createClient();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { title: "Receita" };
+  }
   const { data } = await supabase
     .from("receitas")
     .select("pacientes(nome)")
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -142,14 +150,7 @@ export default async function ReceitaDetalhesPage({
 
       {/* Footer info */}
       <p className="text-xs text-gray-400">
-        Registro criado em{" "}
-        {new Date(r.created_at).toLocaleString("pt-BR", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        Registro criado em {formatDateTime(r.created_at)}
       </p>
     </div>
   );

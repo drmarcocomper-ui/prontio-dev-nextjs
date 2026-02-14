@@ -130,6 +130,7 @@ export async function atualizarReceita(
       tipo: fields.tipo,
       medicamentos: fields.medicamentos,
       observacoes: fields.observacoes,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .eq("medico_id", medicoId);
