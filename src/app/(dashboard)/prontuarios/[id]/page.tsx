@@ -7,6 +7,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { getMedicoId } from "@/lib/clinica";
 import { excluirProntuario } from "../actions";
 import { type Prontuario, TIPO_LABELS, formatDateLong, getInitials } from "../types";
+import { formatDateTime } from "@/lib/format";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -17,10 +18,17 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Prontuário" };
   const supabase = await createClient();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { title: "Prontuário" };
+  }
   const { data } = await supabase
     .from("prontuarios")
     .select("pacientes(nome)")
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -189,24 +197,11 @@ export default async function ProntuarioDetalhesPage({
 
       {/* Footer info */}
       <p className="text-xs text-gray-400">
-        Registro criado em{" "}
-        {new Date(p.created_at).toLocaleString("pt-BR", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        Registro criado em {formatDateTime(p.created_at)}
         {p.updated_at && (
           <>
             {" · Última atualização em "}
-            {new Date(p.updated_at).toLocaleString("pt-BR", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {formatDateTime(p.updated_at)}
           </>
         )}
       </p>

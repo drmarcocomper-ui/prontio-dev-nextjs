@@ -225,6 +225,7 @@ export function ProntuarioForm({
             defaultValue={defaults?.conduta ?? ""}
             className={INPUT_CLASS}
           />
+          <FieldError message={state.fieldErrors?.conduta} />
         </div>
       </fieldset>
 

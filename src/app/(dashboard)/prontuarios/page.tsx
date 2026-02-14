@@ -13,6 +13,8 @@ import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from ".
 
 export const metadata: Metadata = { title: "Prontuários" };
 
+const VALID_TIPO = new Set<string>(Object.keys(TIPO_LABELS));
+
 const PAGE_SIZE = 20;
 
 export default async function ProntuariosPage({
@@ -77,7 +79,7 @@ export default async function ProntuariosPage({
     query = query.or(`cid.ilike.%${escaped}%,queixa_principal.ilike.%${escaped}%,pacientes.nome.ilike.%${escaped}%`);
   }
 
-  if (tipo) {
+  if (tipo && VALID_TIPO.has(tipo)) {
     query = query.eq("tipo", tipo);
   }
 
@@ -116,13 +118,18 @@ export default async function ProntuariosPage({
 
   let pacienteNome = "";
   if (paciente_id) {
-    const { data: pacienteData } = await supabase
-      .from("pacientes")
-      .select("nome")
-      .eq("id", paciente_id)
-      .eq("medico_id", medicoId)
-      .single();
-    pacienteNome = pacienteData?.nome ?? "";
+    const fromResults = items.find((i) => i.pacientes.id === paciente_id);
+    if (fromResults) {
+      pacienteNome = fromResults.pacientes.nome;
+    } else {
+      const { data: pacienteData } = await supabase
+        .from("pacientes")
+        .select("nome")
+        .eq("id", paciente_id)
+        .eq("medico_id", medicoId)
+        .single();
+      pacienteNome = pacienteData?.nome ?? "";
+    }
   }
 
   const sp: Record<string, string> = {};

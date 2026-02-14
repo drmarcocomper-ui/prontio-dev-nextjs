@@ -40,6 +40,20 @@ export function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+export function formatDateTime(isoStr: string) {
+  const d = new Date(isoStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const months = [
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+  ];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${day} de ${month} de ${year}, ${hours}:${minutes}`;
+}
+
 export function formatRelativeTime(dateStr: string) {
   const now = new Date();
   const date = new Date(dateStr);

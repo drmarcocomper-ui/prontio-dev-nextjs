@@ -19,11 +19,14 @@ function firstOfMonth() {
   return d.toISOString().slice(0, 10);
 }
 
-const PERIOD_SHORTCUTS = [
-  { label: "Hoje", de: todayStr(), ate: todayStr() },
-  { label: "7 dias", de: daysAgo(7), ate: todayStr() },
-  { label: "Este mês", de: firstOfMonth(), ate: todayStr() },
-];
+function getPeriodShortcuts() {
+  const today = todayStr();
+  return [
+    { label: "Hoje", de: today, ate: today },
+    { label: "7 dias", de: daysAgo(7), ate: today },
+    { label: "Este mês", de: firstOfMonth(), ate: today },
+  ];
+}
 
 export function ProntuarioFilters({
   currentTipo,
@@ -74,6 +77,7 @@ export function ProntuarioFilters({
     });
   }
 
+  const shortcuts = getPeriodShortcuts();
   const isShortcutActive = (s: { de: string; ate: string }) =>
     currentDe === s.de && currentAte === s.ate;
 
@@ -96,7 +100,7 @@ export function ProntuarioFilters({
       )}
 
       <div className="flex gap-1.5">
-        {PERIOD_SHORTCUTS.map((s) => (
+        {shortcuts.map((s) => (
           <button
             key={s.label}
             type="button"
