@@ -53,7 +53,7 @@ async function verificarConflito(
 }
 
 function timeToMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
+  const [h, m] = time.split(":").slice(0, 2).map(Number);
   return h * 60 + m;
 }
 
@@ -65,6 +65,43 @@ const DIAS_SEMANA: Record<number, { key: string; label: string }> = {
   5: { key: "sex", label: "sexta-feira" },
   6: { key: "sab", label: "sábado" },
 };
+
+// Cache de configurações de horário comercial (TTL 5 min)
+const HORARIO_CACHE_TTL = 5 * 60 * 1000;
+const horarioCache = new Map<string, { data: Record<string, string>; timestamp: number }>();
+
+async function getHorarioConfig(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clinicaId: string,
+): Promise<Record<string, string>> {
+  const cached = horarioCache.get(clinicaId);
+  if (cached && Date.now() - cached.timestamp < HORARIO_CACHE_TTL) {
+    return cached.data;
+  }
+
+  const allKeys = Object.values(DIAS_SEMANA).flatMap((d) => [
+    `horario_${d.key}_inicio`,
+    `horario_${d.key}_fim`,
+  ]);
+
+  const { data: rows } = await supabase
+    .from("configuracoes")
+    .select("chave, valor")
+    .eq("clinica_id", clinicaId)
+    .in("chave", allKeys);
+
+  const config: Record<string, string> = {};
+  (rows ?? []).forEach((r: { chave: string; valor: string }) => {
+    config[r.chave] = r.valor;
+  });
+
+  horarioCache.set(clinicaId, { data: config, timestamp: Date.now() });
+  return config;
+}
+
+export async function invalidarCacheHorario(clinicaId: string) {
+  horarioCache.delete(clinicaId);
+}
 
 async function validarHorarioComercial(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -81,21 +118,12 @@ async function validarHorarioComercial(
     return "Não há expediente aos domingos.";
   }
 
-  const { data: rows } = await supabase
-    .from("configuracoes")
-    .select("chave, valor")
-    .eq("clinica_id", clinicaId)
-    .in("chave", [`horario_${dia.key}_inicio`, `horario_${dia.key}_fim`]);
-
-  const config: Record<string, string> = {};
-  (rows ?? []).forEach((r: { chave: string; valor: string }) => {
-    config[r.chave] = r.valor;
-  });
+  const config = await getHorarioConfig(supabase, clinicaId);
 
   const inicio = config[`horario_${dia.key}_inicio`] || "08:00";
   const fim = config[`horario_${dia.key}_fim`] || "18:00";
 
-  if (horaInicio < inicio || horaFim > fim) {
+  if (timeToMinutes(horaInicio) < timeToMinutes(inicio) || timeToMinutes(horaFim) > timeToMinutes(fim)) {
     return `Horário fora do expediente de ${dia.label} (${inicio}–${fim}).`;
   }
 
@@ -193,18 +221,60 @@ export async function criarAgendamento(
     // Recurring appointment
     const dates = getRecurrenceDates(data, recorrencia, recorrenciaVezes);
 
-    // Check business hours + conflicts for all dates
+    // 1. Check Sundays (no DB query needed)
     for (const d of dates) {
-      const foraExp = await validarHorarioComercial(supabase, clinicaId, d, hora_inicio, hora_fim);
-      if (foraExp) {
-        const dateFmt = formatDate(d);
-        return { fieldErrors: { hora_inicio: `${dateFmt}: ${foraExp}` } };
+      const dayOfWeek = parseLocalDate(d).getDay();
+      if (!DIAS_SEMANA[dayOfWeek]) {
+        return { fieldErrors: { hora_inicio: `${formatDate(d)}: Não há expediente aos domingos.` } };
       }
-      const conflito = await verificarConflito(supabase, d, hora_inicio, hora_fim, clinicaId);
-      if (conflito) {
-        const dateFmt = formatDate(d);
-        return { fieldErrors: { hora_inicio: `${dateFmt}: ${conflito}` } };
+    }
+
+    // 2. Batch fetch config keys for all unique days of week
+    const uniqueDays = [...new Set(dates.map((d) => DIAS_SEMANA[parseLocalDate(d).getDay()].key))];
+    const configKeys = uniqueDays.flatMap((key) => [`horario_${key}_inicio`, `horario_${key}_fim`]);
+
+    const [configRes, conflitosRes] = await Promise.all([
+      supabase
+        .from("configuracoes")
+        .select("chave, valor")
+        .eq("clinica_id", clinicaId)
+        .in("chave", configKeys),
+      supabase
+        .from("agendamentos")
+        .select("id, data, hora_inicio, hora_fim, pacientes(nome)")
+        .eq("clinica_id", clinicaId)
+        .in("data", dates)
+        .lt("hora_inicio", hora_fim)
+        .gt("hora_fim", hora_inicio)
+        .not("status", "in", "(cancelado,faltou)"),
+    ]);
+
+    const config: Record<string, string> = {};
+    (configRes.data ?? []).forEach((r: { chave: string; valor: string }) => {
+      config[r.chave] = r.valor;
+    });
+
+    // 3. Validate business hours for each date
+    for (const d of dates) {
+      const dia = DIAS_SEMANA[parseLocalDate(d).getDay()];
+      const inicio = config[`horario_${dia.key}_inicio`] || "08:00";
+      const fim = config[`horario_${dia.key}_fim`] || "18:00";
+      if (timeToMinutes(hora_inicio) < timeToMinutes(inicio) || timeToMinutes(hora_fim) > timeToMinutes(fim)) {
+        return { fieldErrors: { hora_inicio: `${formatDate(d)}: Horário fora do expediente de ${dia.label} (${inicio}–${fim}).` } };
       }
+    }
+
+    // 4. Check conflicts from batch query
+    const conflitos = (conflitosRes.data ?? []) as unknown as {
+      id: string; data: string; hora_inicio: string; hora_fim: string;
+      pacientes: { nome: string } | null;
+    }[];
+    if (conflitos.length > 0) {
+      const c = conflitos[0];
+      const nome = c.pacientes?.nome ?? "outro paciente";
+      const cInicio = c.hora_inicio.slice(0, 5);
+      const cFim = c.hora_fim.slice(0, 5);
+      return { fieldErrors: { hora_inicio: `${formatDate(c.data)}: Conflito com agendamento de ${nome} (${cInicio}–${cFim}).` } };
     }
 
     const rows = dates.map((d) => ({
@@ -290,6 +360,14 @@ export async function atualizarStatusAgendamento(
   if (error) {
     throw new Error(tratarErroSupabase(error, "atualizar", "status"));
   }
+
+  // Log de auditoria
+  await supabase.from("agendamento_status_log").insert({
+    agendamento_id: id,
+    status_anterior: statusAtual,
+    status_novo: novoStatus,
+    user_id: ctx.userId,
+  });
 
   revalidatePath("/agenda");
   revalidatePath("/");

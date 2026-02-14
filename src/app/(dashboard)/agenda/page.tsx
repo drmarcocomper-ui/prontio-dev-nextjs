@@ -8,29 +8,43 @@ import { StatusSelect } from "./status-select";
 import { StatusBadge } from "./status-badge";
 import { todayLocal } from "@/lib/date";
 import { DATE_RE } from "@/lib/validators";
-import { type Agendamento, TIPO_LABELS, formatTime, getInitials } from "./types";
+import { type Agendamento, type AgendaStatus, type AgendaTipo, STATUS_LABELS, TIPO_LABELS, formatTime, getInitials } from "./types";
+import { AgendaFilters } from "./filters";
 import { getClinicaAtual } from "@/lib/clinica";
+
+const VALID_STATUS = new Set<string>(Object.keys(STATUS_LABELS));
+const VALID_TIPO = new Set<string>(Object.keys(TIPO_LABELS));
 
 export const metadata: Metadata = { title: "Agenda" };
 
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ data?: string }>;
+  searchParams: Promise<{ data?: string; status?: string; tipo?: string }>;
 }) {
-  const { data: dataParam } = await searchParams;
+  const { data: dataParam, status: statusParam, tipo: tipoParam } = await searchParams;
   const currentDate = dataParam && DATE_RE.test(dataParam) ? dataParam : todayLocal();
+  const currentStatus = statusParam && VALID_STATUS.has(statusParam) ? statusParam : "";
+  const currentTipo = tipoParam && VALID_TIPO.has(tipoParam) ? tipoParam : "";
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) redirect("/login");
 
-  const { data: agendamentos, error } = await supabase
+  let query = supabase
     .from("agendamentos")
     .select("id, paciente_id, data, hora_inicio, hora_fim, tipo, status, observacoes, pacientes(id, nome, telefone)")
     .eq("data", currentDate)
-    .eq("clinica_id", ctx.clinicaId)
-    .order("hora_inicio");
+    .eq("clinica_id", ctx.clinicaId);
+
+  if (currentStatus) {
+    query = query.eq("status", currentStatus as AgendaStatus);
+  }
+  if (currentTipo) {
+    query = query.eq("tipo", currentTipo as AgendaTipo);
+  }
+
+  const { data: agendamentos, error } = await query.order("hora_inicio");
 
   if (error) {
     return (
@@ -73,8 +87,11 @@ export default async function AgendaPage({
         </Link>
       </div>
 
-      {/* Date Navigation */}
-      <DatePicker currentDate={currentDate} />
+      {/* Date Navigation + Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <DatePicker currentDate={currentDate} />
+        <AgendaFilters currentStatus={currentStatus} currentTipo={currentTipo} />
+      </div>
 
       {/* Appointments List */}
       {items.length > 0 ? (

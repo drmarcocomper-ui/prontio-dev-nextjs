@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 /* ── mocks de mutation ─────────────────────────────────────────────── */
 
 const mockInsert = vi.fn().mockResolvedValue({ error: null });
+const mockLogInsert = vi.fn().mockResolvedValue({ error: null });
 const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
 const mockDeleteEq = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
@@ -65,6 +66,9 @@ vi.mock("@/lib/supabase/server", () => ({
         if (table === "configuracoes") {
           return { select: () => configChain };
         }
+        if (table === "agendamento_status_log") {
+          return { insert: (data: unknown) => mockLogInsert(data) };
+        }
         return {
           select: () => selectChain,
           insert: (data: unknown) => mockInsert(data),
@@ -99,6 +103,7 @@ import {
   atualizarAgendamento,
   atualizarStatusAgendamento,
   excluirAgendamento,
+  invalidarCacheHorario,
 } from "./actions";
 import { STATUS_TRANSITIONS } from "./types";
 
@@ -125,6 +130,7 @@ const validUpdate = {
 describe("criarAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    invalidarCacheHorario("clinic-1");
     mockInsert.mockResolvedValue({ error: null });
     mockUpdateEq.mockResolvedValue({ error: null });
     conflitoResult = { data: [], error: null };
@@ -314,6 +320,7 @@ describe("criarAgendamento", () => {
 describe("atualizarAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    invalidarCacheHorario("clinic-1");
     mockInsert.mockResolvedValue({ error: null });
     mockUpdateEq.mockResolvedValue({ error: null });
     conflitoResult = { data: [], error: null };
@@ -517,6 +524,23 @@ describe("atualizarStatusAgendamento", () => {
     await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")).rejects.toThrow(
       "Erro ao atualizar status."
     );
+  });
+
+  it("insere log de auditoria após mudança de status", async () => {
+    singleResult = { data: { status: "agendado" }, error: null };
+    await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado");
+    expect(mockLogInsert).toHaveBeenCalledWith({
+      agendamento_id: "00000000-0000-0000-0000-000000000007",
+      status_anterior: "agendado",
+      status_novo: "confirmado",
+      user_id: "user-1",
+    });
+  });
+
+  it("não insere log quando transição é bloqueada", async () => {
+    singleResult = { data: { status: "atendido" }, error: null };
+    await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")).rejects.toThrow();
+    expect(mockLogInsert).not.toHaveBeenCalled();
   });
 });
 

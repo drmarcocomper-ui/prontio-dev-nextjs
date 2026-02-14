@@ -35,6 +35,12 @@ vi.mock("./status-badge", () => ({
   ),
 }));
 
+vi.mock("./filters", () => ({
+  AgendaFilters: ({ currentStatus, currentTipo }: { currentStatus: string; currentTipo: string }) => (
+    <div data-testid="agenda-filters" data-status={currentStatus} data-tipo={currentTipo} />
+  ),
+}));
+
 const mockData: { data: unknown[] | null } = { data: [] };
 
 function createQueryResult() {
@@ -89,7 +95,7 @@ const agendamentosMock = [
   },
 ];
 
-async function renderPage(searchParams: { data?: string } = {}) {
+async function renderPage(searchParams: { data?: string; status?: string; tipo?: string } = {}) {
   const jsx = await AgendaPage({ searchParams: Promise.resolve(searchParams) });
   return render(jsx);
 }
