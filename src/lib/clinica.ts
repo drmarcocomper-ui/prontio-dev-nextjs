@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
-export type Papel = "medico" | "secretaria";
+export type Papel = "medico" | "secretaria" | "admin";
 
 export interface Clinica {
   id: string;
@@ -78,7 +78,7 @@ export async function getMedicoId(): Promise<string> {
   const ctx = await getClinicaAtual();
   if (!ctx) throw new Error("Contexto de clínica não encontrado.");
 
-  if (ctx.papel === "medico") return ctx.userId;
+  if (ctx.papel === "medico" || ctx.papel === "admin") return ctx.userId;
 
   // Secretária: buscar o médico da clínica
   const supabase = await createClient();

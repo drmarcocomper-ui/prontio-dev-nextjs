@@ -57,7 +57,7 @@ export default async function DashboardPage() {
   const ctx = await getClinicaAtual();
   if (!ctx) redirect("/login");
   const clinicaId = ctx.clinicaId;
-  const isMedico = ctx.papel === "medico";
+  const isMedico = ctx.papel === "medico" || ctx.papel === "admin";
   let medicoId: string;
   try {
     medicoId = await getMedicoId();

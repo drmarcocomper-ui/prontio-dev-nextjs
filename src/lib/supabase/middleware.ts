@@ -100,7 +100,7 @@ export async function updateSession(request: NextRequest) {
           });
         }
 
-        if (isMedicoOnlyRoute && vinculo.papel === "secretaria") {
+        if (isMedicoOnlyRoute && vinculo.papel !== "medico" && vinculo.papel !== "admin") {
           const url = request.nextUrl.clone();
           url.pathname = "/agenda";
           return NextResponse.redirect(url);

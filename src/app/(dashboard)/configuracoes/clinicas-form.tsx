@@ -59,11 +59,13 @@ export function ClinicasForm({
                     {clinicaVinculos.map((v) => (
                       <div key={v.user_id} className="flex items-center gap-2 text-xs text-gray-500">
                         <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                          v.papel === "medico"
-                            ? "bg-primary-50 text-primary-700"
-                            : "bg-amber-50 text-amber-700"
+                          v.papel === "admin"
+                            ? "bg-purple-50 text-purple-700"
+                            : v.papel === "medico"
+                              ? "bg-primary-50 text-primary-700"
+                              : "bg-amber-50 text-amber-700"
                         }`}>
-                          {v.papel === "medico" ? "Médico" : "Secretária"}
+                          {v.papel === "admin" ? "Admin" : v.papel === "medico" ? "Médico" : "Secretária"}
                         </span>
                         <span>{v.email || v.user_id.slice(0, 8)}</span>
                       </div>

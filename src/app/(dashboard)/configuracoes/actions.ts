@@ -246,13 +246,15 @@ export async function criarClinica(
     return { error: tratarErroSupabase(clinicaError, "criar", "clínica") };
   }
 
-  // Create user-clinic link
+  // Create user-clinic link — preserve current user's role
+  const ctx = await getClinicaAtual();
+  const papel = ctx?.papel === "admin" ? "admin" : "medico";
   const { error: vinculoError } = await supabase
     .from("usuarios_clinicas")
     .insert({
       user_id: user.id,
       clinica_id: clinica.id,
-      papel: "medico",
+      papel,
     });
 
   if (vinculoError) {
@@ -284,7 +286,7 @@ export async function convidarSecretaria(
 
   // Check that caller is medico for this clinic
   const ctx = await getClinicaAtual();
-  if (!ctx || ctx.papel !== "medico") {
+  if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
     return { error: "Apenas médicos podem convidar secretárias." };
   }
   if (clinicaId !== ctx.clinicaId) {

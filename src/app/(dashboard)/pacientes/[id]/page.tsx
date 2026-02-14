@@ -64,7 +64,7 @@ export default async function PacienteDetalhesPage({
   const currentTab = tab || "identificacao";
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
-  const isMedico = ctx?.papel === "medico";
+  const isMedico = ctx?.papel === "medico" || ctx?.papel === "admin";
   let medicoId: string;
   try {
     medicoId = await getMedicoId();

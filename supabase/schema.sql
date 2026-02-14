@@ -28,7 +28,7 @@ create table usuarios_clinicas (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users(id) on delete cascade,
   clinica_id uuid not null references clinicas(id) on delete cascade,
-  papel      text not null check (papel in ('medico', 'secretaria')),
+  papel      text not null check (papel in ('medico', 'secretaria', 'admin')),
   created_at timestamptz not null default now(),
   unique (user_id, clinica_id)
 );
@@ -36,7 +36,7 @@ create table usuarios_clinicas (
 create index usuarios_clinicas_user_idx    on usuarios_clinicas (user_id);
 create index usuarios_clinicas_clinica_idx on usuarios_clinicas (clinica_id);
 
-comment on table usuarios_clinicas is 'Vínculo entre usuários e clínicas com papel (medico/secretaria)';
+comment on table usuarios_clinicas is 'Vínculo entre usuários e clínicas com papel (medico/secretaria/admin)';
 
 -- 3. Pacientes
 -- --------------------------------------------
@@ -209,23 +209,27 @@ create or replace function public.get_my_medico_clinica_ids()
 returns setof uuid language sql security definer set search_path = '' stable
 as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid() and papel = 'medico'; $$;
 
--- clinicas: usuário vê clínicas que pertence
+create or replace function public.is_admin()
+returns boolean language sql security definer set search_path = '' stable
+as $$ select exists (select 1 from public.usuarios_clinicas where user_id = auth.uid() and papel = 'admin'); $$;
+
+-- clinicas: usuário vê clínicas que pertence; admin vê todas
 create policy "Acesso clinicas" on clinicas for select to authenticated
-  using (id in (select public.get_my_clinica_ids()));
+  using (id in (select public.get_my_clinica_ids()) or public.is_admin());
 
 create policy "Medico gerencia clinicas" on clinicas for all to authenticated
-  using (id in (select public.get_my_medico_clinica_ids()))
-  with check (id in (select public.get_my_medico_clinica_ids()));
+  using (id in (select public.get_my_medico_clinica_ids()) or public.is_admin())
+  with check (id in (select public.get_my_medico_clinica_ids()) or public.is_admin());
 
 -- usuarios_clinicas
 create policy "Acesso vinculos leitura" on usuarios_clinicas for select to authenticated
-  using (user_id = auth.uid() or clinica_id in (select public.get_my_medico_clinica_ids()));
+  using (user_id = auth.uid() or clinica_id in (select public.get_my_medico_clinica_ids()) or public.is_admin());
 
 create policy "Medico gerencia vinculos" on usuarios_clinicas for all to authenticated
-  using (clinica_id in (select public.get_my_medico_clinica_ids()))
-  with check (clinica_id in (select public.get_my_medico_clinica_ids()));
+  using (clinica_id in (select public.get_my_medico_clinica_ids()) or public.is_admin())
+  with check (clinica_id in (select public.get_my_medico_clinica_ids()) or public.is_admin());
 
--- pacientes: médico e suas secretárias
+-- pacientes: médico, suas secretárias e admin
 create policy "Acesso pacientes" on pacientes for all to authenticated
   using (
     medico_id = auth.uid()
@@ -233,22 +237,25 @@ create policy "Acesso pacientes" on pacientes for all to authenticated
       select uc.user_id from public.usuarios_clinicas uc
       where uc.clinica_id in (select public.get_my_clinica_ids()) and uc.papel = 'medico'
     )
+    or public.is_admin()
   );
 
--- prontuarios/receitas: somente o médico
+-- prontuarios/receitas: médico e admin
 create policy "Medico acessa prontuarios" on prontuarios for all to authenticated
-  using (medico_id = auth.uid()) with check (medico_id = auth.uid());
+  using (medico_id = auth.uid() or public.is_admin())
+  with check (medico_id = auth.uid() or public.is_admin());
 
 create policy "Medico acessa receitas" on receitas for all to authenticated
-  using (medico_id = auth.uid()) with check (medico_id = auth.uid());
+  using (medico_id = auth.uid() or public.is_admin())
+  with check (medico_id = auth.uid() or public.is_admin());
 
--- agendamentos: por clínica (médico e secretária)
+-- agendamentos: por clínica (médico, secretária e admin)
 create policy "Acesso agendamentos" on agendamentos for all to authenticated
-  using (clinica_id in (select public.get_my_clinica_ids()));
+  using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
 
--- transacoes: por clínica, somente médico
+-- transacoes: por clínica, médico e admin
 create policy "Medico acessa transacoes" on transacoes for all to authenticated
-  using (clinica_id in (select public.get_my_medico_clinica_ids()));
+  using (clinica_id in (select public.get_my_medico_clinica_ids()) or public.is_admin());
 
 -- configuracoes
 create policy "Acesso configuracoes" on configuracoes for all to authenticated
@@ -256,4 +263,5 @@ create policy "Acesso configuracoes" on configuracoes for all to authenticated
     user_id = auth.uid()
     or clinica_id in (select public.get_my_clinica_ids())
     or (user_id is null and clinica_id is null)
+    or public.is_admin()
   );
