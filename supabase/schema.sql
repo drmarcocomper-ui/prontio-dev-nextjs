@@ -207,11 +207,19 @@ as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid()
 
 create or replace function public.get_my_medico_clinica_ids()
 returns setof uuid language sql security definer set search_path = '' stable
-as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid() and papel = 'medico'; $$;
+as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid() and papel in ('medico', 'admin'); $$;
 
 create or replace function public.is_admin()
 returns boolean language sql security definer set search_path = '' stable
 as $$ select exists (select 1 from public.usuarios_clinicas where user_id = auth.uid() and papel = 'admin'); $$;
+
+create or replace function public.get_my_clinic_medico_ids()
+returns setof uuid language sql security definer set search_path = '' stable
+as $$
+  select uc.user_id from public.usuarios_clinicas uc
+  where uc.clinica_id in (select public.get_my_clinica_ids())
+  and uc.papel in ('medico', 'admin');
+$$;
 
 -- clinicas: usuário vê clínicas que pertence; admin vê todas
 create policy "Acesso clinicas" on clinicas for select to authenticated
@@ -229,14 +237,11 @@ create policy "Medico gerencia vinculos" on usuarios_clinicas for all to authent
   using (clinica_id in (select public.get_my_medico_clinica_ids()) or public.is_admin())
   with check (clinica_id in (select public.get_my_medico_clinica_ids()) or public.is_admin());
 
--- pacientes: médico, suas secretárias e admin
+-- pacientes: médico, suas secretárias e admin (usa SECURITY DEFINER para bypass de RLS em usuarios_clinicas)
 create policy "Acesso pacientes" on pacientes for all to authenticated
   using (
     medico_id = auth.uid()
-    or medico_id in (
-      select uc.user_id from public.usuarios_clinicas uc
-      where uc.clinica_id in (select public.get_my_clinica_ids()) and uc.papel = 'medico'
-    )
+    or medico_id in (select public.get_my_clinic_medico_ids())
     or public.is_admin()
   );
 
