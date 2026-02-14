@@ -3,6 +3,8 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("./tabs", () => ({
   Tabs: ({ papel }: { papel: string }) => <div data-testid="tabs" data-papel={papel} />,
+  isValidTab: (tab: string) => ["consultorio", "profissional", "horarios", "conta", "aparencia", "clinicas", "dados"].includes(tab),
+  getDefaultTab: () => "consultorio",
 }));
 
 vi.mock("./consultorio-form", () => ({
@@ -180,5 +182,10 @@ describe("ConfiguracoesPage", () => {
     // Should render without errors even with null config data
     expect(screen.getByTestId("profissional-form")).toBeInTheDocument();
     mockConfigData.data = [{ chave: "duracao_consulta", valor: "30" }];
+  });
+
+  it("tab inválido faz fallback para consultorio", async () => {
+    await renderPage({ tab: "invalido" });
+    expect(screen.getByTestId("consultorio-form")).toBeInTheDocument();
   });
 });

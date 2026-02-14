@@ -38,7 +38,7 @@ const CATEGORIES: Category[] = [
   {
     key: "usuario",
     label: "Usuário",
-    roles: ["superadmin", "gestor"],
+    roles: ["superadmin", "gestor", "profissional_saude", "financeiro", "secretaria"],
     tabs: [
       { key: "conta", label: "Conta" },
       { key: "aparencia", label: "Aparência" },
@@ -47,13 +47,26 @@ const CATEGORIES: Category[] = [
   },
 ];
 
+const ALL_TAB_KEYS = CATEGORIES.flatMap((c) => c.tabs.map((t) => t.key));
+
+export function isValidTab(tab: string): boolean {
+  return ALL_TAB_KEYS.includes(tab);
+}
+
+export function getDefaultTab(papel: Papel): string {
+  const categories = CATEGORIES.filter((c) => c.roles.includes(papel));
+  return categories[0]?.tabs[0]?.key ?? "conta";
+}
+
 function findCategoryByTab(tab: string, categories: Category[]): Category | undefined {
   return categories.find((cat) => cat.tabs.some((t) => t.key === tab));
 }
 
 export function Tabs({ papel }: { papel: Papel }) {
   const searchParams = useSearchParams();
-  const currentTab = searchParams.get("tab") || "consultorio";
+  const defaultTab = getDefaultTab(papel);
+  const rawTab = searchParams.get("tab") || defaultTab;
+  const currentTab = isValidTab(rawTab) ? rawTab : defaultTab;
 
   const categories = CATEGORIES.filter((c) => c.roles.includes(papel));
   const activeCategory = findCategoryByTab(currentTab, categories) ?? categories[0];
@@ -86,6 +99,7 @@ export function Tabs({ papel }: { papel: Papel }) {
       </div>
 
       {activeCategory && activeCategory.tabs.length > 1 && (
+        <div className="overflow-x-auto">
         <nav
           className="flex gap-4 border-b border-gray-200 px-1"
           aria-label="Sub-abas"
@@ -107,6 +121,7 @@ export function Tabs({ papel }: { papel: Papel }) {
             );
           })}
         </nav>
+        </div>
       )}
     </div>
   );

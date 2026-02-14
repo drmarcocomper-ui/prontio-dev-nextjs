@@ -23,7 +23,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-import { Tabs } from "./tabs";
+import { Tabs, isValidTab, getDefaultTab } from "./tabs";
 
 describe("Tabs", () => {
   it("renderiza as 3 categorias para papel gestor", () => {
@@ -34,12 +34,28 @@ describe("Tabs", () => {
     expect(screen.getByText("Usuário")).toBeInTheDocument();
   });
 
-  it("renderiza nenhuma categoria para secretaria", () => {
+  it("renderiza apenas categoria Usuário para secretaria", () => {
     mockTab = "";
     render(<Tabs papel="secretaria" />);
     expect(screen.queryByText("Clínica")).not.toBeInTheDocument();
     expect(screen.queryByText("Profissional")).not.toBeInTheDocument();
-    expect(screen.queryByText("Usuário")).not.toBeInTheDocument();
+    expect(screen.getByText("Usuário")).toBeInTheDocument();
+  });
+
+  it("renderiza apenas categoria Usuário para profissional_saude", () => {
+    mockTab = "";
+    render(<Tabs papel="profissional_saude" />);
+    expect(screen.queryByText("Clínica")).not.toBeInTheDocument();
+    expect(screen.queryByText("Profissional")).not.toBeInTheDocument();
+    expect(screen.getByText("Usuário")).toBeInTheDocument();
+  });
+
+  it("renderiza apenas categoria Usuário para financeiro", () => {
+    mockTab = "";
+    render(<Tabs papel="financeiro" />);
+    expect(screen.queryByText("Clínica")).not.toBeInTheDocument();
+    expect(screen.queryByText("Profissional")).not.toBeInTheDocument();
+    expect(screen.getByText("Usuário")).toBeInTheDocument();
   });
 
   it("categorias apontam para primeira sub-aba", () => {
@@ -57,7 +73,6 @@ describe("Tabs", () => {
     expect(catLink.className).toContain("bg-white");
     expect(catLink.className).toContain("text-primary-600");
 
-    // Sub-abas da categoria Clínica devem estar visíveis
     expect(screen.getByText("Consultório")).toBeInTheDocument();
     expect(screen.getByText("Horários")).toBeInTheDocument();
     expect(screen.getByText("Clínicas")).toBeInTheDocument();
@@ -75,21 +90,17 @@ describe("Tabs", () => {
     mockTab = "horarios";
     render(<Tabs papel="gestor" />);
 
-    // Categoria Clínica ativa
     const catLink = screen.getByText("Clínica");
     expect(catLink.className).toContain("bg-white");
     expect(catLink.className).toContain("text-primary-600");
 
-    // Sub-abas da Clínica visíveis
     expect(screen.getByText("Consultório")).toBeInTheDocument();
     expect(screen.getByText("Horários")).toBeInTheDocument();
     expect(screen.getByText("Clínicas")).toBeInTheDocument();
 
-    // Horários destacada
     const activeSubTab = screen.getByText("Horários");
     expect(activeSubTab.className).toContain("border-primary-600");
 
-    // Consultório não destacada
     const inactiveSubTab = screen.getByText("Consultório");
     expect(inactiveSubTab.className).toContain("border-transparent");
   });
@@ -98,16 +109,13 @@ describe("Tabs", () => {
     mockTab = "conta";
     render(<Tabs papel="gestor" />);
 
-    // Categoria Usuário ativa
     const catLink = screen.getByText("Usuário");
     expect(catLink.className).toContain("bg-white");
     expect(catLink.className).toContain("text-primary-600");
 
-    // Categoria Clínica inativa
     const inactiveCat = screen.getByText("Clínica");
     expect(inactiveCat.className).toContain("text-gray-500");
 
-    // Sub-abas do Usuário visíveis
     expect(screen.getByText("Conta")).toBeInTheDocument();
     expect(screen.getByText("Aparência")).toBeInTheDocument();
     expect(screen.getByText("Dados")).toBeInTheDocument();
@@ -117,13 +125,33 @@ describe("Tabs", () => {
     mockTab = "profissional";
     render(<Tabs papel="gestor" />);
 
-    // Categoria Profissional ativa
     const catLink = screen.getByText("Profissional");
     expect(catLink.className).toContain("bg-white");
     expect(catLink.className).toContain("text-primary-600");
 
-    // Não deve existir nav de sub-abas
     expect(screen.queryByRole("navigation", { name: "Sub-abas" })).not.toBeInTheDocument();
+  });
+
+  it("tab inválido faz fallback para default do papel", () => {
+    mockTab = "invalido";
+    render(<Tabs papel="gestor" />);
+
+    // Deve cair na categoria Clínica (default para gestor)
+    const catLink = screen.getByText("Clínica");
+    expect(catLink.className).toContain("bg-white");
+    expect(catLink.className).toContain("text-primary-600");
+  });
+
+  it("tab inválido com secretaria faz fallback para conta", () => {
+    mockTab = "invalido";
+    render(<Tabs papel="secretaria" />);
+
+    // Deve cair na categoria Usuário com sub-aba Conta
+    const catLink = screen.getByText("Usuário");
+    expect(catLink.className).toContain("bg-white");
+
+    const subTab = screen.getByText("Conta");
+    expect(subTab.className).toContain("border-primary-600");
   });
 
   it("sub-abas têm hrefs corretos", () => {
@@ -144,5 +172,53 @@ describe("Tabs", () => {
     mockTab = "";
     render(<Tabs papel="gestor" />);
     expect(screen.getByRole("navigation", { name: "Sub-abas" })).toBeInTheDocument();
+  });
+
+  it("secretaria vê sub-abas do Usuário por padrão", () => {
+    mockTab = "";
+    render(<Tabs papel="secretaria" />);
+    expect(screen.getByText("Conta")).toBeInTheDocument();
+    expect(screen.getByText("Aparência")).toBeInTheDocument();
+    expect(screen.getByText("Dados")).toBeInTheDocument();
+  });
+});
+
+describe("isValidTab", () => {
+  it("retorna true para tabs válidos", () => {
+    expect(isValidTab("consultorio")).toBe(true);
+    expect(isValidTab("horarios")).toBe(true);
+    expect(isValidTab("clinicas")).toBe(true);
+    expect(isValidTab("profissional")).toBe(true);
+    expect(isValidTab("conta")).toBe(true);
+    expect(isValidTab("aparencia")).toBe(true);
+    expect(isValidTab("dados")).toBe(true);
+  });
+
+  it("retorna false para tabs inválidos", () => {
+    expect(isValidTab("invalido")).toBe(false);
+    expect(isValidTab("")).toBe(false);
+    expect(isValidTab("xyz")).toBe(false);
+  });
+});
+
+describe("getDefaultTab", () => {
+  it("retorna consultorio para gestor", () => {
+    expect(getDefaultTab("gestor")).toBe("consultorio");
+  });
+
+  it("retorna consultorio para superadmin", () => {
+    expect(getDefaultTab("superadmin")).toBe("consultorio");
+  });
+
+  it("retorna conta para secretaria", () => {
+    expect(getDefaultTab("secretaria")).toBe("conta");
+  });
+
+  it("retorna conta para profissional_saude", () => {
+    expect(getDefaultTab("profissional_saude")).toBe("conta");
+  });
+
+  it("retorna conta para financeiro", () => {
+    expect(getDefaultTab("financeiro")).toBe("conta");
   });
 });
