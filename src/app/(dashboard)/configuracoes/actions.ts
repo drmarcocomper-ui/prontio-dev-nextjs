@@ -267,6 +267,99 @@ export async function criarClinica(
 }
 
 /**
+ * Editar nome de uma clínica
+ */
+export async function editarClinica(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
+    return { error: "Sem permissão para editar clínicas." };
+  }
+
+  const clinicaId = formData.get("clinica_id") as string;
+  if (!clinicaId) return { error: "Clínica não identificada." };
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome é obrigatório." };
+  if (nome.length > NOME_CONSULTORIO_MAX) return { error: `Nome excede ${NOME_CONSULTORIO_MAX} caracteres.` };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("clinicas")
+    .update({ nome })
+    .eq("id", clinicaId);
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "atualizar", "clínica") };
+  }
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/**
+ * Alternar status ativo/inativo de uma clínica
+ */
+export async function alternarStatusClinica(id: string): Promise<void> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
+    throw new Error("Sem permissão para alterar status de clínicas.");
+  }
+
+  const supabase = await createClient();
+
+  const { data: clinica, error: fetchError } = await supabase
+    .from("clinicas")
+    .select("ativo")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !clinica) {
+    throw new Error("Clínica não encontrada.");
+  }
+
+  const { error } = await supabase
+    .from("clinicas")
+    .update({ ativo: !clinica.ativo })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(tratarErroSupabase(error, "atualizar", "clínica"));
+  }
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/", "layout");
+}
+
+/**
+ * Excluir uma clínica
+ */
+export async function excluirClinica(id: string): Promise<void> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
+    throw new Error("Sem permissão para excluir clínicas.");
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("clinicas")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(tratarErroSupabase(error, "excluir", "clínica"));
+  }
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/", "layout");
+}
+
+/**
  * Convidar secretária por email
  */
 export async function convidarSecretaria(

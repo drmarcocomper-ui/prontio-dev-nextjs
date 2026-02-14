@@ -69,7 +69,23 @@ export default async function ConfiguracoesPage({
         .in("clinica_id", clinicaIds)
     : { data: null };
 
-  const clinicasList = clinicas.map((c) => ({ id: c.id, nome: c.nome }));
+  // Load ativo status for each clinic
+  const { data: clinicasAtivo } = clinicaIds.length > 0
+    ? await supabase
+        .from("clinicas")
+        .select("id, ativo")
+        .in("id", clinicaIds)
+    : { data: null };
+
+  const ativoMap = new Map(
+    (clinicasAtivo ?? []).map((c: { id: string; ativo: boolean }) => [c.id, c.ativo])
+  );
+
+  const clinicasList = clinicas.map((c) => ({
+    id: c.id,
+    nome: c.nome,
+    ativo: ativoMap.get(c.id) ?? true,
+  }));
 
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
