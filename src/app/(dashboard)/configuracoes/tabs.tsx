@@ -5,13 +5,13 @@ import { useSearchParams } from "next/navigation";
 import type { Papel } from "@/lib/clinica";
 
 const ALL_TABS = [
-  { key: "consultorio", label: "Consultório", roles: ["medico", "admin"] as Papel[] },
-  { key: "profissional", label: "Profissional", roles: ["medico", "admin"] as Papel[] },
-  { key: "horarios", label: "Horários", roles: ["medico", "admin"] as Papel[] },
-  { key: "conta", label: "Conta", roles: ["medico", "secretaria", "admin"] as Papel[] },
-  { key: "aparencia", label: "Aparência", roles: ["medico", "admin"] as Papel[] },
-  { key: "clinicas", label: "Clínicas", roles: ["medico", "admin"] as Papel[] },
-  { key: "dados", label: "Dados", roles: ["medico", "admin"] as Papel[] },
+  { key: "consultorio", label: "Consultório", roles: ["superadmin", "gestor"] as Papel[] },
+  { key: "profissional", label: "Profissional", roles: ["superadmin", "gestor"] as Papel[] },
+  { key: "horarios", label: "Horários", roles: ["superadmin", "gestor"] as Papel[] },
+  { key: "conta", label: "Conta", roles: ["superadmin", "gestor"] as Papel[] },
+  { key: "aparencia", label: "Aparência", roles: ["superadmin", "gestor"] as Papel[] },
+  { key: "clinicas", label: "Clínicas", roles: ["superadmin", "gestor"] as Papel[] },
+  { key: "dados", label: "Dados", roles: ["superadmin", "gestor"] as Papel[] },
 ];
 
 export function Tabs({ papel }: { papel: Papel }) {

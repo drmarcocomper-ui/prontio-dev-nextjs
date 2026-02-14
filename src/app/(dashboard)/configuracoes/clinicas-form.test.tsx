@@ -49,9 +49,9 @@ const clinicaInativa = [
 ];
 
 const vinculos = [
-  { id: "c-1", user_id: "u-1", papel: "medico", email: "dr@test.com" },
+  { id: "c-1", user_id: "u-1", papel: "profissional_saude", email: "dr@test.com" },
   { id: "c-1", user_id: "u-2", papel: "secretaria", email: "sec@test.com" },
-  { id: "c-2", user_id: "u-3", papel: "admin", email: "admin@test.com" },
+  { id: "c-2", user_id: "u-3", papel: "superadmin", email: "admin@test.com" },
 ];
 
 describe("ClinicasForm", () => {
@@ -85,9 +85,9 @@ describe("ClinicasForm", () => {
 
   it("renderiza os vínculos com badges de papel", () => {
     render(<ClinicasForm clinicas={clinicasAtivas} vinculos={vinculos} />);
-    expect(screen.getAllByText("Médico").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Prof. Saúde").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Secretária").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Admin")).toBeInTheDocument();
+    expect(screen.getByText("Superadmin")).toBeInTheDocument();
   });
 
   it("renderiza emails dos vínculos", () => {
@@ -99,7 +99,7 @@ describe("ClinicasForm", () => {
 
   it("mostra user_id truncado quando email não existe", () => {
     const vinculoSemEmail = [
-      { id: "c-1", user_id: "abcdefgh-1234", papel: "medico" },
+      { id: "c-1", user_id: "abcdefgh-1234", papel: "profissional_saude" },
     ];
     render(<ClinicasForm clinicas={[clinicasAtivas[0]]} vinculos={vinculoSemEmail} />);
     expect(screen.getByText("abcdefgh")).toBeInTheDocument();
@@ -154,9 +154,11 @@ describe("ClinicasForm", () => {
     const papelSelect = screen.getByLabelText("Papel");
     expect(papelSelect).toBeInTheDocument();
     const options = papelSelect.querySelectorAll("option");
-    expect(options).toHaveLength(2);
+    expect(options).toHaveLength(4);
     expect(options[0]).toHaveTextContent("Secretária");
-    expect(options[1]).toHaveTextContent("Médico");
+    expect(options[1]).toHaveTextContent("Profissional de Saúde");
+    expect(options[2]).toHaveTextContent("Gestor");
+    expect(options[3]).toHaveTextContent("Financeiro");
   });
 
   it("renderiza botão Criar usuário", () => {

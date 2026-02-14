@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatTime, formatCurrency, getInitials, formatRelativeTime, formatDate } from "@/lib/format";
 import { toDateString, parseLocalDate } from "@/lib/date";
 import { FinanceiroChart, AgendamentosSemanaChart } from "./dashboard-charts";
-import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, isProfissional, isGestor } from "@/lib/clinica";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -57,7 +57,8 @@ export default async function DashboardPage() {
   const ctx = await getClinicaAtual();
   if (!ctx) redirect("/login");
   const clinicaId = ctx.clinicaId;
-  const isMedico = ctx.papel === "medico" || ctx.papel === "admin";
+  const isProfissionalSaude = isProfissional(ctx.papel);
+  const temAcessoFinanceiro = isGestor(ctx.papel) || ctx.papel === "financeiro";
   let medicoId: string;
   try {
     medicoId = await getMedicoId();
@@ -106,7 +107,7 @@ export default async function DashboardPage() {
       .eq("status", "atendido")
       .gte("data", inicioMes)
       .lte("data", fimMes),
-    isMedico
+    temAcessoFinanceiro
       ? supabase
           .from("transacoes")
           .select("valor")
@@ -130,7 +131,7 @@ export default async function DashboardPage() {
       .eq("medico_id", medicoId)
       .order("created_at", { ascending: false })
       .limit(5),
-    isMedico
+    temAcessoFinanceiro
       ? supabase
           .from("transacoes")
           .select("data, tipo, valor")
@@ -240,7 +241,7 @@ export default async function DashboardPage() {
         </svg>
       ),
     },
-    ...(isMedico
+    ...(temAcessoFinanceiro
       ? [
           {
             label: "Receita",
@@ -284,13 +285,13 @@ export default async function DashboardPage() {
       </div>
 
       {/* Charts */}
-      <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${isMedico ? "lg:grid-cols-2" : ""}`}>
-        {isMedico && <FinanceiroChart data={financeiroChartData} />}
+      <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${temAcessoFinanceiro ? "lg:grid-cols-2" : ""}`}>
+        {temAcessoFinanceiro && <FinanceiroChart data={financeiroChartData} />}
         <AgendamentosSemanaChart data={agendaSemanaChartData} />
       </div>
 
       {/* Sections */}
-      <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${isMedico ? "lg:grid-cols-2" : ""}`}>
+      <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${isProfissionalSaude ? "lg:grid-cols-2" : ""}`}>
         {/* Próximas consultas */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
@@ -350,8 +351,8 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Atividade recente (médico only) */}
-        {isMedico && <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        {/* Atividade recente (profissional de saúde only) */}
+        {isProfissionalSaude && <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
             <h2 className="font-semibold text-gray-900">
               Atividade recente

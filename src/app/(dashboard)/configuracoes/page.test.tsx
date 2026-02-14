@@ -41,12 +41,27 @@ vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
     clinicaNome: "Clínica Teste",
-    papel: "medico",
+    papel: "gestor",
     userId: "user-1",
   }),
   getClinicasDoUsuario: vi.fn().mockResolvedValue([
-    { id: "clinic-1", nome: "Clínica Teste", papel: "medico" },
+    { id: "clinic-1", nome: "Clínica Teste", papel: "gestor" },
   ]),
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: () => ({
+      select: () => ({
+        in: () => Promise.resolve({ data: [{ id: "clinic-1", user_id: "user-1", papel: "gestor" }] }),
+      }),
+    }),
+    auth: {
+      admin: {
+        listUsers: () => Promise.resolve({ data: { users: [{ id: "user-1", email: "doc@test.com" }] } }),
+      },
+    },
+  }),
 }));
 
 const mockClinica = {
@@ -104,7 +119,7 @@ describe("ConfiguracoesPage", () => {
     await renderPage();
     const tabs = screen.getByTestId("tabs");
     expect(tabs).toBeInTheDocument();
-    expect(tabs).toHaveAttribute("data-papel", "medico");
+    expect(tabs).toHaveAttribute("data-papel", "gestor");
   });
 
   it("renderiza ConsultorioForm por padrão", async () => {

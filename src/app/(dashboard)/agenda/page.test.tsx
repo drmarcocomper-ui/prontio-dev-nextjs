@@ -50,7 +50,7 @@ vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
     clinicaNome: "Clínica Teste",
-    papel: "medico",
+    papel: "profissional_saude",
     userId: "user-1",
   }),
 }));

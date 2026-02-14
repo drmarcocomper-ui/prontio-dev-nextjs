@@ -28,7 +28,7 @@ create table usuarios_clinicas (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users(id) on delete cascade,
   clinica_id uuid not null references clinicas(id) on delete cascade,
-  papel      text not null check (papel in ('medico', 'secretaria', 'admin')),
+  papel      text not null check (papel in ('superadmin', 'gestor', 'profissional_saude', 'financeiro', 'secretaria')),
   created_at timestamptz not null default now(),
   unique (user_id, clinica_id)
 );
@@ -36,7 +36,7 @@ create table usuarios_clinicas (
 create index usuarios_clinicas_user_idx    on usuarios_clinicas (user_id);
 create index usuarios_clinicas_clinica_idx on usuarios_clinicas (clinica_id);
 
-comment on table usuarios_clinicas is 'Vínculo entre usuários e clínicas com papel (medico/secretaria/admin)';
+comment on table usuarios_clinicas is 'Vínculo entre usuários e clínicas com papel (superadmin/gestor/profissional_saude/financeiro/secretaria)';
 
 -- 3. Pacientes
 -- --------------------------------------------
@@ -207,18 +207,18 @@ as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid()
 
 create or replace function public.get_my_medico_clinica_ids()
 returns setof uuid language sql security definer set search_path = '' stable
-as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid() and papel in ('medico', 'admin'); $$;
+as $$ select clinica_id from public.usuarios_clinicas where user_id = auth.uid() and papel in ('superadmin', 'gestor', 'profissional_saude'); $$;
 
 create or replace function public.is_admin()
 returns boolean language sql security definer set search_path = '' stable
-as $$ select exists (select 1 from public.usuarios_clinicas where user_id = auth.uid() and papel = 'admin'); $$;
+as $$ select exists (select 1 from public.usuarios_clinicas where user_id = auth.uid() and papel = 'superadmin'); $$;
 
 create or replace function public.get_my_clinic_medico_ids()
 returns setof uuid language sql security definer set search_path = '' stable
 as $$
   select uc.user_id from public.usuarios_clinicas uc
   where uc.clinica_id in (select public.get_my_clinica_ids())
-  and uc.papel in ('medico', 'admin');
+  and uc.papel in ('superadmin', 'profissional_saude');
 $$;
 
 -- clinicas: usuário vê clínicas que pertence; admin vê todas
@@ -258,9 +258,9 @@ create policy "Medico acessa receitas" on receitas for all to authenticated
 create policy "Acesso agendamentos" on agendamentos for all to authenticated
   using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
 
--- transacoes: por clínica, médico e admin
+-- transacoes: por clínica (superadmin, gestor, financeiro)
 create policy "Medico acessa transacoes" on transacoes for all to authenticated
-  using (clinica_id in (select public.get_my_medico_clinica_ids()) or public.is_admin());
+  using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
 
 -- configuracoes
 create policy "Acesso configuracoes" on configuracoes for all to authenticated

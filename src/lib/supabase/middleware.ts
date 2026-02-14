@@ -1,14 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Rotas restritas ao médico — secretária não pode acessar
-const MEDICO_ONLY_ROUTES = [
-  "/prontuarios",
-  "/receitas",
-  "/financeiro",
-  "/relatorios",
-  "/configuracoes",
-];
+// Mapa de rotas restritas → papéis que podem acessar
+const RESTRICTED_ROUTES: Record<string, string[]> = {
+  "/prontuarios": ["superadmin", "profissional_saude"],
+  "/receitas": ["superadmin", "profissional_saude"],
+  "/financeiro": ["superadmin", "gestor", "financeiro"],
+  "/relatorios": ["superadmin", "gestor", "profissional_saude", "financeiro"],
+  "/configuracoes": ["superadmin", "gestor"],
+};
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -75,10 +75,10 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const clinicaCookie = request.cookies.get("prontio_clinica_id")?.value;
     const pathname = request.nextUrl.pathname;
-    const isMedicoOnlyRoute = MEDICO_ONLY_ROUTES.some((r) => pathname.startsWith(r));
+    const restrictedEntry = Object.entries(RESTRICTED_ROUTES).find(([route]) => pathname.startsWith(route));
 
     // Uma única query quando precisamos do vínculo (cookie ausente ou rota protegida)
-    if (!clinicaCookie || isMedicoOnlyRoute) {
+    if (!clinicaCookie || restrictedEntry) {
       let query = supabase
         .from("usuarios_clinicas")
         .select("clinica_id, papel")
@@ -100,9 +100,9 @@ export async function updateSession(request: NextRequest) {
           });
         }
 
-        if (isMedicoOnlyRoute && vinculo.papel !== "medico" && vinculo.papel !== "admin") {
+        if (restrictedEntry && !restrictedEntry[1].includes(vinculo.papel)) {
           const url = request.nextUrl.clone();
-          url.pathname = "/agenda";
+          url.pathname = "/";
           return NextResponse.redirect(url);
         }
       }

@@ -53,7 +53,7 @@ describe("GET /api/backup", () => {
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
       clinicaNome: "Clínica Teste",
-      papel: "medico",
+      papel: "profissional_saude",
       userId: "u-1",
     });
     mockGetMedicoId.mockRejectedValue(new Error("Médico não encontrado"));
@@ -67,7 +67,7 @@ describe("GET /api/backup", () => {
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
       clinicaNome: "Clínica Teste",
-      papel: "medico",
+      papel: "profissional_saude",
       userId: "u-1",
     });
     mockGetMedicoId.mockResolvedValue("u-1");
@@ -104,7 +104,7 @@ describe("GET /api/backup", () => {
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
       clinicaNome: "Clínica Teste",
-      papel: "medico",
+      papel: "profissional_saude",
       userId: "u-1",
     });
     mockGetMedicoId.mockResolvedValue("u-1");
@@ -129,7 +129,7 @@ describe("GET /api/backup", () => {
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
       clinicaNome: "Clínica Teste",
-      papel: "medico",
+      papel: "profissional_saude",
       userId: "u-1",
     });
     mockGetMedicoId.mockResolvedValue("u-1");

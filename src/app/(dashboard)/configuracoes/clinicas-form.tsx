@@ -15,6 +15,14 @@ import {
 } from "./actions";
 import { INPUT_CLASS, NOME_CONSULTORIO_MAX, EMAIL_MAX, SENHA_MIN, SENHA_MAX } from "./constants";
 
+const PAPEL_BADGE: Record<string, { label: string; className: string }> = {
+  superadmin: { label: "Superadmin", className: "bg-purple-50 text-purple-700" },
+  gestor: { label: "Gestor", className: "bg-indigo-50 text-indigo-700" },
+  profissional_saude: { label: "Prof. Saúde", className: "bg-primary-50 text-primary-700" },
+  financeiro: { label: "Financeiro", className: "bg-green-50 text-green-700" },
+  secretaria: { label: "Secretária", className: "bg-amber-50 text-amber-700" },
+};
+
 interface ClinicaInfo {
   id: string;
   nome: string;
@@ -120,14 +128,10 @@ function ClinicaItem({
                 <div key={v.user_id} className="flex items-center gap-2 text-xs text-gray-500">
                   <span
                     className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                      v.papel === "admin"
-                        ? "bg-purple-50 text-purple-700"
-                        : v.papel === "medico"
-                          ? "bg-primary-50 text-primary-700"
-                          : "bg-amber-50 text-amber-700"
+                      PAPEL_BADGE[v.papel]?.className ?? "bg-gray-50 text-gray-700"
                     }`}
                   >
-                    {v.papel === "admin" ? "Admin" : v.papel === "medico" ? "Médico" : "Secretária"}
+                    {PAPEL_BADGE[v.papel]?.label ?? v.papel}
                   </span>
                   <span>{v.email || v.user_id.slice(0, 8)}</span>
                 </div>
@@ -300,7 +304,7 @@ export function ClinicasForm({
       <div className="border-t border-gray-200 pt-6">
         <h3 className="text-sm font-semibold text-gray-900">Criar usuário</h3>
         <p className="mt-1 text-xs text-gray-500">
-          Crie uma conta e vincule à clínica com papel de médico ou secretária.
+          Crie uma conta e vincule à clínica com o papel desejado.
         </p>
         <form action={userAction} className="mt-3 space-y-3" aria-busy={isCreatingUser}>
           <FormError message={userState.error} />
@@ -363,7 +367,9 @@ export function ClinicasForm({
               className={INPUT_CLASS}
             >
               <option value="secretaria">Secretária</option>
-              <option value="medico">Médico</option>
+              <option value="profissional_saude">Profissional de Saúde</option>
+              <option value="gestor">Gestor</option>
+              <option value="financeiro">Financeiro</option>
             </select>
           </div>
           <button

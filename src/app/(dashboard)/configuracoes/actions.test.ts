@@ -58,10 +58,11 @@ vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinica-123",
     clinicaNome: "Clínica Teste",
-    papel: "medico",
+    papel: "gestor",
     userId: "user-456",
   }),
   getMedicoId: vi.fn().mockResolvedValue("user-456"),
+  isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
 import { salvarConsultorio, salvarHorarios, salvarProfissional, alterarSenha, criarUsuario, editarClinica, alternarStatusClinica, excluirClinica } from "./actions";
@@ -329,7 +330,7 @@ describe("criarUsuario", () => {
   });
 
   it("retorna erro quando papel é inválido", async () => {
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "admin", clinica_id: "clinica-123" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "invalido", clinica_id: "clinica-123" }));
     expect(result.error).toBe("Papel inválido.");
   });
 
@@ -379,19 +380,19 @@ describe("criarUsuario", () => {
     });
   });
 
-  it("cria médico com sucesso", async () => {
-    const result = await criarUsuario({}, makeFormData({ email: "dr@test.com", senha: "senhaSegura", papel: "medico", clinica_id: "clinica-123" }));
+  it("cria profissional de saúde com sucesso", async () => {
+    const result = await criarUsuario({}, makeFormData({ email: "dr@test.com", senha: "senhaSegura", papel: "profissional_saude", clinica_id: "clinica-123" }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith({
       user_id: "new-user-id",
       clinica_id: "clinica-123",
-      papel: "medico",
+      papel: "profissional_saude",
     });
   });
 
-  it("permite admin criar usuários", async () => {
+  it("permite superadmin criar usuários", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "admin", userId: "u-1",
+      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
     });
     const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
     expect(result.success).toBe(true);
@@ -444,9 +445,9 @@ describe("editarClinica", () => {
     expect(result.error).toBe("Sem permissão para editar clínicas.");
   });
 
-  it("permite admin editar", async () => {
+  it("permite superadmin editar", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "admin", userId: "u-1",
+      clinicaId: "c-1", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
     });
     const result = await editarClinica({}, makeFormData({ clinica_id: "c-1", nome: "Clínica Admin" }));
     expect(result.success).toBe(true);
@@ -511,9 +512,9 @@ describe("alternarStatusClinica", () => {
     await expect(alternarStatusClinica("c-1")).rejects.toThrow("Erro ao atualizar clínica");
   });
 
-  it("permite admin alternar status", async () => {
+  it("permite superadmin alternar status", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "admin", userId: "u-1",
+      clinicaId: "c-1", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
     });
     await alternarStatusClinica("c-1");
     expect(mockUpdate).toHaveBeenCalledWith({ ativo: false });
@@ -552,9 +553,9 @@ describe("excluirClinica", () => {
     await expect(excluirClinica("c-1")).rejects.toThrow("Erro ao excluir clínica");
   });
 
-  it("permite admin excluir", async () => {
+  it("permite superadmin excluir", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "admin", userId: "u-1",
+      clinicaId: "c-1", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
     });
     await excluirClinica("c-1");
     expect(mockDeleteClinica).toHaveBeenCalled();

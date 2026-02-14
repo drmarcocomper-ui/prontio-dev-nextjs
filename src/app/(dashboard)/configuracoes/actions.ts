@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual, isGestor } from "@/lib/clinica";
 import { emailValido as validarEmail } from "@/lib/validators";
 import {
   NOME_CONSULTORIO_MAX,
@@ -248,7 +248,7 @@ export async function criarClinica(
 
   // Create user-clinic link — preserve current user's role
   const ctx = await getClinicaAtual();
-  const papel = ctx?.papel === "admin" ? "admin" : "medico";
+  const papel = ctx?.papel === "superadmin" ? "superadmin" : "gestor";
   const { error: vinculoError } = await supabase
     .from("usuarios_clinicas")
     .insert({
@@ -274,7 +274,7 @@ export async function editarClinica(
   formData: FormData
 ): Promise<ConfigFormState> {
   const ctx = await getClinicaAtual();
-  if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
+  if (!ctx || !isGestor(ctx.papel)) {
     return { error: "Sem permissão para editar clínicas." };
   }
 
@@ -306,7 +306,7 @@ export async function editarClinica(
  */
 export async function alternarStatusClinica(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
-  if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
+  if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para alterar status de clínicas.");
   }
 
@@ -340,7 +340,7 @@ export async function alternarStatusClinica(id: string): Promise<void> {
  */
 export async function excluirClinica(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
-  if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
+  if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para excluir clínicas.");
   }
 
@@ -385,7 +385,8 @@ export async function criarUsuario(
     return { error: `A senha deve ter no máximo ${SENHA_MAX} caracteres.` };
   }
 
-  if (papel !== "medico" && papel !== "secretaria") {
+  const PAPEIS_VALIDOS = ["gestor", "profissional_saude", "financeiro", "secretaria"];
+  if (!PAPEIS_VALIDOS.includes(papel)) {
     return { error: "Papel inválido." };
   }
 
@@ -393,7 +394,7 @@ export async function criarUsuario(
 
   // Permissão
   const ctx = await getClinicaAtual();
-  if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
+  if (!ctx || !isGestor(ctx.papel)) {
     return { error: "Sem permissão para criar usuários." };
   }
 

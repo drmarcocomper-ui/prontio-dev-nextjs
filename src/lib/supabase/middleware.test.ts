@@ -148,24 +148,24 @@ describe("updateSession", () => {
     );
   });
 
-  it("redireciona secretária de rotas do médico para /agenda", async () => {
+  it("redireciona secretária de rotas restritas para /", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
     mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "secretaria" } };
     await updateSession(createMockRequest("/financeiro", { prontio_clinica_id: "clinic-1" }));
     expect(mockRedirect).toHaveBeenCalled();
     const redirectCall = mockRedirect.mock.calls[0][0];
-    expect(redirectCall.pathname).toBe("/agenda");
+    expect(redirectCall.pathname).toBe("/");
   });
 
-  it("permite médico acessar rotas protegidas", async () => {
+  it("permite profissional_saude acessar rotas protegidas", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
-    mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "medico" } };
-    await updateSession(createMockRequest("/financeiro", { prontio_clinica_id: "clinic-1" }));
-    // Should not redirect to /agenda
-    const agendaRedirects = mockRedirect.mock.calls.filter(
-      (call: unknown[]) => (call[0] as { pathname: string }).pathname === "/agenda"
+    mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "profissional_saude" } };
+    await updateSession(createMockRequest("/prontuarios", { prontio_clinica_id: "clinic-1" }));
+    // Should not redirect to /
+    const dashRedirects = mockRedirect.mock.calls.filter(
+      (call: unknown[]) => (call[0] as { pathname: string }).pathname === "/"
     );
-    expect(agendaRedirects.length).toBe(0);
+    expect(dashRedirects.length).toBe(0);
   });
 
   describe("sem variáveis de ambiente", () => {

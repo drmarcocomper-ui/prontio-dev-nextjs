@@ -17,11 +17,11 @@ vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
     clinicaNome: "Clínica Teste",
-    papel: "medico",
+    papel: "profissional_saude",
     userId: "user-1",
   }),
   getClinicasDoUsuario: vi.fn().mockResolvedValue([
-    { id: "clinic-1", nome: "Clínica Teste", papel: "medico" },
+    { id: "clinic-1", nome: "Clínica Teste", papel: "profissional_saude" },
   ]),
 }));
 

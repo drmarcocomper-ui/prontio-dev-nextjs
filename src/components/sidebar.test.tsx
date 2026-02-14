@@ -38,10 +38,10 @@ vi.mock("@/components/clinic-selector", () => ({
 import { Sidebar } from "./sidebar";
 
 const defaultClinicas: Clinica[] = [
-  { id: "clinic-1", nome: "Clínica Teste", papel: "medico" as const },
+  { id: "clinic-1", nome: "Clínica Teste", papel: "superadmin" as const },
 ];
 const defaultClinicaAtualId = "clinic-1";
-const defaultPapel: Papel = "medico" as const;
+const defaultPapel: Papel = "superadmin" as const;
 
 const defaultProps = {
   profissionalNome: "Dr. João Silva",
@@ -72,8 +72,8 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renderiza todos os 6 links de navegação quando papel é medico", () => {
-    render(<Sidebar {...defaultProps} />);
+  it("renderiza todos os 6 links de navegação quando papel é superadmin", () => {
+    render(<Sidebar {...defaultProps} papel={"superadmin" as const} />);
     for (const item of navItems) {
       expect(screen.getByText(item.label)).toBeInTheDocument();
     }
@@ -117,11 +117,23 @@ describe("Sidebar", () => {
   });
 
   describe("visibilidade por papel", () => {
-    it("quando papel=medico, exibe todos os itens de navegação", () => {
-      render(<Sidebar {...defaultProps} papel={"medico" as const} />);
+    it("quando papel=superadmin, exibe todos os itens de navegação", () => {
+      render(<Sidebar {...defaultProps} papel={"superadmin" as const} />);
       for (const item of navItems) {
         expect(screen.getByText(item.label)).toBeInTheDocument();
       }
+    });
+
+    it("quando papel=profissional_saude, oculta Financeiro e Configurações", () => {
+      render(<Sidebar {...defaultProps} papel={"profissional_saude" as const} />);
+
+      expect(screen.getByText("Início")).toBeInTheDocument();
+      expect(screen.getByText("Agenda")).toBeInTheDocument();
+      expect(screen.getByText("Pacientes")).toBeInTheDocument();
+      expect(screen.getByText("Relatórios")).toBeInTheDocument();
+
+      expect(screen.queryByText("Financeiro")).not.toBeInTheDocument();
+      expect(screen.queryByText("Configurações")).not.toBeInTheDocument();
     });
 
     it("quando papel=secretaria, oculta Financeiro, Relatórios e Configurações", () => {

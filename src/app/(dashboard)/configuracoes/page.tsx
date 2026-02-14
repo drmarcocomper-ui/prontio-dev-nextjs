@@ -22,7 +22,7 @@ export default async function ConfiguracoesPage({
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
-  const papel = ctx?.papel ?? "medico";
+  const papel = ctx?.papel ?? "superadmin";
 
   // Load clinic data for consultório tab
   const { data: clinica } = ctx?.clinicaId

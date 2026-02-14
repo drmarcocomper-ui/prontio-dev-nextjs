@@ -11,7 +11,7 @@ import {
   SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS,
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
-import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, isProfissional } from "@/lib/clinica";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -64,7 +64,7 @@ export default async function PacienteDetalhesPage({
   const currentTab = tab || "identificacao";
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
-  const isMedico = ctx?.papel === "medico" || ctx?.papel === "admin";
+  const isMedico = ctx ? isProfissional(ctx.papel) : false;
   let medicoId: string;
   try {
     medicoId = await getMedicoId();

@@ -49,15 +49,19 @@ let mockPaciente: Record<string, unknown> | null = null;
 let mockProntuarios: Record<string, unknown>[] = [];
 let mockReceitas: Record<string, unknown>[] = [];
 
-vi.mock("@/lib/clinica", () => ({
-  getClinicaAtual: vi.fn().mockResolvedValue({
-    clinicaId: "clinic-1",
-    clinicaNome: "Clínica Teste",
-    papel: "medico",
-    userId: "user-1",
-  }),
-  getMedicoId: vi.fn().mockResolvedValue("user-1"),
-}));
+vi.mock("@/lib/clinica", async () => {
+  const actual = await vi.importActual("@/lib/clinica");
+  return {
+    ...actual,
+    getClinicaAtual: vi.fn().mockResolvedValue({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "profissional_saude",
+      userId: "user-1",
+    }),
+    getMedicoId: vi.fn().mockResolvedValue("user-1"),
+  };
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>

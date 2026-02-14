@@ -46,15 +46,19 @@ function createFromResult() {
   };
 }
 
-vi.mock("@/lib/clinica", () => ({
-  getClinicaAtual: vi.fn().mockResolvedValue({
-    clinicaId: "clinic-1",
-    clinicaNome: "Clínica Teste",
-    papel: "medico",
-    userId: "user-1",
-  }),
-  getMedicoId: vi.fn().mockResolvedValue("user-1"),
-}));
+vi.mock("@/lib/clinica", async () => {
+  const actual = await vi.importActual("@/lib/clinica");
+  return {
+    ...actual,
+    getClinicaAtual: vi.fn().mockResolvedValue({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "superadmin",
+      userId: "user-1",
+    }),
+    getMedicoId: vi.fn().mockResolvedValue("user-1"),
+  };
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
