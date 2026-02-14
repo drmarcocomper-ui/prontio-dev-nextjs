@@ -65,8 +65,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: (table: string) => ({
-        select: () => {
+        select: (cols?: string) => {
           if (table === "clinicas") {
+            if (cols === "id, ativo") {
+              return {
+                in: () => Promise.resolve({ data: [{ id: "clinic-1", ativo: true }] }),
+              };
+            }
             return {
               eq: () => ({ single: () => Promise.resolve(mockClinica) }),
             };
