@@ -11,6 +11,7 @@ import {
   SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS,
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
+import { formatDateMedium } from "@/lib/format";
 import { getClinicaAtual, getMedicoId, isProfissional } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
 
@@ -22,10 +23,17 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Paciente" };
   const supabase = await createClient();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { title: "Paciente" };
+  }
   const { data } = await supabase
     .from("pacientes")
     .select("nome")
     .eq("id", id)
+    .eq("medico_id", medicoId)
     .single();
   return { title: data?.nome ?? "Paciente" };
 }
@@ -248,11 +256,7 @@ export default async function PacienteDetalhesPage({
             <InfoItem label="Observações" value={paciente.observacoes} />
             <InfoItem
               label="Cadastrado em"
-              value={new Date(paciente.created_at).toLocaleDateString("pt-BR", {
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              })}
+              value={formatDateMedium(paciente.created_at.slice(0, 10))}
             />
           </dl>
         </div>

@@ -290,6 +290,7 @@ export function PacienteForm({
               defaultValue={defaults?.numero ?? ""}
               className={INPUT_CLASS}
             />
+            <FieldError message={state.fieldErrors?.numero} />
           </div>
 
           <div className="sm:col-span-2">
@@ -305,6 +306,7 @@ export function PacienteForm({
               defaultValue={defaults?.complemento ?? ""}
               className={INPUT_CLASS}
             />
+            <FieldError message={state.fieldErrors?.complemento} />
           </div>
 
           <div className="sm:col-span-3">
@@ -320,6 +322,7 @@ export function PacienteForm({
               defaultValue={defaults?.bairro ?? ""}
               className={INPUT_CLASS}
             />
+            <FieldError message={state.fieldErrors?.bairro} />
           </div>
 
           <div className="sm:col-span-4">
@@ -335,6 +338,7 @@ export function PacienteForm({
               defaultValue={defaults?.cidade ?? ""}
               className={INPUT_CLASS}
             />
+            <FieldError message={state.fieldErrors?.cidade} />
           </div>
 
           <div className="sm:col-span-2">
@@ -381,6 +385,7 @@ export function PacienteForm({
               defaultValue={defaults?.convenio ?? ""}
               className={INPUT_CLASS}
             />
+            <FieldError message={state.fieldErrors?.convenio} />
           </div>
         </div>
 
@@ -397,6 +402,7 @@ export function PacienteForm({
             defaultValue={defaults?.observacoes ?? ""}
             className={INPUT_CLASS}
           />
+          <FieldError message={state.fieldErrors?.observacoes} />
         </div>
       </fieldset>
 
