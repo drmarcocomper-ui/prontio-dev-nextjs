@@ -15,6 +15,10 @@ const mockSelectClinica = vi.fn().mockReturnValue({
 const mockDeleteClinica = vi.fn().mockReturnValue({
   eq: vi.fn().mockReturnValue({ error: null }),
 });
+const mockAdminCreateUser = vi.fn().mockResolvedValue({
+  data: { user: { id: "new-user-id" } },
+  error: null,
+});
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -40,6 +44,16 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    auth: {
+      admin: {
+        createUser: (data: unknown) => mockAdminCreateUser(data),
+      },
+    },
+  }),
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinica-123",
@@ -50,7 +64,7 @@ vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("user-456"),
 }));
 
-import { salvarConsultorio, salvarHorarios, salvarProfissional, alterarSenha, convidarSecretaria, editarClinica, alternarStatusClinica, excluirClinica } from "./actions";
+import { salvarConsultorio, salvarHorarios, salvarProfissional, alterarSenha, criarUsuario, editarClinica, alternarStatusClinica, excluirClinica } from "./actions";
 import { getClinicaAtual } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
@@ -278,22 +292,115 @@ describe("alterarSenha", () => {
   });
 });
 
-describe("convidarSecretaria", () => {
-  beforeEach(() => vi.clearAllMocks());
+describe("criarUsuario", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAdminCreateUser.mockResolvedValue({
+      data: { user: { id: "new-user-id" } },
+      error: null,
+    });
+  });
 
   it("retorna erro quando email está vazio", async () => {
-    const result = await convidarSecretaria({}, makeFormData({ email: "", clinica_id: "clinica-123" }));
+    const result = await criarUsuario({}, makeFormData({ email: "", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
     expect(result.error).toBe("E-mail é obrigatório.");
   });
 
   it("retorna erro quando email é inválido", async () => {
-    const result = await convidarSecretaria({}, makeFormData({ email: "invalido", clinica_id: "clinica-123" }));
+    const result = await criarUsuario({}, makeFormData({ email: "invalido", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
     expect(result.error).toBe("E-mail inválido.");
   });
 
+  it("retorna erro quando email excede max length", async () => {
+    const longEmail = "a".repeat(250) + "@b.co";
+    const result = await criarUsuario({}, makeFormData({ email: longEmail, senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("E-mail excede 254 caracteres.");
+  });
+
+  it("retorna erro quando senha é curta", async () => {
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123", papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("A senha deve ter pelo menos 6 caracteres.");
+  });
+
+  it("retorna erro quando senha excede max length", async () => {
+    const longPass = "a".repeat(129);
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: longPass, papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("A senha deve ter no máximo 128 caracteres.");
+  });
+
+  it("retorna erro quando papel é inválido", async () => {
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "admin", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("Papel inválido.");
+  });
+
   it("retorna erro quando clinica_id está vazio", async () => {
-    const result = await convidarSecretaria({}, makeFormData({ email: "sec@email.com", clinica_id: "" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "" }));
     expect(result.error).toBe("Selecione uma clínica.");
+  });
+
+  it("retorna erro quando não tem permissão (secretaria)", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "secretaria", userId: "u-1",
+    });
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("Sem permissão para criar usuários.");
+  });
+
+  it("retorna erro quando email já existe", async () => {
+    mockAdminCreateUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: "A user with this email address has already been registered" },
+    });
+    const result = await criarUsuario({}, makeFormData({ email: "dup@test.com", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("Já existe um usuário com este e-mail.");
+  });
+
+  it("retorna erro genérico quando createUser falha", async () => {
+    mockAdminCreateUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: "Unknown error" },
+    });
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("Erro ao criar usuário. Tente novamente.");
+  });
+
+  it("cria usuário com sucesso", async () => {
+    const result = await criarUsuario({}, makeFormData({ email: "novo@test.com", senha: "senhaSegura", papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.success).toBe(true);
+    expect(mockAdminCreateUser).toHaveBeenCalledWith({
+      email: "novo@test.com",
+      password: "senhaSegura",
+      email_confirm: true,
+    });
+    expect(mockInsert).toHaveBeenCalledWith({
+      user_id: "new-user-id",
+      clinica_id: "clinica-123",
+      papel: "secretaria",
+    });
+  });
+
+  it("cria médico com sucesso", async () => {
+    const result = await criarUsuario({}, makeFormData({ email: "dr@test.com", senha: "senhaSegura", papel: "medico", clinica_id: "clinica-123" }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith({
+      user_id: "new-user-id",
+      clinica_id: "clinica-123",
+      papel: "medico",
+    });
+  });
+
+  it("permite admin criar usuários", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "admin", userId: "u-1",
+    });
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.success).toBe(true);
+  });
+
+  it("retorna erro quando vínculo duplicado (23505)", async () => {
+    mockInsert.mockResolvedValueOnce({ error: { code: "23505", message: "duplicate" } });
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "clinica-123" }));
+    expect(result.error).toBe("Este usuário já está vinculado a esta clínica.");
   });
 });
 

@@ -360,67 +360,75 @@ export async function excluirClinica(id: string): Promise<void> {
 }
 
 /**
- * Convidar secretária por email
+ * Criar usuário (médico ou secretária) e vincular à clínica
  */
-export async function convidarSecretaria(
+export async function criarUsuario(
   _prev: ConfigFormState,
   formData: FormData
 ): Promise<ConfigFormState> {
   const email = (formData.get("email") as string)?.trim();
-  const clinicaId = formData.get("clinica_id") as string;
+  const senha = (formData.get("senha") as string) ?? "";
+  const papel = (formData.get("papel") as string)?.trim();
+  const clinicaId = (formData.get("clinica_id") as string)?.trim();
 
+  // Validação
   if (!email) return { error: "E-mail é obrigatório." };
+  if (email.length > EMAIL_MAX) return { error: `E-mail excede ${EMAIL_MAX} caracteres.` };
   const emailErros: Record<string, string> = {};
   validarEmail(emailErros, "email", email);
   if (emailErros.email) return { error: emailErros.email };
+
+  if (!senha || senha.length < SENHA_MIN) {
+    return { error: `A senha deve ter pelo menos ${SENHA_MIN} caracteres.` };
+  }
+  if (senha.length > SENHA_MAX) {
+    return { error: `A senha deve ter no máximo ${SENHA_MAX} caracteres.` };
+  }
+
+  if (papel !== "medico" && papel !== "secretaria") {
+    return { error: "Papel inválido." };
+  }
+
   if (!clinicaId) return { error: "Selecione uma clínica." };
 
-  const supabase = await createClient();
-
-  // Check that caller is medico for this clinic
+  // Permissão
   const ctx = await getClinicaAtual();
   if (!ctx || (ctx.papel !== "medico" && ctx.papel !== "admin")) {
-    return { error: "Apenas médicos podem convidar secretárias." };
-  }
-  if (clinicaId !== ctx.clinicaId) {
-    return { error: "Você não tem permissão para gerenciar esta clínica." };
+    return { error: "Sem permissão para criar usuários." };
   }
 
-  // Look up user by email via RPC (requires get_user_id_by_email function in Supabase)
-  const { data: users, error: rpcError } = await supabase.rpc("get_user_id_by_email", { email_input: email }) as { data: { id: string }[] | null; error: unknown };
+  // Criar usuário via admin client
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminSupabase = createAdminClient();
 
-  if (rpcError) {
-    return { error: "Erro ao buscar usuário. Tente novamente." };
+  const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
+    email,
+    password: senha,
+    email_confirm: true,
+  });
+
+  if (createError) {
+    if (createError.message?.includes("already been registered") || createError.message?.includes("already exists")) {
+      return { error: "Já existe um usuário com este e-mail." };
+    }
+    return { error: "Erro ao criar usuário. Tente novamente." };
   }
 
-  if (!users || users.length === 0) {
-    return { error: "Usuário não encontrado. A secretária precisa criar uma conta primeiro." };
-  }
-
-  const secretariaUserId = users[0].id;
-
-  // Check if already linked
-  const { data: existing } = await supabase
-    .from("usuarios_clinicas")
-    .select("id")
-    .eq("user_id", secretariaUserId)
-    .eq("clinica_id", clinicaId)
-    .single();
-
-  if (existing) {
-    return { error: "Este usuário já está vinculado a esta clínica." };
-  }
-
-  const { error } = await supabase
+  // Vincular à clínica
+  const supabase = await createClient();
+  const { error: vinculoError } = await supabase
     .from("usuarios_clinicas")
     .insert({
-      user_id: secretariaUserId,
+      user_id: newUser.user.id,
       clinica_id: clinicaId,
-      papel: "secretaria",
+      papel,
     });
 
-  if (error) {
-    return { error: tratarErroSupabase(error, "criar", "vínculo da secretária") };
+  if (vinculoError) {
+    if (vinculoError.code === "23505") {
+      return { error: "Este usuário já está vinculado a esta clínica." };
+    }
+    return { error: tratarErroSupabase(vinculoError, "criar", "vínculo do usuário") };
   }
 
   revalidatePath("/configuracoes");

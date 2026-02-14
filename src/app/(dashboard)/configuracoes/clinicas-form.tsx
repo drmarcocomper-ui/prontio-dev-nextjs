@@ -7,13 +7,13 @@ import { DeleteButton } from "@/components/delete-button";
 import { ConfirmModal } from "@/components/confirm-modal";
 import {
   criarClinica,
-  convidarSecretaria,
+  criarUsuario,
   editarClinica,
   alternarStatusClinica,
   excluirClinica,
   type ConfigFormState,
 } from "./actions";
-import { INPUT_CLASS, NOME_CONSULTORIO_MAX } from "./constants";
+import { INPUT_CLASS, NOME_CONSULTORIO_MAX, EMAIL_MAX, SENHA_MIN, SENHA_MAX } from "./constants";
 
 interface ClinicaInfo {
   id: string;
@@ -238,8 +238,8 @@ export function ClinicasForm({
     {}
   );
 
-  const [inviteState, inviteAction, isInviting] = useActionState<ConfigFormState, FormData>(
-    convidarSecretaria,
+  const [userState, userAction, isCreatingUser] = useActionState<ConfigFormState, FormData>(
+    criarUsuario,
     {}
   );
 
@@ -248,8 +248,8 @@ export function ClinicasForm({
   }, [createState]);
 
   useEffect(() => {
-    if (inviteState.success) toast.success("Secretária vinculada com sucesso.");
-  }, [inviteState]);
+    if (userState.success) toast.success("Usuário criado com sucesso.");
+  }, [userState]);
 
   return (
     <div className="space-y-8">
@@ -296,23 +296,23 @@ export function ClinicasForm({
         </form>
       </div>
 
-      {/* Invite Secretary */}
+      {/* Create User */}
       <div className="border-t border-gray-200 pt-6">
-        <h3 className="text-sm font-semibold text-gray-900">Convidar secretária</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Criar usuário</h3>
         <p className="mt-1 text-xs text-gray-500">
-          A secretária terá acesso à agenda e pacientes de todas as suas clínicas.
+          Crie uma conta e vincule à clínica com papel de médico ou secretária.
         </p>
-        <form action={inviteAction} className="mt-3 space-y-3" aria-busy={isInviting}>
-          <FormError message={inviteState.error} />
+        <form action={userAction} className="mt-3 space-y-3" aria-busy={isCreatingUser}>
+          <FormError message={userState.error} />
           <div>
-            <label htmlFor="secretaria_clinica" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="usuario_clinica" className="block text-sm font-medium text-gray-700">
               Clínica
             </label>
             <select
-              id="secretaria_clinica"
+              id="usuario_clinica"
               name="clinica_id"
               required
-              disabled={isInviting}
+              disabled={isCreatingUser}
               className={INPUT_CLASS}
             >
               {clinicas.map((c) => (
@@ -321,29 +321,60 @@ export function ClinicasForm({
             </select>
           </div>
           <div>
-            <label htmlFor="secretaria_email" className="block text-sm font-medium text-gray-700">
-              E-mail da secretária <span className="text-red-500">*</span>
+            <label htmlFor="usuario_email" className="block text-sm font-medium text-gray-700">
+              E-mail <span className="text-red-500">*</span>
             </label>
             <input
-              id="secretaria_email"
+              id="usuario_email"
               name="email"
               type="email"
               required
-              maxLength={254}
-              disabled={isInviting}
+              maxLength={EMAIL_MAX}
+              disabled={isCreatingUser}
               placeholder="email@exemplo.com"
               className={INPUT_CLASS}
             />
           </div>
+          <div>
+            <label htmlFor="usuario_senha" className="block text-sm font-medium text-gray-700">
+              Senha <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="usuario_senha"
+              name="senha"
+              type="password"
+              required
+              minLength={SENHA_MIN}
+              maxLength={SENHA_MAX}
+              disabled={isCreatingUser}
+              placeholder="Mínimo 6 caracteres"
+              className={INPUT_CLASS}
+            />
+          </div>
+          <div>
+            <label htmlFor="usuario_papel" className="block text-sm font-medium text-gray-700">
+              Papel
+            </label>
+            <select
+              id="usuario_papel"
+              name="papel"
+              required
+              disabled={isCreatingUser}
+              className={INPUT_CLASS}
+            >
+              <option value="secretaria">Secretária</option>
+              <option value="medico">Médico</option>
+            </select>
+          </div>
           <button
             type="submit"
-            disabled={isInviting}
+            disabled={isCreatingUser}
             className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:opacity-50"
           >
-            {isInviting && (
+            {isCreatingUser && (
               <div aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
-            Convidar
+            Criar usuário
           </button>
         </form>
       </div>
