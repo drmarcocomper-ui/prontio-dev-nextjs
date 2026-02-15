@@ -70,9 +70,9 @@ export type ConvenioTipo =
   | "amil" | "banescaixa" | "bestsenior" | "bradesco" | "capesaude"
   | "castelo_em_vida" | "cesan_faeces" | "codesa" | "cortesia" | "cst"
   | "geap" | "marinha" | "mediservice" | "medsenior" | "particular"
-  | "pasa" | "petrobras" | "postal_saude" | "retorno" | "samp"
+  | "pasa" | "petrobras" | "postal_saude" | "samp"
   | "santa_casa_saude" | "sao_bernardo" | "sao_lazaro" | "saude_caixa"
-  | "sulamerica" | "telemedicina" | "usiminas" | "usisaude" | "vale";
+  | "sulamerica" | "telemedicina" | "unimed" | "usiminas" | "usisaude" | "vale";
 
 export const CONVENIO_LABELS: Record<ConvenioTipo, string> = {
   amil: "Amil",
@@ -93,7 +93,6 @@ export const CONVENIO_LABELS: Record<ConvenioTipo, string> = {
   pasa: "Pasa",
   petrobras: "Petrobras",
   postal_saude: "Postal Saúde",
-  retorno: "Retorno",
   samp: "Samp",
   santa_casa_saude: "Santa Casa Saúde",
   sao_bernardo: "São Bernardo",
@@ -101,6 +100,7 @@ export const CONVENIO_LABELS: Record<ConvenioTipo, string> = {
   saude_caixa: "Saúde Caixa",
   sulamerica: "SulAmérica",
   telemedicina: "Telemedicina",
+  unimed: "Unimed",
   usiminas: "Usiminas",
   usisaude: "USISAUDE",
   vale: "Vale",
