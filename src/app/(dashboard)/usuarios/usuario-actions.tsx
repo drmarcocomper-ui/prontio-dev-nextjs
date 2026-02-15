@@ -52,10 +52,17 @@ function ResetSenhaButton({ usuario }: { usuario: UsuarioListItem }) {
     {}
   );
 
+  const [prevState, setPrevState] = useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state.success) {
+      setOpen(false);
+    }
+  }
+
   useEffect(() => {
     if (state.success) {
       toast.success("Senha resetada com sucesso.");
-      setOpen(false);
     }
   }, [state]);
 

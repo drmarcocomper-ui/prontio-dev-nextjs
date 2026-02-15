@@ -64,7 +64,7 @@ vi.mock("@/lib/clinica", () => ({
 }));
 
 import { criarUsuario, atualizarUsuario, atualizarPapel, resetarSenha, removerVinculo } from "./actions";
-import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
+import { getClinicaAtual } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 function makeFormData(data: Record<string, string>) {

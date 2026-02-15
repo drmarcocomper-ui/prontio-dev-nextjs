@@ -43,7 +43,7 @@ export default async function ConfiguracoesPage({
   }
 
   // Load config only for tabs that need it
-  let config: Record<string, string> = {};
+  const config: Record<string, string> = {};
   if (needsConfig.has(currentTab)) {
     const { data: rows } = await supabase
       .from("configuracoes")

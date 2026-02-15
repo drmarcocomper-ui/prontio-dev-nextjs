@@ -64,13 +64,9 @@ export function ReceitaForm({
 
   const cancel = cancelHref ?? (isEditing ? `/receitas/${defaults?.id}` : "/receitas");
   const medRef = useRef<HTMLTextAreaElement>(null);
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<Template[]>(() => loadTemplates());
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
-
-  useEffect(() => {
-    setTemplates(loadTemplates());
-  }, []);
 
   const applyTemplate = useCallback((t: Template) => {
     if (medRef.current) {

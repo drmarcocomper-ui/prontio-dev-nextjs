@@ -5,7 +5,6 @@ import { getClinicaAtual } from "@/lib/clinica";
 import { Pagination } from "@/components/pagination";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
-import { escapeLikePattern } from "@/lib/sanitize";
 import { PapelFilter } from "./filters";
 import { UsuarioRowActions } from "./usuario-actions";
 import { type UsuarioListItem, PAPEL_BADGE } from "./types";

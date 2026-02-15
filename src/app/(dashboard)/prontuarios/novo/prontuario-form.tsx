@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useEffect, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
@@ -32,13 +32,7 @@ export function ProntuarioForm({
   const formRef = useRef<HTMLFormElement>(null);
   const draftId = isEditing ? `prontuario-edit-${defaults?.id}` : "prontuario-novo";
   const { restoreDraft, hasDraft, clearDraft } = useFormDraft(draftId, formRef);
-  const [showDraftBanner, setShowDraftBanner] = useState(false);
-
-  useEffect(() => {
-    if (!isEditing && hasDraft()) {
-      setShowDraftBanner(true);
-    }
-  }, [isEditing, hasDraft]);
+  const [showDraftBanner, setShowDraftBanner] = useState(() => !isEditing && hasDraft());
 
   function handleRestore() {
     restoreDraft();

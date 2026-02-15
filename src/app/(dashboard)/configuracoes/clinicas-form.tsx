@@ -52,10 +52,17 @@ function ClinicaItem({
   const [toggleOpen, setToggleOpen] = useState(false);
   const [isToggling, startToggle] = useTransition();
 
+  const [prevEditState, setPrevEditState] = useState(editState);
+  if (editState !== prevEditState) {
+    setPrevEditState(editState);
+    if (editState.success) {
+      setEditing(false);
+    }
+  }
+
   useEffect(() => {
     if (editState.success) {
       toast.success("Clínica atualizada.");
-      setEditing(false);
     }
   }, [editState]);
 

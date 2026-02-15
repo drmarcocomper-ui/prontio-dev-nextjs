@@ -3,11 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // --- Mocks ---
 
 const mockGetUser = vi.fn();
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockIn = vi.fn();
-const mockLimit = vi.fn();
-const mockSingle = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
