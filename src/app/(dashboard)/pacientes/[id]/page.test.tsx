@@ -111,7 +111,7 @@ const pacienteCompleto = {
   bairro: "Centro",
   cidade: "São Paulo",
   estado: "SP",
-  convenio: "Unimed",
+  convenio: "bradesco",
   observacoes: "Alergia a dipirona",
   created_at: "2024-06-15T10:30:00Z",
 };
@@ -231,9 +231,9 @@ describe("PacienteDetalhesPage", () => {
     expect(screen.getByText("01001-000")).toBeInTheDocument();
   });
 
-  it("exibe convênio como badge", async () => {
+  it("exibe convênio como badge com label correto", async () => {
     await renderPage();
-    const elements = screen.getAllByText("Unimed");
+    const elements = screen.getAllByText("Bradesco");
     expect(elements.length).toBeGreaterThanOrEqual(1);
   });
 

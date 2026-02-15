@@ -8,9 +8,9 @@ import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido, valorPermi
 import {
   NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
   ENDERECO_MAX_LENGTH, NUMERO_MAX_LENGTH, COMPLEMENTO_MAX_LENGTH,
-  BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH, CONVENIO_MAX_LENGTH,
+  BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH,
   OBSERVACOES_MAX_LENGTH, validarCPF,
-  SEXO_LABELS, ESTADO_CIVIL_LABELS, ESTADOS_UF,
+  SEXO_LABELS, ESTADO_CIVIL_LABELS, ESTADOS_UF, CONVENIO_LABELS,
 } from "./types";
 import { getMedicoId } from "@/lib/clinica";
 
@@ -69,7 +69,7 @@ function validarCamposPaciente(formData: FormData) {
   tamanhoMaximo(fieldErrors, "bairro", bairro, BAIRRO_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "cidade", cidade, CIDADE_MAX_LENGTH);
   valorPermitido(fieldErrors, "estado", estado, ESTADOS_UF);
-  tamanhoMaximo(fieldErrors, "convenio", convenio, CONVENIO_MAX_LENGTH);
+  valorPermitido(fieldErrors, "convenio", convenio, Object.keys(CONVENIO_LABELS));
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   return {

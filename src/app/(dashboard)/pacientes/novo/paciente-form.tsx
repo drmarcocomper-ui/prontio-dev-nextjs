@@ -16,8 +16,8 @@ import {
   ESTADO_CIVIL_LABELS,
   NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
   ENDERECO_MAX_LENGTH, NUMERO_MAX_LENGTH, COMPLEMENTO_MAX_LENGTH,
-  BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH, CONVENIO_MAX_LENGTH,
-  OBSERVACOES_MAX_LENGTH,
+  BAIRRO_MAX_LENGTH, CIDADE_MAX_LENGTH,
+  OBSERVACOES_MAX_LENGTH, CONVENIO_LABELS,
   maskCPF, maskPhone, maskCEP,
 } from "../types";
 
@@ -369,16 +369,20 @@ export function PacienteForm({
             <label htmlFor="convenio" className="block text-sm font-medium text-gray-700">
               Convênio
             </label>
-            <input
+            <select
               id="convenio"
               name="convenio"
-              type="text"
               disabled={isPending}
-              maxLength={CONVENIO_MAX_LENGTH}
-              placeholder="Nome do convênio"
               defaultValue={defaults?.convenio ?? ""}
               className={INPUT_CLASS}
-            />
+            >
+              <option value="">Selecione</option>
+              {Object.entries(CONVENIO_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
             <FieldError message={state.fieldErrors?.convenio} />
           </div>
         </div>

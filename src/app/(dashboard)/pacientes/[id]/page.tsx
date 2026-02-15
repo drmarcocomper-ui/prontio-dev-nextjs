@@ -8,7 +8,7 @@ import { excluirPaciente } from "../actions";
 import { Tabs } from "./tabs";
 import {
   type Paciente,
-  SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS,
+  SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS, CONVENIO_LABELS,
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
 import { formatDateMedium } from "@/lib/format";
@@ -158,7 +158,7 @@ export default async function PacienteDetalhesPage({
               {paciente.sexo && <span>{SEXO_LABELS[paciente.sexo] ?? paciente.sexo}</span>}
               {paciente.convenio && (
                 <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                  {paciente.convenio}
+                  {CONVENIO_LABELS[paciente.convenio as keyof typeof CONVENIO_LABELS] ?? paciente.convenio}
                 </span>
               )}
             </div>
@@ -252,7 +252,7 @@ export default async function PacienteDetalhesPage({
             Informações adicionais
           </h2>
           <dl className="grid grid-cols-1 gap-4">
-            <InfoItem label="Convênio" value={paciente.convenio} />
+            <InfoItem label="Convênio" value={paciente.convenio ? (CONVENIO_LABELS[paciente.convenio as keyof typeof CONVENIO_LABELS] ?? paciente.convenio) : null} />
             <InfoItem label="Observações" value={paciente.observacoes} />
             <InfoItem
               label="Cadastrado em"

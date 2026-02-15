@@ -55,7 +55,7 @@ const defaults = {
   bairro: "Centro",
   cidade: "São Paulo",
   estado: "SP",
-  convenio: "Unimed",
+  convenio: "bradesco",
   observacoes: "Alergia a dipirona",
 };
 
@@ -135,7 +135,7 @@ describe("PacienteForm", () => {
       expect(screen.getByLabelText("Complemento")).toHaveValue("Apto 42");
       expect(screen.getByLabelText("Bairro")).toHaveValue("Centro");
       expect(screen.getByLabelText("Cidade")).toHaveValue("São Paulo");
-      expect(screen.getByLabelText("Convênio")).toHaveValue("Unimed");
+      expect(screen.getByLabelText("Convênio")).toHaveValue("bradesco");
       expect(screen.getByLabelText("Observações")).toHaveValue("Alergia a dipirona");
     });
 

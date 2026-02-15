@@ -62,10 +62,49 @@ export const NUMERO_MAX_LENGTH = 20;
 export const COMPLEMENTO_MAX_LENGTH = 100;
 export const BAIRRO_MAX_LENGTH = 100;
 export const CIDADE_MAX_LENGTH = 100;
-export const CONVENIO_MAX_LENGTH = 100;
 export const OBSERVACOES_MAX_LENGTH = 1000;
 
 // --- Labels ---
+
+export type ConvenioTipo =
+  | "amil" | "banescaixa" | "bestsenior" | "bradesco" | "capesaude"
+  | "castelo_em_vida" | "cesan_faeces" | "codesa" | "cortesia" | "cst"
+  | "geap" | "marinha" | "mediservice" | "medsenior" | "particular"
+  | "pasa" | "petrobras" | "postal_saude" | "retorno" | "samp"
+  | "santa_casa_saude" | "sao_bernardo" | "sao_lazaro" | "saude_caixa"
+  | "sulamerica" | "telemedicina" | "usiminas" | "usisaude" | "vale";
+
+export const CONVENIO_LABELS: Record<ConvenioTipo, string> = {
+  amil: "Amil",
+  banescaixa: "Banescaixa",
+  bestsenior: "Bestsênior",
+  bradesco: "Bradesco",
+  capesaude: "Capesaúde",
+  castelo_em_vida: "Castelo em Vida",
+  cesan_faeces: "Cesan/Faeces",
+  codesa: "Codesa",
+  cortesia: "Cortesia",
+  cst: "CST",
+  geap: "GEAP",
+  marinha: "Marinha",
+  mediservice: "Mediservice",
+  medsenior: "Medsênior",
+  particular: "Particular",
+  pasa: "Pasa",
+  petrobras: "Petrobras",
+  postal_saude: "Postal Saúde",
+  retorno: "Retorno",
+  samp: "Samp",
+  santa_casa_saude: "Santa Casa Saúde",
+  sao_bernardo: "São Bernardo",
+  sao_lazaro: "São Lázaro",
+  saude_caixa: "Saúde Caixa",
+  sulamerica: "SulAmérica",
+  telemedicina: "Telemedicina",
+  usiminas: "Usiminas",
+  usisaude: "USISAUDE",
+  vale: "Vale",
+};
 
 export const SEXO_LABELS: Record<string, string> = {
   masculino: "Masculino",

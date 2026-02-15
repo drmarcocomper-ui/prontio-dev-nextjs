@@ -69,7 +69,7 @@ const pacienteMock = {
   bairro: "Centro",
   cidade: "São Paulo",
   estado: "SP",
-  convenio: "Unimed",
+  convenio: "bradesco",
   observacoes: "Alergia a dipirona",
 };
 

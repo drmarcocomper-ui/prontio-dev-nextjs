@@ -4,6 +4,7 @@ import {
   OBSERVACOES_MAX_LENGTH,
   SEXO_LABELS,
   ESTADO_CIVIL_LABELS,
+  CONVENIO_LABELS,
   ESTADOS_UF,
   validarCPF,
   calcAge,
@@ -24,6 +25,10 @@ describe("pacientes/types", () => {
 
   it("ESTADO_CIVIL_LABELS tem 5 entradas", () => {
     expect(Object.keys(ESTADO_CIVIL_LABELS)).toHaveLength(5);
+  });
+
+  it("CONVENIO_LABELS tem 29 entradas", () => {
+    expect(Object.keys(CONVENIO_LABELS)).toHaveLength(29);
   });
 
   it("ESTADOS_UF tem 27 estados", () => {

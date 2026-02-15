@@ -21,7 +21,6 @@ vi.mock("./types", () => ({
   TIPO_LABELS: {
     consulta: "Consulta",
     retorno: "Retorno",
-    cortesia: "Cortesia",
   },
 }));
 
@@ -45,7 +44,7 @@ describe("AgendaFilters", () => {
     const select = screen.getByLabelText("Filtrar por tipo");
     expect(select).toBeInTheDocument();
     const options = select.querySelectorAll("option");
-    expect(options).toHaveLength(4); // Todos os tipos + 3 tipos
+    expect(options).toHaveLength(3); // Todos os tipos + 2 tipos
   });
 
   it("seleciona status correto baseado em currentStatus", () => {
@@ -70,8 +69,8 @@ describe("AgendaFilters", () => {
   it("navega ao selecionar um tipo", async () => {
     render(<AgendaFilters currentStatus="" currentTipo="" />);
     const select = screen.getByLabelText("Filtrar por tipo");
-    await userEvent.selectOptions(select, "cortesia");
-    expect(mockReplace).toHaveBeenCalledWith("/agenda?tipo=cortesia");
+    await userEvent.selectOptions(select, "retorno");
+    expect(mockReplace).toHaveBeenCalledWith("/agenda?tipo=retorno");
   });
 
   it("remove filtro ao selecionar 'Todos os status'", async () => {
