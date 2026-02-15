@@ -69,9 +69,7 @@ describe("AgendamentoForm", () => {
     expect(select).toBeInTheDocument();
     expect(screen.getByText("Consulta")).toBeInTheDocument();
     expect(screen.getByText("Retorno")).toBeInTheDocument();
-    expect(screen.getByText("Exame")).toBeInTheDocument();
-    expect(screen.getByText("Procedimento")).toBeInTheDocument();
-    expect(screen.getByText("Avaliação")).toBeInTheDocument();
+    expect(screen.getByText("Cortesia")).toBeInTheDocument();
   });
 
   it("renderiza o botão Agendar", () => {
