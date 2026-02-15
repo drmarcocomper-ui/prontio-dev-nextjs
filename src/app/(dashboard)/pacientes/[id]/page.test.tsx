@@ -277,12 +277,11 @@ describe("PacienteDetalhesPage", () => {
 
   it("renderiza lista de prontuários quando existem", async () => {
     mockProntuarios = [
-      { id: "pr-1", data: "2024-06-15", tipo: "consulta", cid: "J06.9", queixa_principal: "Dor de garganta" },
-      { id: "pr-2", data: "2024-06-10", tipo: null, cid: null, queixa_principal: null },
+      { id: "pr-1", data: "2024-06-15", tipo: "consulta", queixa_principal: "Dor de garganta" },
+      { id: "pr-2", data: "2024-06-10", tipo: null, queixa_principal: null },
     ];
     await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("Consulta")).toBeInTheDocument();
-    expect(screen.getByText("CID: J06.9")).toBeInTheDocument();
     expect(screen.getByText("Dor de garganta")).toBeInTheDocument();
     const link = screen.getByText("Dor de garganta").closest("a");
     expect(link).toHaveAttribute("href", "/prontuarios/pr-1?from=paciente");
@@ -351,7 +350,7 @@ describe("PacienteDetalhesPage", () => {
 
   it("exibe valor raw quando tipo do prontuário não está em TIPO_LABELS", async () => {
     mockProntuarios = [
-      { id: "pr-x", data: "2024-06-15", tipo: "tipo_desconhecido", cid: null, queixa_principal: null },
+      { id: "pr-x", data: "2024-06-15", tipo: "tipo_desconhecido", queixa_principal: null },
     ];
     await renderPage("abc-123", { tab: "prontuario" });
     expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();

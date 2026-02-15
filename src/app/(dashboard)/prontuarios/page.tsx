@@ -44,7 +44,7 @@ export default async function ProntuariosPage({
   let query = supabase
     .from("prontuarios")
     .select(
-      "id, data, tipo, cid, queixa_principal, conduta, pacientes(id, nome)",
+      "id, data, tipo, queixa_principal, pacientes(id, nome)",
       { count: "exact" }
     )
     .eq("medico_id", medicoId);
@@ -76,7 +76,7 @@ export default async function ProntuariosPage({
 
   if (q) {
     const escaped = escapeLikePattern(q);
-    query = query.or(`cid.ilike.%${escaped}%,queixa_principal.ilike.%${escaped}%,pacientes.nome.ilike.%${escaped}%`);
+    query = query.or(`queixa_principal.ilike.%${escaped}%,pacientes.nome.ilike.%${escaped}%`);
   }
 
   if (tipo && VALID_TIPO.has(tipo)) {
@@ -163,7 +163,7 @@ export default async function ProntuariosPage({
       </div>
 
       {/* Search */}
-      <SearchInput basePath="/prontuarios" placeholder="Buscar por paciente ou CID..." ariaLabel="Buscar prontuários" defaultValue={q} />
+      <SearchInput basePath="/prontuarios" placeholder="Buscar por paciente ou evolução..." ariaLabel="Buscar prontuários" defaultValue={q} />
 
       {/* Filters + Sort */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -214,30 +214,18 @@ export default async function ProntuariosPage({
                   </div>
 
                   {/* Tags */}
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    {p.tipo && (
+                  {p.tipo && (
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
                         {TIPO_LABELS[p.tipo] ?? p.tipo}
                       </span>
-                    )}
-                    {p.cid && (
-                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                        CID: {p.cid}
-                      </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Preview */}
                   {p.queixa_principal && (
                     <p className="mt-2 line-clamp-2 text-sm text-gray-600">
-                      <span className="font-medium text-gray-700">QP:</span>{" "}
                       {p.queixa_principal}
-                    </p>
-                  )}
-                  {!p.queixa_principal && p.conduta && (
-                    <p className="mt-2 line-clamp-2 text-sm text-gray-600">
-                      <span className="font-medium text-gray-700">Conduta:</span>{" "}
-                      {p.conduta}
                     </p>
                   )}
                 </div>

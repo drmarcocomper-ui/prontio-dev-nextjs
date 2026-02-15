@@ -86,17 +86,9 @@ describe("criarProntuario", () => {
     expect(result.fieldErrors?.data).toBe("A data não pode ser no futuro.");
   });
 
-  it("retorna fieldErrors quando queixa e conduta estão vazios", async () => {
+  it("retorna fieldErrors quando evolução está vazia", async () => {
     const result = await criarProntuario({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15" }));
-    expect(result.fieldErrors?.queixa_principal).toBe("Preencha ao menos a queixa principal ou a conduta.");
-  });
-
-  it("retorna fieldErrors quando CID excede limite", async () => {
-    const result = await criarProntuario({}, makeFormData({
-      paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor",
-      cid: "A".repeat(21),
-    }));
-    expect(result.fieldErrors?.cid).toBe("Máximo de 20 caracteres.");
+    expect(result.fieldErrors?.queixa_principal).toBe("Evolução é obrigatória.");
   });
 
   it("retorna fieldErrors quando queixa_principal excede limite", async () => {
@@ -105,21 +97,6 @@ describe("criarProntuario", () => {
       queixa_principal: "A".repeat(5001),
     }));
     expect(result.fieldErrors?.queixa_principal).toBe("Máximo de 5000 caracteres.");
-  });
-
-  it("retorna fieldErrors quando observacoes excede limite", async () => {
-    const result = await criarProntuario({}, makeFormData({
-      paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor",
-      observacoes: "A".repeat(1001),
-    }));
-    expect(result.fieldErrors?.observacoes).toBe("Máximo de 1000 caracteres.");
-  });
-
-  it("aceita quando apenas conduta é preenchida", async () => {
-    await expect(
-      criarProntuario({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", conduta: "Prescrição" }))
-    ).rejects.toThrow("REDIRECT");
-    expect(mockInsert).toHaveBeenCalled();
   });
 
   it("redireciona após criação com sucesso", async () => {
@@ -172,16 +149,9 @@ describe("atualizarProntuario", () => {
     expect(result.fieldErrors?.data).toBe("A data não pode ser no futuro.");
   });
 
-  it("retorna fieldErrors quando queixa e conduta estão vazios", async () => {
+  it("retorna fieldErrors quando evolução está vazia", async () => {
     const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15" }));
-    expect(result.fieldErrors?.queixa_principal).toBe("Preencha ao menos a queixa principal ou a conduta.");
-  });
-
-  it("aceita quando apenas conduta é preenchida", async () => {
-    await expect(
-      atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", conduta: "Prescrição" }))
-    ).rejects.toThrow("REDIRECT");
-    expect(mockUpdate).toHaveBeenCalled();
+    expect(result.fieldErrors?.queixa_principal).toBe("Evolução é obrigatória.");
   });
 
   it("inclui updated_at ao atualizar", async () => {
@@ -209,7 +179,7 @@ describe("atualizarProntuario", () => {
 
   it("retorna erro quando supabase falha", async () => {
     mockUpdate.mockResolvedValueOnce({ error: { message: "DB error" } });
-    const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", conduta: "Prescrição" }));
+    const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
     expect(result.error).toBe("Erro ao atualizar prontuário. Tente novamente.");
   });
 

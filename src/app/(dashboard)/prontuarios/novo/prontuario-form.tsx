@@ -4,7 +4,7 @@ import { useActionState, useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
-import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, CID_MAX_LENGTH, TIPO_LABELS } from "../types";
+import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import { useFormDraft } from "@/hooks/use-form-draft";
 
@@ -103,146 +103,38 @@ export function ProntuarioForm({
         </div>
       </div>
 
-      {/* Tipo e CID */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
-            Tipo
-          </label>
-          <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} disabled={isPending} className={INPUT_CLASS}>
-            <option value="">Selecione</option>
-            {Object.entries(TIPO_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <FieldError message={state.fieldErrors?.tipo} />
-        </div>
-
-        <div>
-          <label htmlFor="cid" className="block text-sm font-medium text-gray-700">
-            CID
-          </label>
-          <input
-            id="cid"
-            name="cid"
-            type="text"
-            placeholder="Ex: J06.9"
-            maxLength={CID_MAX_LENGTH}
-            disabled={isPending}
-            defaultValue={defaults?.cid ?? ""}
-            className={INPUT_CLASS}
-          />
-        </div>
+      {/* Tipo */}
+      <div>
+        <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
+          Tipo
+        </label>
+        <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} disabled={isPending} className={INPUT_CLASS}>
+          <option value="">Selecione</option>
+          {Object.entries(TIPO_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <FieldError message={state.fieldErrors?.tipo} />
       </div>
 
-      {/* Campos SOAP / Evolução clínica */}
-      <fieldset className="space-y-4 rounded-lg border border-gray-200 p-4">
-        <legend className="px-2 text-sm font-semibold text-gray-900">
-          Evolução clínica
-        </legend>
-
-        <div>
-          <label htmlFor="queixa_principal" className="block text-sm font-medium text-gray-700">
-            Queixa principal
-          </label>
-          <textarea
-            id="queixa_principal"
-            name="queixa_principal"
-            rows={2}
-            maxLength={TEXTO_MAX_LENGTH}
-            disabled={isPending}
-            placeholder="Motivo da consulta..."
-            defaultValue={defaults?.queixa_principal ?? ""}
-            className={INPUT_CLASS}
-          />
-          <FieldError message={state.fieldErrors?.queixa_principal} />
-        </div>
-
-        <div>
-          <label htmlFor="historia_doenca" className="block text-sm font-medium text-gray-700">
-            História da doença atual
-          </label>
-          <textarea
-            id="historia_doenca"
-            name="historia_doenca"
-            rows={3}
-            maxLength={TEXTO_MAX_LENGTH}
-            disabled={isPending}
-            placeholder="Evolução dos sintomas, duração, fatores de melhora/piora..."
-            defaultValue={defaults?.historia_doenca ?? ""}
-            className={INPUT_CLASS}
-          />
-          <FieldError message={state.fieldErrors?.historia_doenca} />
-        </div>
-
-        <div>
-          <label htmlFor="exame_fisico" className="block text-sm font-medium text-gray-700">
-            Exame físico
-          </label>
-          <textarea
-            id="exame_fisico"
-            name="exame_fisico"
-            rows={3}
-            maxLength={TEXTO_MAX_LENGTH}
-            disabled={isPending}
-            placeholder="Sinais vitais, achados do exame..."
-            defaultValue={defaults?.exame_fisico ?? ""}
-            className={INPUT_CLASS}
-          />
-          <FieldError message={state.fieldErrors?.exame_fisico} />
-        </div>
-
-        <div>
-          <label htmlFor="hipotese_diagnostica" className="block text-sm font-medium text-gray-700">
-            Hipótese diagnóstica
-          </label>
-          <textarea
-            id="hipotese_diagnostica"
-            name="hipotese_diagnostica"
-            rows={2}
-            maxLength={TEXTO_MAX_LENGTH}
-            disabled={isPending}
-            placeholder="Diagnóstico provável..."
-            defaultValue={defaults?.hipotese_diagnostica ?? ""}
-            className={INPUT_CLASS}
-          />
-          <FieldError message={state.fieldErrors?.hipotese_diagnostica} />
-        </div>
-
-        <div>
-          <label htmlFor="conduta" className="block text-sm font-medium text-gray-700">
-            Conduta
-          </label>
-          <textarea
-            id="conduta"
-            name="conduta"
-            rows={3}
-            maxLength={TEXTO_MAX_LENGTH}
-            disabled={isPending}
-            placeholder="Plano terapêutico, medicamentos prescritos, orientações..."
-            defaultValue={defaults?.conduta ?? ""}
-            className={INPUT_CLASS}
-          />
-          <FieldError message={state.fieldErrors?.conduta} />
-        </div>
-      </fieldset>
-
-      {/* Observações */}
+      {/* Evolução */}
       <div>
-        <label htmlFor="observacoes" className="block text-sm font-medium text-gray-700">
-          Observações
+        <label htmlFor="queixa_principal" className="block text-sm font-medium text-gray-700">
+          Evolução <span className="text-red-500">*</span>
         </label>
         <textarea
-          id="observacoes"
-          name="observacoes"
-          rows={2}
-          maxLength={OBSERVACOES_MAX_LENGTH}
+          id="queixa_principal"
+          name="queixa_principal"
+          rows={8}
+          maxLength={TEXTO_MAX_LENGTH}
           disabled={isPending}
-          defaultValue={defaults?.observacoes ?? ""}
+          placeholder="Registre a evolução clínica do atendimento..."
+          defaultValue={defaults?.queixa_principal ?? ""}
           className={INPUT_CLASS}
         />
+        <FieldError message={state.fieldErrors?.queixa_principal} />
       </div>
 
       {/* Actions */}

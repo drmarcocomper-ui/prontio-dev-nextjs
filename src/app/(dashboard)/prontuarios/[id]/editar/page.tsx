@@ -48,7 +48,7 @@ export default async function EditarProntuarioPage({
   const { data: prontuario } = await supabase
     .from("prontuarios")
     .select(
-      "id, data, tipo, cid, queixa_principal, historia_doenca, exame_fisico, hipotese_diagnostica, conduta, observacoes, pacientes(id, nome)"
+      "id, data, tipo, queixa_principal, pacientes(id, nome)"
     )
     .eq("id", id)
     .eq("medico_id", medicoId)
@@ -84,13 +84,7 @@ export default async function EditarProntuarioPage({
             paciente_nome: p.pacientes.nome,
             data: p.data,
             tipo: p.tipo,
-            cid: p.cid,
             queixa_principal: p.queixa_principal,
-            historia_doenca: p.historia_doenca,
-            exame_fisico: p.exame_fisico,
-            hipotese_diagnostica: p.hipotese_diagnostica,
-            conduta: p.conduta,
-            observacoes: p.observacoes,
           }}
         />
       </div>

@@ -61,13 +61,7 @@ const prontuarioMock = {
   id: "pr-123",
   data: "2024-06-15",
   tipo: "consulta",
-  cid: "J06.9",
   queixa_principal: "Dor de cabeça",
-  historia_doenca: "Início há 3 dias",
-  exame_fisico: "PA 120x80",
-  hipotese_diagnostica: "Cefaleia tensional",
-  conduta: "Analgésico",
-  observacoes: "Retorno em 7 dias",
   pacientes: {
     id: "pac-456",
     nome: "Maria Silva",
@@ -112,8 +106,6 @@ describe("EditarProntuarioPage", () => {
     expect(defaults.paciente_nome).toBe("Maria Silva");
     expect(defaults.data).toBe("2024-06-15");
     expect(defaults.tipo).toBe("consulta");
-    expect(defaults.cid).toBe("J06.9");
     expect(defaults.queixa_principal).toBe("Dor de cabeça");
-    expect(defaults.conduta).toBe("Analgésico");
   });
 });

@@ -108,10 +108,9 @@ describe("ProntuarioDetalhesPage", () => {
     expect(screen.getByText("MS")).toBeInTheDocument();
   });
 
-  it("exibe tipo e CID", async () => {
+  it("exibe tipo", async () => {
     await renderPage();
     expect(screen.getByText("Consulta")).toBeInTheDocument();
-    expect(screen.getByText("CID: J06.9")).toBeInTheDocument();
   });
 
   it("renderiza o DeleteButton", async () => {
@@ -120,11 +119,12 @@ describe("ProntuarioDetalhesPage", () => {
     expect(btn).toHaveAttribute("data-title", "Excluir prontuário");
   });
 
-  it("renderiza seções da evolução clínica", async () => {
+  it("renderiza seções da evolução", async () => {
     await renderPage();
-    expect(screen.getByText("Evolução clínica")).toBeInTheDocument();
-    expect(screen.getByText("Queixa principal")).toBeInTheDocument();
+    const headings = screen.getAllByText("Evolução");
+    expect(headings.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Dor de garganta há 3 dias")).toBeInTheDocument();
+    // Campos legados ainda exibidos para registros antigos
     expect(screen.getByText("História da doença atual")).toBeInTheDocument();
     expect(screen.getByText("Paciente relata início há 3 dias")).toBeInTheDocument();
     expect(screen.getByText("Exame físico")).toBeInTheDocument();

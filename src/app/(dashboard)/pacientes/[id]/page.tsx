@@ -92,7 +92,7 @@ export default async function PacienteDetalhesPage({
 
   const { data: prontuarios, count: totalProntuarios } = await supabase
     .from("prontuarios")
-    .select("id, data, tipo, cid, queixa_principal", { count: "exact" })
+    .select("id, data, tipo, queixa_principal", { count: "exact" })
     .eq("paciente_id", id)
     .order("data", { ascending: false })
     .limit(5);
@@ -304,11 +304,6 @@ export default async function PacienteDetalhesPage({
                           {TIPO_LABELS[pront.tipo] ?? pront.tipo}
                         </span>
                       )}
-                      {pront.cid && (
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                          CID: {pront.cid}
-                        </span>
-                      )}
                     </div>
                     {pront.queixa_principal && (
                       <p className="mt-1 truncate text-sm text-gray-500">
@@ -416,7 +411,7 @@ export default async function PacienteDetalhesPage({
             date: p.data,
             type: "prontuario",
             title: p.queixa_principal || "Evolução clínica",
-            subtitle: [p.tipo ? (TIPO_LABELS[p.tipo] ?? p.tipo) : null, p.cid ? `CID: ${p.cid}` : null].filter(Boolean).join(" · "),
+            subtitle: p.tipo ? (TIPO_LABELS[p.tipo] ?? p.tipo) : undefined,
             href: `/prontuarios/${p.id}`,
             color: "bg-violet-500",
           });

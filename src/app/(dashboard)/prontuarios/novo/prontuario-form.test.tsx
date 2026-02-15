@@ -52,18 +52,7 @@ describe("ProntuarioForm", () => {
     expect(screen.getByText(/Paciente/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Data/)).toBeInTheDocument();
     expect(screen.getByLabelText("Tipo")).toBeInTheDocument();
-    expect(screen.getByLabelText("CID")).toBeInTheDocument();
-    expect(screen.getByLabelText("Queixa principal")).toBeInTheDocument();
-    expect(screen.getByLabelText("História da doença atual")).toBeInTheDocument();
-    expect(screen.getByLabelText("Exame físico")).toBeInTheDocument();
-    expect(screen.getByLabelText("Hipótese diagnóstica")).toBeInTheDocument();
-    expect(screen.getByLabelText("Conduta")).toBeInTheDocument();
-    expect(screen.getByLabelText("Observações")).toBeInTheDocument();
-  });
-
-  it("renderiza a seção Evolução clínica", () => {
-    render(<ProntuarioForm medicoId="doc-1" />);
-    expect(screen.getByText("Evolução clínica")).toBeInTheDocument();
+    expect(screen.getByText(/Evolução/)).toBeInTheDocument();
   });
 
   it("renderiza o botão Salvar prontuário", () => {
@@ -106,18 +95,10 @@ describe("ProntuarioForm", () => {
     expect(screen.getByText("Avaliação")).toBeInTheDocument();
   });
 
-  it("textareas têm maxLength definido", () => {
+  it("textarea evolução tem maxLength definido", () => {
     render(<ProntuarioForm medicoId="doc-1" />);
-    const queixa = screen.getByLabelText("Queixa principal") as HTMLTextAreaElement;
-    expect(queixa.maxLength).toBe(5000);
-    const obs = screen.getByLabelText("Observações") as HTMLTextAreaElement;
-    expect(obs.maxLength).toBe(1000);
-  });
-
-  it("CID tem maxLength definido", () => {
-    render(<ProntuarioForm medicoId="doc-1" />);
-    const cid = screen.getByLabelText("CID") as HTMLInputElement;
-    expect(cid.maxLength).toBe(20);
+    const evolucao = screen.getByLabelText(/Evolução/) as HTMLTextAreaElement;
+    expect(evolucao.maxLength).toBe(5000);
   });
 
   it("renderiza botão Salvar alterações no modo edição", () => {

@@ -72,18 +72,14 @@ const prontuariosMock = [
     id: "pr-1",
     data: "2024-06-15",
     tipo: "consulta",
-    cid: "J06.9",
     queixa_principal: "Dor de garganta há 3 dias",
-    conduta: "Amoxicilina 500mg",
     pacientes: { id: "p-1", nome: "Maria Silva" },
   },
   {
     id: "pr-2",
     data: "2024-06-14",
     tipo: null,
-    cid: null,
     queixa_principal: null,
-    conduta: "Retorno em 15 dias",
     pacientes: { id: "p-2", nome: "João Santos" },
   },
 ];
@@ -140,23 +136,16 @@ describe("ProntuariosPage", () => {
     expect(screen.getByText("2 registros")).toBeInTheDocument();
   });
 
-  it("exibe tipo e CID quando disponíveis", async () => {
+  it("exibe tipo quando disponível", async () => {
     mockData.data = prontuariosMock;
     await renderPage();
     expect(screen.getByText("Consulta")).toBeInTheDocument();
-    expect(screen.getByText("CID: J06.9")).toBeInTheDocument();
   });
 
   it("exibe queixa principal como preview", async () => {
     mockData.data = prontuariosMock;
     await renderPage();
     expect(screen.getByText("Dor de garganta há 3 dias")).toBeInTheDocument();
-  });
-
-  it("exibe conduta como fallback quando não há queixa", async () => {
-    mockData.data = [prontuariosMock[1]];
-    await renderPage();
-    expect(screen.getByText("Retorno em 15 dias")).toBeInTheDocument();
   });
 
   it("exibe iniciais dos pacientes", async () => {
