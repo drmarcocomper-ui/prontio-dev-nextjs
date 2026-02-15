@@ -48,8 +48,8 @@ export function AgendamentoForm({
         <FieldError message={state.fieldErrors?.paciente_id} />
       </div>
 
-      {/* Data e horários */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Data e horário */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="data" className="block text-sm font-medium text-gray-700">
             Data <span className="text-red-500">*</span>
@@ -81,23 +81,6 @@ export function AgendamentoForm({
             className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.hora_inicio} />
-        </div>
-
-        <div>
-          <label htmlFor="hora_fim" className="block text-sm font-medium text-gray-700">
-            Término <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="hora_fim"
-            name="hora_fim"
-            type="time"
-            step="300"
-            required
-            disabled={isPending}
-            defaultValue={defaults?.hora_fim ?? ""}
-            className={INPUT_CLASS}
-          />
-          <FieldError message={state.fieldErrors?.hora_fim} />
         </div>
       </div>
 

@@ -27,7 +27,6 @@ export interface AgendamentoDefaults {
   paciente_nome?: string;
   data?: string;
   hora_inicio?: string;
-  hora_fim?: string;
   tipo?: AgendaTipo | null;
   observacoes?: string | null;
 }

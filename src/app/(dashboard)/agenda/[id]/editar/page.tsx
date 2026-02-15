@@ -82,7 +82,6 @@ export default async function EditarAgendamentoPage({
             paciente_nome: ag.pacientes.nome,
             data: ag.data,
             hora_inicio: ag.hora_inicio.slice(0, 5),
-            hora_fim: ag.hora_fim.slice(0, 5),
             tipo: ag.tipo,
             observacoes: ag.observacoes,
           }}

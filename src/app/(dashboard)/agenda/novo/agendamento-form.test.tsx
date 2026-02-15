@@ -54,7 +54,6 @@ describe("AgendamentoForm", () => {
     expect(screen.getByText(/Paciente/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Data/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Início/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Término/)).toBeInTheDocument();
     expect(screen.getByLabelText("Tipo")).toBeInTheDocument();
     expect(screen.getByLabelText("Observações")).toBeInTheDocument();
   });
@@ -90,7 +89,6 @@ describe("AgendamentoForm", () => {
     render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
     expect(screen.getByLabelText(/Data/)).toBeRequired();
     expect(screen.getByLabelText(/Início/)).toBeRequired();
-    expect(screen.getByLabelText(/Término/)).toBeRequired();
   });
 
   it("renderiza o PatientSearch", () => {
@@ -128,7 +126,6 @@ describe("AgendamentoForm", () => {
           paciente_nome: "Maria Silva",
           data: "2024-06-15",
           hora_inicio: "09:00",
-          hora_fim: "09:30",
           tipo: "consulta",
           observacoes: "Obs",
         }}
@@ -145,7 +142,6 @@ describe("AgendamentoForm", () => {
           id: "ag-1",
           data: "2024-06-15",
           hora_inicio: "09:00",
-          hora_fim: "09:30",
         }}
       />
     );
@@ -163,7 +159,6 @@ describe("AgendamentoForm", () => {
           paciente_nome: "Maria Silva",
           data: "2024-06-15",
           hora_inicio: "09:00",
-          hora_fim: "09:30",
           tipo: "consulta",
           observacoes: "Observação teste",
         }}
@@ -171,7 +166,6 @@ describe("AgendamentoForm", () => {
     );
     expect(screen.getByLabelText(/Data/)).toHaveValue("2024-06-15");
     expect(screen.getByLabelText(/Início/)).toHaveValue("09:00");
-    expect(screen.getByLabelText(/Término/)).toHaveValue("09:30");
     expect(screen.getByLabelText("Observações")).toHaveValue("Observação teste");
   });
 
@@ -183,7 +177,6 @@ describe("AgendamentoForm", () => {
           id: "ag-1",
           data: "2024-06-15",
           hora_inicio: "09:00",
-          hora_fim: "09:30",
         }}
       />
     );

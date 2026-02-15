@@ -130,11 +130,17 @@ async function validarHorarioComercial(
   return null;
 }
 
+function calcularHoraFim(horaInicio: string): string {
+  const minutos = timeToMinutes(horaInicio) + 15;
+  const h = Math.floor(minutos / 60).toString().padStart(2, "0");
+  const m = (minutos % 60).toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 function validarCamposAgendamento(formData: FormData) {
   const paciente_id = (formData.get("paciente_id") as string) || null;
   const data = formData.get("data") as string;
   const hora_inicio = formData.get("hora_inicio") as string;
-  const hora_fim = formData.get("hora_fim") as string;
   const tipo = (formData.get("tipo") as string) || null;
   const observacoes = (formData.get("observacoes") as string)?.trim() || null;
 
@@ -143,20 +149,10 @@ function validarCamposAgendamento(formData: FormData) {
   campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
   campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.");
   campoObrigatorio(fieldErrors, "hora_inicio", hora_inicio, "Horário de início é obrigatório.");
-  campoObrigatorio(fieldErrors, "hora_fim", hora_fim, "Horário de término é obrigatório.");
-  if (hora_inicio && hora_fim && hora_inicio >= hora_fim) {
-    fieldErrors.hora_fim = "Horário de término deve ser após o início.";
-  }
-  if (
-    hora_inicio &&
-    hora_fim &&
-    hora_inicio < hora_fim &&
-    timeToMinutes(hora_fim) - timeToMinutes(hora_inicio) < 15
-  ) {
-    fieldErrors.hora_fim = "A consulta deve ter no mínimo 15 minutos.";
-  }
   valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
+
+  const hora_fim = hora_inicio ? calcularHoraFim(hora_inicio) : "";
 
   return { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors };
 }

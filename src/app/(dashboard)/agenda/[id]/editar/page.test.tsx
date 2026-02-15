@@ -111,7 +111,6 @@ describe("EditarAgendamentoPage", () => {
     expect(defaults.paciente_nome).toBe("Maria Silva");
     expect(defaults.data).toBe("2024-06-15");
     expect(defaults.hora_inicio).toBe("09:00");
-    expect(defaults.hora_fim).toBe("09:30");
     expect(defaults.tipo).toBe("consulta");
     expect(defaults.observacoes).toBe("Obs teste");
   });

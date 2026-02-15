@@ -117,7 +117,6 @@ const validCreate = {
   paciente_id: "00000000-0000-0000-0000-000000000001",
   data: "2024-06-15",
   hora_inicio: "09:00",
-  hora_fim: "09:30",
 };
 
 const validUpdate = {
@@ -142,7 +141,7 @@ describe("criarAgendamento", () => {
   it("retorna fieldErrors quando paciente não selecionado", async () => {
     const result = await criarAgendamento(
       {},
-      makeFormData({ data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30" })
+      makeFormData({ data: "2024-06-15", hora_inicio: "09:00" })
     );
     expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
   });
@@ -150,38 +149,27 @@ describe("criarAgendamento", () => {
   it("retorna fieldErrors quando data está vazia", async () => {
     const result = await criarAgendamento(
       {},
-      makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "", hora_inicio: "09:00", hora_fim: "09:30" })
+      makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "", hora_inicio: "09:00" })
     );
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
-  });
-
-  it("retorna fieldErrors quando hora_fim <= hora_inicio", async () => {
-    const result = await criarAgendamento(
-      {},
-      makeFormData({
-        paciente_id: "00000000-0000-0000-0000-000000000001",
-        data: "2024-06-15",
-        hora_inicio: "10:00",
-        hora_fim: "09:00",
-      })
-    );
-    expect(result.fieldErrors?.hora_fim).toBe("Horário de término deve ser após o início.");
   });
 
   it("retorna fieldErrors quando hora_inicio está vazia", async () => {
     const result = await criarAgendamento(
       {},
-      makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", hora_inicio: "", hora_fim: "09:30" })
+      makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", hora_inicio: "" })
     );
     expect(result.fieldErrors?.hora_inicio).toBe("Horário de início é obrigatório.");
   });
 
-  it("retorna fieldErrors quando hora_fim está vazia", async () => {
-    const result = await criarAgendamento(
-      {},
-      makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "" })
+  it("calcula hora_fim automaticamente como hora_inicio + 15 minutos", async () => {
+    await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hora_inicio: "09:00",
+        hora_fim: "09:15",
+      })
     );
-    expect(result.fieldErrors?.hora_fim).toBe("Horário de término é obrigatório.");
   });
 
   it("retorna fieldError de conflito quando há sobreposição de horário", async () => {
@@ -199,7 +187,7 @@ describe("criarAgendamento", () => {
 
     const result = await criarAgendamento(
       {},
-      makeFormData({ ...validCreate, hora_inicio: "09:15", hora_fim: "09:45" })
+      makeFormData({ ...validCreate, hora_inicio: "09:15" })
     );
     expect(result.fieldErrors?.hora_inicio).toBe(
       "Conflito com agendamento de Maria Silva (09:00–09:30)."
@@ -222,7 +210,7 @@ describe("criarAgendamento", () => {
 
     const result = await criarAgendamento(
       {},
-      makeFormData({ ...validCreate, hora_inicio: "08:00", hora_fim: "08:30" })
+      makeFormData({ ...validCreate, hora_inicio: "08:00" })
     );
     expect(result.fieldErrors?.hora_inicio).toBe(
       "Conflito com agendamento de outro paciente (08:00–08:30)."
@@ -246,7 +234,7 @@ describe("criarAgendamento", () => {
   it("consulta conflitos filtrando por data e sobreposição de horário", async () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(selectChain.eq).toHaveBeenCalledWith("data", "2024-06-15");
-    expect(selectChain.lt).toHaveBeenCalledWith("hora_inicio", "09:30");
+    expect(selectChain.lt).toHaveBeenCalledWith("hora_inicio", "09:15");
     expect(selectChain.gt).toHaveBeenCalledWith("hora_fim", "09:00");
     expect(selectChain.not).toHaveBeenCalledWith("status", "in", "(cancelado,faltou)");
     expect(selectChain.limit).toHaveBeenCalledWith(1);
@@ -267,10 +255,10 @@ describe("criarAgendamento", () => {
       error: null,
     };
 
-    // 2024-06-15 is Saturday, configured 09:00-12:00, trying 14:00-14:30
+    // 2024-06-15 is Saturday, configured 09:00-12:00, trying 14:00-14:15
     const result = await criarAgendamento(
       {},
-      makeFormData({ ...validCreate, hora_inicio: "14:00", hora_fim: "14:30" })
+      makeFormData({ ...validCreate, hora_inicio: "14:00" })
     );
     expect(result.fieldErrors?.hora_inicio).toBe(
       "Horário fora do expediente de sábado (09:00–12:00)."
@@ -291,10 +279,10 @@ describe("criarAgendamento", () => {
   it("usa horário padrão 08:00-18:00 quando não há configuração", async () => {
     configResult = { data: [], error: null };
 
-    // 2024-06-15 is Saturday, default 08:00-18:00, trying 07:00-07:30
+    // 2024-06-15 is Saturday, default 08:00-18:00, trying 07:00-07:15
     const result = await criarAgendamento(
       {},
-      makeFormData({ ...validCreate, hora_inicio: "07:00", hora_fim: "07:30" })
+      makeFormData({ ...validCreate, hora_inicio: "07:00" })
     );
     expect(result.fieldErrors?.hora_inicio).toBe(
       "Horário fora do expediente de sábado (08:00–18:00)."
@@ -332,7 +320,7 @@ describe("atualizarAgendamento", () => {
   it("retorna erro quando ID é inválido", async () => {
     const result = await atualizarAgendamento(
       {},
-      makeFormData({ id: "invalido", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30" })
+      makeFormData({ id: "invalido", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", hora_inicio: "09:00" })
     );
     expect(result.error).toBe("ID inválido.");
   });
@@ -340,7 +328,7 @@ describe("atualizarAgendamento", () => {
   it("retorna fieldErrors quando paciente não selecionado", async () => {
     const result = await atualizarAgendamento(
       {},
-      makeFormData({ id: "00000000-0000-0000-0000-000000000007", data: "2024-06-15", hora_inicio: "09:00", hora_fim: "09:30" })
+      makeFormData({ id: "00000000-0000-0000-0000-000000000007", data: "2024-06-15", hora_inicio: "09:00" })
     );
     expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
   });
@@ -353,24 +341,9 @@ describe("atualizarAgendamento", () => {
         paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "",
         hora_inicio: "09:00",
-        hora_fim: "09:30",
       })
     );
     expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
-  });
-
-  it("retorna fieldErrors quando hora_fim <= hora_inicio", async () => {
-    const result = await atualizarAgendamento(
-      {},
-      makeFormData({
-        id: "00000000-0000-0000-0000-000000000007",
-        paciente_id: "00000000-0000-0000-0000-000000000001",
-        data: "2024-06-15",
-        hora_inicio: "10:00",
-        hora_fim: "09:00",
-      })
-    );
-    expect(result.fieldErrors?.hora_fim).toBe("Horário de término deve ser após o início.");
   });
 
   it("retorna fieldError de conflito quando há sobreposição de horário", async () => {
@@ -388,7 +361,7 @@ describe("atualizarAgendamento", () => {
 
     const result = await atualizarAgendamento(
       {},
-      makeFormData({ ...validUpdate, hora_inicio: "09:30", hora_fim: "10:30" })
+      makeFormData({ ...validUpdate, hora_inicio: "09:30" })
     );
     expect(result.fieldErrors?.hora_inicio).toBe(
       "Conflito com agendamento de João Santos (09:00–10:00)."
@@ -413,7 +386,7 @@ describe("atualizarAgendamento", () => {
         paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "2024-06-15",
         hora_inicio: "09:00",
-        hora_fim: "09:30",
+        hora_fim: "09:15",
       }),
       "00000000-0000-0000-0000-000000000007"
     );
@@ -437,7 +410,7 @@ describe("atualizarAgendamento", () => {
 
     const result = await atualizarAgendamento(
       {},
-      makeFormData({ ...validUpdate, hora_inicio: "14:00", hora_fim: "14:30" })
+      makeFormData({ ...validUpdate, hora_inicio: "14:00" })
     );
     expect(result.fieldErrors?.hora_inicio).toBe(
       "Horário fora do expediente de sábado (09:00–12:00)."
