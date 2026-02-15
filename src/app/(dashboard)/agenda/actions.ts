@@ -5,8 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido } from "@/lib/validators";
-import { parseLocalDate, toDateString } from "@/lib/date";
-import { formatDate } from "@/lib/format";
+import { parseLocalDate } from "@/lib/date";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
 import { getClinicaAtual } from "@/lib/clinica";
 
@@ -157,34 +156,6 @@ function validarCamposAgendamento(formData: FormData) {
   return { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors };
 }
 
-function addDaysToDate(dateStr: string, days: number): string {
-  const d = parseLocalDate(dateStr);
-  d.setDate(d.getDate() + days);
-  return toDateString(d);
-}
-
-function getRecurrenceDates(
-  baseDate: string,
-  recorrencia: string,
-  vezes: number
-): string[] {
-  const dates: string[] = [baseDate];
-  const intervalDays =
-    recorrencia === "semanal" ? 7 : recorrencia === "quinzenal" ? 14 : 0;
-
-  for (let i = 1; i < vezes; i++) {
-    if (recorrencia === "mensal") {
-      const base = parseLocalDate(baseDate);
-      const next = new Date(base.getFullYear(), base.getMonth() + i, base.getDate());
-      dates.push(toDateString(next));
-    } else if (intervalDays > 0) {
-      dates.push(addDaysToDate(baseDate, intervalDays * i));
-    }
-  }
-
-  return dates;
-}
-
 export async function criarAgendamento(
   _prev: AgendamentoFormState,
   formData: FormData
@@ -195,12 +166,6 @@ export async function criarAgendamento(
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors };
   }
-
-  const recorrencia = (formData.get("recorrencia") as string) || "";
-  const recorrenciaVezesRaw = Number(formData.get("recorrencia_vezes"));
-  const recorrenciaVezes = Number.isFinite(recorrenciaVezesRaw)
-    ? Math.min(52, Math.max(2, Math.floor(recorrenciaVezesRaw)))
-    : 4;
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
@@ -213,88 +178,6 @@ export async function criarAgendamento(
     return { fieldErrors: { hora_inicio: foraExpediente } };
   }
 
-  if (recorrencia && ["semanal", "quinzenal", "mensal"].includes(recorrencia)) {
-    // Recurring appointment
-    const dates = getRecurrenceDates(data, recorrencia, recorrenciaVezes);
-
-    // 1. Check Sundays (no DB query needed)
-    for (const d of dates) {
-      const dayOfWeek = parseLocalDate(d).getDay();
-      if (!DIAS_SEMANA[dayOfWeek]) {
-        return { fieldErrors: { hora_inicio: `${formatDate(d)}: Não há expediente aos domingos.` } };
-      }
-    }
-
-    // 2. Batch fetch config keys for all unique days of week
-    const uniqueDays = [...new Set(dates.map((d) => DIAS_SEMANA[parseLocalDate(d).getDay()].key))];
-    const configKeys = uniqueDays.flatMap((key) => [`horario_${key}_inicio`, `horario_${key}_fim`]);
-
-    const [configRes, conflitosRes] = await Promise.all([
-      supabase
-        .from("configuracoes")
-        .select("chave, valor")
-        .eq("clinica_id", clinicaId)
-        .in("chave", configKeys),
-      supabase
-        .from("agendamentos")
-        .select("id, data, hora_inicio, hora_fim, pacientes(nome)")
-        .eq("clinica_id", clinicaId)
-        .in("data", dates)
-        .lt("hora_inicio", hora_fim)
-        .gt("hora_fim", hora_inicio)
-        .not("status", "in", "(cancelado,faltou)"),
-    ]);
-
-    const config: Record<string, string> = {};
-    (configRes.data ?? []).forEach((r: { chave: string; valor: string }) => {
-      config[r.chave] = r.valor;
-    });
-
-    // 3. Validate business hours for each date
-    for (const d of dates) {
-      const dia = DIAS_SEMANA[parseLocalDate(d).getDay()];
-      const inicio = config[`horario_${dia.key}_inicio`] || "08:00";
-      const fim = config[`horario_${dia.key}_fim`] || "18:00";
-      if (timeToMinutes(hora_inicio) < timeToMinutes(inicio) || timeToMinutes(hora_fim) > timeToMinutes(fim)) {
-        return { fieldErrors: { hora_inicio: `${formatDate(d)}: Horário fora do expediente de ${dia.label} (${inicio}–${fim}).` } };
-      }
-    }
-
-    // 4. Check conflicts from batch query
-    const conflitos = (conflitosRes.data ?? []) as unknown as {
-      id: string; data: string; hora_inicio: string; hora_fim: string;
-      pacientes: { nome: string } | null;
-    }[];
-    if (conflitos.length > 0) {
-      const c = conflitos[0];
-      const nome = c.pacientes?.nome ?? "outro paciente";
-      const cInicio = c.hora_inicio.slice(0, 5);
-      const cFim = c.hora_fim.slice(0, 5);
-      return { fieldErrors: { hora_inicio: `${formatDate(c.data)}: Conflito com agendamento de ${nome} (${cInicio}–${cFim}).` } };
-    }
-
-    const rows = dates.map((d) => ({
-      paciente_id,
-      clinica_id: clinicaId,
-      data: d,
-      hora_inicio,
-      hora_fim,
-      tipo,
-      status: "agendado" as const,
-      observacoes,
-    }));
-
-    const { error } = await supabase.from("agendamentos").insert(rows);
-    if (error) {
-      return { error: tratarErroSupabase(error, "criar", "agendamentos") };
-    }
-
-    revalidatePath("/agenda");
-    revalidatePath("/");
-    redirect(`/agenda?data=${data}&success=${dates.length}+agendamentos+criados`);
-  }
-
-  // Single appointment — business hours already validated above
   const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, clinicaId);
   if (conflito) {
     return { fieldErrors: { hora_inicio: conflito } };
