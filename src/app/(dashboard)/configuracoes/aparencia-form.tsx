@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormError } from "@/components/form-utils";
 import { salvarProfissional, type ConfigFormState } from "./actions";
@@ -25,6 +25,13 @@ export function AparenciaForm({
     {}
   );
 
+  const [formKey, setFormKey] = useState(0);
+  const [prevState, setPrevState] = useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state.success) setFormKey((k) => k + 1);
+  }
+
   useEffect(() => {
     if (state.success) {
       toast.success("Configurações salvas com sucesso.");
@@ -35,7 +42,7 @@ export function AparenciaForm({
   const currentTheme = defaults.cor_primaria || "sky";
 
   return (
-    <form action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
+    <form key={formKey} action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
       <FormError message={state.error} />
 
       <fieldset>

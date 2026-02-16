@@ -31,11 +31,11 @@ export default async function ConfiguracoesPage({
   const currentTab = tab && isValidTab(tab) ? tab : defaultTab;
 
   // Load clinic data for "clinica" tab
-  let clinicaData = { nome: "", cnpj: null as string | null, telefone: null as string | null, endereco: null as string | null, cidade: null as string | null, estado: null as string | null };
+  let clinicaData = { nome: "", cnpj: null as string | null, telefone: null as string | null, telefone2: null as string | null, telefone3: null as string | null, endereco: null as string | null, cidade: null as string | null, estado: null as string | null };
   if (currentTab === "clinica" && ctx?.clinicaId) {
     const { data: clinica } = await supabase
       .from("clinicas")
-      .select("nome, cnpj, telefone, endereco, cidade, estado")
+      .select("nome, cnpj, telefone, telefone2, telefone3, endereco, cidade, estado")
       .eq("id", ctx.clinicaId)
       .single();
 
@@ -144,14 +144,14 @@ export default async function ConfiguracoesPage({
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         {currentTab === "clinica" && (
           <>
-            <ConsultorioForm key={JSON.stringify(clinicaData)} clinica={clinicaData} />
+            <ConsultorioForm clinica={clinicaData} />
             <div className="border-t border-gray-200 pt-6 mt-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Horários de Atendimento</h2>
-              <HorariosForm key={`horarios-${JSON.stringify(config)}`} defaults={config} />
+              <HorariosForm defaults={config} />
             </div>
             <div className="border-t border-gray-200 pt-6 mt-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Valores</h2>
-              <ValoresForm key={`valores-${JSON.stringify(config)}`} defaults={config} />
+              <ValoresForm defaults={config} />
             </div>
           </>
         )}
@@ -161,12 +161,12 @@ export default async function ConfiguracoesPage({
             {isProfissional(papel) && (
               <div className="border-t border-gray-200 pt-6 mt-6">
                 <h2 className="text-base font-semibold text-gray-900 mb-4">Dados Profissionais</h2>
-                <ProfissionalForm key={`profissional-${JSON.stringify(config)}`} defaults={config} />
+                <ProfissionalForm defaults={config} />
               </div>
             )}
             <div className="border-t border-gray-200 pt-6 mt-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Aparência</h2>
-              <AparenciaForm key={`aparencia-${JSON.stringify(config)}`} defaults={config} />
+              <AparenciaForm defaults={config} />
             </div>
           </>
         )}

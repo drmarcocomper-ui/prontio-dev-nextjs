@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormError } from "@/components/form-utils";
 import { salvarValores, type ConfigFormState } from "./actions";
@@ -27,6 +27,13 @@ export function ValoresForm({
     {}
   );
 
+  const [formKey, setFormKey] = useState(0);
+  const [prevState, setPrevState] = useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state.success) setFormKey((k) => k + 1);
+  }
+
   useEffect(() => {
     if (state.success) toast.success("Valores salvos com sucesso.");
   }, [state]);
@@ -34,7 +41,7 @@ export function ValoresForm({
   const convenios = Object.entries(CONVENIO_LABELS) as [ConvenioTipo, string][];
 
   return (
-    <form action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
+    <form key={formKey} action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
       <FormError message={state.error} />
 
       <div className="space-y-3">

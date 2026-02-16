@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormError } from "@/components/form-utils";
 import { salvarConsultorio, type ConfigFormState } from "./actions";
@@ -20,6 +20,8 @@ interface ClinicaData {
   nome: string;
   cnpj: string | null;
   telefone: string | null;
+  telefone2: string | null;
+  telefone3: string | null;
   endereco: string | null;
   cidade: string | null;
   estado: string | null;
@@ -35,12 +37,19 @@ export function ConsultorioForm({
     {}
   );
 
+  const [formKey, setFormKey] = useState(0);
+  const [prevState, setPrevState] = useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state.success) setFormKey((k) => k + 1);
+  }
+
   useEffect(() => {
     if (state.success) toast.success("Configurações salvas com sucesso.");
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
+    <form key={formKey} action={formAction} className="space-y-4 sm:space-y-6" aria-busy={isPending}>
       <FormError message={state.error} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -80,7 +89,7 @@ export function ConsultorioForm({
 
         <div>
           <label htmlFor="telefone" className="block text-sm font-medium text-gray-700">
-            Telefone
+            Telefone 1
           </label>
           <input
             id="telefone"
@@ -91,6 +100,42 @@ export function ConsultorioForm({
             maxLength={TELEFONE_MAX}
             placeholder="(00) 00000-0000"
             defaultValue={clinica.telefone ? maskPhone(clinica.telefone) : ""}
+            onChange={(e) => (e.target.value = maskPhone(e.target.value))}
+            className={INPUT_CLASS}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="telefone2" className="block text-sm font-medium text-gray-700">
+            Telefone 2
+          </label>
+          <input
+            id="telefone2"
+            name="telefone2"
+            type="tel"
+            inputMode="numeric"
+            disabled={isPending}
+            maxLength={TELEFONE_MAX}
+            placeholder="(00) 00000-0000"
+            defaultValue={clinica.telefone2 ? maskPhone(clinica.telefone2) : ""}
+            onChange={(e) => (e.target.value = maskPhone(e.target.value))}
+            className={INPUT_CLASS}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="telefone3" className="block text-sm font-medium text-gray-700">
+            Telefone 3
+          </label>
+          <input
+            id="telefone3"
+            name="telefone3"
+            type="tel"
+            inputMode="numeric"
+            disabled={isPending}
+            maxLength={TELEFONE_MAX}
+            placeholder="(00) 00000-0000"
+            defaultValue={clinica.telefone3 ? maskPhone(clinica.telefone3) : ""}
             onChange={(e) => (e.target.value = maskPhone(e.target.value))}
             className={INPUT_CLASS}
           />

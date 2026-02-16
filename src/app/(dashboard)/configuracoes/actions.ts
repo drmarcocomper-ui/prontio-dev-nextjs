@@ -67,21 +67,30 @@ export async function salvarConsultorio(
 
   const cnpj = (formData.get("cnpj") as string)?.replace(/\D/g, "") || null;
   const telefone = (formData.get("telefone") as string)?.replace(/\D/g, "") || null;
+  const telefone2 = (formData.get("telefone2") as string)?.replace(/\D/g, "") || null;
+  const telefone3 = (formData.get("telefone3") as string)?.replace(/\D/g, "") || null;
   const endereco = (formData.get("endereco") as string)?.trim() || null;
   const cidade = (formData.get("cidade") as string)?.trim() || null;
   const estado = (formData.get("estado") as string)?.trim().toUpperCase() || null;
 
   if (cnpj && cnpj.length !== 14) return { error: "CNPJ deve ter 14 dígitos." };
-  if (telefone && (telefone.length < 10 || telefone.length > 11)) return { error: "Telefone deve ter 10 ou 11 dígitos." };
+  for (const [label, val] of [["Telefone 1", telefone], ["Telefone 2", telefone2], ["Telefone 3", telefone3]] as const) {
+    if (val && (val.length < 8 || val.length > 11)) return { error: `${label} deve ter entre 8 e 11 dígitos.` };
+  }
   if (endereco && endereco.length > ENDERECO_MAX) return { error: `Endereço excede ${ENDERECO_MAX} caracteres.` };
   if (cidade && cidade.length > CIDADE_MAX) return { error: `Cidade excede ${CIDADE_MAX} caracteres.` };
   if (estado && !ESTADOS_UF.includes(estado)) return { error: "Estado inválido." };
 
-  const supabase = await createClient();
+  if (!isGestor(ctx.papel)) {
+    return { error: "Sem permissão para editar o consultório." };
+  }
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from("clinicas")
-    .update({ nome, cnpj, telefone, endereco, cidade, estado, updated_at: new Date().toISOString() })
+    .update({ nome, cnpj, telefone, telefone2, telefone3, endereco, cidade, estado, updated_at: new Date().toISOString() })
     .eq("id", ctx.clinicaId);
 
   if (error) {
