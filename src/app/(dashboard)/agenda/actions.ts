@@ -201,9 +201,9 @@ export async function criarAgendamento(
   if (!ctx) return { error: "Clínica não selecionada." };
   const clinicaId = ctx.clinicaId;
 
-  // Obter duração configurada (padrão 30 min)
+  // Obter duração configurada (padrão 15 min)
   const config = await getHorarioConfig(supabase, clinicaId);
-  const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 30;
+  const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 15;
   const hora_fim = calcularHoraFim(hora_inicio, duracao);
 
   // Validar horário comercial
@@ -309,9 +309,9 @@ export async function atualizarAgendamento(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
 
-  // Obter duração configurada (padrão 30 min)
+  // Obter duração configurada (padrão 15 min)
   const config = await getHorarioConfig(supabase, ctx.clinicaId);
-  const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 30;
+  const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 15;
   const hora_fim = calcularHoraFim(hora_inicio, duracao);
 
   const foraExpediente = await validarHorarioComercial(supabase, ctx.clinicaId, data, hora_inicio, hora_fim);

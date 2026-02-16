@@ -37,7 +37,7 @@ export function HorariosForm({
           max="240"
           step="5"
           disabled={isPending}
-          defaultValue={defaults.duracao_consulta ?? "30"}
+          defaultValue={defaults.duracao_consulta ?? "15"}
           className={INPUT_CLASS}
         />
       </div>

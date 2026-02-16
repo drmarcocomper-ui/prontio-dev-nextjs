@@ -187,12 +187,12 @@ describe("criarAgendamento", () => {
     expect(result.fieldErrors?.hora_inicio).toBe("Horário de início é obrigatório.");
   });
 
-  it("calcula hora_fim automaticamente como hora_inicio + 30 minutos (padrão)", async () => {
+  it("calcula hora_fim automaticamente como hora_inicio + 15 minutos (padrão)", async () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         hora_inicio: "09:00",
-        hora_fim: "09:30",
+        hora_fim: "09:15",
       })
     );
   });
@@ -305,7 +305,7 @@ describe("criarAgendamento", () => {
   it("consulta conflitos filtrando por data e sobreposição de horário", async () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(selectChain.eq).toHaveBeenCalledWith("data", "2024-06-15");
-    expect(selectChain.lt).toHaveBeenCalledWith("hora_inicio", "09:30");
+    expect(selectChain.lt).toHaveBeenCalledWith("hora_inicio", "09:15");
     expect(selectChain.gt).toHaveBeenCalledWith("hora_fim", "09:00");
     expect(selectChain.not).toHaveBeenCalledWith("status", "in", "(cancelado,faltou)");
     expect(selectChain.limit).toHaveBeenCalledWith(1);
@@ -470,7 +470,7 @@ describe("atualizarAgendamento", () => {
         paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "2024-06-15",
         hora_inicio: "09:00",
-        hora_fim: "09:30",
+        hora_fim: "09:15",
       }),
       "00000000-0000-0000-0000-000000000007"
     );
