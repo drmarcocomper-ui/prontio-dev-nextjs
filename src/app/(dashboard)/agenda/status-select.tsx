@@ -18,6 +18,44 @@ const SELECT_STYLES: Record<AgendaStatus, string> = {
   faltou: "bg-gray-50 text-gray-600 border-gray-200",
 };
 
+const STATUS_ICONS: Record<AgendaStatus, React.ReactNode> = {
+  agendado: (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
+  confirmado: (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
+  em_atendimento: (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  ),
+  atendido: (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  cancelado: (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
+  faltou: (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  ),
+};
+
 export function StatusSelect({
   agendamentoId,
   currentStatus,
@@ -30,6 +68,7 @@ export function StatusSelect({
   const router = useRouter();
 
   const allowed = STATUS_TRANSITIONS[currentStatus] ?? [];
+  const icon = STATUS_ICONS[currentStatus];
 
   function executeChange(newStatus: AgendaStatus) {
     startTransition(async () => {
@@ -54,11 +93,12 @@ export function StatusSelect({
     }
   }
 
-  // No transitions available — render as static badge
+  // No transitions available — render as static badge with icon
   if (allowed.length === 0) {
     const color = STATUS_STYLES[currentStatus] ?? "bg-gray-100 text-gray-600";
     return (
-      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${color}`}>
+      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${color}`}>
+        {icon}
         {STATUS_LABELS[currentStatus] ?? currentStatus}
       </span>
     );
@@ -68,22 +108,28 @@ export function StatusSelect({
 
   return (
     <>
-      <select
-        value={currentStatus}
-        onChange={(e) => handleChange(e.target.value as AgendaStatus)}
-        disabled={isPending}
-        aria-label="Alterar status do agendamento"
-        className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50 ${selectColor}`}
-      >
-        <option value={currentStatus}>
-          {STATUS_LABELS[currentStatus] ?? currentStatus}
-        </option>
-        {allowed.map((value) => (
-          <option key={value} value={value}>
-            {STATUS_LABELS[value] ?? value}
+      <div className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${selectColor}`}>
+        {icon}
+        <select
+          value={currentStatus}
+          onChange={(e) => handleChange(e.target.value as AgendaStatus)}
+          disabled={isPending}
+          aria-label="Alterar status do agendamento"
+          className="appearance-none bg-transparent text-xs font-medium focus:outline-none disabled:opacity-50"
+        >
+          <option value={currentStatus}>
+            {STATUS_LABELS[currentStatus] ?? currentStatus}
           </option>
-        ))}
-      </select>
+          {allowed.map((value) => (
+            <option key={value} value={value}>
+              {STATUS_LABELS[value] ?? value}
+            </option>
+          ))}
+        </select>
+        <svg className="h-3 w-3 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </div>
 
       <ConfirmModal
         open={confirmStatus !== null}
