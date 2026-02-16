@@ -90,9 +90,11 @@ export default async function ExameDetalhesPage({
             >
               {e.pacientes.nome}
             </Link>
-            <p className="mt-1 text-sm text-gray-500 capitalize">
-              {formatDateLong(e.data)}
-            </p>
+            {e.data && (
+              <p className="mt-1 text-sm text-gray-500 capitalize">
+                {formatDateLong(e.data)}
+              </p>
+            )}
           </div>
         </div>
 

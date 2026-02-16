@@ -103,7 +103,7 @@ export default async function ImprimirReceitaPage({
             @media print {
               .no-print { display: none !important; }
               body { margin: 0; padding: 0; }
-              @page { margin: 20mm; }
+              @page { margin: 0; }
             }
           `,
         }}
@@ -120,7 +120,7 @@ export default async function ImprimirReceitaPage({
       </div>
 
       {/* Receita */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 print:rounded-none print:border-0 print:shadow-none print:p-[20mm]">
         {/* Header Consultório */}
         <div className="border-b border-gray-300 pb-6 text-center">
           {cfg.nome_consultorio && (
@@ -145,7 +145,9 @@ export default async function ImprimirReceitaPage({
           <h2 className="text-lg font-bold uppercase tracking-wider text-gray-900">
             {TIPO_LABELS_IMPRESSAO[r.tipo] ?? r.tipo}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">{formatDateMedium(r.data)}</p>
+          {r.data && (
+            <p className="mt-1 text-sm text-gray-500">{formatDateMedium(r.data)}</p>
+          )}
         </div>
 
         {/* Dados do Paciente */}

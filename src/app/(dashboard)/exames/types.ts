@@ -5,14 +5,14 @@ export interface ExamePaciente {
 
 export interface ExameListItem {
   id: string;
-  data: string;
+  data: string | null;
   exames: string;
   pacientes: ExamePaciente;
 }
 
 export interface Exame {
   id: string;
-  data: string;
+  data: string | null;
   exames: string;
   indicacao_clinica: string | null;
   observacoes: string | null;
@@ -22,7 +22,7 @@ export interface Exame {
 
 export interface ExameImpressao {
   id: string;
-  data: string;
+  data: string | null;
   exames: string;
   indicacao_clinica: string | null;
   observacoes: string | null;
@@ -38,7 +38,7 @@ export interface ExameDefaults {
   id?: string;
   paciente_id?: string;
   paciente_nome?: string;
-  data?: string;
+  data?: string | null;
   exames?: string | null;
   indicacao_clinica?: string | null;
   observacoes?: string | null;
@@ -46,7 +46,7 @@ export interface ExameDefaults {
 
 export interface ExameComPaciente {
   id: string;
-  data: string;
+  data: string | null;
   exames: string;
   indicacao_clinica: string | null;
   observacoes: string | null;

@@ -92,7 +92,7 @@ export default async function ReceitaDetalhesPage({
               {r.pacientes.nome}
             </Link>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-              <span className="capitalize">{formatDateLong(r.data)}</span>
+              {r.data && <span className="capitalize">{formatDateLong(r.data)}</span>}
               <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
                 {TIPO_LABELS[r.tipo] ?? r.tipo}
               </span>

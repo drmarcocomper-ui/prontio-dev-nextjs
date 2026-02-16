@@ -15,7 +15,7 @@ export type ReceitaFormState = {
 
 function validarCamposReceita(formData: FormData) {
   const paciente_id = (formData.get("paciente_id") as string) || null;
-  const data = formData.get("data") as string;
+  const data = (formData.get("data") as string) || null;
   const tipo = (formData.get("tipo") as string) || null;
   const medicamentos = (formData.get("medicamentos") as string)?.trim() || null;
   const observacoes = (formData.get("observacoes") as string)?.trim() || null;
@@ -24,9 +24,7 @@ function validarCamposReceita(formData: FormData) {
 
   campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
 
-  if (campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.")) {
-    dataNaoFutura(fieldErrors, "data", data);
-  }
+  dataNaoFutura(fieldErrors, "data", data);
 
   campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo da receita.");
   valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));

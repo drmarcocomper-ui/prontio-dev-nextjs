@@ -155,9 +155,11 @@ export default async function ReceitasPage({
                     <p className="truncate text-sm font-semibold text-gray-900">
                       {r.pacientes.nome}
                     </p>
-                    <span className="shrink-0 text-xs text-gray-500">
-                      {formatDate(r.data)}
-                    </span>
+                    {r.data && (
+                      <span className="shrink-0 text-xs text-gray-500">
+                        {formatDate(r.data)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Tags */}

@@ -7,7 +7,7 @@ export interface ReceitaPaciente {
 
 export interface ReceitaListItem {
   id: string;
-  data: string;
+  data: string | null;
   tipo: ReceitaTipo;
   medicamentos: string;
   pacientes: ReceitaPaciente;
@@ -15,7 +15,7 @@ export interface ReceitaListItem {
 
 export interface Receita {
   id: string;
-  data: string;
+  data: string | null;
   tipo: ReceitaTipo;
   medicamentos: string;
   observacoes: string | null;
@@ -25,7 +25,7 @@ export interface Receita {
 
 export interface ReceitaImpressao {
   id: string;
-  data: string;
+  data: string | null;
   tipo: ReceitaTipo;
   medicamentos: string;
   observacoes: string | null;
@@ -40,7 +40,7 @@ export interface ReceitaDefaults {
   id?: string;
   paciente_id?: string;
   paciente_nome?: string;
-  data?: string;
+  data?: string | null;
   tipo?: ReceitaTipo | null;
   medicamentos?: string | null;
   observacoes?: string | null;
@@ -48,7 +48,7 @@ export interface ReceitaDefaults {
 
 export interface ReceitaComPaciente {
   id: string;
-  data: string;
+  data: string | null;
   tipo: ReceitaTipo;
   medicamentos: string;
   observacoes: string | null;

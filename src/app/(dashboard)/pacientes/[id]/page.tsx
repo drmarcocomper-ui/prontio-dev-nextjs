@@ -371,7 +371,7 @@ export default async function PacienteDetalhesPage({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium text-gray-900">
-                        {formatDate(rec.data)}
+                        {rec.data ? formatDate(rec.data) : "Sem data"}
                       </span>
                       <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
                         {RECEITA_TIPO_LABELS[rec.tipo] ?? rec.tipo}
@@ -426,7 +426,7 @@ export default async function PacienteDetalhesPage({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <span className="text-sm font-medium text-gray-900">
-                      {formatDate(ex.data)}
+                      {ex.data ? formatDate(ex.data) : "Sem data"}
                     </span>
                     <p className="mt-1 line-clamp-2 text-sm text-gray-500">
                       {ex.exames}

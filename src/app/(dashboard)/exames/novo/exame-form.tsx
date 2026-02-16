@@ -65,16 +65,15 @@ export function ExameForm({
 
         <div>
           <label htmlFor="data" className="block text-sm font-medium text-gray-700">
-            Data <span className="text-red-500">*</span>
+            Data
           </label>
           <input
             id="data"
             name="data"
             type="date"
-            required
             disabled={isPending}
             max={today}
-            defaultValue={defaults?.data ?? today}
+            defaultValue={isEditing ? (defaults?.data ?? "") : (defaults?.data ?? today)}
             className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.data} />

@@ -210,7 +210,7 @@ function ParticularFormat({ e, cfg }: { e: ExameImpressao; cfg: Record<string, s
         <h2 className="text-lg font-bold uppercase tracking-wider text-gray-900">
           Solicitação de Exames
         </h2>
-        <p className="mt-1 text-sm text-gray-500">{formatDateMedium(e.data)}</p>
+        {e.data && <p className="mt-1 text-sm text-gray-500">{formatDateMedium(e.data)}</p>}
       </div>
 
       {/* Dados do Paciente */}
@@ -444,7 +444,7 @@ function SADTFormat({
             </td>
             <td colSpan={3} className={c}>
               <span className="fn"><b>22</b> - Data da Solicitação</span>
-              <div className="fv">{formatDateMedium(e.data)}</div>
+              <div className="fv">{e.data ? formatDateMedium(e.data) : ""}</div>
             </td>
             <td colSpan={6} className={c}>
               <span className="fn"><b>23</b> - Indicação Clínica</span>
@@ -518,7 +518,7 @@ function SADTFormat({
           <tr>
             <td colSpan={3} className={c}>
               <span className="fn"><b>20</b> - Data</span>
-              <div className="fv">{formatDateMedium(e.data)}</div>
+              <div className="fv">{e.data ? formatDateMedium(e.data) : ""}</div>
             </td>
             <td colSpan={9} className="border border-black px-1 py-1 text-center" style={{ height: 50 }}>
               <div className="flex h-full flex-col items-center justify-end">

@@ -15,7 +15,7 @@ export type ExameFormState = {
 
 function validarCamposExame(formData: FormData) {
   const paciente_id = (formData.get("paciente_id") as string) || null;
-  const data = formData.get("data") as string;
+  const data = (formData.get("data") as string) || null;
   const exames = (formData.get("exames") as string)?.trim() || null;
   const indicacao_clinica = (formData.get("indicacao_clinica") as string)?.trim() || null;
   const observacoes = (formData.get("observacoes") as string)?.trim() || null;
@@ -24,9 +24,7 @@ function validarCamposExame(formData: FormData) {
 
   campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
 
-  if (campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.")) {
-    dataNaoFutura(fieldErrors, "data", data);
-  }
+  dataNaoFutura(fieldErrors, "data", data);
 
   campoObrigatorio(fieldErrors, "exames", exames, "Exames é obrigatório.");
   tamanhoMaximo(fieldErrors, "exames", exames, EXAMES_MAX_LENGTH);
