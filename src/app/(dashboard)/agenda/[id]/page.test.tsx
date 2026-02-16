@@ -72,6 +72,7 @@ const agendamentoCompleto = {
   hora_fim: "09:30:00",
   tipo: "consulta",
   status: "agendado",
+  valor: 350,
   observacoes: "Primeira consulta",
   created_at: "2024-06-15T08:00:00Z",
   pacientes: { id: "p-1", nome: "Maria Silva", telefone: "(11) 99999-0000" },
@@ -147,6 +148,19 @@ describe("AgendamentoDetalhesPage", () => {
     await renderPage();
     const link = screen.getByText("Editar").closest("a");
     expect(link).toHaveAttribute("href", "/agenda/ag-1/editar");
+  });
+
+  it("exibe valor da consulta", async () => {
+    await renderPage();
+    expect(screen.getByText("Valor")).toBeInTheDocument();
+    // formatCurrency uses toLocaleString which may use different space chars
+    expect(screen.getByText(/R\$\s*350,00/)).toBeInTheDocument();
+  });
+
+  it("não exibe valor quando é null", async () => {
+    mockAgendamento = { ...agendamentoCompleto, valor: null };
+    await renderPage();
+    expect(screen.queryByText("Valor")).not.toBeInTheDocument();
   });
 
   it("exibe valor raw quando tipo não está em TIPO_LABELS", async () => {

@@ -9,10 +9,11 @@ import { ContaForm } from "./conta-form";
 import { AparenciaForm } from "./aparencia-form";
 import { DadosForm } from "./dados-form";
 import { ClinicasForm } from "./clinicas-form";
+import { ValoresForm } from "./valores-form";
 
 export const metadata: Metadata = { title: "Configurações" };
 
-const needsConfig = new Set(["profissional", "horarios", "aparencia"]);
+const needsConfig = new Set(["profissional", "horarios", "valores", "aparencia"]);
 
 export default async function ConfiguracoesPage({
   searchParams,
@@ -132,6 +133,9 @@ export default async function ConfiguracoesPage({
         )}
         {currentTab === "aparencia" && (
           <AparenciaForm defaults={config} />
+        )}
+        {currentTab === "valores" && (
+          <ValoresForm defaults={config} />
         )}
         {currentTab === "clinicas" && (
           <ClinicasForm

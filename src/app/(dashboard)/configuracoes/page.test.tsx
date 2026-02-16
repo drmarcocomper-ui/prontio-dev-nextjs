@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("./tabs", () => ({
   Tabs: ({ papel }: { papel: string }) => <div data-testid="tabs" data-papel={papel} />,
-  isValidTab: (tab: string) => ["consultorio", "profissional", "horarios", "conta", "aparencia", "clinicas", "dados"].includes(tab),
+  isValidTab: (tab: string) => ["consultorio", "profissional", "horarios", "valores", "conta", "aparencia", "clinicas", "dados"].includes(tab),
   getDefaultTab: () => "consultorio",
 }));
 
@@ -37,6 +37,10 @@ vi.mock("./dados-form", () => ({
 
 vi.mock("./clinicas-form", () => ({
   ClinicasForm: () => <form data-testid="clinicas-form" />,
+}));
+
+vi.mock("./valores-form", () => ({
+  ValoresForm: () => <form data-testid="valores-form" />,
 }));
 
 vi.mock("@/lib/clinica", () => ({
@@ -165,6 +169,11 @@ describe("ConfiguracoesPage", () => {
   it("renderiza AparenciaForm quando tab=aparencia", async () => {
     await renderPage({ tab: "aparencia" });
     expect(screen.getByTestId("aparencia-form")).toBeInTheDocument();
+  });
+
+  it("renderiza ValoresForm quando tab=valores", async () => {
+    await renderPage({ tab: "valores" });
+    expect(screen.getByTestId("valores-form")).toBeInTheDocument();
   });
 
   it("renderiza ClinicasForm quando tab=clinicas", async () => {

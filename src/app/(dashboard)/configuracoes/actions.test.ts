@@ -68,7 +68,7 @@ vi.mock("@/lib/clinica", () => ({
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
-import { salvarConsultorio, salvarHorarios, salvarProfissional, alterarSenha, editarClinica, alternarStatusClinica, excluirClinica } from "./actions";
+import { salvarConsultorio, salvarHorarios, salvarProfissional, salvarValores, alterarSenha, editarClinica, alternarStatusClinica, excluirClinica } from "./actions";
 import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
@@ -191,6 +191,97 @@ describe("salvarHorarios", () => {
       config_duracao_consulta: "30",
     }));
     expect(result.error).toContain("Erro ao salvar horários");
+  });
+});
+
+describe("salvarValores", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("salva valores com sucesso", async () => {
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_bradesco: "350,00",
+      config_valor_convenio_unimed: "400,00",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        { chave: "valor_convenio_bradesco", valor: "350.00", clinica_id: "clinica-123" },
+        { chave: "valor_convenio_unimed", valor: "400.00", clinica_id: "clinica-123" },
+      ])
+    );
+  });
+
+  it("ignora chaves fora do allowlist de valores", async () => {
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_bradesco: "350,00",
+      config_chave_maliciosa: "hacked",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith([
+      { chave: "valor_convenio_bradesco", valor: "350.00", clinica_id: "clinica-123" },
+    ]);
+  });
+
+  it("ignora cortesia (não deve estar no allowlist)", async () => {
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_cortesia: "100,00",
+      config_valor_convenio_particular: "500,00",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith([
+      { chave: "valor_convenio_particular", valor: "500.00", clinica_id: "clinica-123" },
+    ]);
+  });
+
+  it("ignora valores vazios", async () => {
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_bradesco: "",
+      config_valor_convenio_unimed: "400,00",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith([
+      { chave: "valor_convenio_unimed", valor: "400.00", clinica_id: "clinica-123" },
+    ]);
+  });
+
+  it("retorna sucesso quando todos os valores estão vazios", async () => {
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_bradesco: "",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("retorna erro quando clínica não está selecionada", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await salvarValores({}, makeFormData({ config_valor_convenio_bradesco: "350,00" }));
+    expect(result.error).toBe("Clínica não selecionada.");
+  });
+
+  it("retorna erro quando insert falha", async () => {
+    mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_bradesco: "350,00",
+    }));
+    expect(result.error).toContain("Erro ao salvar valores");
+  });
+
+  it("converte valores com separador de milhar corretamente", async () => {
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_bradesco: "1.350,00",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith([
+      { chave: "valor_convenio_bradesco", valor: "1350.00", clinica_id: "clinica-123" },
+    ]);
+  });
+
+  it("ignora valores negativos", async () => {
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_bradesco: "-50,00",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 });
 

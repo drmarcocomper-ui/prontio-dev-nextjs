@@ -36,9 +36,13 @@ vi.mock("../types", async () => {
 });
 
 vi.mock("./patient-search", () => ({
-  PatientSearch: ({ defaultPatientId, defaultPatientName }: { defaultPatientId?: string; defaultPatientName?: string }) => (
+  PatientSearch: ({ defaultPatientId, defaultPatientName }: { defaultPatientId?: string; defaultPatientName?: string; onPatientChange?: (id: string) => void }) => (
     <input data-testid="patient-search" placeholder="Buscar paciente" data-patient-id={defaultPatientId} data-patient-name={defaultPatientName} />
   ),
+}));
+
+vi.mock("@/lib/masks", () => ({
+  maskCurrency: (val: string) => val,
 }));
 
 import { AgendamentoForm } from "./agendamento-form";
@@ -55,6 +59,7 @@ describe("AgendamentoForm", () => {
     expect(screen.getByLabelText(/Data/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Início/)).toBeInTheDocument();
     expect(screen.getByLabelText("Tipo")).toBeInTheDocument();
+    expect(screen.getByLabelText("Valor")).toBeInTheDocument();
     expect(screen.getByLabelText("Observações")).toBeInTheDocument();
   });
 
@@ -164,6 +169,21 @@ describe("AgendamentoForm", () => {
     expect(screen.getByLabelText(/Data/)).toHaveValue("2024-06-15");
     expect(screen.getByLabelText(/Início/)).toHaveValue("09:00");
     expect(screen.getByLabelText("Observações")).toHaveValue("Observação teste");
+  });
+
+  it("exibe valor formatado no modo edição", () => {
+    render(
+      <AgendamentoForm
+        medicoId="doc-1"
+        defaults={{
+          id: "ag-1",
+          data: "2024-06-15",
+          hora_inicio: "09:00",
+          valor: 350,
+        }}
+      />
+    );
+    expect(screen.getByLabelText("Valor")).toHaveValue("350,00");
   });
 
   it("inclui hidden input com id no modo edição", () => {

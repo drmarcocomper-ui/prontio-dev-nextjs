@@ -40,7 +40,7 @@ export default async function EditarAgendamentoPage({
   const { data: agendamento } = await supabase
     .from("agendamentos")
     .select(
-      "id, data, hora_inicio, hora_fim, tipo, observacoes, pacientes(id, nome)"
+      "id, data, hora_inicio, hora_fim, tipo, valor, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
     .eq("clinica_id", ctx.clinicaId)
@@ -83,6 +83,7 @@ export default async function EditarAgendamentoPage({
             data: ag.data,
             hora_inicio: ag.hora_inicio.slice(0, 5),
             tipo: ag.tipo,
+            valor: ag.valor,
             observacoes: ag.observacoes,
           }}
         />

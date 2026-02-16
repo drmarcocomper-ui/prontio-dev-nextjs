@@ -8,7 +8,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { getClinicaAtual } from "@/lib/clinica";
 import { excluirAgendamento } from "../actions";
 import { type Agendamento, TIPO_LABELS, formatTime, formatDateBR, getInitials } from "../types";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatCurrency } from "@/lib/format";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -45,7 +45,7 @@ export default async function AgendamentoDetalhesPage({
   const { data: agendamento } = await supabase
     .from("agendamentos")
     .select(
-      "id, data, hora_inicio, hora_fim, tipo, status, observacoes, created_at, updated_at, pacientes(id, nome, telefone)"
+      "id, data, hora_inicio, hora_fim, tipo, status, valor, observacoes, created_at, updated_at, pacientes(id, nome, telefone)"
     )
     .eq("id", id)
     .eq("clinica_id", ctx.clinicaId)
@@ -130,6 +130,15 @@ export default async function AgendamentoDetalhesPage({
               <StatusBadge status={ag.status} />
             </div>
           </div>
+
+          {ag.valor != null && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Valor
+              </h3>
+              <p className="mt-1 text-sm text-gray-800">{formatCurrency(ag.valor)}</p>
+            </div>
+          )}
 
           {ag.pacientes.telefone && (
             <div>

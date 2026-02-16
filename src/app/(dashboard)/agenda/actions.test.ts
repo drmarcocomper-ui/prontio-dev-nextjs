@@ -217,6 +217,20 @@ describe("criarAgendamento", () => {
     );
   });
 
+  it("inclui valor null quando não informado", async () => {
+    await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ valor: null })
+    );
+  });
+
+  it("inclui valor numérico quando informado", async () => {
+    await expect(criarAgendamento({}, makeFormData({ ...validCreate, valor: "350,00" }))).rejects.toThrow("REDIRECT");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ valor: 350 })
+    );
+  });
+
   it("permite agendamento quando não há conflito", async () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalledWith(
@@ -377,6 +391,14 @@ describe("atualizarAgendamento", () => {
   it("não usa neq na criação (sem excluirId)", async () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(selectChain.neq).not.toHaveBeenCalled();
+  });
+
+  it("inclui valor na atualização quando informado", async () => {
+    await expect(atualizarAgendamento({}, makeFormData({ ...validUpdate, valor: "250,00" }))).rejects.toThrow("REDIRECT");
+    expect(mockUpdateEq).toHaveBeenCalledWith(
+      expect.objectContaining({ valor: 250 }),
+      "00000000-0000-0000-0000-000000000007"
+    );
   });
 
   it("redireciona após atualização com sucesso", async () => {

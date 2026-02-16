@@ -14,10 +14,12 @@ export function PatientSearch({
   defaultPatientId,
   defaultPatientName,
   medicoId,
+  onPatientChange,
 }: {
   defaultPatientId?: string;
   defaultPatientName?: string;
   medicoId: string;
+  onPatientChange?: (id: string) => void;
 }) {
   const [query, setQuery] = useState(defaultPatientName ?? "");
   const [results, setResults] = useState<Paciente[]>([]);
@@ -75,6 +77,7 @@ export function PatientSearch({
     setQuery(p.nome);
     setIsOpen(false);
     setActiveIndex(-1);
+    onPatientChange?.(p.id);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

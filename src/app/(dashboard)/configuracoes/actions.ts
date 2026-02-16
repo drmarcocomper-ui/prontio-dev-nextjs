@@ -18,7 +18,7 @@ import {
   SENHA_MIN,
   SENHA_MAX,
 } from "./constants";
-import { ESTADOS_UF } from "../pacientes/types";
+import { ESTADOS_UF, CONVENIO_LABELS, type ConvenioTipo } from "../pacientes/types";
 
 export type ConfigFormState = {
   success?: boolean;
@@ -29,6 +29,12 @@ const HORARIO_KEYS = new Set([
   "duracao_consulta", "intervalo_inicio", "intervalo_fim",
   ...["seg", "ter", "qua", "qui", "sex", "sab"].flatMap(d => [`horario_${d}_inicio`, `horario_${d}_fim`]),
 ]);
+
+const VALORES_KEYS = new Set(
+  (Object.keys(CONVENIO_LABELS) as ConvenioTipo[])
+    .filter((k) => k !== "cortesia")
+    .map((k) => `valor_convenio_${k}`),
+);
 
 const PROFISSIONAL_KEYS = new Set([
   "nome_profissional", "especialidade", "crm", "rqe", "email_profissional", "cor_primaria",
@@ -145,6 +151,55 @@ export async function salvarHorarios(
   }
 
   await invalidarCacheHorario(ctx.clinicaId);
+  revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Salvar valores de consulta por convênio (configuracoes com clinica_id)
+ */
+export async function salvarValores(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Clínica não selecionada." };
+
+  const entries: { chave: string; valor: string; clinica_id: string }[] = [];
+
+  formData.forEach((value, key) => {
+    if (key.startsWith("config_")) {
+      const configKey = key.replace("config_", "");
+      if (!VALORES_KEYS.has(configKey)) return;
+      const val = (value as string).trim();
+      if (!val) return;
+
+      // Converter "350,00" → "350.00"
+      const numeric = parseFloat(val.replace(/\./g, "").replace(",", "."));
+      if (isNaN(numeric) || numeric < 0) return;
+
+      entries.push({ chave: configKey, valor: numeric.toFixed(2), clinica_id: ctx.clinicaId });
+    }
+  });
+
+  const supabase = await createClient();
+
+  // Delete all existing valor_convenio configs for this clinic
+  const allKeys = [...VALORES_KEYS];
+  await supabase
+    .from("configuracoes")
+    .delete()
+    .eq("clinica_id", ctx.clinicaId)
+    .in("chave", allKeys);
+
+  if (entries.length > 0) {
+    const { error } = await supabase.from("configuracoes").insert(entries);
+
+    if (error) {
+      return { error: tratarErroSupabase(error, "salvar", "valores") };
+    }
+  }
+
   revalidatePath("/configuracoes");
   return { success: true };
 }

@@ -136,11 +136,20 @@ function calcularHoraFim(horaInicio: string): string {
   return `${h}:${m}`;
 }
 
+function parseCurrencyToNumber(raw: string | null): number | null {
+  if (!raw || !raw.trim()) return null;
+  const cleaned = raw.replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  if (isNaN(num) || num < 0) return null;
+  return num;
+}
+
 function validarCamposAgendamento(formData: FormData) {
   const paciente_id = (formData.get("paciente_id") as string) || null;
   const data = formData.get("data") as string;
   const hora_inicio = formData.get("hora_inicio") as string;
   const tipo = (formData.get("tipo") as string) || null;
+  const valorRaw = (formData.get("valor") as string) || null;
   const observacoes = (formData.get("observacoes") as string)?.trim() || null;
 
   const fieldErrors: Record<string, string> = {};
@@ -152,15 +161,16 @@ function validarCamposAgendamento(formData: FormData) {
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
   const hora_fim = hora_inicio ? calcularHoraFim(hora_inicio) : "";
+  const valor = parseCurrencyToNumber(valorRaw);
 
-  return { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors };
+  return { paciente_id, data, hora_inicio, hora_fim, tipo, valor, observacoes, fieldErrors };
 }
 
 export async function criarAgendamento(
   _prev: AgendamentoFormState,
   formData: FormData
 ): Promise<AgendamentoFormState> {
-  const { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors } =
+  const { paciente_id, data, hora_inicio, hora_fim, tipo, valor, observacoes, fieldErrors } =
     validarCamposAgendamento(formData);
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -190,6 +200,7 @@ export async function criarAgendamento(
     hora_inicio,
     hora_fim,
     tipo,
+    valor,
     status: "agendado",
     observacoes,
   });
@@ -261,7 +272,7 @@ export async function atualizarAgendamento(
     return { error: "ID inválido." };
   }
 
-  const { paciente_id, data, hora_inicio, hora_fim, tipo, observacoes, fieldErrors } =
+  const { paciente_id, data, hora_inicio, hora_fim, tipo, valor, observacoes, fieldErrors } =
     validarCamposAgendamento(formData);
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -290,6 +301,7 @@ export async function atualizarAgendamento(
       hora_inicio,
       hora_fim,
       tipo,
+      valor,
       observacoes,
       updated_at: new Date().toISOString(),
     })

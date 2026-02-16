@@ -24,6 +24,7 @@ const CATEGORIES: Category[] = [
     tabs: [
       { key: "consultorio", label: "Consultório" },
       { key: "horarios", label: "Horários" },
+      { key: "valores", label: "Valores" },
       { key: "clinicas", label: "Clínicas" },
     ],
   },

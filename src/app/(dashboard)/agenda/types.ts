@@ -15,6 +15,7 @@ export interface Agendamento {
   hora_fim: string;
   tipo: AgendaTipo | null;
   status: AgendaStatus;
+  valor: number | null;
   observacoes: string | null;
   created_at: string;
   updated_at?: string | null;
@@ -28,6 +29,7 @@ export interface AgendamentoDefaults {
   data?: string;
   hora_inicio?: string;
   tipo?: AgendaTipo | null;
+  valor?: number | null;
   observacoes?: string | null;
 }
 

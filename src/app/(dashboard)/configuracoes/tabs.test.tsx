@@ -75,6 +75,7 @@ describe("Tabs", () => {
 
     expect(screen.getByText("Consultório")).toBeInTheDocument();
     expect(screen.getByText("Horários")).toBeInTheDocument();
+    expect(screen.getByText("Valores")).toBeInTheDocument();
     expect(screen.getByText("Clínicas")).toBeInTheDocument();
   });
 
@@ -96,6 +97,7 @@ describe("Tabs", () => {
 
     expect(screen.getByText("Consultório")).toBeInTheDocument();
     expect(screen.getByText("Horários")).toBeInTheDocument();
+    expect(screen.getByText("Valores")).toBeInTheDocument();
     expect(screen.getByText("Clínicas")).toBeInTheDocument();
 
     const activeSubTab = screen.getByText("Horários");
@@ -154,11 +156,27 @@ describe("Tabs", () => {
     expect(subTab.className).toContain("border-primary-600");
   });
 
+  it("tab=valores ativa categoria Clínica e destaca sub-aba Valores", () => {
+    mockTab = "valores";
+    render(<Tabs papel="gestor" />);
+
+    const catLink = screen.getByText("Clínica");
+    expect(catLink.className).toContain("bg-white");
+    expect(catLink.className).toContain("text-primary-600");
+
+    const activeSubTab = screen.getByText("Valores");
+    expect(activeSubTab.className).toContain("border-primary-600");
+
+    const inactiveSubTab = screen.getByText("Consultório");
+    expect(inactiveSubTab.className).toContain("border-transparent");
+  });
+
   it("sub-abas têm hrefs corretos", () => {
     mockTab = "";
     render(<Tabs papel="gestor" />);
     expect(screen.getByText("Consultório").closest("a")).toHaveAttribute("href", "/configuracoes?tab=consultorio");
     expect(screen.getByText("Horários").closest("a")).toHaveAttribute("href", "/configuracoes?tab=horarios");
+    expect(screen.getByText("Valores").closest("a")).toHaveAttribute("href", "/configuracoes?tab=valores");
     expect(screen.getByText("Clínicas").closest("a")).toHaveAttribute("href", "/configuracoes?tab=clinicas");
   });
 
@@ -187,6 +205,7 @@ describe("isValidTab", () => {
   it("retorna true para tabs válidos", () => {
     expect(isValidTab("consultorio")).toBe(true);
     expect(isValidTab("horarios")).toBe(true);
+    expect(isValidTab("valores")).toBe(true);
     expect(isValidTab("clinicas")).toBe(true);
     expect(isValidTab("profissional")).toBe(true);
     expect(isValidTab("conta")).toBe(true);
