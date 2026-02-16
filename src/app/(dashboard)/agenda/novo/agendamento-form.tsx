@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState, useEffect, useActionState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
@@ -20,21 +20,51 @@ export function AgendamentoForm({
 }) {
   const isEditing = !!defaults?.id;
   const action = isEditing ? atualizarAgendamento : criarAgendamento;
-  const dateValue = defaults?.data ?? defaultDate ?? "";
+
+  const [data, setData] = useState(defaults?.data ?? defaultDate ?? "");
+  const [horaInicio, setHoraInicio] = useState(defaults?.hora_inicio ?? defaultTime ?? "");
   const [tipo, setTipo] = useState(defaults?.tipo ?? "");
+  const [selectKey, setSelectKey] = useState(0);
 
   const [state, formAction, isPending] = useActionState<AgendamentoFormState, FormData>(
     action,
     {}
   );
 
-  const cancelHref = isEditing ? `/agenda/${defaults.id}` : `/agenda?data=${dateValue}`;
+  // Restaurar valores após aviso de conflito e forçar remount do select
+  useEffect(() => {
+    if (state.formValues) {
+      setData(state.formValues.data);
+      setHoraInicio(state.formValues.hora_inicio);
+      setTipo(state.formValues.tipo);
+      setSelectKey((k) => k + 1);
+    }
+  }, [state.formValues]);
+
+  const cancelHref = isEditing ? `/agenda/${defaults.id}` : `/agenda?data=${data}`;
 
   return (
     <form action={formAction} className="space-y-6" aria-busy={isPending}>
       {isEditing && <input type="hidden" name="id" value={defaults.id} />}
 
       <FormError message={state.error} />
+
+      {state.conflito && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <svg className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-amber-800">{state.conflito}</p>
+              <p className="mt-1 text-xs text-amber-600">
+                Clique em &quot;{isEditing ? "Salvar alterações" : "Agendar"}&quot; novamente para confirmar o encaixe.
+              </p>
+            </div>
+          </div>
+          <input type="hidden" name="forcar_encaixe" value="true" />
+        </div>
+      )}
 
       {/* Paciente */}
       <div>
@@ -63,7 +93,8 @@ export function AgendamentoForm({
             type="date"
             required
             disabled={isPending}
-            defaultValue={dateValue}
+            value={data}
+            onChange={(e) => setData(e.target.value)}
             className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.data} />
@@ -77,10 +108,11 @@ export function AgendamentoForm({
             id="hora_inicio"
             name="hora_inicio"
             type="time"
-            step={tipo === "encaixe" ? 60 : 300}
+            step="300"
             required
             disabled={isPending}
-            defaultValue={defaults?.hora_inicio ?? defaultTime ?? ""}
+            value={horaInicio}
+            onChange={(e) => setHoraInicio(e.target.value)}
             className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.hora_inicio} />
@@ -92,10 +124,11 @@ export function AgendamentoForm({
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
           Tipo
         </label>
+        <input type="hidden" name="tipo" value={tipo} />
         <select
+          key={selectKey}
           id="tipo"
-          name="tipo"
-          value={tipo}
+          defaultValue={tipo}
           onChange={(e) => setTipo(e.target.value)}
           disabled={isPending}
           className={INPUT_CLASS}
@@ -108,14 +141,6 @@ export function AgendamentoForm({
           ))}
         </select>
         <FieldError message={state.fieldErrors?.tipo} />
-        {tipo === "encaixe" && (
-          <p className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-            </svg>
-            Encaixes permitem agendar em horários sobrepostos.
-          </p>
-        )}
       </div>
 
       {/* Observações */}

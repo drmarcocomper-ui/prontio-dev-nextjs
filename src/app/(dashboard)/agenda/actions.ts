@@ -14,6 +14,8 @@ import { timeToMinutes, DIAS_SEMANA, getHorarioConfig } from "./utils";
 export type AgendamentoFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
+  conflito?: string;
+  formValues?: { data: string; hora_inicio: string; tipo: string };
 };
 
 async function verificarConflito(
@@ -31,8 +33,7 @@ async function verificarConflito(
     .eq("clinica_id", clinicaId)
     .lt("hora_inicio", hora_fim)
     .gt("hora_fim", hora_inicio)
-    .not("status", "in", "(cancelado,faltou)")
-    .neq("tipo", "encaixe");
+    .not("status", "in", "(cancelado,faltou)");
 
   if (excluirId) {
     query = query.neq("id", excluirId);
@@ -161,10 +162,11 @@ export async function criarAgendamento(
     return { fieldErrors: { hora_inicio: foraExpediente } };
   }
 
-  if (tipo !== "encaixe") {
+  const forcarEncaixe = formData.get("forcar_encaixe") === "true";
+  if (!forcarEncaixe) {
     const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, clinicaId);
     if (conflito) {
-      return { fieldErrors: { hora_inicio: conflito } };
+      return { conflito, formValues: { data, hora_inicio, tipo: tipo ?? "" } };
     }
   }
 
@@ -270,10 +272,11 @@ export async function atualizarAgendamento(
     return { fieldErrors: { hora_inicio: foraExpediente } };
   }
 
-  if (tipo !== "encaixe") {
+  const forcarEncaixe = formData.get("forcar_encaixe") === "true";
+  if (!forcarEncaixe) {
     const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, ctx.clinicaId, id);
     if (conflito) {
-      return { fieldErrors: { hora_inicio: conflito } };
+      return { conflito, formValues: { data, hora_inicio, tipo: tipo ?? "" } };
     }
   }
 

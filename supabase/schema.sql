@@ -79,7 +79,7 @@ create table agendamentos (
   data         date not null,
   hora_inicio  time not null,
   hora_fim     time not null,
-  tipo         text check (tipo in ('consulta', 'retorno', 'exame', 'procedimento', 'avaliacao', 'encaixe')),
+  tipo         text check (tipo in ('consulta', 'retorno', 'exame', 'procedimento', 'avaliacao')),
   status       text not null default 'agendado'
                check (status in ('agendado', 'confirmado', 'em_atendimento', 'atendido', 'cancelado', 'faltou')),
   valor        numeric(12,2),

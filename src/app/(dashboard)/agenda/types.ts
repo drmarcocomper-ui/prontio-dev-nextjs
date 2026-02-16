@@ -1,5 +1,5 @@
 export type AgendaStatus = "agendado" | "confirmado" | "em_atendimento" | "atendido" | "cancelado" | "faltou";
-export type AgendaTipo = "consulta" | "retorno" | "encaixe";
+export type AgendaTipo = "consulta" | "retorno";
 
 export interface AgendamentoPaciente {
   id: string;
@@ -46,7 +46,6 @@ export const STATUS_TRANSITIONS: Record<AgendaStatus, AgendaStatus[]> = {
 export const TIPO_LABELS: Record<AgendaTipo, string> = {
   consulta: "Consulta",
   retorno: "Retorno",
-  encaixe: "Encaixe",
 };
 
 export const STATUS_LABELS: Record<AgendaStatus, string> = {

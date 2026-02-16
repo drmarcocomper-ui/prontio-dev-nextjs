@@ -12,7 +12,7 @@ import { timeToMinutes } from "./utils";
 export interface TimeSlot {
   time: string;
   timeEnd: string;
-  type: "available" | "occupied" | "break" | "continuation" | "encaixe";
+  type: "available" | "occupied" | "break" | "continuation";
   agendamento?: Agendamento;
   spanSlots?: number;
 }
@@ -42,10 +42,6 @@ export function generateTimeSlots(
   const breakStartMin = intervaloInicio ? timeToMinutes(intervaloInicio) : -1;
   const breakEndMin = intervaloFim ? timeToMinutes(intervaloFim) : -1;
 
-  // Separate encaixe appointments from regular ones
-  const regularAgs = agendamentos.filter((a) => a.tipo !== "encaixe");
-  const encaixeAgs = agendamentos.filter((a) => a.tipo === "encaixe");
-
   const slots: TimeSlot[] = [];
   const seenIds = new Set<string>();
 
@@ -59,8 +55,8 @@ export function generateTimeSlots(
     const em = (endSlotMin % 60).toString().padStart(2, "0");
     const timeEnd = `${eh}:${em}`;
 
-    // Find overlapping regular appointment
-    const ag = regularAgs.find((a) => {
+    // Find overlapping appointment
+    const ag = agendamentos.find((a) => {
       const agStart = timeToMinutes(a.hora_inicio);
       const agEnd = timeToMinutes(a.hora_fim);
       return agStart < endSlotMin && agEnd > min;
@@ -71,6 +67,7 @@ export function generateTimeSlots(
         slots.push({ time, timeEnd, type: "continuation", agendamento: ag });
       } else {
         seenIds.add(ag.id);
+        // Calculate how many slots this appointment spans
         const agStart = timeToMinutes(ag.hora_inicio);
         const agEnd = timeToMinutes(ag.hora_fim);
         const spanSlots = Math.ceil((agEnd - agStart) / duracao);
@@ -86,23 +83,33 @@ export function generateTimeSlots(
     } else {
       slots.push({ time, timeEnd, type: "available" });
     }
+  }
 
-    // Inject encaixe appointments that start within this slot's range
-    for (const enc of encaixeAgs) {
-      if (seenIds.has(enc.id)) continue;
-      const encStart = timeToMinutes(enc.hora_inicio);
-      if (encStart >= min && encStart < endSlotMin) {
-        seenIds.add(enc.id);
-        const encEnd = timeToMinutes(enc.hora_fim);
-        const encTimeEnd = `${Math.floor(encEnd / 60).toString().padStart(2, "0")}:${(encEnd % 60).toString().padStart(2, "0")}`;
-        slots.push({
-          time: enc.hora_inicio.slice(0, 5),
-          timeEnd: encTimeEnd,
-          type: "encaixe",
-          agendamento: enc,
-        });
+  // Inject overlapping appointments that weren't placed in the regular grid
+  const unplaced = agendamentos
+    .filter((a) => !seenIds.has(a.id))
+    .sort((a, b) => timeToMinutes(b.hora_inicio) - timeToMinutes(a.hora_inicio));
+
+  for (const ag of unplaced) {
+    const agStartMin = timeToMinutes(ag.hora_inicio);
+    const agEndMin = timeToMinutes(ag.hora_fim);
+    const agTimeEnd = `${Math.floor(agEndMin / 60).toString().padStart(2, "0")}:${(agEndMin % 60).toString().padStart(2, "0")}`;
+
+    // Insert after the last slot whose time <= this appointment's start
+    let insertIdx = 0;
+    for (let i = slots.length - 1; i >= 0; i--) {
+      if (timeToMinutes(slots[i].time) <= agStartMin) {
+        insertIdx = i + 1;
+        break;
       }
     }
+
+    slots.splice(insertIdx, 0, {
+      time: ag.hora_inicio.slice(0, 5),
+      timeEnd: agTimeEnd,
+      type: "occupied",
+      agendamento: ag,
+    });
   }
 
   return slots;
@@ -153,44 +160,6 @@ export function TimeGrid({
           );
         }
 
-        if (slot.type === "encaixe" && slot.agendamento) {
-          const ag = slot.agendamento;
-          return (
-            <div
-              key={`${slot.time}-enc-${ag.id}`}
-              className={`flex items-center border-l-4 border-l-amber-400 bg-amber-50/50 ${borderBottom}`}
-            >
-              <div className="w-16 shrink-0 py-3 text-center sm:w-20">
-                <p className="text-sm font-semibold text-amber-700">
-                  {formatTime(ag.hora_inicio)}
-                </p>
-              </div>
-
-              <Link
-                href={`/agenda/${ag.id}`}
-                className="flex min-w-0 flex-1 items-center gap-3 py-3 pr-2 transition-colors hover:bg-amber-50"
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700">
-                  {getInitials(ag.pacientes.nome)}
-                </div>
-                <div className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-gray-900">
-                    {ag.pacientes.nome}
-                  </span>
-                  <span className="block truncate text-xs text-amber-600">
-                    Encaixe
-                    {ag.observacoes ? ` · ${ag.observacoes}` : ""}
-                  </span>
-                </div>
-              </Link>
-
-              <div className="shrink-0 pr-3">
-                <StatusSelect agendamentoId={ag.id} currentStatus={ag.status} />
-              </div>
-            </div>
-          );
-        }
-
         if (slot.type === "break") {
           return (
             <div
@@ -216,7 +185,7 @@ export function TimeGrid({
 
           return (
             <div
-              key={`${slot.time}-occ`}
+              key={`${slot.time}-occ-${ag.id}`}
               className={`flex items-center border-l-4 ${borderColor} ${borderBottom}`}
             >
               <div className="w-16 shrink-0 py-3 text-center sm:w-20">

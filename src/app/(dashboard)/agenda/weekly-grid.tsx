@@ -128,24 +128,6 @@ export function WeeklyGrid({
                     );
                   }
 
-                  if (slot.type === "encaixe" && slot.agendamento) {
-                    const ag = slot.agendamento;
-                    return (
-                      <div
-                        key={`${dateStr}-${time}-enc-${ag.id}`}
-                        className={`flex items-center justify-center p-0.5 ${borderB}`}
-                      >
-                        <Link
-                          href={`/agenda/${ag.id}`}
-                          title={`${ag.pacientes.nome} (Encaixe)`}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-300 transition-transform hover:scale-110"
-                        >
-                          {getInitials(ag.pacientes.nome)}
-                        </Link>
-                      </div>
-                    );
-                  }
-
                   if (slot.type === "occupied" && slot.agendamento) {
                     const ag = slot.agendamento;
                     const statusStyle = STATUS_STYLES[ag.status] ?? "bg-gray-100 text-gray-600";
