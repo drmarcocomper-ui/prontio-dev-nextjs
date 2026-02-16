@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { INPUT_CLASS, FieldError, FormError } from "@/components/form-utils";
 import { maskPhone } from "@/lib/masks";
 import { CONVENIO_LABELS } from "@/app/(dashboard)/pacientes/types";
@@ -89,7 +90,7 @@ export function QuickPatientModal({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
@@ -183,6 +184,7 @@ export function QuickPatientModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
