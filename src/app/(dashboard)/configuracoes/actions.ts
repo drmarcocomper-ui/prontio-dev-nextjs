@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { getClinicaAtual, getClinicasDoUsuario, isGestor, type Papel } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario, isGestor, isProfissional, type Papel } from "@/lib/clinica";
 import { invalidarCacheHorario } from "@/app/(dashboard)/agenda/utils";
 import { emailValido as validarEmail } from "@/lib/validators";
 import {
@@ -161,6 +161,92 @@ export async function salvarHorarios(
 
   await invalidarCacheHorario(ctx.clinicaId);
   revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Salvar horários de atendimento do profissional (horarios_profissional)
+ */
+export async function salvarHorariosProfissional(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Clínica não selecionada." };
+
+  if (!isProfissional(ctx.papel)) {
+    return { error: "Sem permissão para configurar horários de profissional." };
+  }
+
+  const duracao = parseInt(formData.get("duracao_consulta") as string, 10);
+  if (isNaN(duracao) || duracao < 5 || duracao > 240) {
+    return { error: "Duração deve ser entre 5 e 240 minutos." };
+  }
+
+  const DIAS_KEYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+  const rows: {
+    clinica_id: string;
+    user_id: string;
+    dia_semana: number;
+    ativo: boolean;
+    hora_inicio: string | null;
+    hora_fim: string | null;
+    intervalo_inicio: string | null;
+    intervalo_fim: string | null;
+    duracao_consulta: number;
+  }[] = [];
+
+  for (let i = 0; i < 7; i++) {
+    const key = DIAS_KEYS[i];
+    const ativo = formData.get(`ativo_${key}`) === "true";
+    const hora_inicio = (formData.get(`hora_inicio_${key}`) as string) || null;
+    const hora_fim = (formData.get(`hora_fim_${key}`) as string) || null;
+    const intervalo_inicio = (formData.get(`intervalo_inicio_${key}`) as string) || null;
+    const intervalo_fim = (formData.get(`intervalo_fim_${key}`) as string) || null;
+
+    if (ativo) {
+      if (!hora_inicio || !hora_fim) {
+        return { error: `Horário de início e fim são obrigatórios para ${key}.` };
+      }
+      if (hora_fim <= hora_inicio) {
+        return { error: `Horário de término deve ser posterior ao início (${key}).` };
+      }
+      if (intervalo_inicio && intervalo_fim && intervalo_fim <= intervalo_inicio) {
+        return { error: `Intervalo inválido para ${key}.` };
+      }
+    }
+
+    rows.push({
+      clinica_id: ctx.clinicaId,
+      user_id: ctx.userId,
+      dia_semana: i,
+      ativo,
+      hora_inicio: ativo ? hora_inicio : null,
+      hora_fim: ativo ? hora_fim : null,
+      intervalo_inicio: ativo ? intervalo_inicio : null,
+      intervalo_fim: ativo ? intervalo_fim : null,
+      duracao_consulta: duracao,
+    });
+  }
+
+  const supabase = await createClient();
+
+  // Delete existing rows for this user+clinic, then insert fresh
+  await supabase
+    .from("horarios_profissional")
+    .delete()
+    .eq("clinica_id", ctx.clinicaId)
+    .eq("user_id", ctx.userId);
+
+  const { error } = await supabase.from("horarios_profissional").insert(rows);
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "salvar", "horários do profissional") };
+  }
+
+  invalidarCacheHorario(ctx.clinicaId, ctx.userId);
+  revalidatePath("/configuracoes");
+  revalidatePath("/agenda");
   return { success: true };
 }
 

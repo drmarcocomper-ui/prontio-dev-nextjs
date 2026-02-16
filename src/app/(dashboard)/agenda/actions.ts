@@ -7,7 +7,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido } from "@/lib/validators";
 import { parseLocalDate } from "@/lib/date";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
-import { getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 
 import { timeToMinutes, DIAS_SEMANA, getHorarioConfig } from "./utils";
 
@@ -61,19 +61,24 @@ async function validarHorarioComercial(
   data: string,
   horaInicio: string,
   horaFim: string,
+  userId?: string,
 ): Promise<string | null> {
   const date = parseLocalDate(data);
   const dayOfWeek = date.getDay();
 
   const dia = DIAS_SEMANA[dayOfWeek];
   if (!dia) {
-    return "Não há expediente aos domingos.";
+    return "Não há expediente neste dia.";
   }
 
-  const config = await getHorarioConfig(supabase, clinicaId);
+  const config = await getHorarioConfig(supabase, clinicaId, userId);
 
-  const inicio = config[`horario_${dia.key}_inicio`] || "08:00";
-  const fim = config[`horario_${dia.key}_fim`] || "18:00";
+  const inicio = config[`horario_${dia.key}_inicio`];
+  const fim = config[`horario_${dia.key}_fim`];
+
+  if (!inicio || !fim) {
+    return `O profissional não atende neste dia (${dia.label}).`;
+  }
 
   if (timeToMinutes(horaInicio) < timeToMinutes(inicio) || timeToMinutes(horaFim) > timeToMinutes(fim)) {
     return `Horário fora do expediente de ${dia.label} (${inicio}–${fim}).`;
@@ -152,13 +157,15 @@ export async function criarAgendamento(
   if (!ctx) return { error: "Clínica não selecionada." };
   const clinicaId = ctx.clinicaId;
 
+  const medicoUserId = await getMedicoId();
+
   // Obter duração configurada (padrão 15 min)
-  const config = await getHorarioConfig(supabase, clinicaId);
+  const config = await getHorarioConfig(supabase, clinicaId, medicoUserId);
   const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 15;
   const hora_fim = calcularHoraFim(hora_inicio, duracao);
 
   // Validar horário comercial
-  const foraExpediente = await validarHorarioComercial(supabase, clinicaId, data, hora_inicio, hora_fim);
+  const foraExpediente = await validarHorarioComercial(supabase, clinicaId, data, hora_inicio, hora_fim, medicoUserId);
   if (foraExpediente) {
     return { fieldErrors: { hora_inicio: foraExpediente } };
   }
@@ -263,12 +270,14 @@ export async function atualizarAgendamento(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
 
+  const medicoUserId = await getMedicoId();
+
   // Obter duração configurada (padrão 15 min)
-  const config = await getHorarioConfig(supabase, ctx.clinicaId);
+  const config = await getHorarioConfig(supabase, ctx.clinicaId, medicoUserId);
   const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 15;
   const hora_fim = calcularHoraFim(hora_inicio, duracao);
 
-  const foraExpediente = await validarHorarioComercial(supabase, ctx.clinicaId, data, hora_inicio, hora_fim);
+  const foraExpediente = await validarHorarioComercial(supabase, ctx.clinicaId, data, hora_inicio, hora_fim, medicoUserId);
   if (foraExpediente) {
     return { fieldErrors: { hora_inicio: foraExpediente } };
   }

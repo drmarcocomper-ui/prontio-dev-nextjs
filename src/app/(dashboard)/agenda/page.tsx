@@ -8,7 +8,7 @@ import { todayLocal, parseLocalDate } from "@/lib/date";
 import { DATE_RE } from "@/lib/validators";
 import { type Agendamento, type AgendaTipo, STATUS_LABELS, TIPO_LABELS } from "./types";
 import { AgendaFilters } from "./filters";
-import { getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 import { getHorarioConfig, DIAS_SEMANA, getWeekRange } from "./utils";
 import { TimeGrid, generateTimeSlots, type TimeSlot } from "./time-grid";
 import { WeeklyGrid } from "./weekly-grid";
@@ -33,7 +33,8 @@ export default async function AgendaPage({
   const ctx = await getClinicaAtual();
   if (!ctx) redirect("/login");
 
-  const config = await getHorarioConfig(supabase, ctx.clinicaId);
+  const medicoUserId = await getMedicoId();
+  const config = await getHorarioConfig(supabase, ctx.clinicaId, medicoUserId);
   const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 15;
 
   // Build query — range for week, single date for day
@@ -95,7 +96,8 @@ export default async function AgendaPage({
       const d = parseLocalDate(dateStr);
       const dow = d.getDay();
       const dia = DIAS_SEMANA[dow];
-      slotsByDate[dateStr] = dia
+      const dayOff = !dia || !config[`horario_${dia.key}_inicio`];
+      slotsByDate[dateStr] = dia && !dayOff
         ? generateTimeSlots(config, dia.key, grouped[dateStr], duracao)
         : [];
     }
@@ -138,10 +140,10 @@ export default async function AgendaPage({
 
   const date = parseLocalDate(currentDate);
   const dayOfWeek = date.getDay();
-  const isSunday = dayOfWeek === 0;
   const dia = DIAS_SEMANA[dayOfWeek];
+  const isDayOff = !dia || !config[`horario_${dia.key}_inicio`];
 
-  const slots = dia
+  const slots = dia && !isDayOff
     ? generateTimeSlots(config, dia.key, items, duracao)
     : [];
 
@@ -175,7 +177,7 @@ export default async function AgendaPage({
       </div>
 
       {/* Time Grid */}
-      <TimeGrid slots={slots} currentDate={currentDate} isSunday={isSunday} />
+      <TimeGrid slots={slots} currentDate={currentDate} isDayOff={isDayOff} />
     </div>
   );
 }

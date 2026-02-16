@@ -1,5 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 
+export interface HorarioProfissional {
+  dia_semana: number;
+  ativo: boolean;
+  hora_inicio: string | null;
+  hora_fim: string | null;
+  intervalo_inicio: string | null;
+  intervalo_fim: string | null;
+  duracao_consulta: number;
+}
+
 export function getWeekRange(dateStr: string): {
   weekStart: string;
   weekEnd: string;
@@ -32,6 +42,7 @@ export function timeToMinutes(time: string): number {
 }
 
 export const DIAS_SEMANA: Record<number, { key: string; label: string }> = {
+  0: { key: "dom", label: "domingo" },
   1: { key: "seg", label: "segunda-feira" },
   2: { key: "ter", label: "terça-feira" },
   3: { key: "qua", label: "quarta-feira" },
@@ -47,12 +58,42 @@ const horarioCache = new Map<string, { data: Record<string, string>; timestamp: 
 export async function getHorarioConfig(
   supabase: Awaited<ReturnType<typeof createClient>>,
   clinicaId: string,
+  userId?: string,
 ): Promise<Record<string, string>> {
-  const cached = horarioCache.get(clinicaId);
+  const cacheKey = `${clinicaId}:${userId ?? "clinic"}`;
+  const cached = horarioCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < HORARIO_CACHE_TTL) {
     return cached.data;
   }
 
+  // Se userId fornecido, tentar buscar horários do profissional primeiro
+  if (userId) {
+    const { data: rows } = await supabase
+      .from("horarios_profissional")
+      .select("dia_semana, ativo, hora_inicio, hora_fim, intervalo_inicio, intervalo_fim, duracao_consulta")
+      .eq("clinica_id", clinicaId)
+      .eq("user_id", userId);
+
+    if (rows && rows.length > 0) {
+      const config: Record<string, string> = {};
+      for (const row of rows as HorarioProfissional[]) {
+        const dia = DIAS_SEMANA[row.dia_semana];
+        if (!dia) continue;
+        if (row.ativo) {
+          if (row.hora_inicio) config[`horario_${dia.key}_inicio`] = row.hora_inicio;
+          if (row.hora_fim) config[`horario_${dia.key}_fim`] = row.hora_fim;
+          if (row.intervalo_inicio) config[`intervalo_${dia.key}_inicio`] = row.intervalo_inicio;
+          if (row.intervalo_fim) config[`intervalo_${dia.key}_fim`] = row.intervalo_fim;
+        }
+        // dia inativo: não seta horario_*_inicio/fim → dia sem expediente
+        config.duracao_consulta = String(row.duracao_consulta);
+      }
+      horarioCache.set(cacheKey, { data: config, timestamp: Date.now() });
+      return config;
+    }
+  }
+
+  // Fallback: buscar da tabela configuracoes (horário da clínica)
   const allKeys = [
     ...Object.values(DIAS_SEMANA).flatMap((d) => [
       `horario_${d.key}_inicio`,
@@ -74,10 +115,13 @@ export async function getHorarioConfig(
     config[r.chave] = r.valor;
   });
 
-  horarioCache.set(clinicaId, { data: config, timestamp: Date.now() });
+  horarioCache.set(cacheKey, { data: config, timestamp: Date.now() });
   return config;
 }
 
-export function invalidarCacheHorario(clinicaId: string) {
-  horarioCache.delete(clinicaId);
+export function invalidarCacheHorario(clinicaId: string, userId?: string) {
+  if (userId) {
+    horarioCache.delete(`${clinicaId}:${userId}`);
+  }
+  horarioCache.delete(`${clinicaId}:clinic`);
 }
