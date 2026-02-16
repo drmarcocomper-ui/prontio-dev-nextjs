@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario, isProfissional } from "@/lib/clinica";
 import { Tabs } from "./tabs";
 import { isValidTab, getDefaultTab } from "./tab-utils";
 import { ConsultorioForm } from "./consultorio-form";
@@ -13,8 +13,6 @@ import { ClinicasForm } from "./clinicas-form";
 import { ValoresForm } from "./valores-form";
 
 export const metadata: Metadata = { title: "Configurações" };
-
-const needsConfig = new Set(["consultorio", "agenda", "conta"]);
 
 export default async function ConfiguracoesPage({
   searchParams,
@@ -30,9 +28,9 @@ export default async function ConfiguracoesPage({
   const defaultTab = getDefaultTab(papel);
   const currentTab = tab && isValidTab(tab) ? tab : defaultTab;
 
-  // Load clinic data only for consultório tab
+  // Load clinic data for "clinica" tab
   let clinicaData = { nome: "", cnpj: null as string | null, telefone: null as string | null, endereco: null as string | null, cidade: null as string | null, estado: null as string | null };
-  if (currentTab === "consultorio" && ctx?.clinicaId) {
+  if (currentTab === "clinica" && ctx?.clinicaId) {
     const { data: clinica } = await supabase
       .from("clinicas")
       .select("nome, cnpj, telefone, endereco, cidade, estado")
@@ -44,9 +42,9 @@ export default async function ConfiguracoesPage({
     }
   }
 
-  // Load config for tabs that need it
+  // Load config for tabs that need it (clinica: horarios+valores, minha-conta: profissional+aparencia)
   const config: Record<string, string> = {};
-  if (needsConfig.has(currentTab)) {
+  if (currentTab === "clinica" || currentTab === "minha-conta") {
     const { data: rows } = await supabase
       .from("configuracoes")
       .select("chave, valor");
@@ -56,19 +54,19 @@ export default async function ConfiguracoesPage({
     });
   }
 
-  // Get user email only for "conta" tab
+  // Get user email for "minha-conta" tab
   let userEmail = "";
-  if (currentTab === "conta") {
+  if (currentTab === "minha-conta") {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     userEmail = user?.email ?? "";
   }
 
-  // Load clinics data only for "clinicas" tab
+  // Load clinics data for "gestao" tab
   let clinicasList: { id: string; nome: string; ativo: boolean }[] = [];
   let vinculos: { id: string; user_id: string; papel: string; email?: string }[] = [];
-  if (currentTab === "clinicas") {
+  if (currentTab === "gestao") {
     const clinicas = await getClinicasDoUsuario();
     const clinicaIds = clinicas.map((c) => c.id);
 
@@ -120,42 +118,45 @@ export default async function ConfiguracoesPage({
       <Tabs papel={papel} />
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
-        {currentTab === "consultorio" && (
+        {currentTab === "clinica" && (
           <>
             <ConsultorioForm clinica={clinicaData} />
             <div className="border-t border-gray-200 pt-6 mt-6">
-              <h2 className="text-base font-semibold text-gray-900 mb-4">Profissional</h2>
-              <ProfissionalForm defaults={config} />
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Horários de Atendimento</h2>
+              <HorariosForm defaults={config} />
             </div>
-          </>
-        )}
-        {currentTab === "agenda" && (
-          <>
-            <HorariosForm defaults={config} />
             <div className="border-t border-gray-200 pt-6 mt-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Valores</h2>
               <ValoresForm defaults={config} />
             </div>
           </>
         )}
-        {currentTab === "conta" && (
+        {currentTab === "minha-conta" && (
           <>
             <ContaForm email={userEmail} />
+            {isProfissional(papel) && (
+              <div className="border-t border-gray-200 pt-6 mt-6">
+                <h2 className="text-base font-semibold text-gray-900 mb-4">Dados Profissionais</h2>
+                <ProfissionalForm defaults={config} />
+              </div>
+            )}
             <div className="border-t border-gray-200 pt-6 mt-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Aparência</h2>
               <AparenciaForm defaults={config} />
             </div>
+          </>
+        )}
+        {currentTab === "gestao" && (
+          <>
+            <ClinicasForm
+              clinicas={clinicasList}
+              vinculos={vinculos}
+            />
             <div className="border-t border-gray-200 pt-6 mt-6">
-              <h2 className="text-base font-semibold text-gray-900 mb-4">Dados</h2>
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Dados e Backup</h2>
               <DadosForm />
             </div>
           </>
-        )}
-        {currentTab === "clinicas" && (
-          <ClinicasForm
-            clinicas={clinicasList}
-            vinculos={vinculos}
-          />
         )}
       </div>
     </div>
