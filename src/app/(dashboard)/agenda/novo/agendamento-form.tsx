@@ -122,7 +122,7 @@ export function AgendamentoForm({
       {/* Tipo */}
       <div>
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
-          Tipo
+          Tipo <span className="text-red-500">*</span>
         </label>
         <input type="hidden" name="tipo" value={tipo} />
         <select

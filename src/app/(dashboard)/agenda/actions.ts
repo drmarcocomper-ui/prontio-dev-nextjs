@@ -101,6 +101,7 @@ function validarCamposAgendamento(formData: FormData) {
   campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
   campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.");
   campoObrigatorio(fieldErrors, "hora_inicio", hora_inicio, "Horário de início é obrigatório.");
+  campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo.");
   valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
