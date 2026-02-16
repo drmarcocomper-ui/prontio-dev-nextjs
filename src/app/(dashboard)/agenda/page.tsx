@@ -36,9 +36,6 @@ export default async function AgendaPage({
     .eq("data", currentDate)
     .eq("clinica_id", ctx.clinicaId);
 
-  if (currentStatus) {
-    query = query.eq("status", currentStatus as AgendaStatus);
-  }
   if (currentTipo) {
     query = query.eq("tipo", currentTipo as AgendaTipo);
   }
@@ -60,9 +57,19 @@ export default async function AgendaPage({
     );
   }
 
-  const items = (agendamentos ?? []) as unknown as Agendamento[];
-  const total = items.length;
-  const atendidos = items.filter((a) => a.status === "atendido").length;
+  const allItems = (agendamentos ?? []) as unknown as Agendamento[];
+
+  // Count per status (from full list, before filtering)
+  const statusCounts: Record<string, number> = {};
+  for (const a of allItems) {
+    statusCounts[a.status] = (statusCounts[a.status] ?? 0) + 1;
+  }
+
+  const items = currentStatus
+    ? allItems.filter((a) => a.status === currentStatus)
+    : allItems;
+  const total = allItems.length;
+  const atendidos = statusCounts["atendido"] ?? 0;
 
   // Build time grid
   const date = parseLocalDate(currentDate);
@@ -102,7 +109,7 @@ export default async function AgendaPage({
       {/* Date Navigation + Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <DatePicker currentDate={currentDate} />
-        <AgendaFilters currentStatus={currentStatus} currentTipo={currentTipo} />
+        <AgendaFilters currentStatus={currentStatus} currentTipo={currentTipo} statusCounts={statusCounts} total={total} />
       </div>
 
       {/* Time Grid */}
