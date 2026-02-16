@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useActionState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
@@ -21,6 +21,7 @@ export function AgendamentoForm({
   const isEditing = !!defaults?.id;
   const action = isEditing ? atualizarAgendamento : criarAgendamento;
   const dateValue = defaults?.data ?? defaultDate ?? "";
+  const [tipo, setTipo] = useState(defaults?.tipo ?? "");
 
   const [state, formAction, isPending] = useActionState<AgendamentoFormState, FormData>(
     action,
@@ -76,7 +77,7 @@ export function AgendamentoForm({
             id="hora_inicio"
             name="hora_inicio"
             type="time"
-            step="300"
+            step={tipo === "encaixe" ? 60 : 300}
             required
             disabled={isPending}
             defaultValue={defaults?.hora_inicio ?? defaultTime ?? ""}
@@ -94,7 +95,8 @@ export function AgendamentoForm({
         <select
           id="tipo"
           name="tipo"
-          defaultValue={defaults?.tipo ?? ""}
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
           disabled={isPending}
           className={INPUT_CLASS}
         >
@@ -106,6 +108,14 @@ export function AgendamentoForm({
           ))}
         </select>
         <FieldError message={state.fieldErrors?.tipo} />
+        {tipo === "encaixe" && (
+          <p className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+            Encaixes permitem agendar em horários sobrepostos.
+          </p>
+        )}
       </div>
 
       {/* Observações */}

@@ -81,7 +81,7 @@ export default async function AgendamentoDetalhesPage({
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
               <span className="capitalize">{formatDateBR(ag.data)}</span>
               {ag.tipo && (
-                <span className="inline-flex items-center rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ag.tipo === "encaixe" ? "bg-amber-50 text-amber-700" : "bg-primary-50 text-primary-700"}`}>
                   {TIPO_LABELS[ag.tipo] ?? ag.tipo}
                 </span>
               )}

@@ -31,7 +31,8 @@ async function verificarConflito(
     .eq("clinica_id", clinicaId)
     .lt("hora_inicio", hora_fim)
     .gt("hora_fim", hora_inicio)
-    .not("status", "in", "(cancelado,faltou)");
+    .not("status", "in", "(cancelado,faltou)")
+    .neq("tipo", "encaixe");
 
   if (excluirId) {
     query = query.neq("id", excluirId);
@@ -160,9 +161,11 @@ export async function criarAgendamento(
     return { fieldErrors: { hora_inicio: foraExpediente } };
   }
 
-  const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, clinicaId);
-  if (conflito) {
-    return { fieldErrors: { hora_inicio: conflito } };
+  if (tipo !== "encaixe") {
+    const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, clinicaId);
+    if (conflito) {
+      return { fieldErrors: { hora_inicio: conflito } };
+    }
   }
 
   const valor = await determinarValor(supabase, clinicaId, paciente_id!, tipo);
@@ -267,9 +270,11 @@ export async function atualizarAgendamento(
     return { fieldErrors: { hora_inicio: foraExpediente } };
   }
 
-  const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, ctx.clinicaId, id);
-  if (conflito) {
-    return { fieldErrors: { hora_inicio: conflito } };
+  if (tipo !== "encaixe") {
+    const conflito = await verificarConflito(supabase, data, hora_inicio, hora_fim, ctx.clinicaId, id);
+    if (conflito) {
+      return { fieldErrors: { hora_inicio: conflito } };
+    }
   }
 
   const valor = await determinarValor(supabase, ctx.clinicaId, paciente_id!, tipo);
