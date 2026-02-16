@@ -261,6 +261,15 @@ function ParticularFormat({ e, cfg }: { e: ExameImpressao; cfg: Record<string, s
   );
 }
 
+function SADTField({ num, label, children }: { num: string; label: string; children?: React.ReactNode }) {
+  return (
+    <>
+      <span className="text-[8px] text-gray-500"><b>{num}</b> - {label}</span>
+      <div className="min-h-[14px] text-[10px] leading-tight">{children}</div>
+    </>
+  );
+}
+
 function SADTFormat({
   e,
   cfg,
@@ -279,178 +288,207 @@ function SADTFormat({
     ? items
     : e.exames.split("\n").filter((l) => l.trim()).map((l) => ({ nome: l.trim(), codigoTuss: null }));
 
+  const cellBase = "border border-black px-1.5 py-0.5 align-top";
+  const sectionHeader = "border border-black bg-gray-200 px-1.5 py-0.5 text-[9px] font-bold text-center";
+
   return (
-    <div className="bg-white p-1">
-      {/* SADT Grid Layout */}
-      <table className="w-full border-collapse text-[11px] leading-tight" style={{ borderSpacing: 0 }}>
+    <div className="bg-white">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .sadt-table { border-collapse: collapse; width: 100%; font-family: Arial, Helvetica, sans-serif; }
+        .sadt-table td { vertical-align: top; }
+      `}} />
+
+      <table className="sadt-table">
+        <colgroup>
+          <col style={{ width: "8%" }} />
+          <col style={{ width: "12%" }} />
+          <col style={{ width: "20%" }} />
+          <col style={{ width: "20%" }} />
+          <col style={{ width: "25%" }} />
+          <col style={{ width: "15%" }} />
+        </colgroup>
         <tbody>
-          {/* Title Row */}
+          {/* ═══ HEADER ═══ */}
           <tr>
-            <td colSpan={6} className="border border-black px-2 py-1.5 text-center font-bold text-xs">
-              GUIA DE SP/SADT
+            <td colSpan={6} className="border border-black px-2 py-1 text-center">
+              <span className="text-xs font-bold tracking-wide">GUIA DE SP/SADT</span>
+              <span className="ml-3 text-[8px] text-gray-500">Padrão TISS</span>
             </td>
           </tr>
 
-          {/* Row: Registro ANS + Nº Guia */}
+          {/* ═══ 1 - DADOS DA OPERADORA / GUIA ═══ */}
           <tr>
-            <td colSpan={3} className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">1 - </span>
-              <span className="text-[9px] text-gray-500">Registro ANS</span>
-              <p className="mt-0.5 text-[11px] font-medium">{registroANS || ""}</p>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="1" label="Registro ANS">{registroANS}</SADTField>
             </td>
-            <td colSpan={3} className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">2 - </span>
-              <span className="text-[9px] text-gray-500">N° Guia no Prestador</span>
-              <p className="mt-0.5 text-[11px] font-medium">&nbsp;</p>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="2" label="Nº Guia no Prestador">&nbsp;</SADTField>
+            </td>
+            <td className={cellBase}>
+              <SADTField num="3" label="Nº Guia Principal">&nbsp;</SADTField>
+            </td>
+            <td className={cellBase}>
+              <SADTField num="4" label="Data da Autorização">&nbsp;</SADTField>
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={3} className={cellBase}>
+              <SADTField num="5" label="Senha">&nbsp;</SADTField>
+            </td>
+            <td colSpan={3} className={cellBase}>
+              <SADTField num="6" label="Data de Validade da Senha">&nbsp;</SADTField>
             </td>
           </tr>
 
-          {/* Section: Dados do Beneficiário */}
+          {/* ═══ 2 - DADOS DO BENEFICIÁRIO ═══ */}
           <tr>
-            <td colSpan={6} className="border border-black bg-gray-100 px-2 py-1 font-bold text-[10px]">
-              DADOS DO BENEFICIÁRIO
+            <td colSpan={6} className={sectionHeader}>DADOS DO BENEFICIÁRIO</td>
+          </tr>
+          <tr>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="8" label="Número da Carteira">{carteirinha}</SADTField>
+            </td>
+            <td className={cellBase}>
+              <SADTField num="9" label="Validade da Carteira">&nbsp;</SADTField>
+            </td>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="10" label="Nome">{e.pacientes.nome}</SADTField>
+            </td>
+            <td className={cellBase}>
+              <SADTField num="11" label="Cartão Nacional de Saúde">&nbsp;</SADTField>
             </td>
           </tr>
           <tr>
-            <td colSpan={2} className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">8 - </span>
-              <span className="text-[9px] text-gray-500">N° da Carteira</span>
-              <p className="mt-0.5 text-[11px] font-medium">{carteirinha || ""}</p>
-            </td>
-            <td colSpan={3} className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">10 - </span>
-              <span className="text-[9px] text-gray-500">Nome</span>
-              <p className="mt-0.5 text-[11px] font-medium">{e.pacientes.nome}</p>
-            </td>
-            <td className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">11 - </span>
-              <span className="text-[9px] text-gray-500">CPF</span>
-              <p className="mt-0.5 text-[11px] font-medium">{e.pacientes.cpf ? formatCPF(e.pacientes.cpf) : ""}</p>
-            </td>
-          </tr>
-
-          {/* Section: Dados do Solicitante */}
-          <tr>
-            <td colSpan={6} className="border border-black bg-gray-100 px-2 py-1 font-bold text-[10px]">
-              DADOS DO SOLICITANTE
-            </td>
-          </tr>
-          <tr>
-            <td colSpan={3} className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">13 - </span>
-              <span className="text-[9px] text-gray-500">Código na Operadora / CNPJ</span>
-              <p className="mt-0.5 text-[11px] font-medium">&nbsp;</p>
-            </td>
-            <td colSpan={3} className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">14 - </span>
-              <span className="text-[9px] text-gray-500">Nome do Contratado</span>
-              <p className="mt-0.5 text-[11px] font-medium">{operadora || cfg.nome_consultorio || ""}</p>
-            </td>
-          </tr>
-          <tr>
-            <td colSpan={3} className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">15 - </span>
-              <span className="text-[9px] text-gray-500">Nome do Profissional Solicitante</span>
-              <p className="mt-0.5 text-[11px] font-medium">{cfg.nome_profissional || ""}</p>
-            </td>
-            <td className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">16 - </span>
-              <span className="text-[9px] text-gray-500">Conselho</span>
-              <p className="mt-0.5 text-[11px] font-medium">CRM</p>
-            </td>
-            <td className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">17 - </span>
-              <span className="text-[9px] text-gray-500">N° no Conselho</span>
-              <p className="mt-0.5 text-[11px] font-medium">{cfg.crm || ""}</p>
-            </td>
-            <td className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">18 - </span>
-              <span className="text-[9px] text-gray-500">UF</span>
-              <p className="mt-0.5 text-[11px] font-medium">&nbsp;</p>
+            <td colSpan={6} className={cellBase}>
+              <SADTField num="12" label="Atendimento a RN">N</SADTField>
             </td>
           </tr>
 
-          {/* Section: Dados da Solicitação */}
+          {/* ═══ 3 - DADOS DO SOLICITANTE ═══ */}
           <tr>
-            <td colSpan={6} className="border border-black bg-gray-100 px-2 py-1 font-bold text-[10px]">
-              DADOS DA SOLICITAÇÃO / PROCEDIMENTOS SOLICITADOS
+            <td colSpan={6} className={sectionHeader}>DADOS DO SOLICITANTE</td>
+          </tr>
+          <tr>
+            <td colSpan={3} className={cellBase}>
+              <SADTField num="13" label="Código na Operadora">&nbsp;</SADTField>
+            </td>
+            <td colSpan={3} className={cellBase}>
+              <SADTField num="14" label="Nome do Contratado">{operadora || cfg.nome_consultorio || ""}</SADTField>
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="15" label="Nome do Profissional Solicitante">{cfg.nome_profissional || ""}</SADTField>
+            </td>
+            <td className={cellBase}>
+              <SADTField num="16" label="Conselho Profissional">CRM</SADTField>
+            </td>
+            <td className={cellBase}>
+              <SADTField num="17" label="Nº no Conselho">{cfg.crm || ""}</SADTField>
+            </td>
+            <td className={cellBase}>
+              <SADTField num="18" label="UF">&nbsp;</SADTField>
+            </td>
+            <td className={cellBase}>
+              <SADTField num="19" label="Código CBO-S">&nbsp;</SADTField>
             </td>
           </tr>
 
-          {/* Indicação Clínica */}
+          {/* ═══ 4 - DADOS DA SOLICITAÇÃO / PROCEDIMENTOS ═══ */}
           <tr>
-            <td colSpan={6} className="border border-black px-2 py-1">
-              <span className="text-[9px] font-bold text-gray-500">21 - </span>
-              <span className="text-[9px] text-gray-500">Indicação Clínica</span>
-              <p className="mt-0.5 text-[11px] font-medium whitespace-pre-wrap">{e.indicacao_clinica || ""}</p>
+            <td colSpan={6} className={sectionHeader}>DADOS DA SOLICITAÇÃO / PROCEDIMENTOS E EXAMES SOLICITADOS</td>
+          </tr>
+          <tr>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="21" label="Caráter do Atendimento">Eletiva</SADTField>
+            </td>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="22" label="Data da Solicitação">{formatDateMedium(e.data)}</SADTField>
+            </td>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="23" label="Indicação Clínica">
+                <span className="whitespace-pre-wrap">{e.indicacao_clinica || ""}</span>
+              </SADTField>
             </td>
           </tr>
 
           {/* Procedures Table Header */}
           <tr>
-            <td className="border border-black bg-gray-50 px-2 py-1 text-center font-bold text-[9px]">
-              <span className="text-gray-500">22 - </span>Tab
+            <td className="border border-black bg-gray-100 px-1 py-0.5 text-center text-[8px] font-bold">
+              <span className="text-gray-500">24</span><br />Tabela
             </td>
-            <td colSpan={2} className="border border-black bg-gray-50 px-2 py-1 text-center font-bold text-[9px]">
-              Cód. Procedimento
+            <td colSpan={2} className="border border-black bg-gray-100 px-1 py-0.5 text-center text-[8px] font-bold">
+              <span className="text-gray-500">25</span><br />Código do Procedimento
             </td>
-            <td colSpan={2} className="border border-black bg-gray-50 px-2 py-1 font-bold text-[9px]">
-              Descrição
+            <td colSpan={2} className="border border-black bg-gray-100 px-1 py-0.5 text-[8px] font-bold">
+              <span className="text-gray-500">26</span><br />Descrição
             </td>
-            <td className="border border-black bg-gray-50 px-2 py-1 text-center font-bold text-[9px]">
-              Qtd
+            <td className="border border-black bg-gray-100 px-1 py-0.5 text-center text-[8px] font-bold">
+              <span className="text-gray-500">27</span><br />Qtde. Solic.
             </td>
           </tr>
 
           {/* Procedure Rows */}
           {allItems.map((item, i) => (
             <tr key={i}>
-              <td className="border border-black px-2 py-1 text-center text-[10px]">
+              <td className="border border-black px-1 py-0.5 text-center text-[9px]">
                 {item.codigoTuss ? "22" : ""}
               </td>
-              <td colSpan={2} className="border border-black px-2 py-1 text-center text-[10px]">
+              <td colSpan={2} className="border border-black px-1 py-0.5 text-center text-[9px]">
                 {item.codigoTuss || ""}
               </td>
-              <td colSpan={2} className="border border-black px-2 py-1 text-[10px]">
+              <td colSpan={2} className="border border-black px-1 py-0.5 text-[9px]">
                 {item.nome}
               </td>
-              <td className="border border-black px-2 py-1 text-center text-[10px]">
+              <td className="border border-black px-1 py-0.5 text-center text-[9px]">
                 1
               </td>
             </tr>
           ))}
 
-          {/* Free text if any */}
+          {/* Empty rows to fill at least 5 procedure lines */}
+          {Array.from({ length: Math.max(0, 5 - allItems.length) }).map((_, i) => (
+            <tr key={`empty-${i}`}>
+              <td className="border border-black px-1 py-0.5 text-[9px]">&nbsp;</td>
+              <td colSpan={2} className="border border-black px-1 py-0.5 text-[9px]">&nbsp;</td>
+              <td colSpan={2} className="border border-black px-1 py-0.5 text-[9px]">&nbsp;</td>
+              <td className="border border-black px-1 py-0.5 text-[9px]">&nbsp;</td>
+            </tr>
+          ))}
+
+          {/* Free text */}
           {freeText.length > 0 && (
             <tr>
-              <td colSpan={6} className="border border-black px-2 py-1 text-[10px]">
-                <span className="text-[9px] text-gray-500">Obs: </span>
-                {freeText.join("; ")}
+              <td colSpan={6} className={cellBase}>
+                <span className="text-[8px] text-gray-500">Obs:</span>{" "}
+                <span className="text-[9px]">{freeText.join("; ")}</span>
               </td>
             </tr>
           )}
 
-          {/* Observações */}
-          {e.observacoes && (
-            <tr>
-              <td colSpan={6} className="border border-black px-2 py-1">
-                <span className="text-[9px] font-bold text-gray-500">23 - </span>
-                <span className="text-[9px] text-gray-500">Observações</span>
-                <p className="mt-0.5 text-[10px] whitespace-pre-wrap">{e.observacoes}</p>
-              </td>
-            </tr>
-          )}
-
-          {/* Signature Row */}
+          {/* ═══ OBSERVAÇÃO / JUSTIFICATIVA ═══ */}
           <tr>
-            <td colSpan={2} className="border border-black px-2 py-1">
-              <span className="text-[9px] text-gray-500">Data</span>
-              <p className="mt-0.5 text-[11px] font-medium">{formatDateMedium(e.data)}</p>
+            <td colSpan={6} className={cellBase}>
+              <SADTField num="58" label="Observação / Justificativa">
+                <span className="whitespace-pre-wrap">{e.observacoes || ""}</span>
+              </SADTField>
             </td>
-            <td colSpan={4} className="border border-black px-2 py-4 text-center">
-              <div className="mt-4 flex flex-col items-center">
-                <div className="w-56 border-b border-black" />
-                <p className="mt-1 text-[10px]">
+          </tr>
+
+          {/* ═══ ASSINATURA ═══ */}
+          <tr>
+            <td colSpan={6} className={sectionHeader}>ASSINATURA DO PROFISSIONAL SOLICITANTE</td>
+          </tr>
+          <tr>
+            <td colSpan={2} className={cellBase}>
+              <SADTField num="20" label="Data">
+                {formatDateMedium(e.data)}
+              </SADTField>
+            </td>
+            <td colSpan={4} className="border border-black px-1.5 py-3 text-center align-bottom">
+              <div className="mt-6 flex flex-col items-center">
+                <div className="w-60 border-b border-black" />
+                <p className="mt-0.5 text-[8px] text-gray-500">
                   Assinatura do Profissional Solicitante
                 </p>
               </div>
