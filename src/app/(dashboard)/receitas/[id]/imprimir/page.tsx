@@ -8,6 +8,7 @@ import {
   TIPO_LABELS_IMPRESSAO,
   formatDateMedium,
   formatCPF,
+  parseMedicamentos,
 } from "../../types";
 import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
@@ -165,8 +166,8 @@ export default async function ImprimirReceitaPage({
           <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
             Medicamentos
           </h3>
-          <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
-            {r.medicamentos}
+          <div className="mt-3">
+            <MedicamentosFormatted text={r.medicamentos} />
           </div>
         </div>
 
@@ -198,6 +199,44 @@ export default async function ImprimirReceitaPage({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function MedicamentosFormatted({ text }: { text: string }) {
+  const { items, freeText } = parseMedicamentos(text);
+
+  // If no structured items found, fall back to plain text
+  if (items.length === 0) {
+    return (
+      <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
+        {text}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <ol className="list-none space-y-3">
+        {items.map((item, i) => (
+          <li key={i} className="flex gap-3 text-sm">
+            <span className="shrink-0 font-semibold text-gray-500">
+              {String(i + 1).padStart(2, "0")}.
+            </span>
+            <div>
+              <p className="font-semibold text-gray-900">{item.nome}</p>
+              {item.detalhes && (
+                <p className="mt-0.5 text-gray-600">{item.detalhes}</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+      {freeText.length > 0 && (
+        <div className="mt-4 whitespace-pre-wrap border-t border-gray-100 pt-3 text-sm text-gray-700">
+          {freeText.join("\n")}
+        </div>
+      )}
     </div>
   );
 }
