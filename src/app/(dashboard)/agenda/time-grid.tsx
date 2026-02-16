@@ -166,9 +166,6 @@ export function TimeGrid({
                 <p className="text-sm font-semibold text-gray-900">
                   {formatTime(ag.hora_inicio)}
                 </p>
-                <p className="text-[10px] text-gray-400">
-                  {formatTime(ag.hora_fim)}
-                </p>
               </div>
 
               <Link
