@@ -11,6 +11,7 @@ import {
   TIPO_LABELS,
   formatDateLong,
   getInitials,
+  parseMedicamentos,
 } from "../types";
 import { formatDateTime } from "@/lib/format";
 import { UUID_RE } from "@/lib/validators";
@@ -132,9 +133,7 @@ export default async function ReceitaDetalhesPage({
           Medicamentos
         </h2>
         <div className="mt-4 rounded-lg bg-gray-50 p-3 sm:p-4">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
-            {r.medicamentos}
-          </p>
+          <MedicamentosDetail text={r.medicamentos} />
         </div>
       </div>
 
@@ -152,6 +151,43 @@ export default async function ReceitaDetalhesPage({
       <p className="text-xs text-gray-400">
         Registro criado em {formatDateTime(r.created_at)}
       </p>
+    </div>
+  );
+}
+
+function MedicamentosDetail({ text }: { text: string }) {
+  const { items, freeText } = parseMedicamentos(text);
+
+  if (items.length === 0) {
+    return (
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
+        {text}
+      </p>
+    );
+  }
+
+  return (
+    <div>
+      <div className="divide-y divide-gray-200/70">
+        {items.map((item, i) => (
+          <div key={i} className="flex gap-3 py-2.5 first:pt-0 last:pb-0">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+              {i + 1}
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">{item.nome}</p>
+              {item.detalhes && (
+                <p className="mt-0.5 text-xs text-gray-500">{item.detalhes}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {freeText.length > 0 && (
+        <div className="mt-3 whitespace-pre-wrap border-t border-gray-200 pt-2 text-sm text-gray-700">
+          {freeText.join("\n")}
+        </div>
+      )}
     </div>
   );
 }
