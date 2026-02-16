@@ -170,7 +170,24 @@ create index receitas_medico_idx on receitas (medico_id);
 
 comment on table receitas is 'Receitas médicas prescritas aos pacientes (por médico)';
 
--- 8. Configurações
+-- 8. Medicamentos (catálogo da clínica)
+-- --------------------------------------------
+create table medicamentos (
+  id                uuid primary key default gen_random_uuid(),
+  clinica_id        uuid not null references clinicas (id) on delete cascade,
+  nome              text not null,
+  posologia         text,
+  quantidade        text,
+  via_administracao text,
+  created_at        timestamptz not null default now()
+);
+
+create index medicamentos_clinica_idx on medicamentos (clinica_id);
+create index medicamentos_nome_idx on medicamentos using gin (nome gin_trgm_ops);
+
+comment on table medicamentos is 'Catálogo de medicamentos por clínica';
+
+-- 9. Configurações
 -- --------------------------------------------
 create table configuracoes (
   id         uuid primary key default gen_random_uuid(),
@@ -199,6 +216,7 @@ alter table agendamentos enable row level security;
 alter table prontuarios enable row level security;
 alter table transacoes enable row level security;
 alter table receitas enable row level security;
+alter table medicamentos enable row level security;
 alter table configuracoes enable row level security;
 
 -- Funções SECURITY DEFINER para evitar recursão no RLS de usuarios_clinicas
@@ -261,6 +279,10 @@ create policy "Acesso agendamentos" on agendamentos for all to authenticated
 
 -- transacoes: por clínica (superadmin, gestor, financeiro)
 create policy "Medico acessa transacoes" on transacoes for all to authenticated
+  using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
+
+-- medicamentos: por clínica (admin vê todas)
+create policy "Acesso medicamentos" on medicamentos for all to authenticated
   using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
 
 -- configuracoes

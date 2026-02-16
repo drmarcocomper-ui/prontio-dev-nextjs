@@ -11,6 +11,7 @@ import { AparenciaForm } from "./aparencia-form";
 import { DadosForm } from "./dados-form";
 import { ClinicasForm } from "./clinicas-form";
 import { ValoresForm } from "./valores-form";
+import { MedicamentosForm, type Medicamento } from "./medicamentos-form";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -111,6 +112,18 @@ export default async function ConfiguracoesPage({
     }
   }
 
+  // Load medicamentos for "medicamentos" tab
+  let medicamentosList: Medicamento[] = [];
+  if (currentTab === "medicamentos" && ctx?.clinicaId) {
+    const { data } = await supabase
+      .from("medicamentos")
+      .select("id, nome, posologia, quantidade, via_administracao")
+      .eq("clinica_id", ctx.clinicaId)
+      .order("nome");
+
+    medicamentosList = (data ?? []) as Medicamento[];
+  }
+
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
@@ -145,6 +158,9 @@ export default async function ConfiguracoesPage({
               <AparenciaForm defaults={config} />
             </div>
           </>
+        )}
+        {currentTab === "medicamentos" && (
+          <MedicamentosForm medicamentos={medicamentosList} />
         )}
         {currentTab === "gestao" && (
           <>

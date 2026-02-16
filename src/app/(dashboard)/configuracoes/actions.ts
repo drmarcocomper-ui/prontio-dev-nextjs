@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { getClinicaAtual, getClinicasDoUsuario, isGestor } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario, isGestor, type Papel } from "@/lib/clinica";
 import { invalidarCacheHorario } from "@/app/(dashboard)/agenda/utils";
 import { emailValido as validarEmail } from "@/lib/validators";
 import {
@@ -451,5 +451,123 @@ export async function excluirClinica(id: string): Promise<void> {
 
   revalidatePath("/configuracoes");
   revalidatePath("/", "layout");
+}
+
+// ============================================
+// Medicamentos
+// ============================================
+
+const NOME_MEDICAMENTO_MAX = 255;
+const POSOLOGIA_MAX = 500;
+const QUANTIDADE_MAX = 100;
+const VIA_MAX = 100;
+
+function isSuperAdmin(papel: Papel): boolean {
+  return papel === "superadmin";
+}
+
+/**
+ * Criar medicamento
+ */
+export async function criarMedicamento(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    return { error: "Sem permissão." };
+  }
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome é obrigatório." };
+  if (nome.length > NOME_MEDICAMENTO_MAX) return { error: `Nome excede ${NOME_MEDICAMENTO_MAX} caracteres.` };
+
+  const posologia = (formData.get("posologia") as string)?.trim() || null;
+  const quantidade = (formData.get("quantidade") as string)?.trim() || null;
+  const via_administracao = (formData.get("via_administracao") as string)?.trim() || null;
+
+  if (posologia && posologia.length > POSOLOGIA_MAX) return { error: `Posologia excede ${POSOLOGIA_MAX} caracteres.` };
+  if (quantidade && quantidade.length > QUANTIDADE_MAX) return { error: `Quantidade excede ${QUANTIDADE_MAX} caracteres.` };
+  if (via_administracao && via_administracao.length > VIA_MAX) return { error: `Via excede ${VIA_MAX} caracteres.` };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("medicamentos")
+    .insert({ clinica_id: ctx.clinicaId, nome, posologia, quantidade, via_administracao });
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "criar", "medicamento") };
+  }
+
+  revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Atualizar medicamento
+ */
+export async function atualizarMedicamento(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    return { error: "Sem permissão." };
+  }
+
+  const id = formData.get("id") as string;
+  if (!id) return { error: "Medicamento não identificado." };
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome é obrigatório." };
+  if (nome.length > NOME_MEDICAMENTO_MAX) return { error: `Nome excede ${NOME_MEDICAMENTO_MAX} caracteres.` };
+
+  const posologia = (formData.get("posologia") as string)?.trim() || null;
+  const quantidade = (formData.get("quantidade") as string)?.trim() || null;
+  const via_administracao = (formData.get("via_administracao") as string)?.trim() || null;
+
+  if (posologia && posologia.length > POSOLOGIA_MAX) return { error: `Posologia excede ${POSOLOGIA_MAX} caracteres.` };
+  if (quantidade && quantidade.length > QUANTIDADE_MAX) return { error: `Quantidade excede ${QUANTIDADE_MAX} caracteres.` };
+  if (via_administracao && via_administracao.length > VIA_MAX) return { error: `Via excede ${VIA_MAX} caracteres.` };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("medicamentos")
+    .update({ nome, posologia, quantidade, via_administracao })
+    .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId);
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "atualizar", "medicamento") };
+  }
+
+  revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Excluir medicamento
+ */
+export async function excluirMedicamento(id: string): Promise<void> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    throw new Error("Sem permissão.");
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("medicamentos")
+    .delete()
+    .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId);
+
+  if (error) {
+    throw new Error(tratarErroSupabase(error, "excluir", "medicamento"));
+  }
+
+  revalidatePath("/configuracoes");
 }
 
