@@ -135,8 +135,8 @@ export default async function AgendaPage({
                 </div>
               </Link>
 
-              {/* Status Badge (mobile) */}
-              <div className="hidden sm:block">
+              {/* Status Badge */}
+              <div className="block">
                 <StatusBadge status={ag.status} />
               </div>
 

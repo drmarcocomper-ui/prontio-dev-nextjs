@@ -78,10 +78,13 @@ async function getHorarioConfig(
     return cached.data;
   }
 
-  const allKeys = Object.values(DIAS_SEMANA).flatMap((d) => [
-    `horario_${d.key}_inicio`,
-    `horario_${d.key}_fim`,
-  ]);
+  const allKeys = [
+    ...Object.values(DIAS_SEMANA).flatMap((d) => [
+      `horario_${d.key}_inicio`,
+      `horario_${d.key}_fim`,
+    ]),
+    "duracao_consulta",
+  ];
 
   const { data: rows } = await supabase
     .from("configuracoes")
@@ -129,19 +132,11 @@ async function validarHorarioComercial(
   return null;
 }
 
-function calcularHoraFim(horaInicio: string): string {
-  const minutos = timeToMinutes(horaInicio) + 15;
+function calcularHoraFim(horaInicio: string, duracao: number): string {
+  const minutos = timeToMinutes(horaInicio) + duracao;
   const h = Math.floor(minutos / 60).toString().padStart(2, "0");
   const m = (minutos % 60).toString().padStart(2, "0");
   return `${h}:${m}`;
-}
-
-function parseCurrencyToNumber(raw: string | null): number | null {
-  if (!raw || !raw.trim()) return null;
-  const cleaned = raw.replace(/\./g, "").replace(",", ".");
-  const num = parseFloat(cleaned);
-  if (isNaN(num) || num < 0) return null;
-  return num;
 }
 
 function validarCamposAgendamento(formData: FormData) {
@@ -149,7 +144,6 @@ function validarCamposAgendamento(formData: FormData) {
   const data = formData.get("data") as string;
   const hora_inicio = formData.get("hora_inicio") as string;
   const tipo = (formData.get("tipo") as string) || null;
-  const valorRaw = (formData.get("valor") as string) || null;
   const observacoes = (formData.get("observacoes") as string)?.trim() || null;
 
   const fieldErrors: Record<string, string> = {};
@@ -160,17 +154,42 @@ function validarCamposAgendamento(formData: FormData) {
   valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
-  const hora_fim = hora_inicio ? calcularHoraFim(hora_inicio) : "";
-  const valor = parseCurrencyToNumber(valorRaw);
+  return { paciente_id, data, hora_inicio, tipo, observacoes, fieldErrors };
+}
 
-  return { paciente_id, data, hora_inicio, hora_fim, tipo, valor, observacoes, fieldErrors };
+async function determinarValor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clinicaId: string,
+  pacienteId: string,
+  tipo: string | null,
+): Promise<number | null> {
+  if (tipo === "retorno") return 0;
+
+  const { data: paciente } = await supabase
+    .from("pacientes")
+    .select("convenio")
+    .eq("id", pacienteId)
+    .single();
+
+  if (!paciente?.convenio) return null;
+
+  if (paciente.convenio === "cortesia") return 0;
+
+  const { data: config } = await supabase
+    .from("configuracoes")
+    .select("valor")
+    .eq("clinica_id", clinicaId)
+    .eq("chave", `valor_convenio_${paciente.convenio}`)
+    .single();
+
+  return config?.valor ? parseFloat(config.valor) : null;
 }
 
 export async function criarAgendamento(
   _prev: AgendamentoFormState,
   formData: FormData
 ): Promise<AgendamentoFormState> {
-  const { paciente_id, data, hora_inicio, hora_fim, tipo, valor, observacoes, fieldErrors } =
+  const { paciente_id, data, hora_inicio, tipo, observacoes, fieldErrors } =
     validarCamposAgendamento(formData);
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -182,6 +201,11 @@ export async function criarAgendamento(
   if (!ctx) return { error: "Clínica não selecionada." };
   const clinicaId = ctx.clinicaId;
 
+  // Obter duração configurada (padrão 30 min)
+  const config = await getHorarioConfig(supabase, clinicaId);
+  const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 30;
+  const hora_fim = calcularHoraFim(hora_inicio, duracao);
+
   // Validar horário comercial
   const foraExpediente = await validarHorarioComercial(supabase, clinicaId, data, hora_inicio, hora_fim);
   if (foraExpediente) {
@@ -192,6 +216,8 @@ export async function criarAgendamento(
   if (conflito) {
     return { fieldErrors: { hora_inicio: conflito } };
   }
+
+  const valor = await determinarValor(supabase, clinicaId, paciente_id!, tipo);
 
   const { error } = await supabase.from("agendamentos").insert({
     paciente_id,
@@ -272,7 +298,7 @@ export async function atualizarAgendamento(
     return { error: "ID inválido." };
   }
 
-  const { paciente_id, data, hora_inicio, hora_fim, tipo, valor, observacoes, fieldErrors } =
+  const { paciente_id, data, hora_inicio, tipo, observacoes, fieldErrors } =
     validarCamposAgendamento(formData);
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -283,6 +309,11 @@ export async function atualizarAgendamento(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
 
+  // Obter duração configurada (padrão 30 min)
+  const config = await getHorarioConfig(supabase, ctx.clinicaId);
+  const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 30;
+  const hora_fim = calcularHoraFim(hora_inicio, duracao);
+
   const foraExpediente = await validarHorarioComercial(supabase, ctx.clinicaId, data, hora_inicio, hora_fim);
   if (foraExpediente) {
     return { fieldErrors: { hora_inicio: foraExpediente } };
@@ -292,6 +323,8 @@ export async function atualizarAgendamento(
   if (conflito) {
     return { fieldErrors: { hora_inicio: conflito } };
   }
+
+  const valor = await determinarValor(supabase, ctx.clinicaId, paciente_id!, tipo);
 
   const { error } = await supabase
     .from("agendamentos")

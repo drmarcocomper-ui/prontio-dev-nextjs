@@ -25,6 +25,16 @@ let configResult: { data: unknown[] | null; error: unknown } = {
   error: null,
 };
 
+let pacienteSingleResult: { data: unknown | null; error: unknown } = {
+  data: null,
+  error: null,
+};
+
+let configSingleResult: { data: unknown | null; error: unknown } = {
+  data: null,
+  error: null,
+};
+
 function createSelectChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   chain.eq = vi.fn().mockReturnValue(chain);
@@ -42,11 +52,20 @@ function createConfigChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   chain.eq = vi.fn().mockReturnValue(chain);
   chain.in = vi.fn().mockImplementation(() => configResult);
+  chain.single = vi.fn().mockImplementation(() => configSingleResult);
+  return chain;
+}
+
+function createPacienteChain() {
+  const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+  chain.eq = vi.fn().mockReturnValue(chain);
+  chain.single = vi.fn().mockImplementation(() => pacienteSingleResult);
   return chain;
 }
 
 let selectChain = createSelectChain();
 let configChain = createConfigChain();
+let pacienteChain = createPacienteChain();
 
 /* ── mock do Supabase ──────────────────────────────────────────────── */
 
@@ -65,6 +84,9 @@ vi.mock("@/lib/supabase/server", () => ({
       from: (table: string) => {
         if (table === "configuracoes") {
           return { select: () => configChain };
+        }
+        if (table === "pacientes") {
+          return { select: () => pacienteChain };
         }
         if (table === "agendamento_status_log") {
           return { insert: (data: unknown) => mockLogInsert(data) };
@@ -134,8 +156,11 @@ describe("criarAgendamento", () => {
     mockUpdateEq.mockResolvedValue({ error: null });
     conflitoResult = { data: [], error: null };
     configResult = { data: [], error: null };
+    pacienteSingleResult = { data: null, error: null };
+    configSingleResult = { data: null, error: null };
     selectChain = createSelectChain();
     configChain = createConfigChain();
+    pacienteChain = createPacienteChain();
   });
 
   it("retorna fieldErrors quando paciente não selecionado", async () => {
@@ -162,12 +187,26 @@ describe("criarAgendamento", () => {
     expect(result.fieldErrors?.hora_inicio).toBe("Horário de início é obrigatório.");
   });
 
-  it("calcula hora_fim automaticamente como hora_inicio + 15 minutos", async () => {
+  it("calcula hora_fim automaticamente como hora_inicio + 30 minutos (padrão)", async () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         hora_inicio: "09:00",
-        hora_fim: "09:15",
+        hora_fim: "09:30",
+      })
+    );
+  });
+
+  it("usa duracao_consulta do config quando configurado", async () => {
+    configResult = {
+      data: [{ chave: "duracao_consulta", valor: "45" }],
+      error: null,
+    };
+    await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hora_inicio: "09:00",
+        hora_fim: "09:45",
       })
     );
   });
@@ -217,15 +256,33 @@ describe("criarAgendamento", () => {
     );
   });
 
-  it("inclui valor null quando não informado", async () => {
+  it("determina valor null quando paciente não tem convênio", async () => {
+    pacienteSingleResult = { data: { convenio: null }, error: null };
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({ valor: null })
     );
   });
 
-  it("inclui valor numérico quando informado", async () => {
-    await expect(criarAgendamento({}, makeFormData({ ...validCreate, valor: "350,00" }))).rejects.toThrow("REDIRECT");
+  it("determina valor 0 quando tipo é retorno", async () => {
+    await expect(criarAgendamento({}, makeFormData({ ...validCreate, tipo: "retorno" }))).rejects.toThrow("REDIRECT");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ valor: 0 })
+    );
+  });
+
+  it("determina valor 0 quando convênio é cortesia", async () => {
+    pacienteSingleResult = { data: { convenio: "cortesia" }, error: null };
+    await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ valor: 0 })
+    );
+  });
+
+  it("determina valor do convênio quando configurado", async () => {
+    pacienteSingleResult = { data: { convenio: "bradesco" }, error: null };
+    configSingleResult = { data: { valor: "350.00" }, error: null };
+    await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({ valor: 350 })
     );
@@ -248,7 +305,7 @@ describe("criarAgendamento", () => {
   it("consulta conflitos filtrando por data e sobreposição de horário", async () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(selectChain.eq).toHaveBeenCalledWith("data", "2024-06-15");
-    expect(selectChain.lt).toHaveBeenCalledWith("hora_inicio", "09:15");
+    expect(selectChain.lt).toHaveBeenCalledWith("hora_inicio", "09:30");
     expect(selectChain.gt).toHaveBeenCalledWith("hora_fim", "09:00");
     expect(selectChain.not).toHaveBeenCalledWith("status", "in", "(cancelado,faltou)");
     expect(selectChain.limit).toHaveBeenCalledWith(1);
@@ -327,8 +384,11 @@ describe("atualizarAgendamento", () => {
     mockUpdateEq.mockResolvedValue({ error: null });
     conflitoResult = { data: [], error: null };
     configResult = { data: [], error: null };
+    pacienteSingleResult = { data: null, error: null };
+    configSingleResult = { data: null, error: null };
     selectChain = createSelectChain();
     configChain = createConfigChain();
+    pacienteChain = createPacienteChain();
   });
 
   it("retorna erro quando ID é inválido", async () => {
@@ -393,8 +453,10 @@ describe("atualizarAgendamento", () => {
     expect(selectChain.neq).not.toHaveBeenCalled();
   });
 
-  it("inclui valor na atualização quando informado", async () => {
-    await expect(atualizarAgendamento({}, makeFormData({ ...validUpdate, valor: "250,00" }))).rejects.toThrow("REDIRECT");
+  it("determina valor do convênio na atualização", async () => {
+    pacienteSingleResult = { data: { convenio: "unimed" }, error: null };
+    configSingleResult = { data: { valor: "250.00" }, error: null };
+    await expect(atualizarAgendamento({}, makeFormData(validUpdate))).rejects.toThrow("REDIRECT");
     expect(mockUpdateEq).toHaveBeenCalledWith(
       expect.objectContaining({ valor: 250 }),
       "00000000-0000-0000-0000-000000000007"
@@ -408,7 +470,7 @@ describe("atualizarAgendamento", () => {
         paciente_id: "00000000-0000-0000-0000-000000000001",
         data: "2024-06-15",
         hora_inicio: "09:00",
-        hora_fim: "09:15",
+        hora_fim: "09:30",
       }),
       "00000000-0000-0000-0000-000000000007"
     );

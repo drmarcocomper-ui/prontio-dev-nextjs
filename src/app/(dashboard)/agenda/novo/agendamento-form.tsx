@@ -1,20 +1,11 @@
 "use client";
 
-import { useActionState, useState, useEffect, useCallback, useRef } from "react";
+import { useActionState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
 import { type AgendamentoDefaults, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "./patient-search";
-import { maskCurrency } from "@/lib/masks";
-
-function formatValorDefault(valor: number | null | undefined): string {
-  if (valor == null) return "";
-  return valor.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 export function AgendamentoForm({
   defaultDate,
@@ -34,30 +25,6 @@ export function AgendamentoForm({
     {}
   );
 
-  const [valor, setValor] = useState(formatValorDefault(defaults?.valor));
-  const [pacienteId, setPacienteId] = useState(defaults?.paciente_id ?? "");
-  const [tipo, setTipo] = useState(defaults?.tipo ?? "");
-  const userEditedValor = useRef(false);
-
-  const fetchValor = useCallback(async (pid: string, t: string) => {
-    if (!pid || userEditedValor.current) return;
-    try {
-      const params = new URLSearchParams({ paciente_id: pid });
-      if (t) params.set("tipo", t);
-      const res = await fetch(`/api/valor-consulta?${params}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.valor != null) {
-        setValor(formatValorDefault(data.valor));
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    if (isEditing) return;
-    fetchValor(pacienteId, tipo);
-  }, [pacienteId, tipo, fetchValor, isEditing]);
-
   const cancelHref = isEditing ? `/agenda/${defaults.id}` : `/agenda?data=${dateValue}`;
 
   return (
@@ -76,10 +43,6 @@ export function AgendamentoForm({
             defaultPatientId={defaults?.paciente_id}
             defaultPatientName={defaults?.paciente_nome}
             medicoId={medicoId}
-            onPatientChange={(id) => {
-              setPacienteId(id);
-              userEditedValor.current = false;
-            }}
           />
         </div>
         <FieldError message={state.fieldErrors?.paciente_id} />
@@ -131,10 +94,6 @@ export function AgendamentoForm({
           name="tipo"
           defaultValue={defaults?.tipo ?? ""}
           disabled={isPending}
-          onChange={(e) => {
-            setTipo(e.target.value);
-            userEditedValor.current = false;
-          }}
           className={INPUT_CLASS}
         >
           <option value="">Selecione</option>
@@ -145,29 +104,6 @@ export function AgendamentoForm({
           ))}
         </select>
         <FieldError message={state.fieldErrors?.tipo} />
-      </div>
-
-      {/* Valor */}
-      <div>
-        <label htmlFor="valor" className="block text-sm font-medium text-gray-700">
-          Valor
-        </label>
-        <div className="relative mt-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">R$</span>
-          <input
-            id="valor"
-            name="valor"
-            type="text"
-            inputMode="numeric"
-            disabled={isPending}
-            value={valor}
-            onChange={(e) => {
-              userEditedValor.current = true;
-              setValor(maskCurrency(e.target.value));
-            }}
-            className={`${INPUT_CLASS} pl-10`}
-          />
-        </div>
       </div>
 
       {/* Observações */}

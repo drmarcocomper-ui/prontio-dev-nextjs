@@ -83,7 +83,6 @@ export default async function EditarAgendamentoPage({
             data: ag.data,
             hora_inicio: ag.hora_inicio.slice(0, 5),
             tipo: ag.tipo,
-            valor: ag.valor,
             observacoes: ag.observacoes,
           }}
         />

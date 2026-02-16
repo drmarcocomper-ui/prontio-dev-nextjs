@@ -29,7 +29,6 @@ export interface AgendamentoDefaults {
   data?: string;
   hora_inicio?: string;
   tipo?: AgendaTipo | null;
-  valor?: number | null;
   observacoes?: string | null;
 }
 
