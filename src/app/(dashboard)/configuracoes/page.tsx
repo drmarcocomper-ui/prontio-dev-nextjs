@@ -12,6 +12,7 @@ import { DadosForm } from "./dados-form";
 import { ClinicasForm } from "./clinicas-form";
 import { ValoresForm } from "./valores-form";
 import { MedicamentosForm, type Medicamento } from "./medicamentos-form";
+import { CatalogoExamesForm, type CatalogoExame } from "./catalogo-exames-form";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -123,6 +124,17 @@ export default async function ConfiguracoesPage({
     medicamentosList = (data ?? []) as Medicamento[];
   }
 
+  // Load catalogo_exames for "exames" tab
+  let examesList: CatalogoExame[] = [];
+  if (currentTab === "exames") {
+    const { data } = await supabase
+      .from("catalogo_exames")
+      .select("id, nome, codigo_tuss")
+      .order("nome");
+
+    examesList = (data ?? []) as CatalogoExame[];
+  }
+
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
@@ -160,6 +172,9 @@ export default async function ConfiguracoesPage({
         )}
         {currentTab === "medicamentos" && (
           <MedicamentosForm medicamentos={medicamentosList} />
+        )}
+        {currentTab === "exames" && (
+          <CatalogoExamesForm exames={examesList} />
         )}
         {currentTab === "gestao" && (
           <>

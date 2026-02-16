@@ -454,17 +454,117 @@ export async function excluirClinica(id: string): Promise<void> {
 }
 
 // ============================================
+// Catálogo de Exames
+// ============================================
+
+const NOME_EXAME_MAX = 255;
+const CODIGO_TUSS_MAX = 50;
+
+/**
+ * Criar exame no catálogo
+ */
+export async function criarCatalogoExame(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    return { error: "Sem permissão." };
+  }
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome é obrigatório." };
+  if (nome.length > NOME_EXAME_MAX) return { error: `Nome excede ${NOME_EXAME_MAX} caracteres.` };
+
+  const codigo_tuss = (formData.get("codigo_tuss") as string)?.trim() || null;
+  if (codigo_tuss && codigo_tuss.length > CODIGO_TUSS_MAX) return { error: `Código TUSS excede ${CODIGO_TUSS_MAX} caracteres.` };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("catalogo_exames")
+    .insert({ nome, codigo_tuss });
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "criar", "exame") };
+  }
+
+  revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Atualizar exame no catálogo
+ */
+export async function atualizarCatalogoExame(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    return { error: "Sem permissão." };
+  }
+
+  const id = formData.get("id") as string;
+  if (!id) return { error: "Exame não identificado." };
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome é obrigatório." };
+  if (nome.length > NOME_EXAME_MAX) return { error: `Nome excede ${NOME_EXAME_MAX} caracteres.` };
+
+  const codigo_tuss = (formData.get("codigo_tuss") as string)?.trim() || null;
+  if (codigo_tuss && codigo_tuss.length > CODIGO_TUSS_MAX) return { error: `Código TUSS excede ${CODIGO_TUSS_MAX} caracteres.` };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("catalogo_exames")
+    .update({ nome, codigo_tuss })
+    .eq("id", id);
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "atualizar", "exame") };
+  }
+
+  revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Excluir exame do catálogo
+ */
+export async function excluirCatalogoExame(id: string): Promise<void> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    throw new Error("Sem permissão.");
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("catalogo_exames")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(tratarErroSupabase(error, "excluir", "exame"));
+  }
+
+  revalidatePath("/configuracoes");
+}
+
+// ============================================
 // Medicamentos
 // ============================================
+
+function isSuperAdmin(papel: Papel): boolean {
+  return papel === "superadmin";
+}
 
 const NOME_MEDICAMENTO_MAX = 255;
 const POSOLOGIA_MAX = 500;
 const QUANTIDADE_MAX = 100;
 const VIA_MAX = 100;
-
-function isSuperAdmin(papel: Papel): boolean {
-  return papel === "superadmin";
-}
 
 /**
  * Criar medicamento
