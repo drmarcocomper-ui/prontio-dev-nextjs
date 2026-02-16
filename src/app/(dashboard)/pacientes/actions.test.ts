@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockInsert = vi.fn().mockResolvedValue({ error: null });
+const mockInsert = vi.fn();
 const mockUpdate = vi.fn().mockResolvedValue({ error: null });
 const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
+
+let insertResponse: { data: unknown; error: unknown };
 
 vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
@@ -13,7 +15,17 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: () => ({
-        insert: (data: unknown) => mockInsert(data),
+        insert: (data: unknown) => {
+          mockInsert(data);
+          const getResponse = () => Promise.resolve(insertResponse);
+          return {
+            then: (resolve: (v: unknown) => unknown, reject?: (v: unknown) => unknown) =>
+              getResponse().then(resolve, reject),
+            select: () => ({
+              single: getResponse,
+            }),
+          };
+        },
         update: (data: unknown) => ({
           eq: () => ({
             eq: () => mockUpdate(data),
@@ -42,7 +54,7 @@ vi.mock("./types", async () => {
   return { ...actual };
 });
 
-import { criarPaciente, atualizarPaciente, excluirPaciente } from "./actions";
+import { criarPaciente, atualizarPaciente, excluirPaciente, criarPacienteRapido } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -51,7 +63,10 @@ function makeFormData(data: Record<string, string>) {
 }
 
 describe("criarPaciente", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertResponse = { data: null, error: null };
+  });
 
   it("retorna fieldErrors quando nome está vazio", async () => {
     const result = await criarPaciente({}, makeFormData({ nome: "" }));
@@ -106,20 +121,82 @@ describe("criarPaciente", () => {
   });
 
   it("retorna erro de CPF duplicado quando código 23505", async () => {
-    mockInsert.mockResolvedValueOnce({ error: { code: "23505" } });
+    insertResponse = { data: null, error: { code: "23505" } };
     const result = await criarPaciente({}, makeFormData({ nome: "João" }));
     expect(result.error).toBe("Já existe um paciente com este CPF.");
   });
 
   it("retorna erro genérico quando insert falha", async () => {
-    mockInsert.mockResolvedValueOnce({ error: { message: "DB error" } });
+    insertResponse = { data: null, error: { message: "DB error" } };
     const result = await criarPaciente({}, makeFormData({ nome: "João" }));
     expect(result.error).toBe("Erro ao criar paciente. Tente novamente.");
   });
 });
 
+describe("criarPacienteRapido", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertResponse = { data: { id: "new-uuid" }, error: null };
+  });
+
+  it("retorna fieldErrors quando nome está vazio", async () => {
+    const result = await criarPacienteRapido({ nome: "" });
+    expect(result.fieldErrors?.nome).toBe("Nome é obrigatório.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("retorna fieldErrors quando telefone tem dígitos insuficientes", async () => {
+    const result = await criarPacienteRapido({ nome: "João", telefone: "123456" });
+    expect(result.fieldErrors?.telefone).toBe("Telefone deve ter 10 ou 11 dígitos.");
+  });
+
+  it("retorna fieldErrors quando convênio é inválido", async () => {
+    const result = await criarPacienteRapido({ nome: "João", convenio: "invalido" });
+    expect(result.fieldErrors?.convenio).toBe("Valor inválido.");
+  });
+
+  it("retorna id e nome após criação com sucesso", async () => {
+    const result = await criarPacienteRapido({ nome: "João Silva" });
+    expect(result.id).toBe("new-uuid");
+    expect(result.nome).toBe("João Silva");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ nome: "João Silva", medico_id: "user-1" })
+    );
+  });
+
+  it("aceita telefone e convênio opcionais", async () => {
+    const result = await criarPacienteRapido({
+      nome: "Maria",
+      telefone: "(11) 98765-4321",
+      convenio: "particular",
+    });
+    expect(result.id).toBe("new-uuid");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nome: "Maria",
+        telefone: "11987654321",
+        convenio: "particular",
+      })
+    );
+  });
+
+  it("retorna erro genérico quando insert falha", async () => {
+    insertResponse = { data: null, error: { message: "DB error" } };
+    const result = await criarPacienteRapido({ nome: "João" });
+    expect(result.error).toBe("Erro ao criar paciente. Tente novamente.");
+  });
+
+  it("não redireciona após criação", async () => {
+    await criarPacienteRapido({ nome: "João" });
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+});
+
 describe("atualizarPaciente", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertResponse = { data: null, error: null };
+  });
 
   it("retorna erro quando ID é inválido", async () => {
     const result = await atualizarPaciente({}, makeFormData({ id: "invalido", nome: "Maria" }));

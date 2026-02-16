@@ -172,6 +172,57 @@ export async function atualizarPaciente(
   redirect(`/pacientes/${id}?success=Paciente+atualizado`);
 }
 
+export type QuickPacienteResult =
+  | { id: string; nome: string; error?: undefined; fieldErrors?: undefined }
+  | { id?: undefined; nome?: undefined; error?: string; fieldErrors?: Record<string, string> };
+
+export async function criarPacienteRapido(data: {
+  nome: string;
+  telefone?: string;
+  convenio?: string;
+}): Promise<QuickPacienteResult> {
+  const nome = data.nome?.trim();
+  const telefone = data.telefone?.replace(/\D/g, "") || null;
+  const convenio = data.convenio || null;
+
+  const fieldErrors: Record<string, string> = {};
+
+  campoObrigatorio(fieldErrors, "nome", nome, "Nome é obrigatório.");
+  tamanhoMaximo(fieldErrors, "nome", nome, NOME_MAX_LENGTH);
+
+  if (telefone && (telefone.length < 10 || telefone.length > 11)) {
+    fieldErrors.telefone = "Telefone deve ter 10 ou 11 dígitos.";
+  }
+
+  valorPermitido(fieldErrors, "convenio", convenio, Object.keys(CONVENIO_LABELS));
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors };
+  }
+
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return { error: "Não foi possível identificar o médico responsável." };
+  }
+
+  const supabase = await createClient();
+  const { data: inserted, error } = await supabase
+    .from("pacientes")
+    .insert({ medico_id: medicoId, nome, telefone, convenio })
+    .select("id")
+    .single();
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "criar", "paciente") };
+  }
+
+  revalidatePath("/pacientes");
+  revalidatePath("/");
+  return { id: inserted.id, nome: nome! };
+}
+
 export async function excluirPaciente(id: string): Promise<void> {
   if (!uuidValido(id)) {
     throw new Error("ID inválido.");

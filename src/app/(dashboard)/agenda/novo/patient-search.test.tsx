@@ -10,6 +10,10 @@ let mockSearchResults: { id: string; nome: string; cpf: string | null }[] = [
 
 const mockEq = vi.fn();
 
+vi.mock("./quick-patient-modal", () => ({
+  QuickPatientModal: () => null,
+}));
+
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     from: () => ({
@@ -196,6 +200,19 @@ describe("PatientSearch", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Nenhum paciente encontrado.")).toBeInTheDocument();
+    });
+  });
+
+  it("exibe botão 'Cadastrar novo paciente' quando sem resultados e sem erro", async () => {
+    mockSearchResults = [];
+    render(<PatientSearch medicoId="doc-1" />);
+    const input = screen.getByPlaceholderText("Buscar paciente por nome...");
+
+    await userEvent.type(input, "Xyz");
+    vi.advanceTimersByTime(350);
+
+    await waitFor(() => {
+      expect(screen.getByText("Cadastrar novo paciente")).toBeInTheDocument();
     });
   });
 

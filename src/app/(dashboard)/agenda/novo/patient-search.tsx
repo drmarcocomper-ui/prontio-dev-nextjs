@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { escapeLikePattern } from "@/lib/sanitize";
+import { QuickPatientModal } from "./quick-patient-modal";
 
 interface Paciente {
   id: string;
@@ -14,12 +15,10 @@ export function PatientSearch({
   defaultPatientId,
   defaultPatientName,
   medicoId,
-  onPatientChange,
 }: {
   defaultPatientId?: string;
   defaultPatientName?: string;
   medicoId: string;
-  onPatientChange?: (id: string) => void;
 }) {
   const [query, setQuery] = useState(defaultPatientName ?? "");
   const [results, setResults] = useState<Paciente[]>([]);
@@ -27,6 +26,7 @@ export function PatientSearch({
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [searchError, setSearchError] = useState(false);
+  const [showQuickModal, setShowQuickModal] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -77,7 +77,6 @@ export function PatientSearch({
     setQuery(p.nome);
     setIsOpen(false);
     setActiveIndex(-1);
-    onPatientChange?.(p.id);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -203,10 +202,34 @@ export function PatientSearch({
           {searchError ? (
             <span className="text-red-600">Erro ao buscar pacientes. Tente novamente.</span>
           ) : (
-            <span className="text-gray-500">Nenhum paciente encontrado.</span>
+            <div className="space-y-2">
+              <span className="text-gray-500">Nenhum paciente encontrado.</span>
+              <button
+                type="button"
+                onClick={() => setShowQuickModal(true)}
+                className="mx-auto flex items-center gap-1 rounded-lg bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Cadastrar novo paciente
+              </button>
+            </div>
           )}
         </div>
       )}
+
+      <QuickPatientModal
+        open={showQuickModal}
+        onClose={() => setShowQuickModal(false)}
+        onCreated={(id, nome) => {
+          setSelectedId(id);
+          setQuery(nome);
+          setShowQuickModal(false);
+          setIsOpen(false);
+        }}
+        defaultNome={query}
+      />
     </div>
   );
 }
