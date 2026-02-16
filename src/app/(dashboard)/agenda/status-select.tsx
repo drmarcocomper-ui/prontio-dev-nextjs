@@ -5,9 +5,18 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { atualizarStatusAgendamento } from "./actions";
-import { STATUS_TRANSITIONS, STATUS_LABELS, type AgendaStatus } from "./types";
+import { STATUS_TRANSITIONS, STATUS_LABELS, STATUS_STYLES, type AgendaStatus } from "./types";
 
 const DESTRUCTIVE_STATUSES = new Set<AgendaStatus>(["cancelado", "faltou"]);
+
+const SELECT_STYLES: Record<AgendaStatus, string> = {
+  agendado: "bg-blue-50 text-blue-700 border-blue-200",
+  confirmado: "bg-blue-50 text-blue-700 border-blue-200",
+  em_atendimento: "bg-amber-50 text-amber-700 border-amber-200",
+  atendido: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  cancelado: "bg-red-50 text-red-700 border-red-200",
+  faltou: "bg-gray-50 text-gray-600 border-gray-200",
+};
 
 export function StatusSelect({
   agendamentoId,
@@ -45,9 +54,17 @@ export function StatusSelect({
     }
   }
 
+  // No transitions available — render as static badge
   if (allowed.length === 0) {
-    return null;
+    const color = STATUS_STYLES[currentStatus] ?? "bg-gray-100 text-gray-600";
+    return (
+      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${color}`}>
+        {STATUS_LABELS[currentStatus] ?? currentStatus}
+      </span>
+    );
   }
+
+  const selectColor = SELECT_STYLES[currentStatus] ?? "bg-gray-50 text-gray-600 border-gray-200";
 
   return (
     <>
@@ -56,7 +73,7 @@ export function StatusSelect({
         onChange={(e) => handleChange(e.target.value as AgendaStatus)}
         disabled={isPending}
         aria-label="Alterar status do agendamento"
-        className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium shadow-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
+        className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50 ${selectColor}`}
       >
         <option value={currentStatus}>
           {STATUS_LABELS[currentStatus] ?? currentStatus}

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { StatusBadge } from "./status-badge";
 import { StatusSelect } from "./status-select";
 import {
   type Agendamento,
@@ -186,10 +185,6 @@ export function TimeGrid({
                   </span>
                 </div>
               </Link>
-
-              <div className="hidden shrink-0 pr-2 sm:block">
-                <StatusBadge status={ag.status} />
-              </div>
 
               <div className="shrink-0 pr-3">
                 <StatusSelect agendamentoId={ag.id} currentStatus={ag.status} />
