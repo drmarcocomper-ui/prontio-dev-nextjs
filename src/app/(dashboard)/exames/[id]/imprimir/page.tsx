@@ -9,6 +9,7 @@ import {
   formatCPF,
   parseExames,
 } from "../../types";
+import { CONVENIO_LABELS } from "@/app/(dashboard)/pacientes/types";
 import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
 
@@ -42,10 +43,15 @@ export default async function ImprimirExamePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ formato?: string }>;
+  searchParams: Promise<{
+    formato?: string;
+    operadora?: string;
+    carteirinha?: string;
+    registro_ans?: string;
+  }>;
 }) {
   const { id } = await params;
-  const { formato: formatoParam } = await searchParams;
+  const { formato: formatoParam, operadora: opParam, carteirinha: cartParam, registro_ans: ansParam } = await searchParams;
   if (!UUID_RE.test(id)) notFound();
 
   let medicoId: string;
@@ -59,7 +65,7 @@ export default async function ImprimirExamePage({
 
   const { data: exame } = await supabase
     .from("solicitacoes_exames")
-    .select("id, data, tipo, exames, indicacao_clinica, operadora, numero_carteirinha, observacoes, pacientes(id, nome, cpf)")
+    .select("id, data, exames, indicacao_clinica, observacoes, pacientes(id, nome, cpf, convenio)")
     .eq("id", id)
     .eq("medico_id", medicoId)
     .single();
@@ -71,7 +77,7 @@ export default async function ImprimirExamePage({
   const e = exame as unknown as ExameImpressao;
   const formato = formatoParam === "sadt" || formatoParam === "particular"
     ? formatoParam
-    : e.tipo === "convenio" ? "sadt" : "particular";
+    : "particular";
 
   const ctx = await getClinicaAtual();
 
@@ -100,34 +106,56 @@ export default async function ImprimirExamePage({
     cfg[c.chave] = c.valor;
   });
 
+  // Convênio label from patient's convenio
+  const convenioLabel = e.pacientes.convenio
+    ? (CONVENIO_LABELS[e.pacientes.convenio as keyof typeof CONVENIO_LABELS] ?? e.pacientes.convenio)
+    : "";
+
+  // SADT fields from searchParams (filled at print time, not saved)
+  const sadtOperadora = opParam ?? convenioLabel;
+  const sadtCarteirinha = cartParam ?? "";
+  const sadtRegistroANS = ansParam ?? "";
+
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-3xl">
       <style
         dangerouslySetInnerHTML={{
           __html: `
             @media print {
               .no-print { display: none !important; }
               body { margin: 0; padding: 0; }
-              @page { margin: 20mm; }
+              @page { margin: 15mm; }
             }
           `,
         }}
       />
 
       {/* Actions Bar */}
-      <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="no-print mb-6 space-y-4">
         <Breadcrumb items={[
           { label: "Pacientes", href: "/pacientes" },
           { label: e.pacientes.nome, href: `/pacientes/${e.pacientes.id}` },
           { label: "Imprimir exame" },
         ]} />
-        <PrintActions id={e.id} defaultFormato={formato} />
+        <PrintActions
+          id={e.id}
+          defaultFormato={formato}
+          defaultOperadora={convenioLabel}
+          defaultCarteirinha={sadtCarteirinha}
+          defaultRegistroANS={sadtRegistroANS}
+        />
       </div>
 
       {formato === "particular" ? (
         <ParticularFormat e={e} cfg={cfg} />
       ) : (
-        <SADTFormat e={e} cfg={cfg} />
+        <SADTFormat
+          e={e}
+          cfg={cfg}
+          operadora={sadtOperadora}
+          carteirinha={sadtCarteirinha}
+          registroANS={sadtRegistroANS}
+        />
       )}
     </div>
   );
@@ -233,146 +261,203 @@ function ParticularFormat({ e, cfg }: { e: ExameImpressao; cfg: Record<string, s
   );
 }
 
-function SADTFormat({ e, cfg }: { e: ExameImpressao; cfg: Record<string, string> }) {
+function SADTFormat({
+  e,
+  cfg,
+  operadora,
+  carteirinha,
+  registroANS,
+}: {
+  e: ExameImpressao;
+  cfg: Record<string, string>;
+  operadora: string;
+  carteirinha: string;
+  registroANS: string;
+}) {
   const { items, freeText } = parseExames(e.exames);
+  const allItems = items.length > 0
+    ? items
+    : e.exames.split("\n").filter((l) => l.trim()).map((l) => ({ nome: l.trim(), codigoTuss: null }));
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8">
-      {/* Header */}
-      <div className="border-b-2 border-gray-900 pb-4 text-center">
-        <h1 className="text-lg font-bold uppercase tracking-wider text-gray-900">
-          Guia de Solicitação — SP/SADT
-        </h1>
-      </div>
+    <div className="bg-white p-1">
+      {/* SADT Grid Layout */}
+      <table className="w-full border-collapse text-[11px] leading-tight" style={{ borderSpacing: 0 }}>
+        <tbody>
+          {/* Title Row */}
+          <tr>
+            <td colSpan={6} className="border border-black px-2 py-1.5 text-center font-bold text-xs">
+              GUIA DE SP/SADT
+            </td>
+          </tr>
 
-      {/* Dados do Beneficiário */}
-      <div className="mt-6">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">
-          Dados do Beneficiário
-        </h3>
-        <div className="rounded-lg border border-gray-200 p-4">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div>
-              <span className="text-xs font-medium text-gray-500">Nome:</span>
-              <p className="text-sm font-medium text-gray-900">{e.pacientes.nome}</p>
-            </div>
-            {e.numero_carteirinha && (
-              <div>
-                <span className="text-xs font-medium text-gray-500">N° Carteirinha:</span>
-                <p className="text-sm font-medium text-gray-900">{e.numero_carteirinha}</p>
-              </div>
-            )}
-            {e.operadora && (
-              <div>
-                <span className="text-xs font-medium text-gray-500">Operadora:</span>
-                <p className="text-sm font-medium text-gray-900">{e.operadora}</p>
-              </div>
-            )}
-            {e.pacientes.cpf && (
-              <div>
-                <span className="text-xs font-medium text-gray-500">CPF:</span>
-                <p className="text-sm font-medium text-gray-900">{formatCPF(e.pacientes.cpf)}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          {/* Row: Registro ANS + Nº Guia */}
+          <tr>
+            <td colSpan={3} className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">1 - </span>
+              <span className="text-[9px] text-gray-500">Registro ANS</span>
+              <p className="mt-0.5 text-[11px] font-medium">{registroANS || ""}</p>
+            </td>
+            <td colSpan={3} className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">2 - </span>
+              <span className="text-[9px] text-gray-500">N° Guia no Prestador</span>
+              <p className="mt-0.5 text-[11px] font-medium">&nbsp;</p>
+            </td>
+          </tr>
 
-      {/* Dados do Solicitante */}
-      <div className="mt-6">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">
-          Dados do Solicitante
-        </h3>
-        <div className="rounded-lg border border-gray-200 p-4">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {cfg.nome_profissional && (
-              <div>
-                <span className="text-xs font-medium text-gray-500">Profissional:</span>
-                <p className="text-sm font-medium text-gray-900">{cfg.nome_profissional}</p>
-              </div>
-            )}
-            {cfg.crm && (
-              <div>
-                <span className="text-xs font-medium text-gray-500">CRM:</span>
-                <p className="text-sm font-medium text-gray-900">{cfg.crm}</p>
-              </div>
-            )}
-            <div>
-              <span className="text-xs font-medium text-gray-500">Data:</span>
-              <p className="text-sm font-medium text-gray-900">{formatDateMedium(e.data)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+          {/* Section: Dados do Beneficiário */}
+          <tr>
+            <td colSpan={6} className="border border-black bg-gray-100 px-2 py-1 font-bold text-[10px]">
+              DADOS DO BENEFICIÁRIO
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={2} className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">8 - </span>
+              <span className="text-[9px] text-gray-500">N° da Carteira</span>
+              <p className="mt-0.5 text-[11px] font-medium">{carteirinha || ""}</p>
+            </td>
+            <td colSpan={3} className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">10 - </span>
+              <span className="text-[9px] text-gray-500">Nome</span>
+              <p className="mt-0.5 text-[11px] font-medium">{e.pacientes.nome}</p>
+            </td>
+            <td className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">11 - </span>
+              <span className="text-[9px] text-gray-500">CPF</span>
+              <p className="mt-0.5 text-[11px] font-medium">{e.pacientes.cpf ? formatCPF(e.pacientes.cpf) : ""}</p>
+            </td>
+          </tr>
 
-      {/* Tabela de Procedimentos */}
-      <div className="mt-6">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">
-          Procedimentos Solicitados
-        </h3>
-        {items.length > 0 ? (
-          <table className="w-full border-collapse border border-gray-300 text-sm">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-600">N°</th>
-                <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-600">Exame</th>
-                <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-600">Cód. TUSS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                <tr key={i}>
-                  <td className="border border-gray-300 px-3 py-2 text-center text-gray-600">{i + 1}</td>
-                  <td className="border border-gray-300 px-3 py-2 font-medium text-gray-900">{item.nome}</td>
-                  <td className="border border-gray-300 px-3 py-2 text-gray-600">{item.codigoTuss ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="rounded-lg border border-gray-200 p-4">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
-              {e.exames}
-            </p>
-          </div>
-        )}
-        {freeText.length > 0 && (
-          <div className="mt-3 whitespace-pre-wrap text-sm text-gray-700">
-            {freeText.join("\n")}
-          </div>
-        )}
-      </div>
+          {/* Section: Dados do Solicitante */}
+          <tr>
+            <td colSpan={6} className="border border-black bg-gray-100 px-2 py-1 font-bold text-[10px]">
+              DADOS DO SOLICITANTE
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={3} className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">13 - </span>
+              <span className="text-[9px] text-gray-500">Código na Operadora / CNPJ</span>
+              <p className="mt-0.5 text-[11px] font-medium">&nbsp;</p>
+            </td>
+            <td colSpan={3} className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">14 - </span>
+              <span className="text-[9px] text-gray-500">Nome do Contratado</span>
+              <p className="mt-0.5 text-[11px] font-medium">{operadora || cfg.nome_consultorio || ""}</p>
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={3} className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">15 - </span>
+              <span className="text-[9px] text-gray-500">Nome do Profissional Solicitante</span>
+              <p className="mt-0.5 text-[11px] font-medium">{cfg.nome_profissional || ""}</p>
+            </td>
+            <td className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">16 - </span>
+              <span className="text-[9px] text-gray-500">Conselho</span>
+              <p className="mt-0.5 text-[11px] font-medium">CRM</p>
+            </td>
+            <td className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">17 - </span>
+              <span className="text-[9px] text-gray-500">N° no Conselho</span>
+              <p className="mt-0.5 text-[11px] font-medium">{cfg.crm || ""}</p>
+            </td>
+            <td className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">18 - </span>
+              <span className="text-[9px] text-gray-500">UF</span>
+              <p className="mt-0.5 text-[11px] font-medium">&nbsp;</p>
+            </td>
+          </tr>
 
-      {/* Indicação Clínica */}
-      {e.indicacao_clinica && (
-        <div className="mt-6">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
-            Indicação Clínica
-          </h3>
-          <div className="rounded-lg border border-gray-200 p-4">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
-              {e.indicacao_clinica}
-            </p>
-          </div>
-        </div>
-      )}
+          {/* Section: Dados da Solicitação */}
+          <tr>
+            <td colSpan={6} className="border border-black bg-gray-100 px-2 py-1 font-bold text-[10px]">
+              DADOS DA SOLICITAÇÃO / PROCEDIMENTOS SOLICITADOS
+            </td>
+          </tr>
 
-      {/* Assinatura */}
-      <div className="mt-16 flex flex-col items-center">
-        <div className="w-72 border-b border-gray-900" />
-        <div className="mt-3 text-center">
-          {cfg.nome_profissional && (
-            <p className="text-sm font-bold text-gray-900">
-              {cfg.nome_profissional}
-            </p>
+          {/* Indicação Clínica */}
+          <tr>
+            <td colSpan={6} className="border border-black px-2 py-1">
+              <span className="text-[9px] font-bold text-gray-500">21 - </span>
+              <span className="text-[9px] text-gray-500">Indicação Clínica</span>
+              <p className="mt-0.5 text-[11px] font-medium whitespace-pre-wrap">{e.indicacao_clinica || ""}</p>
+            </td>
+          </tr>
+
+          {/* Procedures Table Header */}
+          <tr>
+            <td className="border border-black bg-gray-50 px-2 py-1 text-center font-bold text-[9px]">
+              <span className="text-gray-500">22 - </span>Tab
+            </td>
+            <td colSpan={2} className="border border-black bg-gray-50 px-2 py-1 text-center font-bold text-[9px]">
+              Cód. Procedimento
+            </td>
+            <td colSpan={2} className="border border-black bg-gray-50 px-2 py-1 font-bold text-[9px]">
+              Descrição
+            </td>
+            <td className="border border-black bg-gray-50 px-2 py-1 text-center font-bold text-[9px]">
+              Qtd
+            </td>
+          </tr>
+
+          {/* Procedure Rows */}
+          {allItems.map((item, i) => (
+            <tr key={i}>
+              <td className="border border-black px-2 py-1 text-center text-[10px]">
+                {item.codigoTuss ? "22" : ""}
+              </td>
+              <td colSpan={2} className="border border-black px-2 py-1 text-center text-[10px]">
+                {item.codigoTuss || ""}
+              </td>
+              <td colSpan={2} className="border border-black px-2 py-1 text-[10px]">
+                {item.nome}
+              </td>
+              <td className="border border-black px-2 py-1 text-center text-[10px]">
+                1
+              </td>
+            </tr>
+          ))}
+
+          {/* Free text if any */}
+          {freeText.length > 0 && (
+            <tr>
+              <td colSpan={6} className="border border-black px-2 py-1 text-[10px]">
+                <span className="text-[9px] text-gray-500">Obs: </span>
+                {freeText.join("; ")}
+              </td>
+            </tr>
           )}
-          {cfg.crm && (
-            <p className="mt-0.5 text-sm font-medium text-gray-700">
-              CRM {cfg.crm}
-            </p>
+
+          {/* Observações */}
+          {e.observacoes && (
+            <tr>
+              <td colSpan={6} className="border border-black px-2 py-1">
+                <span className="text-[9px] font-bold text-gray-500">23 - </span>
+                <span className="text-[9px] text-gray-500">Observações</span>
+                <p className="mt-0.5 text-[10px] whitespace-pre-wrap">{e.observacoes}</p>
+              </td>
+            </tr>
           )}
-        </div>
-      </div>
+
+          {/* Signature Row */}
+          <tr>
+            <td colSpan={2} className="border border-black px-2 py-1">
+              <span className="text-[9px] text-gray-500">Data</span>
+              <p className="mt-0.5 text-[11px] font-medium">{formatDateMedium(e.data)}</p>
+            </td>
+            <td colSpan={4} className="border border-black px-2 py-4 text-center">
+              <div className="mt-4 flex flex-col items-center">
+                <div className="w-56 border-b border-black" />
+                <p className="mt-1 text-[10px]">
+                  Assinatura do Profissional Solicitante
+                </p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -8,11 +8,9 @@ import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import { ExameSearch } from "./exame-search";
 import {
   type ExameDefaults,
-  type ExameTipo,
   EXAMES_MAX_LENGTH,
   INDICACAO_MAX_LENGTH,
   OBSERVACOES_MAX_LENGTH,
-  TIPO_LABELS,
 } from "../types";
 
 export function ExameForm({
@@ -40,9 +38,8 @@ export function ExameForm({
     {}
   );
 
-  const cancel = cancelHref ?? (isEditing ? `/exames/${defaults?.id}` : "/exames");
+  const cancel = cancelHref ?? (isEditing ? `/exames/${defaults?.id}` : "/pacientes");
   const examesRef = useRef<HTMLTextAreaElement>(null);
-  const [tipo, setTipo] = useState<ExameTipo | "">(defaults?.tipo ?? "");
 
   return (
     <form action={formAction} className="space-y-6" aria-busy={isPending}>
@@ -83,69 +80,6 @@ export function ExameForm({
           <FieldError message={state.fieldErrors?.data} />
         </div>
       </div>
-
-      {/* Tipo */}
-      <div>
-        <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
-          Tipo da solicitação <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="tipo"
-          name="tipo"
-          required
-          disabled={isPending}
-          value={tipo}
-          onChange={(e) => setTipo(e.target.value as ExameTipo | "")}
-          className={INPUT_CLASS}
-        >
-          <option value="">Selecione</option>
-          {Object.entries(TIPO_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <FieldError message={state.fieldErrors?.tipo} />
-      </div>
-
-      {/* Campos convênio */}
-      {tipo === "convenio" && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="operadora" className="block text-sm font-medium text-gray-700">
-              Operadora <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="operadora"
-              name="operadora"
-              type="text"
-              required
-              disabled={isPending}
-              maxLength={200}
-              defaultValue={defaults?.operadora ?? ""}
-              placeholder="Nome do convênio"
-              className={INPUT_CLASS}
-            />
-            <FieldError message={state.fieldErrors?.operadora} />
-          </div>
-          <div>
-            <label htmlFor="numero_carteirinha" className="block text-sm font-medium text-gray-700">
-              N° Carteirinha
-            </label>
-            <input
-              id="numero_carteirinha"
-              name="numero_carteirinha"
-              type="text"
-              disabled={isPending}
-              maxLength={50}
-              defaultValue={defaults?.numero_carteirinha ?? ""}
-              placeholder="Número da carteirinha"
-              className={INPUT_CLASS}
-            />
-            <FieldError message={state.fieldErrors?.numero_carteirinha} />
-          </div>
-        </div>
-      )}
 
       {/* Exames */}
       <div>

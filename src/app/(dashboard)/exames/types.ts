@@ -1,5 +1,3 @@
-export type ExameTipo = "convenio" | "particular";
-
 export interface ExamePaciente {
   id: string;
   nome: string;
@@ -8,7 +6,6 @@ export interface ExamePaciente {
 export interface ExameListItem {
   id: string;
   data: string;
-  tipo: ExameTipo;
   exames: string;
   pacientes: ExamePaciente;
 }
@@ -16,11 +13,8 @@ export interface ExameListItem {
 export interface Exame {
   id: string;
   data: string;
-  tipo: ExameTipo;
   exames: string;
   indicacao_clinica: string | null;
-  operadora: string | null;
-  numero_carteirinha: string | null;
   observacoes: string | null;
   created_at: string;
   pacientes: ExamePaciente;
@@ -29,16 +23,14 @@ export interface Exame {
 export interface ExameImpressao {
   id: string;
   data: string;
-  tipo: ExameTipo;
   exames: string;
   indicacao_clinica: string | null;
-  operadora: string | null;
-  numero_carteirinha: string | null;
   observacoes: string | null;
   pacientes: {
     id: string;
     nome: string;
     cpf: string | null;
+    convenio: string | null;
   };
 }
 
@@ -47,22 +39,16 @@ export interface ExameDefaults {
   paciente_id?: string;
   paciente_nome?: string;
   data?: string;
-  tipo?: ExameTipo | null;
   exames?: string | null;
   indicacao_clinica?: string | null;
-  operadora?: string | null;
-  numero_carteirinha?: string | null;
   observacoes?: string | null;
 }
 
 export interface ExameComPaciente {
   id: string;
   data: string;
-  tipo: ExameTipo;
   exames: string;
   indicacao_clinica: string | null;
-  operadora: string | null;
-  numero_carteirinha: string | null;
   observacoes: string | null;
   pacientes: ExamePaciente;
 }
@@ -70,11 +56,6 @@ export interface ExameComPaciente {
 export const EXAMES_MAX_LENGTH = 5000;
 export const INDICACAO_MAX_LENGTH = 2000;
 export const OBSERVACOES_MAX_LENGTH = 1000;
-
-export const TIPO_LABELS: Record<ExameTipo, string> = {
-  convenio: "Convênio",
-  particular: "Particular",
-};
 
 // --- Helpers de formatação (re-exports) ---
 export { formatDate, formatDateLong, formatDateMedium, getInitials, formatCPF } from "@/lib/format";

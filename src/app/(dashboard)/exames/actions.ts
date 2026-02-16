@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido } from "@/lib/validators";
-import { EXAMES_MAX_LENGTH, INDICACAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "./types";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido } from "@/lib/validators";
+import { EXAMES_MAX_LENGTH, INDICACAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./types";
 import { getMedicoId } from "@/lib/clinica";
 
 export type ExameFormState = {
@@ -16,11 +16,8 @@ export type ExameFormState = {
 function validarCamposExame(formData: FormData) {
   const paciente_id = (formData.get("paciente_id") as string) || null;
   const data = formData.get("data") as string;
-  const tipo = (formData.get("tipo") as string) || null;
   const exames = (formData.get("exames") as string)?.trim() || null;
   const indicacao_clinica = (formData.get("indicacao_clinica") as string)?.trim() || null;
-  const operadora = (formData.get("operadora") as string)?.trim() || null;
-  const numero_carteirinha = (formData.get("numero_carteirinha") as string)?.trim() || null;
   const observacoes = (formData.get("observacoes") as string)?.trim() || null;
 
   const fieldErrors: Record<string, string> = {};
@@ -31,18 +28,12 @@ function validarCamposExame(formData: FormData) {
     dataNaoFutura(fieldErrors, "data", data);
   }
 
-  campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo da solicitação.");
-  valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
   campoObrigatorio(fieldErrors, "exames", exames, "Exames é obrigatório.");
   tamanhoMaximo(fieldErrors, "exames", exames, EXAMES_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "indicacao_clinica", indicacao_clinica, INDICACAO_MAX_LENGTH);
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
 
-  if (tipo === "convenio") {
-    campoObrigatorio(fieldErrors, "operadora", operadora, "Operadora é obrigatória para convênio.");
-  }
-
-  return { paciente_id, data, tipo, exames, indicacao_clinica, operadora, numero_carteirinha, observacoes, fieldErrors };
+  return { paciente_id, data, exames, indicacao_clinica, observacoes, fieldErrors };
 }
 
 export async function criarExame(
@@ -74,17 +65,14 @@ export async function criarExame(
     return { fieldErrors: { paciente_id: "Paciente não encontrado." } };
   }
 
-  const { data: inserted, error } = await supabase
+  const { error } = await supabase
     .from("solicitacoes_exames")
     .insert({
       paciente_id: fields.paciente_id,
       medico_id: medicoId,
       data: fields.data,
-      tipo: fields.tipo,
       exames: fields.exames,
       indicacao_clinica: fields.indicacao_clinica,
-      operadora: fields.operadora,
-      numero_carteirinha: fields.numero_carteirinha,
       observacoes: fields.observacoes,
     })
     .select("id")
@@ -96,7 +84,8 @@ export async function criarExame(
 
   revalidatePath("/exames");
   revalidatePath("/");
-  redirect(`/exames/${inserted.id}?success=Solicitação+registrada`);
+  revalidatePath(`/pacientes/${fields.paciente_id}`);
+  redirect(`/pacientes/${fields.paciente_id}?tab=prontuario&success=Solicitação+registrada`);
 }
 
 export async function atualizarExame(
@@ -138,11 +127,8 @@ export async function atualizarExame(
     .update({
       paciente_id: fields.paciente_id,
       data: fields.data,
-      tipo: fields.tipo,
       exames: fields.exames,
       indicacao_clinica: fields.indicacao_clinica,
-      operadora: fields.operadora,
-      numero_carteirinha: fields.numero_carteirinha,
       observacoes: fields.observacoes,
       updated_at: new Date().toISOString(),
     })
@@ -155,6 +141,7 @@ export async function atualizarExame(
 
   revalidatePath("/exames");
   revalidatePath("/");
+  revalidatePath(`/pacientes/${fields.paciente_id}`);
   redirect(`/exames/${id}?success=Solicitação+atualizada`);
 }
 
@@ -185,7 +172,7 @@ export async function excluirExame(id: string): Promise<void> {
   revalidatePath("/");
   if (pacienteId) {
     revalidatePath(`/pacientes/${pacienteId}`);
-    redirect(`/pacientes/${pacienteId}?success=Solicitação+exclu%C3%ADda`);
+    redirect(`/pacientes/${pacienteId}?tab=prontuario&success=Solicitação+exclu%C3%ADda`);
   }
-  redirect("/exames?success=Solicitação+exclu%C3%ADda");
+  redirect("/pacientes");
 }

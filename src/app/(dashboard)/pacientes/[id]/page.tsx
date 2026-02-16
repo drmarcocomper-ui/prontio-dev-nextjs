@@ -105,7 +105,7 @@ export default async function PacienteDetalhesPage({
 
   const { data: solicitacoesExames } = await supabase
     .from("solicitacoes_exames")
-    .select("id, data, tipo, exames")
+    .select("id, data, exames")
     .eq("paciente_id", id)
     .order("data", { ascending: false });
 
@@ -425,18 +425,9 @@ export default async function PacienteDetalhesPage({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">
-                        {formatDate(ex.data)}
-                      </span>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        ex.tipo === "convenio"
-                          ? "bg-blue-50 text-blue-700"
-                          : "bg-amber-50 text-amber-700"
-                      }`}>
-                        {ex.tipo === "convenio" ? "Convênio" : "Particular"}
-                      </span>
-                    </div>
+                    <span className="text-sm font-medium text-gray-900">
+                      {formatDate(ex.data)}
+                    </span>
                     <p className="mt-1 line-clamp-2 text-sm text-gray-500">
                       {ex.exames}
                     </p>
@@ -522,13 +513,14 @@ export default async function PacienteDetalhesPage({
         }
 
         for (const ex of solicitacoesExames ?? []) {
+          const exTyped = ex as { id: string; data: string; exames: string };
           events.push({
-            id: `e-${ex.id}`,
-            date: ex.data,
+            id: `e-${exTyped.id}`,
+            date: exTyped.data,
             type: "exame",
             title: "Solicitação de exame",
-            subtitle: ex.exames?.slice(0, 80),
-            href: `/exames/${ex.id}`,
+            subtitle: exTyped.exames?.slice(0, 80),
+            href: `/exames/${exTyped.id}`,
             color: "bg-cyan-500",
           });
         }

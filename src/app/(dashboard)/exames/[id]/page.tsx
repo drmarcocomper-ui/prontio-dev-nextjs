@@ -8,7 +8,6 @@ import { getMedicoId } from "@/lib/clinica";
 import { excluirExame } from "../actions";
 import {
   type Exame,
-  TIPO_LABELS,
   formatDateLong,
   getInitials,
 } from "../types";
@@ -57,7 +56,7 @@ export default async function ExameDetalhesPage({
   const { data: exame } = await supabase
     .from("solicitacoes_exames")
     .select(
-      "id, data, tipo, exames, indicacao_clinica, operadora, numero_carteirinha, observacoes, created_at, pacientes(id, nome)"
+      "id, data, exames, indicacao_clinica, observacoes, created_at, pacientes(id, nome)"
     )
     .eq("id", id)
     .eq("medico_id", medicoId)
@@ -91,16 +90,9 @@ export default async function ExameDetalhesPage({
             >
               {e.pacientes.nome}
             </Link>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-              <span className="capitalize">{formatDateLong(e.data)}</span>
-              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                e.tipo === "convenio"
-                  ? "bg-blue-50 text-blue-700"
-                  : "bg-amber-50 text-amber-700"
-              }`}>
-                {TIPO_LABELS[e.tipo] ?? e.tipo}
-              </span>
-            </div>
+            <p className="mt-1 text-sm text-gray-500 capitalize">
+              {formatDateLong(e.data)}
+            </p>
           </div>
         </div>
 
@@ -126,32 +118,6 @@ export default async function ExameDetalhesPage({
           <DeleteButton onDelete={excluirExame.bind(null, e.id)} title="Excluir solicitação" description="Tem certeza que deseja excluir esta solicitação de exame? Esta ação não pode ser desfeita." errorMessage="Erro ao excluir solicitação. Tente novamente." />
         </div>
       </div>
-
-      {/* Dados do convênio */}
-      {e.tipo === "convenio" && (e.operadora || e.numero_carteirinha) && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-            <svg aria-hidden="true" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z" />
-            </svg>
-            Dados do convênio
-          </h2>
-          <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {e.operadora && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500">Operadora</dt>
-                <dd className="mt-0.5 text-sm text-gray-900">{e.operadora}</dd>
-              </div>
-            )}
-            {e.numero_carteirinha && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500">N° Carteirinha</dt>
-                <dd className="mt-0.5 text-sm text-gray-900">{e.numero_carteirinha}</dd>
-              </div>
-            )}
-          </dl>
-        </div>
-      )}
 
       {/* Exames */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">

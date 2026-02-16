@@ -48,7 +48,7 @@ export default async function EditarExamePage({
   const { data: exame } = await supabase
     .from("solicitacoes_exames")
     .select(
-      "id, data, tipo, exames, indicacao_clinica, operadora, numero_carteirinha, observacoes, pacientes(id, nome)"
+      "id, data, exames, indicacao_clinica, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
     .eq("medico_id", medicoId)
@@ -83,11 +83,8 @@ export default async function EditarExamePage({
             paciente_id: e.pacientes.id,
             paciente_nome: e.pacientes.nome,
             data: e.data,
-            tipo: e.tipo,
             exames: e.exames,
             indicacao_clinica: e.indicacao_clinica,
-            operadora: e.operadora,
-            numero_carteirinha: e.numero_carteirinha,
             observacoes: e.observacoes,
           }}
         />

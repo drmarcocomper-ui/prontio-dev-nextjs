@@ -205,7 +205,7 @@ create table solicitacoes_exames (
   paciente_id         uuid not null references pacientes(id) on delete cascade,
   medico_id           uuid not null references auth.users(id),
   data                date not null,
-  tipo                text not null check (tipo in ('convenio', 'particular')),
+  tipo                text,
   exames              text not null,
   indicacao_clinica   text,
   operadora           text,
