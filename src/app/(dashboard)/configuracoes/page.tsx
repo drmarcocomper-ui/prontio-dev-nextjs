@@ -144,14 +144,14 @@ export default async function ConfiguracoesPage({
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         {currentTab === "clinica" && (
           <>
-            <ConsultorioForm clinica={clinicaData} />
+            <ConsultorioForm key={JSON.stringify(clinicaData)} clinica={clinicaData} />
             <div className="border-t border-gray-200 pt-6 mt-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Horários de Atendimento</h2>
-              <HorariosForm defaults={config} />
+              <HorariosForm key={`horarios-${JSON.stringify(config)}`} defaults={config} />
             </div>
             <div className="border-t border-gray-200 pt-6 mt-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Valores</h2>
-              <ValoresForm defaults={config} />
+              <ValoresForm key={`valores-${JSON.stringify(config)}`} defaults={config} />
             </div>
           </>
         )}
@@ -161,12 +161,12 @@ export default async function ConfiguracoesPage({
             {isProfissional(papel) && (
               <div className="border-t border-gray-200 pt-6 mt-6">
                 <h2 className="text-base font-semibold text-gray-900 mb-4">Dados Profissionais</h2>
-                <ProfissionalForm defaults={config} />
+                <ProfissionalForm key={`profissional-${JSON.stringify(config)}`} defaults={config} />
               </div>
             )}
             <div className="border-t border-gray-200 pt-6 mt-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Aparência</h2>
-              <AparenciaForm defaults={config} />
+              <AparenciaForm key={`aparencia-${JSON.stringify(config)}`} defaults={config} />
             </div>
           </>
         )}
