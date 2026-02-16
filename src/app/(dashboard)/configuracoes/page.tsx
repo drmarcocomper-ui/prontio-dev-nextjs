@@ -14,7 +14,7 @@ import { ValoresForm } from "./valores-form";
 
 export const metadata: Metadata = { title: "Configurações" };
 
-const needsConfig = new Set(["profissional", "horarios", "valores", "aparencia"]);
+const needsConfig = new Set(["consultorio", "agenda", "conta"]);
 
 export default async function ConfiguracoesPage({
   searchParams,
@@ -44,7 +44,7 @@ export default async function ConfiguracoesPage({
     }
   }
 
-  // Load config only for tabs that need it
+  // Load config for tabs that need it
   const config: Record<string, string> = {};
   if (needsConfig.has(currentTab)) {
     const { data: rows } = await supabase
@@ -121,31 +121,41 @@ export default async function ConfiguracoesPage({
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         {currentTab === "consultorio" && (
-          <ConsultorioForm clinica={clinicaData} />
+          <>
+            <ConsultorioForm clinica={clinicaData} />
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Profissional</h2>
+              <ProfissionalForm defaults={config} />
+            </div>
+          </>
         )}
-        {currentTab === "profissional" && (
-          <ProfissionalForm defaults={config} />
-        )}
-        {currentTab === "horarios" && (
-          <HorariosForm defaults={config} />
+        {currentTab === "agenda" && (
+          <>
+            <HorariosForm defaults={config} />
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Valores</h2>
+              <ValoresForm defaults={config} />
+            </div>
+          </>
         )}
         {currentTab === "conta" && (
-          <ContaForm email={userEmail} />
-        )}
-        {currentTab === "aparencia" && (
-          <AparenciaForm defaults={config} />
-        )}
-        {currentTab === "valores" && (
-          <ValoresForm defaults={config} />
+          <>
+            <ContaForm email={userEmail} />
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Aparência</h2>
+              <AparenciaForm defaults={config} />
+            </div>
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Dados</h2>
+              <DadosForm />
+            </div>
+          </>
         )}
         {currentTab === "clinicas" && (
           <ClinicasForm
             clinicas={clinicasList}
             vinculos={vinculos}
           />
-        )}
-        {currentTab === "dados" && (
-          <DadosForm />
         )}
       </div>
     </div>
