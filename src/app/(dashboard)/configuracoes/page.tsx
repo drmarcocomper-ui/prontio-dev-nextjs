@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
-import { Tabs, isValidTab, getDefaultTab } from "./tabs";
+import { Tabs } from "./tabs";
+import { isValidTab, getDefaultTab } from "./tab-utils";
 import { ConsultorioForm } from "./consultorio-form";
 import { ProfissionalForm } from "./profissional-form";
 import { HorariosForm } from "./horarios-form";

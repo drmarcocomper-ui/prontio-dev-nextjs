@@ -3,6 +3,9 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("./tabs", () => ({
   Tabs: ({ papel }: { papel: string }) => <div data-testid="tabs" data-papel={papel} />,
+}));
+
+vi.mock("./tab-utils", () => ({
   isValidTab: (tab: string) => ["consultorio", "profissional", "horarios", "valores", "conta", "aparencia", "clinicas", "dados"].includes(tab),
   getDefaultTab: () => "consultorio",
 }));
