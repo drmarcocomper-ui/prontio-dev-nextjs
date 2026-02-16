@@ -112,13 +112,12 @@ export default async function ConfiguracoesPage({
     }
   }
 
-  // Load medicamentos for "medicamentos" tab
+  // Load medicamentos for "medicamentos" tab (catálogo global)
   let medicamentosList: Medicamento[] = [];
-  if (currentTab === "medicamentos" && ctx?.clinicaId) {
+  if (currentTab === "medicamentos") {
     const { data } = await supabase
       .from("medicamentos")
       .select("id, nome, posologia, quantidade, via_administracao")
-      .eq("clinica_id", ctx.clinicaId)
       .order("nome");
 
     medicamentosList = (data ?? []) as Medicamento[];

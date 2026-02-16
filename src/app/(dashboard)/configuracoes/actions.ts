@@ -494,7 +494,7 @@ export async function criarMedicamento(
 
   const { error } = await supabase
     .from("medicamentos")
-    .insert({ clinica_id: ctx.clinicaId, nome, posologia, quantidade, via_administracao });
+    .insert({ nome, posologia, quantidade, via_administracao });
 
   if (error) {
     return { error: tratarErroSupabase(error, "criar", "medicamento") };
@@ -536,8 +536,7 @@ export async function atualizarMedicamento(
   const { error } = await supabase
     .from("medicamentos")
     .update({ nome, posologia, quantidade, via_administracao })
-    .eq("id", id)
-    .eq("clinica_id", ctx.clinicaId);
+    .eq("id", id);
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "medicamento") };
@@ -561,8 +560,7 @@ export async function excluirMedicamento(id: string): Promise<void> {
   const { error } = await supabase
     .from("medicamentos")
     .delete()
-    .eq("id", id)
-    .eq("clinica_id", ctx.clinicaId);
+    .eq("id", id);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "medicamento"));

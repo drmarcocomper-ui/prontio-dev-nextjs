@@ -170,11 +170,10 @@ create index receitas_medico_idx on receitas (medico_id);
 
 comment on table receitas is 'Receitas médicas prescritas aos pacientes (por médico)';
 
--- 8. Medicamentos (catálogo da clínica)
+-- 8. Medicamentos (catálogo global do sistema)
 -- --------------------------------------------
 create table medicamentos (
   id                uuid primary key default gen_random_uuid(),
-  clinica_id        uuid not null references clinicas (id) on delete cascade,
   nome              text not null,
   posologia         text,
   quantidade        text,
@@ -182,10 +181,9 @@ create table medicamentos (
   created_at        timestamptz not null default now()
 );
 
-create index medicamentos_clinica_idx on medicamentos (clinica_id);
 create index medicamentos_nome_idx on medicamentos using gin (nome gin_trgm_ops);
 
-comment on table medicamentos is 'Catálogo de medicamentos por clínica';
+comment on table medicamentos is 'Catálogo global de medicamentos do sistema';
 
 -- 9. Configurações
 -- --------------------------------------------
@@ -281,9 +279,9 @@ create policy "Acesso agendamentos" on agendamentos for all to authenticated
 create policy "Medico acessa transacoes" on transacoes for all to authenticated
   using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
 
--- medicamentos: por clínica (admin vê todas)
+-- medicamentos: catálogo global, todos autenticados podem ler
 create policy "Acesso medicamentos" on medicamentos for all to authenticated
-  using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
+  using (true);
 
 -- configuracoes
 create policy "Acesso configuracoes" on configuracoes for all to authenticated
