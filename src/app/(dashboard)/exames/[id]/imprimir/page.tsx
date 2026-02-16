@@ -79,6 +79,8 @@ export default async function ImprimirExamePage({
     ? formatoParam
     : "particular";
 
+  const isSADT = formato === "sadt";
+
   const ctx = await getClinicaAtual();
 
   const [{ data: clinica }, { data: profConfigs }] = await Promise.all([
@@ -106,25 +108,39 @@ export default async function ImprimirExamePage({
     cfg[c.chave] = c.valor;
   });
 
-  // Convênio label from patient's convenio
   const convenioLabel = e.pacientes.convenio
     ? (CONVENIO_LABELS[e.pacientes.convenio as keyof typeof CONVENIO_LABELS] ?? e.pacientes.convenio)
     : "";
 
-  // SADT fields from searchParams (filled at print time, not saved)
   const sadtOperadora = opParam ?? convenioLabel;
   const sadtCarteirinha = cartParam ?? "";
   const sadtRegistroANS = ansParam ?? "";
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className={isSADT ? "mx-auto w-full" : "mx-auto max-w-3xl"}>
       <style
         dangerouslySetInnerHTML={{
           __html: `
             @media print {
               .no-print { display: none !important; }
-              body { margin: 0; padding: 0; }
-              @page { margin: 15mm; }
+              html, body { margin: 0 !important; padding: 0 !important; }
+              ${isSADT ? `
+              @page {
+                size: A4 landscape;
+                margin: 0;
+              }
+              .sadt-print-wrapper {
+                padding: 8mm 10mm;
+              }
+              ` : `
+              @page {
+                size: A4 portrait;
+                margin: 0;
+              }
+              .particular-print-wrapper {
+                padding: 15mm 20mm;
+              }
+              `}
             }
           `,
         }}
@@ -146,16 +162,20 @@ export default async function ImprimirExamePage({
         />
       </div>
 
-      {formato === "particular" ? (
-        <ParticularFormat e={e} cfg={cfg} />
+      {!isSADT ? (
+        <div className="particular-print-wrapper">
+          <ParticularFormat e={e} cfg={cfg} />
+        </div>
       ) : (
-        <SADTFormat
-          e={e}
-          cfg={cfg}
-          operadora={sadtOperadora}
-          carteirinha={sadtCarteirinha}
-          registroANS={sadtRegistroANS}
-        />
+        <div className="sadt-print-wrapper">
+          <SADTFormat
+            e={e}
+            cfg={cfg}
+            operadora={sadtOperadora}
+            carteirinha={sadtCarteirinha}
+            registroANS={sadtRegistroANS}
+          />
+        </div>
       )}
     </div>
   );
@@ -261,14 +281,10 @@ function ParticularFormat({ e, cfg }: { e: ExameImpressao; cfg: Record<string, s
   );
 }
 
-function SADTField({ num, label, children }: { num: string; label: string; children?: React.ReactNode }) {
-  return (
-    <>
-      <span className="text-[8px] text-gray-500"><b>{num}</b> - {label}</span>
-      <div className="min-h-[14px] text-[10px] leading-tight">{children}</div>
-    </>
-  );
-}
+/* ────────────────────────────────────────────────────────────
+   SADT — Guia SP/SADT padrão ANS TISS
+   Landscape A4, full width, numbered fields
+   ──────────────────────────────────────────────────────────── */
 
 function SADTFormat({
   e,
@@ -288,212 +304,232 @@ function SADTFormat({
     ? items
     : e.exames.split("\n").filter((l) => l.trim()).map((l) => ({ nome: l.trim(), codigoTuss: null }));
 
-  const cellBase = "border border-black px-1.5 py-0.5 align-top";
-  const sectionHeader = "border border-black bg-gray-200 px-1.5 py-0.5 text-[9px] font-bold text-center";
+  const c = "border border-black px-1 py-[2px] align-top"; // cell
+  const sh = "border border-black bg-gray-200 px-1 py-[2px] text-[8px] font-bold tracking-wide"; // section header
 
   return (
     <div className="bg-white">
       <style dangerouslySetInnerHTML={{ __html: `
-        .sadt-table { border-collapse: collapse; width: 100%; font-family: Arial, Helvetica, sans-serif; }
-        .sadt-table td { vertical-align: top; }
+        .sadt { border-collapse: collapse; width: 100%; font-family: Arial, Helvetica, sans-serif; font-size: 8px; line-height: 1.2; }
+        .sadt td { vertical-align: top; }
+        .sadt .fn { color: #555; font-size: 7px; display: block; }
+        .sadt .fn b { font-weight: 700; }
+        .sadt .fv { font-size: 9px; min-height: 12px; }
       `}} />
 
-      <table className="sadt-table">
+      <table className="sadt">
+        {/* 12-column grid for precise control */}
         <colgroup>
-          <col style={{ width: "8%" }} />
-          <col style={{ width: "12%" }} />
-          <col style={{ width: "20%" }} />
-          <col style={{ width: "20%" }} />
-          <col style={{ width: "25%" }} />
-          <col style={{ width: "15%" }} />
+          {Array.from({ length: 12 }).map((_, i) => (
+            <col key={i} style={{ width: `${100/12}%` }} />
+          ))}
         </colgroup>
         <tbody>
-          {/* ═══ HEADER ═══ */}
+
+          {/* ═══ TÍTULO ═══ */}
           <tr>
-            <td colSpan={6} className="border border-black px-2 py-1 text-center">
-              <span className="text-xs font-bold tracking-wide">GUIA DE SP/SADT</span>
-              <span className="ml-3 text-[8px] text-gray-500">Padrão TISS</span>
+            <td colSpan={12} className="border border-black px-2 py-1 text-center">
+              <b style={{ fontSize: 11, letterSpacing: 1 }}>GUIA DE SP/SADT</b>
             </td>
           </tr>
 
-          {/* ═══ 1 - DADOS DA OPERADORA / GUIA ═══ */}
+          {/* ═══ CAMPOS 1-6: IDENTIFICAÇÃO DA GUIA ═══ */}
           <tr>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="1" label="Registro ANS">{registroANS}</SADTField>
+            <td colSpan={3} className={c}>
+              <span className="fn"><b>1</b> - Registro ANS</span>
+              <div className="fv">{registroANS}</div>
             </td>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="2" label="Nº Guia no Prestador">&nbsp;</SADTField>
+            <td colSpan={3} className={c}>
+              <span className="fn"><b>2</b> - Nº Guia no Prestador</span>
+              <div className="fv">&nbsp;</div>
             </td>
-            <td className={cellBase}>
-              <SADTField num="3" label="Nº Guia Principal">&nbsp;</SADTField>
+            <td colSpan={3} className={c}>
+              <span className="fn"><b>3</b> - Nº Guia Principal</span>
+              <div className="fv">&nbsp;</div>
             </td>
-            <td className={cellBase}>
-              <SADTField num="4" label="Data da Autorização">&nbsp;</SADTField>
+            <td colSpan={3} className={c}>
+              <span className="fn"><b>4</b> - Data da Autorização</span>
+              <div className="fv">&nbsp;</div>
             </td>
           </tr>
           <tr>
-            <td colSpan={3} className={cellBase}>
-              <SADTField num="5" label="Senha">&nbsp;</SADTField>
+            <td colSpan={4} className={c}>
+              <span className="fn"><b>5</b> - Senha</span>
+              <div className="fv">&nbsp;</div>
             </td>
-            <td colSpan={3} className={cellBase}>
-              <SADTField num="6" label="Data de Validade da Senha">&nbsp;</SADTField>
+            <td colSpan={4} className={c}>
+              <span className="fn"><b>6</b> - Data de Validade da Senha</span>
+              <div className="fv">&nbsp;</div>
             </td>
-          </tr>
-
-          {/* ═══ 2 - DADOS DO BENEFICIÁRIO ═══ */}
-          <tr>
-            <td colSpan={6} className={sectionHeader}>DADOS DO BENEFICIÁRIO</td>
-          </tr>
-          <tr>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="8" label="Número da Carteira">{carteirinha}</SADTField>
-            </td>
-            <td className={cellBase}>
-              <SADTField num="9" label="Validade da Carteira">&nbsp;</SADTField>
-            </td>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="10" label="Nome">{e.pacientes.nome}</SADTField>
-            </td>
-            <td className={cellBase}>
-              <SADTField num="11" label="Cartão Nacional de Saúde">&nbsp;</SADTField>
-            </td>
-          </tr>
-          <tr>
-            <td colSpan={6} className={cellBase}>
-              <SADTField num="12" label="Atendimento a RN">N</SADTField>
+            <td colSpan={4} className={c}>
+              <span className="fn"><b>7</b> - Nº Guia Operadora</span>
+              <div className="fv">&nbsp;</div>
             </td>
           </tr>
 
-          {/* ═══ 3 - DADOS DO SOLICITANTE ═══ */}
+          {/* ═══ DADOS DO BENEFICIÁRIO ═══ */}
           <tr>
-            <td colSpan={6} className={sectionHeader}>DADOS DO SOLICITANTE</td>
+            <td colSpan={12} className={sh}>DADOS DO BENEFICIÁRIO</td>
           </tr>
           <tr>
-            <td colSpan={3} className={cellBase}>
-              <SADTField num="13" label="Código na Operadora">&nbsp;</SADTField>
+            <td colSpan={3} className={c}>
+              <span className="fn"><b>8</b> - Número da Carteira</span>
+              <div className="fv">{carteirinha}</div>
             </td>
-            <td colSpan={3} className={cellBase}>
-              <SADTField num="14" label="Nome do Contratado">{operadora || cfg.nome_consultorio || ""}</SADTField>
+            <td colSpan={2} className={c}>
+              <span className="fn"><b>9</b> - Validade da Carteira</span>
+              <div className="fv">&nbsp;</div>
+            </td>
+            <td colSpan={5} className={c}>
+              <span className="fn"><b>10</b> - Nome do Beneficiário</span>
+              <div className="fv">{e.pacientes.nome}</div>
+            </td>
+            <td colSpan={2} className={c}>
+              <span className="fn"><b>11</b> - Cartão Nacional de Saúde</span>
+              <div className="fv">{e.pacientes.cpf ? formatCPF(e.pacientes.cpf) : ""}</div>
             </td>
           </tr>
           <tr>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="15" label="Nome do Profissional Solicitante">{cfg.nome_profissional || ""}</SADTField>
-            </td>
-            <td className={cellBase}>
-              <SADTField num="16" label="Conselho Profissional">CRM</SADTField>
-            </td>
-            <td className={cellBase}>
-              <SADTField num="17" label="Nº no Conselho">{cfg.crm || ""}</SADTField>
-            </td>
-            <td className={cellBase}>
-              <SADTField num="18" label="UF">&nbsp;</SADTField>
-            </td>
-            <td className={cellBase}>
-              <SADTField num="19" label="Código CBO-S">&nbsp;</SADTField>
-            </td>
-          </tr>
-
-          {/* ═══ 4 - DADOS DA SOLICITAÇÃO / PROCEDIMENTOS ═══ */}
-          <tr>
-            <td colSpan={6} className={sectionHeader}>DADOS DA SOLICITAÇÃO / PROCEDIMENTOS E EXAMES SOLICITADOS</td>
-          </tr>
-          <tr>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="21" label="Caráter do Atendimento">Eletiva</SADTField>
-            </td>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="22" label="Data da Solicitação">{formatDateMedium(e.data)}</SADTField>
-            </td>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="23" label="Indicação Clínica">
-                <span className="whitespace-pre-wrap">{e.indicacao_clinica || ""}</span>
-              </SADTField>
+            <td colSpan={12} className={c}>
+              <span className="fn"><b>12</b> - Atendimento a RN</span>
+              <div className="fv">N</div>
             </td>
           </tr>
 
-          {/* Procedures Table Header */}
+          {/* ═══ DADOS DO SOLICITANTE ═══ */}
           <tr>
-            <td className="border border-black bg-gray-100 px-1 py-0.5 text-center text-[8px] font-bold">
-              <span className="text-gray-500">24</span><br />Tabela
+            <td colSpan={12} className={sh}>DADOS DO SOLICITANTE</td>
+          </tr>
+          <tr>
+            <td colSpan={4} className={c}>
+              <span className="fn"><b>13</b> - Código na Operadora/CNPJ</span>
+              <div className="fv">&nbsp;</div>
             </td>
-            <td colSpan={2} className="border border-black bg-gray-100 px-1 py-0.5 text-center text-[8px] font-bold">
-              <span className="text-gray-500">25</span><br />Código do Procedimento
+            <td colSpan={8} className={c}>
+              <span className="fn"><b>14</b> - Nome do Contratado</span>
+              <div className="fv">{operadora || cfg.nome_consultorio || ""}</div>
             </td>
-            <td colSpan={2} className="border border-black bg-gray-100 px-1 py-0.5 text-[8px] font-bold">
-              <span className="text-gray-500">26</span><br />Descrição
+          </tr>
+          <tr>
+            <td colSpan={4} className={c}>
+              <span className="fn"><b>15</b> - Nome do Profissional Solicitante</span>
+              <div className="fv">{cfg.nome_profissional || ""}</div>
             </td>
-            <td className="border border-black bg-gray-100 px-1 py-0.5 text-center text-[8px] font-bold">
-              <span className="text-gray-500">27</span><br />Qtde. Solic.
+            <td colSpan={2} className={c}>
+              <span className="fn"><b>16</b> - Conselho</span>
+              <div className="fv">CRM</div>
+            </td>
+            <td colSpan={2} className={c}>
+              <span className="fn"><b>17</b> - Nº no Conselho</span>
+              <div className="fv">{cfg.crm || ""}</div>
+            </td>
+            <td colSpan={2} className={c}>
+              <span className="fn"><b>18</b> - UF</span>
+              <div className="fv">&nbsp;</div>
+            </td>
+            <td colSpan={2} className={c}>
+              <span className="fn"><b>19</b> - Código CBO-S</span>
+              <div className="fv">&nbsp;</div>
+            </td>
+          </tr>
+
+          {/* ═══ DADOS DA SOLICITAÇÃO ═══ */}
+          <tr>
+            <td colSpan={12} className={sh}>DADOS DA SOLICITAÇÃO / PROCEDIMENTOS E EXAMES SOLICITADOS</td>
+          </tr>
+          <tr>
+            <td colSpan={3} className={c}>
+              <span className="fn"><b>21</b> - Caráter do Atendimento</span>
+              <div className="fv">Eletiva</div>
+            </td>
+            <td colSpan={3} className={c}>
+              <span className="fn"><b>22</b> - Data da Solicitação</span>
+              <div className="fv">{formatDateMedium(e.data)}</div>
+            </td>
+            <td colSpan={6} className={c}>
+              <span className="fn"><b>23</b> - Indicação Clínica</span>
+              <div className="fv whitespace-pre-wrap">{e.indicacao_clinica || ""}</div>
+            </td>
+          </tr>
+
+          {/* Tabela de Procedimentos — Header */}
+          <tr>
+            <td colSpan={1} className="border border-black bg-gray-100 px-1 py-[2px] text-center text-[7px] font-bold">
+              <span className="fn"><b>24</b></span>Tabela
+            </td>
+            <td colSpan={3} className="border border-black bg-gray-100 px-1 py-[2px] text-center text-[7px] font-bold">
+              <span className="fn"><b>25</b></span>Código do Procedimento
+            </td>
+            <td colSpan={6} className="border border-black bg-gray-100 px-1 py-[2px] text-[7px] font-bold">
+              <span className="fn"><b>26</b></span>Descrição
+            </td>
+            <td colSpan={2} className="border border-black bg-gray-100 px-1 py-[2px] text-center text-[7px] font-bold">
+              <span className="fn"><b>27</b></span>Qtde. Solic.
             </td>
           </tr>
 
           {/* Procedure Rows */}
           {allItems.map((item, i) => (
             <tr key={i}>
-              <td className="border border-black px-1 py-0.5 text-center text-[9px]">
+              <td colSpan={1} className="border border-black px-1 py-[2px] text-center text-[8px]">
                 {item.codigoTuss ? "22" : ""}
               </td>
-              <td colSpan={2} className="border border-black px-1 py-0.5 text-center text-[9px]">
+              <td colSpan={3} className="border border-black px-1 py-[2px] text-center text-[8px]">
                 {item.codigoTuss || ""}
               </td>
-              <td colSpan={2} className="border border-black px-1 py-0.5 text-[9px]">
+              <td colSpan={6} className="border border-black px-1 py-[2px] text-[8px]">
                 {item.nome}
               </td>
-              <td className="border border-black px-1 py-0.5 text-center text-[9px]">
+              <td colSpan={2} className="border border-black px-1 py-[2px] text-center text-[8px]">
                 1
               </td>
             </tr>
           ))}
 
-          {/* Empty rows to fill at least 5 procedure lines */}
-          {Array.from({ length: Math.max(0, 5 - allItems.length) }).map((_, i) => (
-            <tr key={`empty-${i}`}>
-              <td className="border border-black px-1 py-0.5 text-[9px]">&nbsp;</td>
-              <td colSpan={2} className="border border-black px-1 py-0.5 text-[9px]">&nbsp;</td>
-              <td colSpan={2} className="border border-black px-1 py-0.5 text-[9px]">&nbsp;</td>
-              <td className="border border-black px-1 py-0.5 text-[9px]">&nbsp;</td>
+          {/* Empty rows to fill minimum 10 procedure lines */}
+          {Array.from({ length: Math.max(0, 10 - allItems.length) }).map((_, i) => (
+            <tr key={`e-${i}`}>
+              <td colSpan={1} className="border border-black px-1 py-[2px] text-[8px]">&nbsp;</td>
+              <td colSpan={3} className="border border-black px-1 py-[2px] text-[8px]">&nbsp;</td>
+              <td colSpan={6} className="border border-black px-1 py-[2px] text-[8px]">&nbsp;</td>
+              <td colSpan={2} className="border border-black px-1 py-[2px] text-[8px]">&nbsp;</td>
             </tr>
           ))}
 
           {/* Free text */}
           {freeText.length > 0 && (
             <tr>
-              <td colSpan={6} className={cellBase}>
-                <span className="text-[8px] text-gray-500">Obs:</span>{" "}
-                <span className="text-[9px]">{freeText.join("; ")}</span>
+              <td colSpan={12} className={c}>
+                <span className="fn">Obs:</span>
+                <div className="fv">{freeText.join("; ")}</div>
               </td>
             </tr>
           )}
 
           {/* ═══ OBSERVAÇÃO / JUSTIFICATIVA ═══ */}
           <tr>
-            <td colSpan={6} className={cellBase}>
-              <SADTField num="58" label="Observação / Justificativa">
-                <span className="whitespace-pre-wrap">{e.observacoes || ""}</span>
-              </SADTField>
+            <td colSpan={12} className={c}>
+              <span className="fn"><b>58</b> - Observação / Justificativa</span>
+              <div className="fv whitespace-pre-wrap">{e.observacoes || ""}</div>
             </td>
           </tr>
 
-          {/* ═══ ASSINATURA ═══ */}
+          {/* ═══ ASSINATURA DO PROFISSIONAL SOLICITANTE ═══ */}
           <tr>
-            <td colSpan={6} className={sectionHeader}>ASSINATURA DO PROFISSIONAL SOLICITANTE</td>
-          </tr>
-          <tr>
-            <td colSpan={2} className={cellBase}>
-              <SADTField num="20" label="Data">
-                {formatDateMedium(e.data)}
-              </SADTField>
+            <td colSpan={3} className={c}>
+              <span className="fn"><b>20</b> - Data</span>
+              <div className="fv">{formatDateMedium(e.data)}</div>
             </td>
-            <td colSpan={4} className="border border-black px-1.5 py-3 text-center align-bottom">
-              <div className="mt-6 flex flex-col items-center">
-                <div className="w-60 border-b border-black" />
-                <p className="mt-0.5 text-[8px] text-gray-500">
+            <td colSpan={9} className="border border-black px-1 py-1 text-center" style={{ height: 50 }}>
+              <div className="flex h-full flex-col items-center justify-end">
+                <div className="w-64 border-b border-black" />
+                <span style={{ fontSize: 7, color: "#555", marginTop: 2 }}>
                   Assinatura do Profissional Solicitante
-                </p>
+                </span>
               </div>
             </td>
           </tr>
+
         </tbody>
       </table>
     </div>
