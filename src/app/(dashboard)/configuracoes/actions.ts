@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { getClinicaAtual, getClinicasDoUsuario, isGestor } from "@/lib/clinica";
-import { invalidarCacheHorario } from "@/app/(dashboard)/agenda/actions";
+import { invalidarCacheHorario } from "@/app/(dashboard)/agenda/utils";
 import { emailValido as validarEmail } from "@/lib/validators";
 import {
   NOME_CONSULTORIO_MAX,

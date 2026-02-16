@@ -9,9 +9,9 @@ export const metadata: Metadata = { title: "Novo Agendamento" };
 export default async function NovoAgendamentoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ data?: string }>;
+  searchParams: Promise<{ data?: string; hora?: string }>;
 }) {
-  const { data } = await searchParams;
+  const { data, hora } = await searchParams;
   const defaultDate = data || todayLocal();
   const medicoId = await getMedicoId();
 
@@ -30,7 +30,7 @@ export default async function NovoAgendamentoPage({
 
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
-        <AgendamentoForm defaultDate={defaultDate} medicoId={medicoId} />
+        <AgendamentoForm defaultDate={defaultDate} defaultTime={hora} medicoId={medicoId} />
       </div>
     </div>
   );

@@ -9,10 +9,12 @@ import { PatientSearch } from "./patient-search";
 
 export function AgendamentoForm({
   defaultDate,
+  defaultTime,
   defaults,
   medicoId,
 }: {
   defaultDate?: string;
+  defaultTime?: string;
   defaults?: AgendamentoDefaults;
   medicoId: string;
 }) {
@@ -77,7 +79,7 @@ export function AgendamentoForm({
             step="300"
             required
             disabled={isPending}
-            defaultValue={defaults?.hora_inicio ?? ""}
+            defaultValue={defaults?.hora_inicio ?? defaultTime ?? ""}
             className={INPUT_CLASS}
           />
           <FieldError message={state.fieldErrors?.hora_inicio} />

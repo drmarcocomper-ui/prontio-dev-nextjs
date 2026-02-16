@@ -125,8 +125,8 @@ import {
   atualizarAgendamento,
   atualizarStatusAgendamento,
   excluirAgendamento,
-  invalidarCacheHorario,
 } from "./actions";
+import { invalidarCacheHorario } from "./utils";
 import { STATUS_TRANSITIONS } from "./types";
 
 function makeFormData(data: Record<string, string>) {
