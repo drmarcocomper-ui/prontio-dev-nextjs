@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarReceita, atualizarReceita, type ReceitaFormState } from "../actions";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
+import { MedicamentoSearch } from "./medicamento-search";
 import {
   type ReceitaDefaults,
   MEDICAMENTOS_MAX_LENGTH,
@@ -226,6 +227,20 @@ export function ReceitaForm({
             ))}
           </div>
         )}
+
+        <div className="mt-2">
+          <label className="mb-1 block text-xs font-medium text-gray-500">Buscar no catálogo</label>
+          <MedicamentoSearch
+            onSelect={(med) => {
+              if (!medRef.current) return;
+              const details = [med.posologia, med.quantidade, med.via_administracao].filter(Boolean).join(" | ");
+              const entry = details ? `- ${med.nome}\n  ${details}` : `- ${med.nome}`;
+              const current = medRef.current.value.trim();
+              medRef.current.value = current ? `${current}\n${entry}` : entry;
+              medRef.current.focus();
+            }}
+          />
+        </div>
 
         <textarea
           ref={medRef}
