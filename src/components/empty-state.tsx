@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export type IllustrationType = "pacientes" | "agenda" | "prontuarios" | "receitas" | "financeiro" | "usuarios";
+export type IllustrationType = "pacientes" | "agenda" | "prontuarios" | "receitas" | "financeiro" | "usuarios" | "exames";
 
 interface EmptyStateProps {
   icon: IllustrationType;
@@ -95,6 +95,19 @@ function UsuariosIllustration() {
   );
 }
 
+function ExamesIllustration() {
+  return (
+    <svg aria-hidden="true" className="h-24 w-24" viewBox="0 0 96 96" fill="none">
+      <circle cx="48" cy="48" r="48" className="fill-primary-50" />
+      <rect x="26" y="20" width="44" height="56" rx="4" className="stroke-primary-300" strokeWidth="2" fill="none" />
+      <path d="M34 34h28M34 44h20M34 54h24" className="stroke-primary-200" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="64" cy="60" r="12" className="fill-white stroke-primary-300" strokeWidth="2" />
+      <path d="M60 60h8M64 56v8" className="stroke-primary-500" strokeWidth="2" strokeLinecap="round" />
+      <path d="M40 20v8M56 20v8" className="stroke-primary-300" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function EmptyStateIllustration({ type }: { type: IllustrationType }) {
   const Component = illustrations[type];
   return <Component />;
@@ -107,6 +120,7 @@ const illustrations = {
   receitas: ReceitasIllustration,
   financeiro: FinanceiroIllustration,
   usuarios: UsuariosIllustration,
+  exames: ExamesIllustration,
 };
 
 export function EmptyState({

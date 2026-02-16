@@ -185,7 +185,43 @@ create index medicamentos_nome_idx on medicamentos using gin (nome gin_trgm_ops)
 
 comment on table medicamentos is 'Catálogo global de medicamentos do sistema';
 
--- 9. Configurações
+-- 9. Catálogo de exames (catálogo global do sistema)
+-- --------------------------------------------
+create table catalogo_exames (
+  id          uuid primary key default gen_random_uuid(),
+  nome        text not null,
+  codigo_tuss text,
+  created_at  timestamptz not null default now()
+);
+
+create index catalogo_exames_nome_idx on catalogo_exames using gin (nome gin_trgm_ops);
+
+comment on table catalogo_exames is 'Catálogo global de exames do sistema';
+
+-- 10. Solicitações de exames
+-- --------------------------------------------
+create table solicitacoes_exames (
+  id                  uuid primary key default gen_random_uuid(),
+  paciente_id         uuid not null references pacientes(id) on delete cascade,
+  medico_id           uuid not null references auth.users(id),
+  data                date not null,
+  tipo                text not null check (tipo in ('convenio', 'particular')),
+  exames              text not null,
+  indicacao_clinica   text,
+  operadora           text,
+  numero_carteirinha  text,
+  observacoes         text,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz
+);
+
+create index solicitacoes_exames_paciente_idx on solicitacoes_exames (paciente_id);
+create index solicitacoes_exames_data_idx on solicitacoes_exames (data desc);
+create index solicitacoes_exames_medico_idx on solicitacoes_exames (medico_id);
+
+comment on table solicitacoes_exames is 'Solicitações de exames prescritas aos pacientes (por médico)';
+
+-- 11. Configurações
 -- --------------------------------------------
 create table configuracoes (
   id         uuid primary key default gen_random_uuid(),
@@ -215,6 +251,8 @@ alter table prontuarios enable row level security;
 alter table transacoes enable row level security;
 alter table receitas enable row level security;
 alter table medicamentos enable row level security;
+alter table catalogo_exames enable row level security;
+alter table solicitacoes_exames enable row level security;
 alter table configuracoes enable row level security;
 
 -- Funções SECURITY DEFINER para evitar recursão no RLS de usuarios_clinicas
@@ -282,6 +320,15 @@ create policy "Medico acessa transacoes" on transacoes for all to authenticated
 -- medicamentos: catálogo global, todos autenticados podem ler
 create policy "Acesso medicamentos" on medicamentos for all to authenticated
   using (true);
+
+-- catalogo_exames: catálogo global, todos autenticados podem ler
+create policy "Acesso catalogo_exames" on catalogo_exames for all to authenticated
+  using (true);
+
+-- solicitacoes_exames: médico e admin
+create policy "Medico acessa solicitacoes_exames" on solicitacoes_exames for all to authenticated
+  using (medico_id = auth.uid() or public.is_admin())
+  with check (medico_id = auth.uid() or public.is_admin());
 
 -- configuracoes
 create policy "Acesso configuracoes" on configuracoes for all to authenticated

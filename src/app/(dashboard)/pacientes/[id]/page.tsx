@@ -103,6 +103,12 @@ export default async function PacienteDetalhesPage({
     .eq("paciente_id", id)
     .order("data", { ascending: false });
 
+  const { data: solicitacoesExames } = await supabase
+    .from("solicitacoes_exames")
+    .select("id, data, tipo, exames")
+    .eq("paciente_id", id)
+    .order("data", { ascending: false });
+
   // Timeline data (only fetch when needed)
   const { data: agendamentos } = currentTab === "historico"
     ? await supabase
@@ -388,6 +394,66 @@ export default async function PacienteDetalhesPage({
           </p>
         )}
       </div>
+
+      {/* Solicitações de exames */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <svg aria-hidden="true" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+            </svg>
+            Solicitações de exames
+          </h2>
+          <Link
+            href={`/exames/novo?paciente_id=${paciente.id}&paciente_nome=${encodeURIComponent(paciente.nome)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+          >
+            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Nova solicitação
+          </Link>
+        </div>
+
+        {solicitacoesExames && solicitacoesExames.length > 0 ? (
+          <div className="space-y-3">
+            {solicitacoesExames.map((ex) => (
+              <Link
+                key={ex.id}
+                href={`/exames/${ex.id}`}
+                className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-gray-200 hover:bg-gray-50 sm:p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatDate(ex.data)}
+                      </span>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        ex.tipo === "convenio"
+                          ? "bg-blue-50 text-blue-700"
+                          : "bg-amber-50 text-amber-700"
+                      }`}>
+                        {ex.tipo === "convenio" ? "Convênio" : "Particular"}
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+                      {ex.exames}
+                    </p>
+                  </div>
+                  <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-gray-400">
+            Nenhuma solicitação de exame registrada.
+          </p>
+        )}
+      </div>
       </>
       )}
 
@@ -396,7 +462,7 @@ export default async function PacienteDetalhesPage({
         type TimelineEvent = {
           id: string;
           date: string;
-          type: "prontuario" | "agendamento" | "receita" | "transacao";
+          type: "prontuario" | "agendamento" | "receita" | "transacao" | "exame";
           title: string;
           subtitle?: string;
           href: string;
@@ -455,6 +521,18 @@ export default async function PacienteDetalhesPage({
           });
         }
 
+        for (const ex of solicitacoesExames ?? []) {
+          events.push({
+            id: `e-${ex.id}`,
+            date: ex.data,
+            type: "exame",
+            title: "Solicitação de exame",
+            subtitle: ex.exames?.slice(0, 80),
+            href: `/exames/${ex.id}`,
+            color: "bg-cyan-500",
+          });
+        }
+
         events.sort((a, b) => b.date.localeCompare(a.date));
 
         const TYPE_LABELS: Record<string, string> = {
@@ -462,6 +540,7 @@ export default async function PacienteDetalhesPage({
           agendamento: "Agendamento",
           receita: "Receita",
           transacao: "Financeiro",
+          exame: "Exame",
         };
 
         return (
