@@ -1,5 +1,31 @@
 import { createClient } from "@/lib/supabase/server";
 
+export function getWeekRange(dateStr: string): {
+  weekStart: string;
+  weekEnd: string;
+  weekDates: string[];
+} {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d, 12);
+  const dow = date.getDay(); // 0=Sun … 6=Sat
+  const diffToMonday = dow === 0 ? -6 : 1 - dow;
+
+  const monday = new Date(date);
+  monday.setDate(monday.getDate() + diffToMonday);
+
+  const weekDates: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const cur = new Date(monday);
+    cur.setDate(cur.getDate() + i);
+    const yy = cur.getFullYear();
+    const mm = String(cur.getMonth() + 1).padStart(2, "0");
+    const dd = String(cur.getDate()).padStart(2, "0");
+    weekDates.push(`${yy}-${mm}-${dd}`);
+  }
+
+  return { weekStart: weekDates[0], weekEnd: weekDates[5], weekDates };
+}
+
 export function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").slice(0, 2).map(Number);
   return h * 60 + m;

@@ -9,7 +9,7 @@ import {
 } from "./types";
 import { timeToMinutes } from "./utils";
 
-interface TimeSlot {
+export interface TimeSlot {
   time: string;
   timeEnd: string;
   type: "available" | "occupied" | "break" | "continuation";
