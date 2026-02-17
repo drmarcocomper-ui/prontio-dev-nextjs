@@ -12,6 +12,8 @@ create table clinicas (
   nome       text not null,
   cnpj       text,
   telefone   text,
+  telefone2  text,
+  telefone3  text,
   endereco   text,
   cidade     text,
   estado     text check (estado is null or char_length(estado) = 2),
@@ -93,8 +95,24 @@ create table agendamentos (
 create index agendamentos_data_idx on agendamentos (data);
 create index agendamentos_paciente_idx on agendamentos (paciente_id);
 create index agendamentos_clinica_idx on agendamentos (clinica_id);
+create index agendamentos_clinica_data_idx on agendamentos (clinica_id, data);
 
 comment on table agendamentos is 'Agenda de consultas e procedimentos (por clínica)';
+
+-- 4b. Log de alteração de status de agendamentos
+-- --------------------------------------------
+create table agendamento_status_log (
+  id               uuid primary key default gen_random_uuid(),
+  agendamento_id   uuid not null references agendamentos(id) on delete cascade,
+  status_anterior  text not null,
+  status_novo      text not null,
+  user_id          uuid not null references auth.users(id),
+  created_at       timestamptz not null default now()
+);
+
+create index agendamento_log_agendamento_idx on agendamento_status_log (agendamento_id);
+
+comment on table agendamento_status_log is 'Auditoria de mudanças de status em agendamentos';
 
 -- 5. Prontuários
 -- --------------------------------------------
@@ -147,6 +165,7 @@ create index transacoes_data_idx on transacoes (data desc);
 create index transacoes_tipo_idx on transacoes (tipo);
 create index transacoes_paciente_idx on transacoes (paciente_id);
 create index transacoes_clinica_idx on transacoes (clinica_id);
+create index transacoes_clinica_data_idx on transacoes (clinica_id, data desc);
 
 comment on table transacoes is 'Receitas e despesas (por clínica)';
 
@@ -221,7 +240,27 @@ create index solicitacoes_exames_medico_idx on solicitacoes_exames (medico_id);
 
 comment on table solicitacoes_exames is 'Solicitações de exames prescritas aos pacientes (por médico)';
 
--- 11. Configurações
+-- 11. Horários por profissional
+-- --------------------------------------------
+create table horarios_profissional (
+  id               uuid primary key default gen_random_uuid(),
+  clinica_id       uuid not null references clinicas(id) on delete cascade,
+  user_id          uuid not null references auth.users(id) on delete cascade,
+  dia_semana       integer not null check (dia_semana between 0 and 6),
+  ativo            boolean not null default false,
+  hora_inicio      time,
+  hora_fim         time,
+  intervalo_inicio time,
+  intervalo_fim    time,
+  duracao_consulta integer not null default 15 check (duracao_consulta between 5 and 240),
+  unique (clinica_id, user_id, dia_semana)
+);
+
+create index horarios_prof_clinica_user_idx on horarios_profissional (clinica_id, user_id);
+
+comment on table horarios_profissional is 'Horários de atendimento configurados por profissional, por clínica';
+
+-- 12. Configurações
 -- --------------------------------------------
 create table configuracoes (
   id         uuid primary key default gen_random_uuid(),
@@ -236,6 +275,8 @@ create unique index configuracoes_scope_idx on configuracoes (
   coalesce(clinica_id::text, ''),
   coalesce(user_id::text, '')
 );
+create index configuracoes_clinica_chave_idx on configuracoes (clinica_id, chave) where clinica_id is not null;
+create index configuracoes_user_chave_idx on configuracoes (user_id, chave) where user_id is not null;
 
 comment on table configuracoes is 'Configurações por escopo (clínica, usuário ou global)';
 
@@ -253,6 +294,8 @@ alter table receitas enable row level security;
 alter table medicamentos enable row level security;
 alter table catalogo_exames enable row level security;
 alter table solicitacoes_exames enable row level security;
+alter table horarios_profissional enable row level security;
+alter table agendamento_status_log enable row level security;
 alter table configuracoes enable row level security;
 
 -- Funções SECURITY DEFINER para evitar recursão no RLS de usuarios_clinicas
@@ -329,6 +372,31 @@ create policy "Acesso catalogo_exames" on catalogo_exames for all to authenticat
 create policy "Medico acessa solicitacoes_exames" on solicitacoes_exames for all to authenticated
   using (medico_id = auth.uid() or public.is_admin())
   with check (medico_id = auth.uid() or public.is_admin());
+
+-- horarios_profissional: profissional edita seus próprios; clínica pode ler
+create policy "Acesso horarios_profissional" on horarios_profissional for select to authenticated
+  using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
+
+create policy "Profissional gerencia horarios" on horarios_profissional for all to authenticated
+  using (
+    (user_id = auth.uid() and clinica_id in (select public.get_my_clinica_ids()))
+    or clinica_id in (select public.get_my_medico_clinica_ids())
+    or public.is_admin()
+  )
+  with check (
+    (user_id = auth.uid() and clinica_id in (select public.get_my_clinica_ids()))
+    or clinica_id in (select public.get_my_medico_clinica_ids())
+    or public.is_admin()
+  );
+
+-- agendamento_status_log: mesma política dos agendamentos (por clínica)
+create policy "Acesso agendamento_status_log" on agendamento_status_log for all to authenticated
+  using (
+    agendamento_id in (
+      select id from agendamentos where clinica_id in (select public.get_my_clinica_ids())
+    )
+    or public.is_admin()
+  );
 
 -- configuracoes
 create policy "Acesso configuracoes" on configuracoes for all to authenticated
