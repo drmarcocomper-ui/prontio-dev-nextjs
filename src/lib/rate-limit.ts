@@ -18,13 +18,15 @@ const store = new Map<string, RateLimitEntry>();
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+let maxWindowMs = 0;
 
 function ensureCleanup(windowMs: number) {
+  if (windowMs > maxWindowMs) maxWindowMs = windowMs;
   if (cleanupTimer) return;
   cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of store) {
-      if (now - entry.firstAttempt > windowMs) {
+      if (now - entry.firstAttempt > maxWindowMs) {
         store.delete(key);
       }
     }

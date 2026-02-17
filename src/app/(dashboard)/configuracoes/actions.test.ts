@@ -46,6 +46,9 @@ const mockDeleteMedicamento = vi.fn().mockReturnValue({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/app/(dashboard)/agenda/utils", () => ({ invalidarCacheHorario: vi.fn() }));
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: vi.fn().mockReturnValue({ success: true, remaining: 4, resetIn: 900000 }),
+}));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
@@ -136,6 +139,7 @@ vi.mock("@/lib/clinica", () => ({
 
 import { salvarConsultorio, salvarHorarios, salvarProfissional, salvarValores, alterarSenha, editarClinica, alternarStatusClinica, excluirClinica, criarClinica, salvarHorariosProfissional, criarCatalogoExame, atualizarCatalogoExame, excluirCatalogoExame, criarMedicamento, atualizarMedicamento, excluirMedicamento } from "./actions";
 import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -515,6 +519,13 @@ describe("alterarSenha", () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: null } });
     const result = await alterarSenha({}, makeFormData({ current_password: "senhaAtual", new_password: "novaSenha123", confirm_password: "novaSenha123" }));
     expect(result.error).toBe("Usuário não autenticado.");
+  });
+
+  it("retorna erro quando rate limited", async () => {
+    vi.mocked(rateLimit).mockReturnValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await alterarSenha({}, makeFormData({ current_password: "senhaAtual", new_password: "novaSenha123", confirm_password: "novaSenha123" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 });
 

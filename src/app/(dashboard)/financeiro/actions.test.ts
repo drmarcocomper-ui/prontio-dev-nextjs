@@ -147,6 +147,13 @@ describe("criarTransacao", () => {
       criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15", paciente_id: "00000000-0000-0000-0000-000000000001" }))
     ).resolves.toEqual({ fieldErrors: { paciente_id: "Paciente não encontrado." } });
   });
+
+  it("retorna erro quando getMedicoId lança exceção (com paciente_id)", async () => {
+    mockMedicoId.mockRejectedValueOnce(new Error("Sem contexto"));
+    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15", paciente_id: "00000000-0000-0000-0000-000000000001" }));
+    expect(result.error).toBe("Não foi possível identificar o médico responsável.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
 
 describe("atualizarTransacao", () => {

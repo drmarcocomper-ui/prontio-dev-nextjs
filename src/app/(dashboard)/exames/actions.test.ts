@@ -69,6 +69,7 @@ vi.mock("./types", async () => {
 });
 
 import { criarExame, atualizarExame, excluirExame } from "./actions";
+import { getMedicoId } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -139,6 +140,13 @@ describe("criarExame", () => {
     expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
     expect(mockInsert).not.toHaveBeenCalled();
   });
+
+  it("retorna erro quando getMedicoId lança exceção", async () => {
+    vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Sem contexto"));
+    const result = await criarExame({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", exames: "Hemograma completo" }));
+    expect(result.error).toBe("Não foi possível identificar o médico responsável.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
 
 describe("atualizarExame", () => {
@@ -203,6 +211,13 @@ describe("atualizarExame", () => {
     mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
     const result = await atualizarExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", exames: "Hemograma completo" }));
     expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("retorna erro quando getMedicoId lança exceção", async () => {
+    vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Sem contexto"));
+    const result = await atualizarExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", exames: "Hemograma completo" }));
+    expect(result.error).toBe("Não foi possível identificar o médico responsável.");
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

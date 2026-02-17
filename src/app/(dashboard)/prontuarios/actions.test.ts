@@ -61,6 +61,7 @@ vi.mock("./types", async () => {
 });
 
 import { criarProntuario, atualizarProntuario, excluirProntuario } from "./actions";
+import { getMedicoId } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -120,6 +121,13 @@ describe("criarProntuario", () => {
     mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
     const result = await criarProntuario({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
     expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("retorna erro quando getMedicoId lança exceção", async () => {
+    vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Sem contexto"));
+    const result = await criarProntuario({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.error).toBe("Não foi possível identificar o médico responsável.");
     expect(mockInsert).not.toHaveBeenCalled();
   });
 });
@@ -200,6 +208,13 @@ describe("atualizarProntuario", () => {
     mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
     const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
     expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("retorna erro quando getMedicoId lança exceção", async () => {
+    vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Sem contexto"));
+    const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.error).toBe("Não foi possível identificar o médico responsável.");
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

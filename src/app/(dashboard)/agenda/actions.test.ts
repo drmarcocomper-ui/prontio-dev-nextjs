@@ -141,6 +141,7 @@ import {
 } from "./actions";
 import { invalidarCacheHorario } from "./utils";
 import { STATUS_TRANSITIONS } from "./types";
+import { getClinicaAtual } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -405,6 +406,13 @@ describe("criarAgendamento", () => {
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalled();
   });
+
+  it("retorna erro quando getClinicaAtual retorna null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await criarAgendamento({}, makeFormData(validCreate));
+    expect(result.error).toBe("Clínica não selecionada.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
 
 /* ── atualizarAgendamento ──────────────────────────────────────────── */
@@ -553,6 +561,16 @@ describe("atualizarAgendamento", () => {
     );
     expect(mockUpdateEq).not.toHaveBeenCalled();
   });
+
+  it("retorna erro quando getClinicaAtual retorna null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await atualizarAgendamento(
+      {},
+      makeFormData(validUpdate)
+    );
+    expect(result.error).toBe("Clínica não selecionada.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
 });
 
 /* ── atualizarStatusAgendamento ────────────────────────────────────── */
@@ -651,6 +669,14 @@ describe("atualizarStatusAgendamento", () => {
     await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")).rejects.toThrow();
     expect(mockLogInsert).not.toHaveBeenCalled();
   });
+
+  it("lança erro quando getClinicaAtual retorna null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    await expect(
+      atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")
+    ).rejects.toThrow("Clínica não selecionada.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
 });
 
 /* ── STATUS_TRANSITIONS ────────────────────────────────────────────── */
@@ -706,5 +732,13 @@ describe("excluirAgendamento", () => {
     await expect(excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")).rejects.toThrow(
       "Erro ao excluir agendamento."
     );
+  });
+
+  it("lança erro quando getClinicaAtual retorna null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    await expect(
+      excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")
+    ).rejects.toThrow("Clínica não selecionada.");
+    expect(mockDeleteEq).not.toHaveBeenCalled();
   });
 });

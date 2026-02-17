@@ -6,6 +6,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { getClinicaAtual, getClinicasDoUsuario, isGestor, isProfissional, type Papel } from "@/lib/clinica";
 import { invalidarCacheHorario } from "@/app/(dashboard)/agenda/utils";
 import { emailValido as validarEmail, uuidValido } from "@/lib/validators";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   NOME_CONSULTORIO_MAX,
   ENDERECO_MAX,
@@ -398,6 +399,15 @@ export async function alterarSenha(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) {
     return { error: "Usuário não autenticado." };
+  }
+
+  const { success: allowed } = rateLimit({
+    key: `alterar_senha:${user.id}`,
+    maxAttempts: 5,
+    windowMs: 15 * 60 * 1000, // 15 minutos
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
   }
 
   const { error: verifyError } = await supabase.auth.signInWithPassword({
