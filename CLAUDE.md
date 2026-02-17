@@ -41,6 +41,8 @@ src/
 │       ├── pacientes/              # CRUD de pacientes
 │       ├── agenda/                 # Agendamentos por dia
 │       ├── prontuarios/            # Evoluções clínicas (SOAP)
+│       ├── receitas/               # Receitas médicas (prescrições)
+│       ├── exames/                 # Solicitações de exames
 │       ├── financeiro/             # Receitas e despesas
 │       └── configuracoes/          # Settings (abas: consultório, profissional, horários, conta)
 ├── components/
@@ -51,7 +53,7 @@ src/
 │       ├── client.ts               # createBrowserClient (Client Components)
 │       ├── server.ts               # createServerClient (Server Components / Actions)
 │       └── middleware.ts            # Refresh de sessão + proteção de rotas
-└── middleware.ts                    # Redireciona para /login se não autenticado
+├── proxy.ts                        # Middleware do Next.js (renova sessão via updateSession)
 ```
 
 ## Padrões e convenções
@@ -100,15 +102,33 @@ Schema em `supabase/schema.sql`. Tabelas:
 
 | Tabela | Descrição |
 |---|---|
-| `pacientes` | Cadastro de pacientes (CPF unique condicional) |
+| `clinicas` | Cadastro de clínicas |
+| `usuarios_clinicas` | Associação usuário-clínica (multi-tenant) |
+| `pacientes` | Cadastro de pacientes (CPF unique condicional, FK clínica) |
 | `agendamentos` | Consultas agendadas (FK paciente, check hora_fim > hora_inicio) |
+| `agendamento_status_log` | Histórico de mudanças de status dos agendamentos |
 | `prontuarios` | Evoluções clínicas SOAP (FK paciente) |
+| `receitas` | Receitas médicas / prescrições (FK paciente) |
+| `medicamentos` | Medicamentos prescritos em cada receita (FK receita) |
+| `solicitacoes_exames` | Solicitações de exames (FK paciente) |
+| `catalogo_exames` | Catálogo de tipos de exames disponíveis |
 | `transacoes` | Receitas e despesas (FK opcional paciente) |
-| `configuracoes` | Chave-valor para settings do consultório |
+| `configuracoes` | Chave-valor para settings da clínica |
+| `horarios_profissional` | Horários por profissional (unique clinica+user+dia) |
 
-RLS habilitado em todas as tabelas. Política: acesso total para `authenticated` (single-tenant).
+RLS habilitado em todas as tabelas. Multi-tenant: cada tabela filtra por `clinica_id` via políticas RLS.
 
 Extensão `pg_trgm` usada para busca parcial por nome.
+
+## Testes
+
+- **Framework**: Vitest + jsdom
+- **Config**: `vitest.config.ts` (alias `@` → `src/`, timeouts de 30s)
+- **Setup**: `src/test/setup.ts`
+- **Rodar**: `npx vitest run` (todos) ou `npx vitest run src/path/file.test.ts` (específico)
+- **Padrão de mocks**: Supabase mockado via `vi.mock("@/lib/supabase/server")` com `from()` chain
+- **Testes de actions**: Validam fieldErrors, erros de DB, e redirects (redirect lança Error("REDIRECT"))
+- **Testes de componentes**: Usam `@testing-library/react` com `render()` e queries do screen
 
 ## Variáveis de ambiente
 
