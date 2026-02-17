@@ -43,7 +43,7 @@ export async function GET() {
   const errors: string[] = [];
 
   // Tables filtered by medico_id
-  for (const table of ["pacientes", "prontuarios"] as const) {
+  for (const table of ["pacientes", "prontuarios", "receitas", "solicitacoes_exames"] as const) {
     const { data, error } = await supabase
       .from(table)
       .select("*")
@@ -56,11 +56,23 @@ export async function GET() {
   }
 
   // Tables filtered by clinica_id
-  for (const table of ["agendamentos", "transacoes", "configuracoes"] as const) {
+  for (const table of ["agendamentos", "transacoes", "configuracoes", "horarios_profissional"] as const) {
     const { data, error } = await supabase
       .from(table)
       .select("*")
       .eq("clinica_id", ctx.clinicaId);
+    if (error) {
+      errors.push(`Erro ao exportar ${table}. Tente novamente.`);
+    } else {
+      backup[table] = data ?? [];
+    }
+  }
+
+  // Global tables (no filter)
+  for (const table of ["medicamentos", "catalogo_exames"] as const) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*");
     if (error) {
       errors.push(`Erro ao exportar ${table}. Tente novamente.`);
     } else {

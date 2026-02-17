@@ -73,6 +73,17 @@ export async function enviarResetSenha(
     return { error: "Informe seu e-mail." };
   }
 
+  // Rate limit: 3 tentativas por email a cada 15 minutos
+  const { success } = rateLimit({
+    key: `reset:${email.toLowerCase()}`,
+    maxAttempts: 3,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!success) {
+    // Não revela se o rate limit foi atingido (mesmo retorno de sucesso)
+    return { success: true };
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {

@@ -21,11 +21,14 @@ vi.mock("@/lib/clinica", () => ({
 import { GET } from "./route";
 
 function makeSelectChain(data: unknown[] | null, error: unknown = null) {
-  return {
-    select: () => ({
-      eq: () => Promise.resolve({ data, error }),
-    }),
+  const result = { data, error };
+  // Thenable chain: supports both .select().eq() and direct .select() (await)
+  const chain: Record<string, unknown> = {
+    eq: () => chain,
+    then: (resolve: (v: unknown) => void) => Promise.resolve(result).then(resolve),
+    catch: () => Promise.resolve(result),
   };
+  return { select: () => chain };
 }
 
 describe("GET /api/backup", () => {
@@ -88,15 +91,26 @@ describe("GET /api/backup", () => {
     expect(body.tables.prontuarios).toHaveLength(1);
     expect(body.tables.transacoes).toHaveLength(1);
     expect(body.tables.configuracoes).toHaveLength(1);
+    expect(body.tables.receitas).toHaveLength(1);
+    expect(body.tables.solicitacoes_exames).toHaveLength(1);
+    expect(body.tables.horarios_profissional).toHaveLength(1);
+    expect(body.tables.medicamentos).toHaveLength(1);
+    expect(body.tables.catalogo_exames).toHaveLength(1);
     expect(body.errors).toBeUndefined();
 
     // Verify medico_id tables were called
     expect(mockFrom).toHaveBeenCalledWith("pacientes");
     expect(mockFrom).toHaveBeenCalledWith("prontuarios");
+    expect(mockFrom).toHaveBeenCalledWith("receitas");
+    expect(mockFrom).toHaveBeenCalledWith("solicitacoes_exames");
     // Verify clinica_id tables were called
     expect(mockFrom).toHaveBeenCalledWith("agendamentos");
     expect(mockFrom).toHaveBeenCalledWith("transacoes");
     expect(mockFrom).toHaveBeenCalledWith("configuracoes");
+    expect(mockFrom).toHaveBeenCalledWith("horarios_profissional");
+    // Verify global tables were called
+    expect(mockFrom).toHaveBeenCalledWith("medicamentos");
+    expect(mockFrom).toHaveBeenCalledWith("catalogo_exames");
   });
 
   it("inclui erros quando tabela falha", async () => {

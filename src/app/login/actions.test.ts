@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockSignInWithPassword = vi.fn();
 const mockSignOut = vi.fn();
+const mockResetPasswordForEmail = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 const mockRevalidatePath = vi.fn();
 const mockRateLimit = vi.fn();
@@ -12,6 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({
       auth: {
         signInWithPassword: mockSignInWithPassword,
         signOut: mockSignOut,
+        resetPasswordForEmail: mockResetPasswordForEmail,
       },
     }),
 }));
@@ -36,7 +38,7 @@ vi.mock("@/lib/rate-limit", () => ({
   rateLimit: (...args: unknown[]) => mockRateLimit(...args),
 }));
 
-import { login, logout } from "./actions";
+import { login, logout, enviarResetSenha } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -95,5 +97,49 @@ describe("logout", () => {
     expect(mockSignOut).toHaveBeenCalled();
     expect(mockRevalidatePath).toHaveBeenCalledWith("/", "layout");
     expect(mockRedirect).toHaveBeenCalledWith("/login");
+  });
+});
+
+describe("enviarResetSenha", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockReturnValue({ success: true, remaining: 2, resetIn: 900000 });
+  });
+
+  it("retorna erro quando email está vazio", async () => {
+    const result = await enviarResetSenha({}, makeFormData({ email: "" }));
+    expect(result.error).toBe("Informe seu e-mail.");
+  });
+
+  it("retorna success quando rate limit é atingido (não revela)", async () => {
+    mockRateLimit.mockReturnValue({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await enviarResetSenha({}, makeFormData({ email: "test@test.com" }));
+    expect(result.success).toBe(true);
+    expect(mockResetPasswordForEmail).not.toHaveBeenCalled();
+  });
+
+  it("chama rateLimit com chave baseada no email", async () => {
+    await enviarResetSenha({}, makeFormData({ email: "Test@Example.com" }));
+    expect(mockRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: "reset:test@example.com",
+        maxAttempts: 3,
+      })
+    );
+  });
+
+  it("envia email de reset com sucesso", async () => {
+    const result = await enviarResetSenha({}, makeFormData({ email: "test@test.com" }));
+    expect(result.success).toBe(true);
+    expect(mockResetPasswordForEmail).toHaveBeenCalledWith(
+      "test@test.com",
+      expect.objectContaining({ redirectTo: expect.stringContaining("/auth/callback") })
+    );
+  });
+
+  it("retorna success mesmo quando Supabase retorna erro (não revela)", async () => {
+    mockResetPasswordForEmail.mockResolvedValueOnce({ error: { message: "User not found" } });
+    const result = await enviarResetSenha({}, makeFormData({ email: "unknown@test.com" }));
+    expect(result.success).toBe(true);
   });
 });
