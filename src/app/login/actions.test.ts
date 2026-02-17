@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockSignInWithPassword = vi.fn();
 const mockSignOut = vi.fn();
 const mockResetPasswordForEmail = vi.fn().mockResolvedValue({ error: null });
+const mockUpdateUser = vi.fn();
 const mockRedirect = vi.fn();
 const mockRevalidatePath = vi.fn();
 const mockRateLimit = vi.fn();
@@ -14,6 +15,7 @@ vi.mock("@/lib/supabase/server", () => ({
         signInWithPassword: mockSignInWithPassword,
         signOut: mockSignOut,
         resetPasswordForEmail: mockResetPasswordForEmail,
+        updateUser: mockUpdateUser,
       },
     }),
 }));
@@ -38,7 +40,7 @@ vi.mock("@/lib/rate-limit", () => ({
   rateLimit: (...args: unknown[]) => mockRateLimit(...args),
 }));
 
-import { login, logout, enviarResetSenha } from "./actions";
+import { login, logout, enviarResetSenha, redefinirSenha } from "./actions";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -141,5 +143,66 @@ describe("enviarResetSenha", () => {
     mockResetPasswordForEmail.mockResolvedValueOnce({ error: { message: "User not found" } });
     const result = await enviarResetSenha({}, makeFormData({ email: "unknown@test.com" }));
     expect(result.success).toBe(true);
+  });
+});
+
+describe("redefinirSenha", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("retorna erro quando senha está vazia", async () => {
+    const result = await redefinirSenha(
+      {},
+      makeFormData({ password: "", confirm_password: "" })
+    );
+    expect(result.error).toBe("A senha deve ter pelo menos 6 caracteres.");
+  });
+
+  it("retorna erro quando senha tem menos de 6 caracteres", async () => {
+    const result = await redefinirSenha(
+      {},
+      makeFormData({ password: "12345", confirm_password: "12345" })
+    );
+    expect(result.error).toBe("A senha deve ter pelo menos 6 caracteres.");
+  });
+
+  it("retorna erro quando senha excede 100 caracteres", async () => {
+    const longPassword = "a".repeat(101);
+    const result = await redefinirSenha(
+      {},
+      makeFormData({ password: longPassword, confirm_password: longPassword })
+    );
+    expect(result.error).toBe("A senha deve ter no máximo 100 caracteres.");
+  });
+
+  it("retorna erro quando senhas não coincidem", async () => {
+    const result = await redefinirSenha(
+      {},
+      makeFormData({ password: "123456", confirm_password: "654321" })
+    );
+    expect(result.error).toBe("As senhas não coincidem.");
+  });
+
+  it("retorna erro quando supabase.auth.updateUser falha", async () => {
+    mockUpdateUser.mockResolvedValue({ error: { message: "Token expired" } });
+    const result = await redefinirSenha(
+      {},
+      makeFormData({ password: "novaSenha123", confirm_password: "novaSenha123" })
+    );
+    expect(result.error).toBe(
+      "Erro ao redefinir senha. O link pode ter expirado. Solicite um novo."
+    );
+    expect(mockUpdateUser).toHaveBeenCalledWith({ password: "novaSenha123" });
+  });
+
+  it("retorna success quando senha é redefinida com sucesso", async () => {
+    mockUpdateUser.mockResolvedValue({ error: null });
+    const result = await redefinirSenha(
+      {},
+      makeFormData({ password: "novaSenha123", confirm_password: "novaSenha123" })
+    );
+    expect(result.success).toBe(true);
+    expect(mockUpdateUser).toHaveBeenCalledWith({ password: "novaSenha123" });
   });
 });

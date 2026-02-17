@@ -21,8 +21,31 @@ const mockAdminCreateUser = vi.fn().mockResolvedValue({
   data: { user: { id: "new-user-id" } },
   error: null,
 });
+const mockInsertClinicaSelect = vi.fn().mockReturnValue({
+  single: vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000099" }, error: null }),
+});
+const mockInsertClinica = vi.fn().mockReturnValue({
+  select: () => mockInsertClinicaSelect(),
+});
+const mockInsertVinculo = vi.fn().mockResolvedValue({ error: null });
+const mockUpsertHorarios = vi.fn().mockResolvedValue({ error: null });
+const mockInsertCatalogoExame = vi.fn().mockResolvedValue({ error: null });
+const mockUpdateCatalogoExame = vi.fn().mockReturnValue({
+  eq: vi.fn().mockReturnValue({ error: null }),
+});
+const mockDeleteCatalogoExame = vi.fn().mockReturnValue({
+  eq: vi.fn().mockReturnValue({ error: null }),
+});
+const mockInsertMedicamento = vi.fn().mockResolvedValue({ error: null });
+const mockUpdateMedicamento = vi.fn().mockReturnValue({
+  eq: vi.fn().mockReturnValue({ error: null }),
+});
+const mockDeleteMedicamento = vi.fn().mockReturnValue({
+  eq: vi.fn().mockReturnValue({ error: null }),
+});
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/app/(dashboard)/agenda/utils", () => ({ invalidarCacheHorario: vi.fn() }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
@@ -30,9 +53,34 @@ vi.mock("@/lib/supabase/server", () => ({
       from: (table: string) => {
         if (table === "clinicas") {
           return {
+            insert: (data: unknown) => mockInsertClinica(data),
             update: (data: unknown) => mockUpdate(data),
             select: (cols: string) => mockSelectClinica(cols),
             delete: () => mockDeleteClinica(),
+          };
+        }
+        if (table === "usuarios_clinicas") {
+          return {
+            insert: (rows: unknown) => mockInsertVinculo(rows),
+          };
+        }
+        if (table === "horarios_profissional") {
+          return {
+            upsert: (rows: unknown, opts: unknown) => mockUpsertHorarios(rows, opts),
+          };
+        }
+        if (table === "catalogo_exames") {
+          return {
+            insert: (rows: unknown) => mockInsertCatalogoExame(rows),
+            update: (data: unknown) => mockUpdateCatalogoExame(data),
+            delete: () => mockDeleteCatalogoExame(),
+          };
+        }
+        if (table === "medicamentos") {
+          return {
+            insert: (rows: unknown) => mockInsertMedicamento(rows),
+            update: (data: unknown) => mockUpdateMedicamento(data),
+            delete: () => mockDeleteMedicamento(),
           };
         }
         return {
@@ -83,9 +131,10 @@ vi.mock("@/lib/clinica", () => ({
   ]),
   getMedicoId: vi.fn().mockResolvedValue("00000000-0000-0000-0000-000000000002"),
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
+  isProfissional: (papel: string) => papel === "superadmin" || papel === "profissional_saude",
 }));
 
-import { salvarConsultorio, salvarHorarios, salvarProfissional, salvarValores, alterarSenha, editarClinica, alternarStatusClinica, excluirClinica } from "./actions";
+import { salvarConsultorio, salvarHorarios, salvarProfissional, salvarValores, alterarSenha, editarClinica, alternarStatusClinica, excluirClinica, criarClinica, salvarHorariosProfissional, criarCatalogoExame, atualizarCatalogoExame, excluirCatalogoExame, criarMedicamento, atualizarMedicamento, excluirMedicamento } from "./actions";
 import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
@@ -652,5 +701,668 @@ describe("excluirClinica", () => {
     ]);
     await excluirClinica("00000000-0000-0000-0000-000000000088");
     expect(mockDeleteClinica).toHaveBeenCalled();
+  });
+});
+
+// ============================================
+// criarClinica
+// ============================================
+
+describe("criarClinica", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockInsertClinicaSelect.mockReturnValue({
+      single: vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000099" }, error: null }),
+    });
+  });
+
+  it("retorna erro quando nome está vazio", async () => {
+    const result = await criarClinica({}, makeFormData({ nome: "" }));
+    expect(result.error).toBe("Nome é obrigatório.");
+  });
+
+  it("retorna erro quando nome excede max length", async () => {
+    const longName = "a".repeat(256);
+    const result = await criarClinica({}, makeFormData({ nome: longName }));
+    expect(result.error).toBe("Nome excede 255 caracteres.");
+  });
+
+  it("retorna erro quando contexto é null (sem permissão)", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await criarClinica({}, makeFormData({ nome: "Nova Clínica" }));
+    expect(result.error).toBe("Sem permissão para criar clínicas.");
+  });
+
+  it("retorna erro quando papel não é gestor", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    const result = await criarClinica({}, makeFormData({ nome: "Nova Clínica" }));
+    expect(result.error).toBe("Sem permissão para criar clínicas.");
+  });
+
+  it("retorna erro quando usuário não está autenticado", async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null } });
+    const result = await criarClinica({}, makeFormData({ nome: "Nova Clínica" }));
+    expect(result.error).toBe("Usuário não autenticado.");
+  });
+
+  it("cria clínica com sucesso (gestor)", async () => {
+    const result = await criarClinica({}, makeFormData({ nome: "Nova Clínica" }));
+    expect(result.success).toBe(true);
+    expect(mockInsertClinica).toHaveBeenCalledWith({ nome: "Nova Clínica" });
+    expect(mockInsertVinculo).toHaveBeenCalledWith({
+      user_id: "00000000-0000-0000-0000-000000000002",
+      clinica_id: "00000000-0000-0000-0000-000000000099",
+      papel: "gestor",
+    });
+  });
+
+  it("preserva papel superadmin no vínculo", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "superadmin", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    const result = await criarClinica({}, makeFormData({ nome: "Nova Clínica" }));
+    expect(result.success).toBe(true);
+    expect(mockInsertVinculo).toHaveBeenCalledWith(
+      expect.objectContaining({ papel: "superadmin" }),
+    );
+  });
+
+  it("retorna erro quando insert da clínica falha", async () => {
+    mockInsertClinicaSelect.mockReturnValueOnce({
+      single: vi.fn().mockResolvedValue({ data: null, error: { message: "DB error" } }),
+    });
+    const result = await criarClinica({}, makeFormData({ nome: "Nova Clínica" }));
+    expect(result.error).toContain("Erro ao criar clínica");
+  });
+
+  it("retorna erro quando insert do vínculo falha", async () => {
+    mockInsertVinculo.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await criarClinica({}, makeFormData({ nome: "Nova Clínica" }));
+    expect(result.error).toContain("Erro ao criar vínculo");
+  });
+});
+
+// ============================================
+// salvarHorariosProfissional
+// ============================================
+
+function makeHorariosProfFormData(overrides: Record<string, string> = {}): FormData {
+  const defaults: Record<string, string> = {
+    duracao_consulta: "30",
+    // All days inactive by default
+  };
+  return makeFormData({ ...defaults, ...overrides });
+}
+
+describe("salvarHorariosProfissional", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: profissional_saude role
+    vi.mocked(getClinicaAtual).mockResolvedValue({
+      clinicaId: "00000000-0000-0000-0000-000000000001",
+      clinicaNome: "Clínica Teste",
+      papel: "profissional_saude",
+      userId: "00000000-0000-0000-0000-000000000002",
+    });
+  });
+
+  it("retorna erro quando contexto é null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData());
+    expect(result.error).toBe("Clínica não selecionada.");
+  });
+
+  it("retorna erro quando papel não é profissional", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData());
+    expect(result.error).toBe("Sem permissão para configurar horários de profissional.");
+  });
+
+  it("retorna erro quando duração é menor que 5", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({ duracao_consulta: "3" }));
+    expect(result.error).toBe("Duração deve ser entre 5 e 240 minutos.");
+  });
+
+  it("retorna erro quando duração é maior que 240", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({ duracao_consulta: "300" }));
+    expect(result.error).toBe("Duração deve ser entre 5 e 240 minutos.");
+  });
+
+  it("retorna erro quando duração não é número", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({ duracao_consulta: "abc" }));
+    expect(result.error).toBe("Duração deve ser entre 5 e 240 minutos.");
+  });
+
+  it("retorna erro quando dia ativo não tem hora_inicio", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({
+      duracao_consulta: "30",
+      ativo_seg: "true",
+      hora_fim_seg: "18:00",
+    }));
+    expect(result.error).toBe("Horário de início e fim são obrigatórios para seg.");
+  });
+
+  it("retorna erro quando dia ativo não tem hora_fim", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({
+      duracao_consulta: "30",
+      ativo_seg: "true",
+      hora_inicio_seg: "08:00",
+    }));
+    expect(result.error).toBe("Horário de início e fim são obrigatórios para seg.");
+  });
+
+  it("retorna erro quando hora_fim <= hora_inicio", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({
+      duracao_consulta: "30",
+      ativo_seg: "true",
+      hora_inicio_seg: "18:00",
+      hora_fim_seg: "08:00",
+    }));
+    expect(result.error).toBe("Horário de término deve ser posterior ao início (seg).");
+  });
+
+  it("retorna erro quando hora_fim === hora_inicio", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({
+      duracao_consulta: "30",
+      ativo_ter: "true",
+      hora_inicio_ter: "10:00",
+      hora_fim_ter: "10:00",
+    }));
+    expect(result.error).toBe("Horário de término deve ser posterior ao início (ter).");
+  });
+
+  it("retorna erro quando intervalo_fim <= intervalo_inicio", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({
+      duracao_consulta: "30",
+      ativo_seg: "true",
+      hora_inicio_seg: "08:00",
+      hora_fim_seg: "18:00",
+      intervalo_inicio_seg: "14:00",
+      intervalo_fim_seg: "12:00",
+    }));
+    expect(result.error).toBe("Intervalo inválido para seg.");
+  });
+
+  it("salva horários com sucesso (todos inativos)", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData());
+    expect(result.success).toBe(true);
+    expect(mockUpsertHorarios).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          clinica_id: "00000000-0000-0000-0000-000000000001",
+          user_id: "00000000-0000-0000-0000-000000000002",
+          dia_semana: 0,
+          ativo: false,
+          hora_inicio: null,
+          hora_fim: null,
+          duracao_consulta: 30,
+        }),
+      ]),
+      { onConflict: "clinica_id,user_id,dia_semana" },
+    );
+  });
+
+  it("salva horários com dia ativo com sucesso", async () => {
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData({
+      duracao_consulta: "45",
+      ativo_seg: "true",
+      hora_inicio_seg: "08:00",
+      hora_fim_seg: "18:00",
+      intervalo_inicio_seg: "12:00",
+      intervalo_fim_seg: "13:00",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockUpsertHorarios).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dia_semana: 1, // seg = index 1
+          ativo: true,
+          hora_inicio: "08:00",
+          hora_fim: "18:00",
+          intervalo_inicio: "12:00",
+          intervalo_fim: "13:00",
+          duracao_consulta: 45,
+        }),
+      ]),
+      { onConflict: "clinica_id,user_id,dia_semana" },
+    );
+  });
+
+  it("retorna erro quando upsert falha", async () => {
+    mockUpsertHorarios.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData());
+    expect(result.error).toContain("Erro ao salvar horários do profissional");
+  });
+
+  it("permite superadmin salvar horários", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "superadmin", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData());
+    expect(result.success).toBe(true);
+  });
+
+  it("gera 7 rows (uma por dia da semana)", async () => {
+    await salvarHorariosProfissional({}, makeHorariosProfFormData());
+    expect(mockUpsertHorarios).toHaveBeenCalledTimes(1);
+    const rows = mockUpsertHorarios.mock.calls[0][0];
+    expect(rows).toHaveLength(7);
+    expect(rows.map((r: { dia_semana: number }) => r.dia_semana)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+});
+
+// ============================================
+// criarCatalogoExame
+// ============================================
+
+describe("criarCatalogoExame", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getClinicaAtual).mockResolvedValue({
+      clinicaId: "00000000-0000-0000-0000-000000000001",
+      clinicaNome: "Clínica Teste",
+      papel: "superadmin",
+      userId: "00000000-0000-0000-0000-000000000002",
+    });
+  });
+
+  it("retorna erro quando contexto é null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await criarCatalogoExame({}, makeFormData({ nome: "Hemograma" }));
+    expect(result.error).toBe("Sem permissão.");
+  });
+
+  it("retorna erro quando papel não é superadmin", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "gestor", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    const result = await criarCatalogoExame({}, makeFormData({ nome: "Hemograma" }));
+    expect(result.error).toBe("Sem permissão.");
+  });
+
+  it("retorna erro quando nome está vazio", async () => {
+    const result = await criarCatalogoExame({}, makeFormData({ nome: "" }));
+    expect(result.error).toBe("Nome é obrigatório.");
+  });
+
+  it("retorna erro quando nome excede 255 caracteres", async () => {
+    const longName = "a".repeat(256);
+    const result = await criarCatalogoExame({}, makeFormData({ nome: longName }));
+    expect(result.error).toBe("Nome excede 255 caracteres.");
+  });
+
+  it("retorna erro quando codigo_tuss excede 50 caracteres", async () => {
+    const longCode = "a".repeat(51);
+    const result = await criarCatalogoExame({}, makeFormData({ nome: "Hemograma", codigo_tuss: longCode }));
+    expect(result.error).toBe("Código TUSS excede 50 caracteres.");
+  });
+
+  it("cria exame com sucesso", async () => {
+    const result = await criarCatalogoExame({}, makeFormData({ nome: "Hemograma", codigo_tuss: "40304361" }));
+    expect(result.success).toBe(true);
+    expect(mockInsertCatalogoExame).toHaveBeenCalledWith({ nome: "Hemograma", codigo_tuss: "40304361" });
+  });
+
+  it("cria exame sem codigo_tuss (null)", async () => {
+    const result = await criarCatalogoExame({}, makeFormData({ nome: "Hemograma" }));
+    expect(result.success).toBe(true);
+    expect(mockInsertCatalogoExame).toHaveBeenCalledWith({ nome: "Hemograma", codigo_tuss: null });
+  });
+
+  it("retorna erro quando insert falha", async () => {
+    mockInsertCatalogoExame.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await criarCatalogoExame({}, makeFormData({ nome: "Hemograma" }));
+    expect(result.error).toContain("Erro ao criar exame");
+  });
+});
+
+// ============================================
+// atualizarCatalogoExame
+// ============================================
+
+describe("atualizarCatalogoExame", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getClinicaAtual).mockResolvedValue({
+      clinicaId: "00000000-0000-0000-0000-000000000001",
+      clinicaNome: "Clínica Teste",
+      papel: "superadmin",
+      userId: "00000000-0000-0000-0000-000000000002",
+    });
+    mockUpdateCatalogoExame.mockReturnValue({
+      eq: vi.fn().mockReturnValue({ error: null }),
+    });
+  });
+
+  it("retorna erro quando contexto é null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000010", nome: "Hemograma" }));
+    expect(result.error).toBe("Sem permissão.");
+  });
+
+  it("retorna erro quando papel não é superadmin", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "gestor", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000010", nome: "Hemograma" }));
+    expect(result.error).toBe("Sem permissão.");
+  });
+
+  it("retorna erro quando id não é UUID válido", async () => {
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "invalid", nome: "Hemograma" }));
+    expect(result.error).toBe("Exame não identificado.");
+  });
+
+  it("retorna erro quando nome está vazio", async () => {
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000010", nome: "" }));
+    expect(result.error).toBe("Nome é obrigatório.");
+  });
+
+  it("retorna erro quando nome excede 255 caracteres", async () => {
+    const longName = "a".repeat(256);
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000010", nome: longName }));
+    expect(result.error).toBe("Nome excede 255 caracteres.");
+  });
+
+  it("retorna erro quando codigo_tuss excede 50 caracteres", async () => {
+    const longCode = "a".repeat(51);
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000010", nome: "Hemograma", codigo_tuss: longCode }));
+    expect(result.error).toBe("Código TUSS excede 50 caracteres.");
+  });
+
+  it("atualiza exame com sucesso", async () => {
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000010", nome: "Hemograma Completo", codigo_tuss: "40304361" }));
+    expect(result.success).toBe(true);
+    expect(mockUpdateCatalogoExame).toHaveBeenCalledWith({ nome: "Hemograma Completo", codigo_tuss: "40304361" });
+  });
+
+  it("retorna erro quando update falha", async () => {
+    mockUpdateCatalogoExame.mockReturnValueOnce({
+      eq: vi.fn().mockReturnValue({ error: { message: "DB error" } }),
+    });
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000010", nome: "Hemograma" }));
+    expect(result.error).toContain("Erro ao atualizar exame");
+  });
+});
+
+// ============================================
+// excluirCatalogoExame
+// ============================================
+
+describe("excluirCatalogoExame", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getClinicaAtual).mockResolvedValue({
+      clinicaId: "00000000-0000-0000-0000-000000000001",
+      clinicaNome: "Clínica Teste",
+      papel: "superadmin",
+      userId: "00000000-0000-0000-0000-000000000002",
+    });
+    mockDeleteCatalogoExame.mockReturnValue({
+      eq: vi.fn().mockReturnValue({ error: null }),
+    });
+  });
+
+  it("lança erro quando id não é UUID válido", async () => {
+    await expect(excluirCatalogoExame("invalid")).rejects.toThrow("ID inválido.");
+  });
+
+  it("lança erro quando contexto é null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    await expect(excluirCatalogoExame("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Sem permissão.");
+  });
+
+  it("lança erro quando papel não é superadmin", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "gestor", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    await expect(excluirCatalogoExame("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Sem permissão.");
+  });
+
+  it("exclui exame com sucesso", async () => {
+    await excluirCatalogoExame("00000000-0000-0000-0000-000000000010");
+    expect(mockDeleteCatalogoExame).toHaveBeenCalled();
+  });
+
+  it("lança erro quando delete falha", async () => {
+    mockDeleteCatalogoExame.mockReturnValueOnce({
+      eq: vi.fn().mockReturnValue({ error: { message: "FK constraint" } }),
+    });
+    await expect(excluirCatalogoExame("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Erro ao excluir exame");
+  });
+});
+
+// ============================================
+// criarMedicamento
+// ============================================
+
+describe("criarMedicamento", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getClinicaAtual).mockResolvedValue({
+      clinicaId: "00000000-0000-0000-0000-000000000001",
+      clinicaNome: "Clínica Teste",
+      papel: "superadmin",
+      userId: "00000000-0000-0000-0000-000000000002",
+    });
+  });
+
+  it("retorna erro quando contexto é null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await criarMedicamento({}, makeFormData({ nome: "Amoxicilina" }));
+    expect(result.error).toBe("Sem permissão.");
+  });
+
+  it("retorna erro quando papel não é superadmin", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "gestor", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    const result = await criarMedicamento({}, makeFormData({ nome: "Amoxicilina" }));
+    expect(result.error).toBe("Sem permissão.");
+  });
+
+  it("retorna erro quando nome está vazio", async () => {
+    const result = await criarMedicamento({}, makeFormData({ nome: "" }));
+    expect(result.error).toBe("Nome é obrigatório.");
+  });
+
+  it("retorna erro quando nome excede 255 caracteres", async () => {
+    const longName = "a".repeat(256);
+    const result = await criarMedicamento({}, makeFormData({ nome: longName }));
+    expect(result.error).toBe("Nome excede 255 caracteres.");
+  });
+
+  it("retorna erro quando posologia excede 500 caracteres", async () => {
+    const longPosologia = "a".repeat(501);
+    const result = await criarMedicamento({}, makeFormData({ nome: "Amoxicilina", posologia: longPosologia }));
+    expect(result.error).toBe("Posologia excede 500 caracteres.");
+  });
+
+  it("retorna erro quando quantidade excede 100 caracteres", async () => {
+    const longQtd = "a".repeat(101);
+    const result = await criarMedicamento({}, makeFormData({ nome: "Amoxicilina", quantidade: longQtd }));
+    expect(result.error).toBe("Quantidade excede 100 caracteres.");
+  });
+
+  it("retorna erro quando via excede 100 caracteres", async () => {
+    const longVia = "a".repeat(101);
+    const result = await criarMedicamento({}, makeFormData({ nome: "Amoxicilina", via_administracao: longVia }));
+    expect(result.error).toBe("Via excede 100 caracteres.");
+  });
+
+  it("cria medicamento com sucesso (todos os campos)", async () => {
+    const result = await criarMedicamento({}, makeFormData({
+      nome: "Amoxicilina",
+      posologia: "500mg 8/8h",
+      quantidade: "21 comprimidos",
+      via_administracao: "Oral",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockInsertMedicamento).toHaveBeenCalledWith({
+      nome: "Amoxicilina",
+      posologia: "500mg 8/8h",
+      quantidade: "21 comprimidos",
+      via_administracao: "Oral",
+    });
+  });
+
+  it("cria medicamento com campos opcionais null", async () => {
+    const result = await criarMedicamento({}, makeFormData({ nome: "Amoxicilina" }));
+    expect(result.success).toBe(true);
+    expect(mockInsertMedicamento).toHaveBeenCalledWith({
+      nome: "Amoxicilina",
+      posologia: null,
+      quantidade: null,
+      via_administracao: null,
+    });
+  });
+
+  it("retorna erro quando insert falha", async () => {
+    mockInsertMedicamento.mockResolvedValueOnce({ error: { message: "DB error" } });
+    const result = await criarMedicamento({}, makeFormData({ nome: "Amoxicilina" }));
+    expect(result.error).toContain("Erro ao criar medicamento");
+  });
+});
+
+// ============================================
+// atualizarMedicamento
+// ============================================
+
+describe("atualizarMedicamento", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getClinicaAtual).mockResolvedValue({
+      clinicaId: "00000000-0000-0000-0000-000000000001",
+      clinicaNome: "Clínica Teste",
+      papel: "superadmin",
+      userId: "00000000-0000-0000-0000-000000000002",
+    });
+    mockUpdateMedicamento.mockReturnValue({
+      eq: vi.fn().mockReturnValue({ error: null }),
+    });
+  });
+
+  it("retorna erro quando contexto é null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "Amoxicilina" }));
+    expect(result.error).toBe("Sem permissão.");
+  });
+
+  it("retorna erro quando papel não é superadmin", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "profissional_saude", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "Amoxicilina" }));
+    expect(result.error).toBe("Sem permissão.");
+  });
+
+  it("retorna erro quando id não é UUID válido", async () => {
+    const result = await atualizarMedicamento({}, makeFormData({ id: "invalid", nome: "Amoxicilina" }));
+    expect(result.error).toBe("Medicamento não identificado.");
+  });
+
+  it("retorna erro quando nome está vazio", async () => {
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "" }));
+    expect(result.error).toBe("Nome é obrigatório.");
+  });
+
+  it("retorna erro quando nome excede 255 caracteres", async () => {
+    const longName = "a".repeat(256);
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: longName }));
+    expect(result.error).toBe("Nome excede 255 caracteres.");
+  });
+
+  it("retorna erro quando posologia excede 500 caracteres", async () => {
+    const longPosologia = "a".repeat(501);
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "Med", posologia: longPosologia }));
+    expect(result.error).toBe("Posologia excede 500 caracteres.");
+  });
+
+  it("retorna erro quando quantidade excede 100 caracteres", async () => {
+    const longQtd = "a".repeat(101);
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "Med", quantidade: longQtd }));
+    expect(result.error).toBe("Quantidade excede 100 caracteres.");
+  });
+
+  it("retorna erro quando via excede 100 caracteres", async () => {
+    const longVia = "a".repeat(101);
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "Med", via_administracao: longVia }));
+    expect(result.error).toBe("Via excede 100 caracteres.");
+  });
+
+  it("atualiza medicamento com sucesso", async () => {
+    const result = await atualizarMedicamento({}, makeFormData({
+      id: "00000000-0000-0000-0000-000000000020",
+      nome: "Amoxicilina 500mg",
+      posologia: "8/8h por 7 dias",
+      quantidade: "21 comp",
+      via_administracao: "Oral",
+    }));
+    expect(result.success).toBe(true);
+    expect(mockUpdateMedicamento).toHaveBeenCalledWith({
+      nome: "Amoxicilina 500mg",
+      posologia: "8/8h por 7 dias",
+      quantidade: "21 comp",
+      via_administracao: "Oral",
+    });
+  });
+
+  it("retorna erro quando update falha", async () => {
+    mockUpdateMedicamento.mockReturnValueOnce({
+      eq: vi.fn().mockReturnValue({ error: { message: "DB error" } }),
+    });
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "Amoxicilina" }));
+    expect(result.error).toContain("Erro ao atualizar medicamento");
+  });
+});
+
+// ============================================
+// excluirMedicamento
+// ============================================
+
+describe("excluirMedicamento", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getClinicaAtual).mockResolvedValue({
+      clinicaId: "00000000-0000-0000-0000-000000000001",
+      clinicaNome: "Clínica Teste",
+      papel: "superadmin",
+      userId: "00000000-0000-0000-0000-000000000002",
+    });
+    mockDeleteMedicamento.mockReturnValue({
+      eq: vi.fn().mockReturnValue({ error: null }),
+    });
+  });
+
+  it("lança erro quando id não é UUID válido", async () => {
+    await expect(excluirMedicamento("invalid")).rejects.toThrow("ID inválido.");
+  });
+
+  it("lança erro quando contexto é null", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
+    await expect(excluirMedicamento("00000000-0000-0000-0000-000000000020")).rejects.toThrow("Sem permissão.");
+  });
+
+  it("lança erro quando papel não é superadmin", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "gestor", userId: "00000000-0000-0000-0000-000000000002",
+    });
+    await expect(excluirMedicamento("00000000-0000-0000-0000-000000000020")).rejects.toThrow("Sem permissão.");
+  });
+
+  it("exclui medicamento com sucesso", async () => {
+    await excluirMedicamento("00000000-0000-0000-0000-000000000020");
+    expect(mockDeleteMedicamento).toHaveBeenCalled();
+  });
+
+  it("lança erro quando delete falha", async () => {
+    mockDeleteMedicamento.mockReturnValueOnce({
+      eq: vi.fn().mockReturnValue({ error: { message: "FK constraint" } }),
+    });
+    await expect(excluirMedicamento("00000000-0000-0000-0000-000000000020")).rejects.toThrow("Erro ao excluir medicamento");
   });
 });
