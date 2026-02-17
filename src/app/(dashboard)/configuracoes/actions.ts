@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { getClinicaAtual, getClinicasDoUsuario, isGestor, isProfissional, type Papel } from "@/lib/clinica";
 import { invalidarCacheHorario } from "@/app/(dashboard)/agenda/utils";
-import { emailValido as validarEmail } from "@/lib/validators";
+import { emailValido as validarEmail, uuidValido } from "@/lib/validators";
 import {
   NOME_CONSULTORIO_MAX,
   ENDERECO_MAX,
@@ -476,7 +476,7 @@ export async function editarClinica(
   }
 
   const clinicaId = formData.get("clinica_id") as string;
-  if (!clinicaId) return { error: "Clínica não identificada." };
+  if (!uuidValido(clinicaId)) return { error: "Clínica não identificada." };
 
   // Verificar se o usuário tem acesso à clínica
   const clinicas = await getClinicasDoUsuario();
@@ -508,6 +508,8 @@ export async function editarClinica(
  * Alternar status ativo/inativo de uma clínica
  */
 export async function alternarStatusClinica(id: string): Promise<void> {
+  if (!uuidValido(id)) throw new Error("ID inválido.");
+
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para alterar status de clínicas.");
@@ -548,6 +550,8 @@ export async function alternarStatusClinica(id: string): Promise<void> {
  * Excluir uma clínica
  */
 export async function excluirClinica(id: string): Promise<void> {
+  if (!uuidValido(id)) throw new Error("ID inválido.");
+
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para excluir clínicas.");
@@ -627,7 +631,7 @@ export async function atualizarCatalogoExame(
   }
 
   const id = formData.get("id") as string;
-  if (!id) return { error: "Exame não identificado." };
+  if (!uuidValido(id)) return { error: "Exame não identificado." };
 
   const nome = (formData.get("nome") as string)?.trim();
   if (!nome) return { error: "Nome é obrigatório." };
@@ -655,6 +659,8 @@ export async function atualizarCatalogoExame(
  * Excluir exame do catálogo
  */
 export async function excluirCatalogoExame(id: string): Promise<void> {
+  if (!uuidValido(id)) throw new Error("ID inválido.");
+
   const ctx = await getClinicaAtual();
   if (!ctx || !isSuperAdmin(ctx.papel)) {
     throw new Error("Sem permissão.");
@@ -738,7 +744,7 @@ export async function atualizarMedicamento(
   }
 
   const id = formData.get("id") as string;
-  if (!id) return { error: "Medicamento não identificado." };
+  if (!uuidValido(id)) return { error: "Medicamento não identificado." };
 
   const nome = (formData.get("nome") as string)?.trim();
   if (!nome) return { error: "Nome é obrigatório." };
@@ -771,6 +777,8 @@ export async function atualizarMedicamento(
  * Excluir medicamento
  */
 export async function excluirMedicamento(id: string): Promise<void> {
+  if (!uuidValido(id)) throw new Error("ID inválido.");
+
   const ctx = await getClinicaAtual();
   if (!ctx || !isSuperAdmin(ctx.papel)) {
     throw new Error("Sem permissão.");

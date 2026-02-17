@@ -7,7 +7,7 @@ const mockUpdate = vi.fn().mockReturnValue({
 const mockInsert = vi.fn().mockResolvedValue({ error: null });
 const mockDelete = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ in: vi.fn().mockResolvedValue({ error: null }) }) });
 const mockUpdateUser = vi.fn().mockResolvedValue({ error: null });
-const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: "user-456", email: "user@test.com" } } });
+const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: "00000000-0000-0000-0000-000000000002", email: "user@test.com" } } });
 const mockSignInWithPassword = vi.fn().mockResolvedValue({ error: null });
 const mockSelectClinica = vi.fn().mockReturnValue({
   eq: vi.fn().mockReturnValue({
@@ -73,15 +73,15 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
-    clinicaId: "clinica-123",
+    clinicaId: "00000000-0000-0000-0000-000000000001",
     clinicaNome: "Clínica Teste",
     papel: "gestor",
-    userId: "user-456",
+    userId: "00000000-0000-0000-0000-000000000002",
   }),
   getClinicasDoUsuario: vi.fn().mockResolvedValue([
-    { id: "clinica-123", nome: "Clínica Teste", papel: "gestor" },
+    { id: "00000000-0000-0000-0000-000000000001", nome: "Clínica Teste", papel: "gestor" },
   ]),
-  getMedicoId: vi.fn().mockResolvedValue("user-456"),
+  getMedicoId: vi.fn().mockResolvedValue("00000000-0000-0000-0000-000000000002"),
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
@@ -161,9 +161,9 @@ describe("salvarHorarios", () => {
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith(
       expect.arrayContaining([
-        { chave: "duracao_consulta", valor: "30", clinica_id: "clinica-123" },
-        { chave: "horario_seg_inicio", valor: "08:00", clinica_id: "clinica-123" },
-        { chave: "horario_seg_fim", valor: "18:00", clinica_id: "clinica-123" },
+        { chave: "duracao_consulta", valor: "30", clinica_id: "00000000-0000-0000-0000-000000000001" },
+        { chave: "horario_seg_inicio", valor: "08:00", clinica_id: "00000000-0000-0000-0000-000000000001" },
+        { chave: "horario_seg_fim", valor: "18:00", clinica_id: "00000000-0000-0000-0000-000000000001" },
       ])
     );
   });
@@ -175,7 +175,7 @@ describe("salvarHorarios", () => {
     }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith([
-      { chave: "duracao_consulta", valor: "30", clinica_id: "clinica-123" },
+      { chave: "duracao_consulta", valor: "30", clinica_id: "00000000-0000-0000-0000-000000000001" },
     ]);
   });
 
@@ -186,7 +186,7 @@ describe("salvarHorarios", () => {
     }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith([
-      { chave: "duracao_consulta", valor: "30", clinica_id: "clinica-123" },
+      { chave: "duracao_consulta", valor: "30", clinica_id: "00000000-0000-0000-0000-000000000001" },
     ]);
   });
 
@@ -235,8 +235,8 @@ describe("salvarValores", () => {
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith(
       expect.arrayContaining([
-        { chave: "valor_convenio_bradesco", valor: "350.00", clinica_id: "clinica-123" },
-        { chave: "valor_convenio_unimed", valor: "400.00", clinica_id: "clinica-123" },
+        { chave: "valor_convenio_bradesco", valor: "350.00", clinica_id: "00000000-0000-0000-0000-000000000001" },
+        { chave: "valor_convenio_unimed", valor: "400.00", clinica_id: "00000000-0000-0000-0000-000000000001" },
       ])
     );
   });
@@ -248,7 +248,7 @@ describe("salvarValores", () => {
     }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith([
-      { chave: "valor_convenio_bradesco", valor: "350.00", clinica_id: "clinica-123" },
+      { chave: "valor_convenio_bradesco", valor: "350.00", clinica_id: "00000000-0000-0000-0000-000000000001" },
     ]);
   });
 
@@ -259,7 +259,7 @@ describe("salvarValores", () => {
     }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith([
-      { chave: "valor_convenio_particular", valor: "500.00", clinica_id: "clinica-123" },
+      { chave: "valor_convenio_particular", valor: "500.00", clinica_id: "00000000-0000-0000-0000-000000000001" },
     ]);
   });
 
@@ -270,7 +270,7 @@ describe("salvarValores", () => {
     }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith([
-      { chave: "valor_convenio_unimed", valor: "400.00", clinica_id: "clinica-123" },
+      { chave: "valor_convenio_unimed", valor: "400.00", clinica_id: "00000000-0000-0000-0000-000000000001" },
     ]);
   });
 
@@ -302,7 +302,7 @@ describe("salvarValores", () => {
     }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith([
-      { chave: "valor_convenio_bradesco", valor: "1350.00", clinica_id: "clinica-123" },
+      { chave: "valor_convenio_bradesco", valor: "1350.00", clinica_id: "00000000-0000-0000-0000-000000000001" },
     ]);
   });
 
@@ -340,9 +340,9 @@ describe("salvarProfissional", () => {
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith(
       expect.arrayContaining([
-        { chave: "nome_profissional", valor: "Dr. João", user_id: "user-456" },
-        { chave: "especialidade", valor: "Cardiologia", user_id: "user-456" },
-        { chave: "crm", valor: "CRM/SP 123456", user_id: "user-456" },
+        { chave: "nome_profissional", valor: "Dr. João", user_id: "00000000-0000-0000-0000-000000000002" },
+        { chave: "especialidade", valor: "Cardiologia", user_id: "00000000-0000-0000-0000-000000000002" },
+        { chave: "crm", valor: "CRM/SP 123456", user_id: "00000000-0000-0000-0000-000000000002" },
       ])
     );
   });
@@ -354,7 +354,7 @@ describe("salvarProfissional", () => {
     }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith([
-      { chave: "nome_profissional", valor: "Dr. João", user_id: "user-456" },
+      { chave: "nome_profissional", valor: "Dr. João", user_id: "00000000-0000-0000-0000-000000000002" },
     ]);
   });
 
@@ -393,7 +393,7 @@ describe("salvarProfissional", () => {
     }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith([
-      { chave: "email_profissional", valor: "dr@clinica.com", user_id: "user-456" },
+      { chave: "email_profissional", valor: "dr@clinica.com", user_id: "00000000-0000-0000-0000-000000000002" },
     ]);
   });
 
@@ -473,20 +473,20 @@ describe("editarClinica", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("edita nome da clínica com sucesso", async () => {
-    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "Nova Clínica" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000001", nome: "Nova Clínica" }));
     expect(result.success).toBe(true);
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ nome: "Nova Clínica" }));
-    expect(mockEq).toHaveBeenCalledWith("id", "clinica-123");
+    expect(mockEq).toHaveBeenCalledWith("id", "00000000-0000-0000-0000-000000000001");
   });
 
   it("retorna erro quando nome está vazio", async () => {
-    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000001", nome: "" }));
     expect(result.error).toBe("Nome é obrigatório.");
   });
 
   it("retorna erro quando nome excede max length", async () => {
     const longName = "a".repeat(256);
-    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: longName }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000001", nome: longName }));
     expect(result.error).toBe("Nome excede 255 caracteres.");
   });
 
@@ -496,35 +496,35 @@ describe("editarClinica", () => {
   });
 
   it("retorna erro quando clinicaId não pertence ao usuário", async () => {
-    const result = await editarClinica({}, makeFormData({ clinica_id: "outra-clinica", nome: "Clínica" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000099", nome: "Clínica" }));
     expect(result.error).toBe("Você não tem acesso a esta clínica.");
   });
 
   it("retorna erro quando não tem permissão (secretaria)", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "secretaria", userId: "u-1",
+      clinicaId: "00000000-0000-0000-0000-000000000003", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000004",
     });
-    const result = await editarClinica({}, makeFormData({ clinica_id: "c-1", nome: "Clínica" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000003", nome: "Clínica" }));
     expect(result.error).toBe("Sem permissão para editar clínicas.");
   });
 
   it("retorna erro quando contexto é null", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
-    const result = await editarClinica({}, makeFormData({ clinica_id: "c-1", nome: "Clínica" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000003", nome: "Clínica" }));
     expect(result.error).toBe("Sem permissão para editar clínicas.");
   });
 
   it("permite superadmin editar", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "superadmin", userId: "00000000-0000-0000-0000-000000000004",
     });
-    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "Clínica Admin" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000001", nome: "Clínica Admin" }));
     expect(result.success).toBe(true);
   });
 
   it("retorna erro quando update falha", async () => {
     mockUpdate.mockReturnValueOnce({ eq: () => ({ error: { message: "DB error" } }) });
-    const result = await editarClinica({}, makeFormData({ clinica_id: "clinica-123", nome: "Clínica" }));
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000001", nome: "Clínica" }));
     expect(result.error).toContain("Erro ao atualizar clínica");
   });
 });
@@ -540,7 +540,7 @@ describe("alternarStatusClinica", () => {
   });
 
   it("alterna de ativo para inativo", async () => {
-    await alternarStatusClinica("clinica-123");
+    await alternarStatusClinica("00000000-0000-0000-0000-000000000001");
     expect(mockSelectClinica).toHaveBeenCalledWith("ativo");
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ ativo: false }));
   });
@@ -551,49 +551,49 @@ describe("alternarStatusClinica", () => {
         single: vi.fn().mockResolvedValue({ data: { ativo: false }, error: null }),
       }),
     });
-    await alternarStatusClinica("clinica-123");
+    await alternarStatusClinica("00000000-0000-0000-0000-000000000001");
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ ativo: true }));
   });
 
   it("lança erro quando não tem permissão (secretaria)", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "secretaria", userId: "u-1",
+      clinicaId: "00000000-0000-0000-0000-000000000003", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000004",
     });
-    await expect(alternarStatusClinica("c-1")).rejects.toThrow("Sem permissão para alterar status de clínicas.");
+    await expect(alternarStatusClinica("00000000-0000-0000-0000-000000000003")).rejects.toThrow("Sem permissão para alterar status de clínicas.");
   });
 
   it("lança erro quando contexto é null", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
-    await expect(alternarStatusClinica("c-1")).rejects.toThrow("Sem permissão para alterar status de clínicas.");
+    await expect(alternarStatusClinica("00000000-0000-0000-0000-000000000003")).rejects.toThrow("Sem permissão para alterar status de clínicas.");
   });
 
   it("lança erro quando clinicaId não pertence ao usuário", async () => {
-    await expect(alternarStatusClinica("outra-clinica")).rejects.toThrow("Você não tem acesso a esta clínica.");
+    await expect(alternarStatusClinica("00000000-0000-0000-0000-000000000099")).rejects.toThrow("Você não tem acesso a esta clínica.");
   });
 
   it("lança erro quando clínica não é encontrada no DB", async () => {
     vi.mocked(getClinicasDoUsuario).mockResolvedValueOnce([
-      { id: "clinica-123", nome: "Clínica Teste", papel: "gestor" },
-      { id: "clinica-inexistente", nome: "Fantasma", papel: "gestor" },
+      { id: "00000000-0000-0000-0000-000000000001", nome: "Clínica Teste", papel: "gestor" },
+      { id: "00000000-0000-0000-0000-000000000088", nome: "Fantasma", papel: "gestor" },
     ]);
     mockSelectClinica.mockReturnValue({
       eq: vi.fn().mockReturnValue({
         single: vi.fn().mockResolvedValue({ data: null, error: { message: "not found" } }),
       }),
     });
-    await expect(alternarStatusClinica("clinica-inexistente")).rejects.toThrow("Clínica não encontrada.");
+    await expect(alternarStatusClinica("00000000-0000-0000-0000-000000000088")).rejects.toThrow("Clínica não encontrada.");
   });
 
   it("lança erro quando update falha", async () => {
     mockUpdate.mockReturnValueOnce({ eq: () => ({ error: { message: "DB error" } }) });
-    await expect(alternarStatusClinica("clinica-123")).rejects.toThrow("Erro ao atualizar clínica");
+    await expect(alternarStatusClinica("00000000-0000-0000-0000-000000000001")).rejects.toThrow("Erro ao atualizar clínica");
   });
 
   it("permite superadmin alternar status", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "superadmin", userId: "00000000-0000-0000-0000-000000000004",
     });
-    await alternarStatusClinica("clinica-123");
+    await alternarStatusClinica("00000000-0000-0000-0000-000000000001");
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ ativo: false }));
   });
 });
@@ -607,38 +607,38 @@ describe("excluirClinica", () => {
   });
 
   it("exclui clínica com sucesso", async () => {
-    await excluirClinica("clinica-123");
+    await excluirClinica("00000000-0000-0000-0000-000000000001");
     expect(mockDeleteClinica).toHaveBeenCalled();
   });
 
   it("lança erro quando não tem permissão (secretaria)", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "c-1", clinicaNome: "Teste", papel: "secretaria", userId: "u-1",
+      clinicaId: "00000000-0000-0000-0000-000000000003", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000004",
     });
-    await expect(excluirClinica("c-1")).rejects.toThrow("Sem permissão para excluir clínicas.");
+    await expect(excluirClinica("00000000-0000-0000-0000-000000000003")).rejects.toThrow("Sem permissão para excluir clínicas.");
   });
 
   it("lança erro quando contexto é null", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
-    await expect(excluirClinica("c-1")).rejects.toThrow("Sem permissão para excluir clínicas.");
+    await expect(excluirClinica("00000000-0000-0000-0000-000000000003")).rejects.toThrow("Sem permissão para excluir clínicas.");
   });
 
   it("lança erro quando clinicaId não pertence ao usuário", async () => {
-    await expect(excluirClinica("outra-clinica")).rejects.toThrow("Você não tem acesso a esta clínica.");
+    await expect(excluirClinica("00000000-0000-0000-0000-000000000099")).rejects.toThrow("Você não tem acesso a esta clínica.");
   });
 
   it("lança erro quando delete falha", async () => {
     mockDeleteClinica.mockReturnValue({
       eq: vi.fn().mockReturnValue({ error: { message: "FK constraint" } }),
     });
-    await expect(excluirClinica("clinica-123")).rejects.toThrow("Erro ao excluir clínica");
+    await expect(excluirClinica("00000000-0000-0000-0000-000000000001")).rejects.toThrow("Erro ao excluir clínica");
   });
 
   it("permite superadmin excluir", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "clinica-123", clinicaNome: "Teste", papel: "superadmin", userId: "u-1",
+      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "superadmin", userId: "00000000-0000-0000-0000-000000000004",
     });
-    await excluirClinica("clinica-123");
+    await excluirClinica("00000000-0000-0000-0000-000000000001");
     expect(mockDeleteClinica).toHaveBeenCalled();
   });
 });

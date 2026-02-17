@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { parseLocalDate } from "@/lib/date";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
 import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
@@ -104,7 +104,13 @@ function validarCamposAgendamento(formData: FormData) {
   const fieldErrors: Record<string, string> = {};
 
   campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
+  if (paciente_id && !uuidValido(paciente_id)) {
+    fieldErrors.paciente_id = "Paciente inválido.";
+  }
   campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.");
+  if (data && !DATE_RE.test(data)) {
+    fieldErrors.data = "Formato de data inválido.";
+  }
   campoObrigatorio(fieldErrors, "hora_inicio", hora_inicio, "Horário de início é obrigatório.");
   campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo.");
   valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
@@ -239,12 +245,15 @@ export async function atualizarStatusAgendamento(
   }
 
   // Log de auditoria
-  await supabase.from("agendamento_status_log").insert({
+  const { error: logError } = await supabase.from("agendamento_status_log").insert({
     agendamento_id: id,
     status_anterior: statusAtual,
     status_novo: novoStatus,
     user_id: ctx.userId,
   });
+  if (logError) {
+    console.error("Falha ao inserir log de auditoria:", logError.message);
+  }
 
   revalidatePath("/agenda");
   revalidatePath("/", "page");

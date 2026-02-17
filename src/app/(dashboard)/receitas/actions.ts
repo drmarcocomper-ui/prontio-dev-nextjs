@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { MEDICAMENTOS_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "./types";
 import { getMedicoId } from "@/lib/clinica";
 
@@ -23,7 +23,13 @@ function validarCamposReceita(formData: FormData) {
   const fieldErrors: Record<string, string> = {};
 
   campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
+  if (paciente_id && !uuidValido(paciente_id)) {
+    fieldErrors.paciente_id = "Paciente inválido.";
+  }
 
+  if (data && !DATE_RE.test(data)) {
+    fieldErrors.data = "Formato de data inválido.";
+  }
   dataNaoFutura(fieldErrors, "data", data);
 
   campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo da receita.");

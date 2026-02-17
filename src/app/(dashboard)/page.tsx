@@ -4,7 +4,14 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatTime, formatCurrency, getInitials, formatRelativeTime, formatDate } from "@/lib/format";
 import { toDateString, parseLocalDate } from "@/lib/date";
-import { FinanceiroChart, AgendamentosSemanaChart } from "./dashboard-charts";
+import dynamic from "next/dynamic";
+
+const FinanceiroChart = dynamic(
+  () => import("./dashboard-charts").then((m) => ({ default: m.FinanceiroChart })),
+);
+const AgendamentosSemanaChart = dynamic(
+  () => import("./dashboard-charts").then((m) => ({ default: m.AgendamentosSemanaChart })),
+);
 import { getClinicaAtual, getMedicoId, isProfissional, isGestor } from "@/lib/clinica";
 import {
   TIPO_LABELS as _TIPO_LABELS,

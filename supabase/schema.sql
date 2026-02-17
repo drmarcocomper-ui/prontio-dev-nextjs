@@ -418,3 +418,23 @@ create policy "Acesso configuracoes" on configuracoes for all to authenticated
     or (user_id is null and clinica_id is null)
     or public.is_admin()
   );
+
+-- ============================================
+-- Trigger: updated_at automático
+-- ============================================
+
+create or replace function public.set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger set_updated_at before update on clinicas for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on pacientes for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on agendamentos for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on prontuarios for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on transacoes for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on receitas for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on solicitacoes_exames for each row execute function public.set_updated_at();
