@@ -6,6 +6,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { getClinicaAtual, getClinicasDoUsuario, isGestor } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 import { emailValido as validarEmail } from "@/lib/validators";
+import { uuidValido } from "@/lib/validators";
 import { EMAIL_MAX, SENHA_MIN, SENHA_MAX, PAPEIS_VALIDOS, type UsuarioFormState } from "./types";
 
 /**
@@ -38,6 +39,7 @@ export async function criarUsuario(
   }
 
   if (!clinicaId) return { error: "Selecione uma clínica." };
+  if (!uuidValido(clinicaId)) return { error: "Clínica inválida." };
 
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
@@ -98,6 +100,7 @@ export async function atualizarUsuario(
   const papel = (formData.get("papel") as string)?.trim();
 
   if (!vinculoId) return { error: "Vínculo não identificado." };
+  if (!uuidValido(vinculoId)) return { error: "Vínculo inválido." };
 
   if (!PAPEIS_VALIDOS.includes(papel as typeof PAPEIS_VALIDOS[number])) {
     return { error: "Papel inválido." };
@@ -108,6 +111,7 @@ export async function atualizarUsuario(
     return { error: "Sem permissão para editar usuários." };
   }
 
+  if (userId && !uuidValido(userId)) return { error: "Usuário inválido." };
   if (userId === ctx.userId) {
     return { error: "Você não pode editar seu próprio vínculo." };
   }
@@ -139,6 +143,7 @@ export async function atualizarPapel(
   const novoPapel = (formData.get("papel") as string)?.trim();
 
   if (!vinculoId) return { error: "Vínculo não identificado." };
+  if (!uuidValido(vinculoId)) return { error: "Vínculo inválido." };
 
   if (!PAPEIS_VALIDOS.includes(novoPapel as typeof PAPEIS_VALIDOS[number])) {
     return { error: "Papel inválido." };
@@ -149,6 +154,7 @@ export async function atualizarPapel(
     return { error: "Sem permissão para alterar papéis." };
   }
 
+  if (userId && !uuidValido(userId)) return { error: "Usuário inválido." };
   if (userId === ctx.userId) {
     return { error: "Você não pode alterar seu próprio papel." };
   }
@@ -179,6 +185,7 @@ export async function resetarSenha(
   const novaSenha = (formData.get("senha") as string) ?? "";
 
   if (!userId) return { error: "Usuário não identificado." };
+  if (!uuidValido(userId)) return { error: "Usuário inválido." };
 
   if (!novaSenha || novaSenha.length < SENHA_MIN) {
     return { error: `A senha deve ter pelo menos ${SENHA_MIN} caracteres.` };
@@ -237,6 +244,7 @@ export async function resetarSenha(
  */
 export async function removerVinculo(vinculoId: string): Promise<void> {
   if (!vinculoId) throw new Error("Vínculo não identificado.");
+  if (!uuidValido(vinculoId)) throw new Error("Vínculo inválido.");
 
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {

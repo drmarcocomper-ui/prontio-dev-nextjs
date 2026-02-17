@@ -22,7 +22,9 @@ function validarCamposExame(formData: FormData) {
 
   const fieldErrors: Record<string, string> = {};
 
-  campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.");
+  if (campoObrigatorio(fieldErrors, "paciente_id", paciente_id, "Selecione um paciente.")) {
+    if (!uuidValido(paciente_id!)) fieldErrors.paciente_id = "Paciente inválido.";
+  }
 
   dataNaoFutura(fieldErrors, "data", data);
 
