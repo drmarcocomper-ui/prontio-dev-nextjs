@@ -13,9 +13,14 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: vi.fn().mockReturnValue({ success: true, remaining: 4, resetIn: 3600000 }),
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: () => mockGetClinicaAtual(),
   getMedicoId: () => mockGetMedicoId(),
+  isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
 import { GET } from "./route";
@@ -51,12 +56,25 @@ describe("GET /api/backup", () => {
     expect(body.error).toBe("Clínica não encontrada.");
   });
 
+  it("retorna 403 quando papel não é gestor", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1", email: "test@test.com" } } });
+    mockGetClinicaAtual.mockResolvedValue({
+      clinicaId: "c-1",
+      clinicaNome: "Clínica Teste",
+      papel: "secretaria",
+      userId: "u-1",
+    });
+    const res = await GET();
+    const body = JSON.parse(await (res as unknown as Response).text());
+    expect(body.error).toBe("Sem permissão para exportar dados.");
+  });
+
   it("retorna 403 quando médico não encontrado", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1", email: "test@test.com" } } });
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
       clinicaNome: "Clínica Teste",
-      papel: "profissional_saude",
+      papel: "gestor",
       userId: "u-1",
     });
     mockGetMedicoId.mockRejectedValue(new Error("Médico não encontrado"));
@@ -70,7 +88,7 @@ describe("GET /api/backup", () => {
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
       clinicaNome: "Clínica Teste",
-      papel: "profissional_saude",
+      papel: "gestor",
       userId: "u-1",
     });
     mockGetMedicoId.mockResolvedValue("u-1");
@@ -118,7 +136,7 @@ describe("GET /api/backup", () => {
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
       clinicaNome: "Clínica Teste",
-      papel: "profissional_saude",
+      papel: "gestor",
       userId: "u-1",
     });
     mockGetMedicoId.mockResolvedValue("u-1");
@@ -143,7 +161,7 @@ describe("GET /api/backup", () => {
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
       clinicaNome: "Clínica Teste",
-      papel: "profissional_saude",
+      papel: "gestor",
       userId: "u-1",
     });
     mockGetMedicoId.mockResolvedValue("u-1");

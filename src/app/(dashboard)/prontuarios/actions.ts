@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { TEXTO_MAX_LENGTH, TIPO_LABELS } from "./types";
 import { getMedicoId } from "@/lib/clinica";
 
@@ -25,7 +25,11 @@ function validarCamposProntuario(formData: FormData) {
     if (!uuidValido(paciente_id!)) fieldErrors.paciente_id = "Paciente inválido.";
   }
   if (campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.")) {
-    dataNaoFutura(fieldErrors, "data", data);
+    if (!DATE_RE.test(data)) {
+      fieldErrors.data = "Formato de data inválido.";
+    } else {
+      dataNaoFutura(fieldErrors, "data", data);
+    }
   }
   campoObrigatorio(fieldErrors, "queixa_principal", queixa_principal, "Evolução é obrigatória.");
 

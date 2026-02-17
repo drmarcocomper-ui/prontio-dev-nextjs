@@ -604,11 +604,20 @@ describe("excluirClinica", () => {
     mockDeleteClinica.mockReturnValue({
       eq: vi.fn().mockReturnValue({ error: null }),
     });
+    // Incluir clínica-88 na lista para testes de exclusão (diferente da ativa)
+    vi.mocked(getClinicasDoUsuario).mockResolvedValue([
+      { id: "00000000-0000-0000-0000-000000000001", nome: "Clínica Teste", papel: "gestor" },
+      { id: "00000000-0000-0000-0000-000000000088", nome: "Outra Clínica", papel: "gestor" },
+    ]);
   });
 
   it("exclui clínica com sucesso", async () => {
-    await excluirClinica("00000000-0000-0000-0000-000000000001");
+    await excluirClinica("00000000-0000-0000-0000-000000000088");
     expect(mockDeleteClinica).toHaveBeenCalled();
+  });
+
+  it("lança erro ao tentar excluir a clínica ativa", async () => {
+    await expect(excluirClinica("00000000-0000-0000-0000-000000000001")).rejects.toThrow("Não é possível excluir a clínica ativa.");
   });
 
   it("lança erro quando não tem permissão (secretaria)", async () => {
@@ -631,14 +640,17 @@ describe("excluirClinica", () => {
     mockDeleteClinica.mockReturnValue({
       eq: vi.fn().mockReturnValue({ error: { message: "FK constraint" } }),
     });
-    await expect(excluirClinica("00000000-0000-0000-0000-000000000001")).rejects.toThrow("Erro ao excluir clínica");
+    await expect(excluirClinica("00000000-0000-0000-0000-000000000088")).rejects.toThrow("Erro ao excluir clínica");
   });
 
   it("permite superadmin excluir", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "superadmin", userId: "00000000-0000-0000-0000-000000000004",
+      clinicaId: "00000000-0000-0000-0000-000000000003", clinicaNome: "Teste", papel: "superadmin", userId: "00000000-0000-0000-0000-000000000004",
     });
-    await excluirClinica("00000000-0000-0000-0000-000000000001");
+    vi.mocked(getClinicasDoUsuario).mockResolvedValueOnce([
+      { id: "00000000-0000-0000-0000-000000000088", nome: "Outra", papel: "superadmin" },
+    ]);
+    await excluirClinica("00000000-0000-0000-0000-000000000088");
     expect(mockDeleteClinica).toHaveBeenCalled();
   });
 });

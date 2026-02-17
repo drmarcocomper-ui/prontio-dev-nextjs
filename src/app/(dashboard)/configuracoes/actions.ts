@@ -111,6 +111,7 @@ export async function salvarHorarios(
 ): Promise<ConfigFormState> {
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
+  if (!isGestor(ctx.papel)) return { error: "Sem permissão para editar horários." };
 
   const entries: { chave: string; valor: string; clinica_id: string }[] = [];
 
@@ -258,6 +259,7 @@ export async function salvarValores(
 ): Promise<ConfigFormState> {
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
+  if (!isGestor(ctx.papel)) return { error: "Sem permissão para editar valores." };
 
   const entries: { chave: string; valor: string; clinica_id: string }[] = [];
 
@@ -428,6 +430,11 @@ export async function criarClinica(
   if (!nome) return { error: "Nome é obrigatório." };
   if (nome.length > NOME_CONSULTORIO_MAX) return { error: `Nome excede ${NOME_CONSULTORIO_MAX} caracteres.` };
 
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isGestor(ctx.papel)) {
+    return { error: "Sem permissão para criar clínicas." };
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Usuário não autenticado." };
@@ -444,8 +451,7 @@ export async function criarClinica(
   }
 
   // Create user-clinic link — preserve current user's role
-  const ctx = await getClinicaAtual();
-  const papel = ctx?.papel === "superadmin" ? "superadmin" : "gestor";
+  const papel = ctx.papel === "superadmin" ? "superadmin" : "gestor";
   const { error: vinculoError } = await supabase
     .from("usuarios_clinicas")
     .insert({
@@ -555,6 +561,10 @@ export async function excluirClinica(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para excluir clínicas.");
+  }
+
+  if (id === ctx.clinicaId) {
+    throw new Error("Não é possível excluir a clínica ativa.");
   }
 
   // Verificar se o usuário tem acesso à clínica

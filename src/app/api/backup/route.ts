@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, isGestor } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET() {
@@ -30,6 +30,10 @@ export async function GET() {
   const ctx = await getClinicaAtual();
   if (!ctx) {
     return NextResponse.json({ error: "Clínica não encontrada." }, { status: 403 });
+  }
+
+  if (!isGestor(ctx.papel)) {
+    return NextResponse.json({ error: "Sem permissão para exportar dados." }, { status: 403 });
   }
 
   let medicoId: string;

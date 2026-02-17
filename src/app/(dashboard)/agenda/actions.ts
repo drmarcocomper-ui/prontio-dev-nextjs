@@ -112,6 +112,9 @@ function validarCamposAgendamento(formData: FormData) {
     fieldErrors.data = "Formato de data inválido.";
   }
   campoObrigatorio(fieldErrors, "hora_inicio", hora_inicio, "Horário de início é obrigatório.");
+  if (hora_inicio && !/^\d{2}:\d{2}$/.test(hora_inicio)) {
+    fieldErrors.hora_inicio = "Formato de horário inválido.";
+  }
   campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo.");
   valorPermitido(fieldErrors, "tipo", tipo, Object.keys(TIPO_LABELS));
   tamanhoMaximo(fieldErrors, "observacoes", observacoes, OBSERVACOES_MAX_LENGTH);
@@ -329,6 +332,9 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
   if (!uuidValido(id)) {
     throw new Error("ID inválido.");
   }
+  if (!DATE_RE.test(data)) {
+    throw new Error("Data inválida.");
+  }
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
@@ -342,5 +348,5 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
 
   revalidatePath("/agenda");
   revalidatePath("/", "page");
-  redirect(`/agenda?data=${data}&success=Agendamento+exclu%C3%ADdo`);
+  redirect(`/agenda?data=${encodeURIComponent(data)}&success=Agendamento+exclu%C3%ADdo`);
 }

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido } from "@/lib/validators";
+import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS } from "./constants";
 import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 
@@ -37,7 +37,11 @@ function validarCamposTransacao(formData: FormData) {
   } else if (valor > VALOR_MAX) {
     fieldErrors.valor = `Valor máximo é R$ ${VALOR_MAX.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`;
   }
-  campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.");
+  if (campoObrigatorio(fieldErrors, "data", data, "Data é obrigatória.")) {
+    if (!DATE_RE.test(data)) {
+      fieldErrors.data = "Formato de data inválido.";
+    }
+  }
   if (paciente_id && !uuidValido(paciente_id)) {
     fieldErrors.paciente_id = "Paciente inválido.";
   }
