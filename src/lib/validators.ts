@@ -69,3 +69,5 @@ export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export function uuidValido(valor: string | null | undefined): boolean {
   return !!valor && UUID_RE.test(valor);
 }
+
+export const OBSERVACOES_MAX_LENGTH = 1000;

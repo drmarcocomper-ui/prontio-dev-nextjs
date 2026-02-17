@@ -4,28 +4,28 @@ import { tratarErroSupabase } from "./supabase-errors";
 describe("tratarErroSupabase", () => {
   it("retorna mensagem de duplicata para código 23505", () => {
     const result = tratarErroSupabase({ code: "23505" }, "criar", "paciente");
-    expect(result).toContain("Ja existe um registro");
+    expect(result).toContain("Já existe um registro");
   });
 
   it("retorna mensagem de vínculo para código 23503 ao excluir", () => {
     const result = tratarErroSupabase({ code: "23503" }, "excluir", "paciente");
-    expect(result).toContain("Nao e possivel excluir");
+    expect(result).toContain("Não é possível excluir");
     expect(result).toContain("registros vinculados");
   });
 
   it("retorna mensagem de referência inválida para código 23503 ao criar", () => {
     const result = tratarErroSupabase({ code: "23503" }, "criar", "agendamento");
-    expect(result).toContain("Referencia invalida");
+    expect(result).toContain("Referência inválida");
   });
 
   it("retorna mensagem de permissão para código 42501", () => {
     const result = tratarErroSupabase({ code: "42501" }, "criar", "paciente");
-    expect(result).toContain("Sem permissao");
+    expect(result).toContain("Sem permissão");
   });
 
   it("retorna mensagem de sessão expirada para código PGRST301", () => {
     const result = tratarErroSupabase({ code: "PGRST301" }, "buscar", "paciente");
-    expect(result).toContain("Sessao expirada");
+    expect(result).toContain("Sessão expirada");
   });
 
   it("retorna mensagem genérica para código desconhecido", () => {

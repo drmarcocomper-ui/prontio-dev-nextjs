@@ -62,7 +62,7 @@ export const NUMERO_MAX_LENGTH = 20;
 export const COMPLEMENTO_MAX_LENGTH = 100;
 export const BAIRRO_MAX_LENGTH = 100;
 export const CIDADE_MAX_LENGTH = 100;
-export const OBSERVACOES_MAX_LENGTH = 1000;
+export { OBSERVACOES_MAX_LENGTH } from "@/lib/validators";
 
 // --- Labels ---
 

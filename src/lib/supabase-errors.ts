@@ -2,13 +2,13 @@ type Operacao = "criar" | "atualizar" | "excluir" | "salvar" | "buscar";
 
 const PG_ERROR_MAP: Record<string, (operacao: Operacao, entidade: string) => string> = {
   "23505": () =>
-    "Ja existe um registro com esses dados. Verifique e tente novamente.",
+    "Já existe um registro com esses dados. Verifique e tente novamente.",
   "23503": (operacao) =>
     operacao === "excluir"
-      ? "Nao e possivel excluir: existem registros vinculados."
-      : "Referencia invalida. Verifique os dados e tente novamente.",
-  "42501": () => "Sem permissao para realizar esta operacao.",
-  PGRST301: () => "Sessao expirada. Faca login novamente.",
+      ? "Não é possível excluir: existem registros vinculados."
+      : "Referência inválida. Verifique os dados e tente novamente.",
+  "42501": () => "Sem permissão para realizar esta operação.",
+  PGRST301: () => "Sessão expirada. Faça login novamente.",
 };
 
 export function tratarErroSupabase(

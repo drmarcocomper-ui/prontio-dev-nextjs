@@ -32,7 +32,7 @@ export interface AgendamentoDefaults {
   observacoes?: string | null;
 }
 
-export const OBSERVACOES_MAX_LENGTH = 1000;
+export { OBSERVACOES_MAX_LENGTH } from "@/lib/validators";
 
 export const STATUS_TRANSITIONS: Record<AgendaStatus, AgendaStatus[]> = {
   agendado: ["confirmado", "cancelado", "faltou"],

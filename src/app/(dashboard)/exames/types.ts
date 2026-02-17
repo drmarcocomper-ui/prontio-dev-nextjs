@@ -55,7 +55,7 @@ export interface ExameComPaciente {
 
 export const EXAMES_MAX_LENGTH = 5000;
 export const INDICACAO_MAX_LENGTH = 2000;
-export const OBSERVACOES_MAX_LENGTH = 1000;
+export { OBSERVACOES_MAX_LENGTH } from "@/lib/validators";
 
 // --- Helpers de formatação (re-exports) ---
 export { formatDate, formatDateLong, formatDateMedium, getInitials, formatCPF } from "@/lib/format";

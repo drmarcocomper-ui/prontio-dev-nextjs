@@ -56,7 +56,7 @@ export interface ReceitaComPaciente {
 }
 
 export const MEDICAMENTOS_MAX_LENGTH = 5000;
-export const OBSERVACOES_MAX_LENGTH = 1000;
+export { OBSERVACOES_MAX_LENGTH } from "@/lib/validators";
 
 export const TIPO_LABELS: Record<ReceitaTipo, string> = {
   simples: "Simples",

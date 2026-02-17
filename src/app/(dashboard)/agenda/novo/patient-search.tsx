@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { escapeLikePattern } from "@/lib/sanitize";
+import { formatCPF } from "@/lib/format";
 import { QuickPatientModal } from "./quick-patient-modal";
 
 interface Paciente {
@@ -110,10 +111,6 @@ export function PatientSearch({
       item?.scrollIntoView?.({ block: "nearest" });
     }
   }, [activeIndex]);
-
-  function formatCPF(cpf: string) {
-    return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-  }
 
   const listboxId = "patient-search-listbox";
 
