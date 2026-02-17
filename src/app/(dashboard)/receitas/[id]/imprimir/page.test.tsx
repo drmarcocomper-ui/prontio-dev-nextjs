@@ -92,15 +92,19 @@ vi.mock("./print-button", () => ({
   PrintButton: () => <button data-testid="print-button">Imprimir</button>,
 }));
 
-vi.mock("../../types", () => ({
-  TIPO_LABELS_IMPRESSAO: {
-    simples: "Receita Simples",
-    especial: "Receita Especial",
-    controle_especial: "Receita de Controle Especial",
-  },
-  formatDateMedium: (d: string) => d,
-  formatCPF: (cpf: string) => cpf,
-}));
+vi.mock("../../types", async () => {
+  const actual = await vi.importActual("../../types");
+  return {
+    ...actual,
+    TIPO_LABELS_IMPRESSAO: {
+      simples: "Receita Simples",
+      especial: "Receita Especial",
+      controle_especial: "Receita de Controle Especial",
+    },
+    formatDateMedium: (d: string) => d,
+    formatCPF: (cpf: string) => cpf,
+  };
+});
 
 import ImprimirReceitaPage from "./page";
 
@@ -136,7 +140,7 @@ describe("ImprimirReceitaPage", () => {
     await renderPage();
     expect(screen.getByText("Dr. João")).toBeInTheDocument();
     expect(screen.getByText("Cardiologia")).toBeInTheDocument();
-    expect(screen.getByText("CRM: 12345-SP")).toBeInTheDocument();
+    expect(screen.getByText(/CRM.*12345-SP/)).toBeInTheDocument();
   });
 
   it("renderiza dados da clínica", async () => {

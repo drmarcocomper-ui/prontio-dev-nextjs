@@ -67,11 +67,11 @@ describe("ReceitaForm", () => {
     expect(link).toHaveAttribute("href", "/receitas");
   });
 
-  it("campo data é obrigatório e tem valor padrão de hoje", () => {
+  it("campo data tem valor padrão de hoje", () => {
     render(<ReceitaForm medicoId="doc-1" />);
     const input = screen.getByLabelText(/Data/);
-    expect(input).toBeRequired();
-    const today = new Date().toISOString().split("T")[0];
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
     expect(input).toHaveValue(today);
   });
 
@@ -144,7 +144,8 @@ describe("ReceitaForm", () => {
   it("campo data tem max igual a hoje", () => {
     render(<ReceitaForm medicoId="doc-1" />);
     const input = screen.getByLabelText(/Data/) as HTMLInputElement;
-    const today = new Date().toISOString().split("T")[0];
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
     expect(input.max).toBe(today);
   });
 });

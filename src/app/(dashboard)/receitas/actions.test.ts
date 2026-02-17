@@ -84,9 +84,10 @@ describe("criarReceita", () => {
     expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
   });
 
-  it("retorna fieldErrors quando data está vazia", async () => {
-    const result = await criarReceita({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "", tipo: "simples", medicamentos: "Amoxicilina" }));
-    expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
+  it("aceita data vazia (campo opcional)", async () => {
+    await expect(
+      criarReceita({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "", tipo: "simples", medicamentos: "Amoxicilina" }))
+    ).rejects.toThrow("REDIRECT");
   });
 
   it("retorna fieldErrors quando data é no futuro", async () => {
@@ -155,9 +156,10 @@ describe("atualizarReceita", () => {
     expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
   });
 
-  it("retorna fieldErrors quando data está vazia", async () => {
-    const result = await atualizarReceita({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "", tipo: "simples", medicamentos: "Amoxicilina" }));
-    expect(result.fieldErrors?.data).toBe("Data é obrigatória.");
+  it("aceita data vazia (campo opcional)", async () => {
+    await expect(
+      atualizarReceita({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "", tipo: "simples", medicamentos: "Amoxicilina" }))
+    ).rejects.toThrow("REDIRECT");
   });
 
   it("retorna fieldErrors quando data é no futuro", async () => {

@@ -26,57 +26,67 @@ vi.mock("./types", () => ({
 
 import { AgendaFilters } from "./filters";
 
+const defaultProps = {
+  currentStatus: "",
+  currentTipo: "",
+  statusCounts: { agendado: 2, confirmado: 1, em_atendimento: 0, atendido: 0, cancelado: 0, faltou: 0 },
+  total: 3,
+};
+
 describe("AgendaFilters", () => {
   beforeEach(() => {
     mockReplace.mockClear();
   });
 
-  it("renderiza select de status com todas as opções", () => {
-    render(<AgendaFilters currentStatus="" currentTipo="" />);
-    const select = screen.getByLabelText("Filtrar por status");
-    expect(select).toBeInTheDocument();
-    const options = select.querySelectorAll("option");
-    expect(options).toHaveLength(7); // Todos os status + 6 status
+  it("renderiza pill 'Todos' com contagem total", () => {
+    render(<AgendaFilters {...defaultProps} />);
+    const buttons = screen.getAllByRole("button");
+    const todosButton = buttons.find((b) => b.textContent?.includes("Todos"));
+    expect(todosButton).toBeDefined();
+    expect(todosButton?.textContent).toContain("(3)");
+  });
+
+  it("renderiza pills apenas para status com contagem > 0", () => {
+    render(<AgendaFilters {...defaultProps} />);
+    expect(screen.getByText(/Agendado/)).toBeInTheDocument();
+    expect(screen.getByText(/Confirmado/)).toBeInTheDocument();
+    expect(screen.queryByText(/Em atendimento/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Atendido/)).not.toBeInTheDocument();
   });
 
   it("renderiza select de tipo com todas as opções", () => {
-    render(<AgendaFilters currentStatus="" currentTipo="" />);
+    render(<AgendaFilters {...defaultProps} />);
     const select = screen.getByLabelText("Filtrar por tipo");
     expect(select).toBeInTheDocument();
     const options = select.querySelectorAll("option");
     expect(options).toHaveLength(3); // Todos os tipos + 2 tipos
   });
 
-  it("seleciona status correto baseado em currentStatus", () => {
-    render(<AgendaFilters currentStatus="confirmado" currentTipo="" />);
-    const select = screen.getByLabelText("Filtrar por status") as HTMLSelectElement;
-    expect(select.value).toBe("confirmado");
-  });
-
   it("seleciona tipo correto baseado em currentTipo", () => {
-    render(<AgendaFilters currentStatus="" currentTipo="retorno" />);
+    render(<AgendaFilters {...defaultProps} currentTipo="retorno" />);
     const select = screen.getByLabelText("Filtrar por tipo") as HTMLSelectElement;
     expect(select.value).toBe("retorno");
   });
 
-  it("navega ao selecionar um status", async () => {
-    render(<AgendaFilters currentStatus="" currentTipo="" />);
-    const select = screen.getByLabelText("Filtrar por status");
-    await userEvent.selectOptions(select, "confirmado");
-    expect(mockReplace).toHaveBeenCalledWith("/agenda?status=confirmado");
+  it("navega ao clicar em pill de status", async () => {
+    render(<AgendaFilters {...defaultProps} />);
+    await userEvent.click(screen.getByText(/Agendado/));
+    expect(mockReplace).toHaveBeenCalledWith("/agenda?status=agendado");
   });
 
   it("navega ao selecionar um tipo", async () => {
-    render(<AgendaFilters currentStatus="" currentTipo="" />);
+    render(<AgendaFilters {...defaultProps} />);
     const select = screen.getByLabelText("Filtrar por tipo");
     await userEvent.selectOptions(select, "retorno");
     expect(mockReplace).toHaveBeenCalledWith("/agenda?tipo=retorno");
   });
 
-  it("remove filtro ao selecionar 'Todos os status'", async () => {
-    render(<AgendaFilters currentStatus="agendado" currentTipo="" />);
-    const select = screen.getByLabelText("Filtrar por status");
-    await userEvent.selectOptions(select, "");
+  it("remove filtro ao clicar em 'Todos'", async () => {
+    render(<AgendaFilters {...defaultProps} currentStatus="agendado" />);
+    const buttons = screen.getAllByRole("button");
+    const todosButton = buttons.find((b) => b.textContent?.includes("Todos"));
+    expect(todosButton).toBeDefined();
+    await userEvent.click(todosButton!);
     expect(mockReplace).toHaveBeenCalledWith("/agenda?");
   });
 });

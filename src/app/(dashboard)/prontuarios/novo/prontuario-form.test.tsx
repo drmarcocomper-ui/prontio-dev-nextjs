@@ -70,14 +70,16 @@ describe("ProntuarioForm", () => {
     render(<ProntuarioForm medicoId="doc-1" />);
     const input = screen.getByLabelText(/Data/);
     expect(input).toBeRequired();
-    const today = new Date().toISOString().split("T")[0];
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
     expect(input).toHaveValue(today);
   });
 
   it("campo data tem max igual a hoje", () => {
     render(<ProntuarioForm medicoId="doc-1" />);
     const input = screen.getByLabelText(/Data/) as HTMLInputElement;
-    const today = new Date().toISOString().split("T")[0];
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
     expect(input.max).toBe(today);
   });
 

@@ -36,9 +36,49 @@ vi.mock("./status-badge", () => ({
 }));
 
 vi.mock("./filters", () => ({
-  AgendaFilters: ({ currentStatus, currentTipo }: { currentStatus: string; currentTipo: string }) => (
-    <div data-testid="agenda-filters" data-status={currentStatus} data-tipo={currentTipo} />
+  AgendaFilters: ({ currentStatus, currentTipo, total }: { currentStatus: string; currentTipo: string; total: number }) => (
+    <div data-testid="agenda-filters" data-status={currentStatus} data-tipo={currentTipo} data-total={total} />
   ),
+}));
+
+vi.mock("./view-toggle", () => ({
+  ViewToggle: () => <div data-testid="view-toggle" />,
+}));
+
+vi.mock("./time-grid", () => ({
+  TimeGrid: ({ slots, isDayOff }: { slots: unknown[]; isDayOff: boolean }) => (
+    <div data-testid="time-grid" data-slots={slots.length} data-dayoff={isDayOff} />
+  ),
+  generateTimeSlots: () => [],
+}));
+
+vi.mock("./weekly-grid", () => ({
+  WeeklyGrid: () => <div data-testid="weekly-grid" />,
+}));
+
+vi.mock("@/lib/date", () => ({
+  todayLocal: () => "2024-06-15",
+  parseLocalDate: (s: string) => new Date(s + "T12:00:00"),
+}));
+
+vi.mock("./utils", () => ({
+  getHorarioConfig: vi.fn().mockResolvedValue({
+    horario_seg_inicio: "08:00",
+    horario_seg_fim: "18:00",
+    horario_sab_inicio: "08:00",
+    horario_sab_fim: "18:00",
+    duracao_consulta: "15",
+  }),
+  DIAS_SEMANA: {
+    0: { key: "dom", label: "domingo" },
+    1: { key: "seg", label: "segunda-feira" },
+    2: { key: "ter", label: "terça-feira" },
+    3: { key: "qua", label: "quarta-feira" },
+    4: { key: "qui", label: "quinta-feira" },
+    5: { key: "sex", label: "sexta-feira" },
+    6: { key: "sab", label: "sábado" },
+  },
+  getWeekRange: vi.fn().mockReturnValue({ start: "2024-06-10", end: "2024-06-16", weekStart: "2024-06-10", weekEnd: "2024-06-16", weekDates: ["2024-06-10", "2024-06-11", "2024-06-12", "2024-06-13", "2024-06-14", "2024-06-15", "2024-06-16"] }),
 }));
 
 const mockData: { data: unknown[] | null } = { data: [] };
@@ -59,12 +99,21 @@ vi.mock("@/lib/clinica", () => ({
     papel: "profissional_saude",
     userId: "user-1",
   }),
+  getMedicoId: vi.fn().mockResolvedValue("user-1"),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
-      from: () => ({ select: () => createQueryResult() }),
+      from: (table: string) => {
+        if (table === "horarios_profissional") {
+          return { select: () => ({ eq: () => ({ eq: () => ({ data: null, error: null }) }) }) };
+        }
+        if (table === "configuracoes") {
+          return { select: () => ({ eq: () => ({ in: () => ({ data: [], error: null }) }) }) };
+        }
+        return { select: () => createQueryResult() };
+      },
     }),
 }));
 
@@ -122,18 +171,21 @@ describe("AgendaPage", () => {
     expect(picker).toHaveAttribute("data-date", "2024-06-15");
   });
 
-  it("mostra estado vazio quando não há agendamentos", async () => {
-    mockData.data = [];
+  it("renderiza o TimeGrid", async () => {
     await renderPage();
-    expect(screen.getByText("Nenhum agendamento para este dia")).toBeInTheDocument();
-    expect(screen.getByText("Agende uma consulta para começar.")).toBeInTheDocument();
+    expect(screen.getByTestId("time-grid")).toBeInTheDocument();
   });
 
-  it("renderiza lista de agendamentos", async () => {
+  it("renderiza o ViewToggle", async () => {
+    await renderPage();
+    expect(screen.getByTestId("view-toggle")).toBeInTheDocument();
+  });
+
+  it("renderiza AgendaFilters com contagens", async () => {
     mockData.data = agendamentosMock;
     await renderPage();
-    expect(screen.getByText("Maria Silva")).toBeInTheDocument();
-    expect(screen.getByText("João Santos")).toBeInTheDocument();
+    const filters = screen.getByTestId("agenda-filters");
+    expect(filters).toHaveAttribute("data-total", "2");
   });
 
   it("exibe contagem de agendamentos", async () => {
@@ -154,61 +206,10 @@ describe("AgendaPage", () => {
     expect(screen.getByText(/1 agendamento(?!s)/)).toBeInTheDocument();
   });
 
-  it("formata horários corretamente", async () => {
-    mockData.data = agendamentosMock;
-    await renderPage();
-    expect(screen.getByText("09:00")).toBeInTheDocument();
-    expect(screen.getByText("até 09:30")).toBeInTheDocument();
-    expect(screen.getByText("10:00")).toBeInTheDocument();
-    expect(screen.getByText("até 10:45")).toBeInTheDocument();
-  });
-
-  it("exibe tipo do agendamento com label correto", async () => {
-    mockData.data = agendamentosMock;
-    await renderPage();
-    expect(screen.getByText("Consulta")).toBeInTheDocument();
-    expect(screen.getByText("Retorno")).toBeInTheDocument();
-  });
-
-  it("exibe observações quando disponíveis", async () => {
-    mockData.data = agendamentosMock;
-    await renderPage();
-    expect(screen.getByText("Primeira consulta")).toBeInTheDocument();
-  });
-
-  it("exibe iniciais dos pacientes", async () => {
-    mockData.data = agendamentosMock;
-    await renderPage();
-    expect(screen.getByText("MS")).toBeInTheDocument();
-    expect(screen.getByText("JS")).toBeInTheDocument();
-  });
-
-  it("link do paciente aponta para a página de detalhes do agendamento", async () => {
-    mockData.data = [agendamentosMock[0]];
-    await renderPage();
-    const link = screen.getByText("Maria Silva").closest("a");
-    expect(link).toHaveAttribute("href", "/agenda/ag-1");
-  });
-
-  it("renderiza StatusSelect para cada agendamento", async () => {
-    mockData.data = agendamentosMock;
-    await renderPage();
-    expect(screen.getByTestId("status-select-ag-1")).toBeInTheDocument();
-    expect(screen.getByTestId("status-select-ag-2")).toBeInTheDocument();
-  });
-
-  it("exibe valor raw quando tipo não está em TIPO_LABELS", async () => {
-    mockData.data = [{
-      ...agendamentosMock[0],
-      tipo: "tipo_desconhecido",
-    }];
-    await renderPage();
-    expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
-  });
-
   it("lida com agendamentos null do Supabase", async () => {
     mockData.data = null;
     await renderPage();
-    expect(screen.getByText("Nenhum agendamento para este dia")).toBeInTheDocument();
+    // Page renders with 0 agendamentos — TimeGrid gets empty slots
+    expect(screen.getByText(/0 agendamentos/)).toBeInTheDocument();
   });
 });

@@ -54,8 +54,8 @@ describe("AgendamentoForm", () => {
     expect(screen.getByText(/Paciente/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Data/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Início/)).toBeInTheDocument();
-    expect(screen.getByLabelText("Tipo")).toBeInTheDocument();
-    expect(screen.getByLabelText("Observações")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Tipo/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Observações/)).toBeInTheDocument();
   });
 
   it("preenche a data com o valor padrão", () => {
@@ -65,7 +65,7 @@ describe("AgendamentoForm", () => {
 
   it("renderiza as opções de tipo", () => {
     render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
-    const select = screen.getByLabelText("Tipo");
+    const select = screen.getByLabelText(/Tipo/);
     expect(select).toBeInTheDocument();
     expect(screen.getByText("Consulta")).toBeInTheDocument();
     expect(screen.getByText("Retorno")).toBeInTheDocument();

@@ -39,9 +39,9 @@ describe("HorariosForm", () => {
     expect(screen.getByLabelText(/Duração padrão da consulta/)).toBeInTheDocument();
   });
 
-  it("duração padrão é 30 minutos", () => {
+  it("duração padrão é 15 minutos", () => {
     render(<HorariosForm defaults={emptyDefaults} />);
-    expect(screen.getByLabelText(/Duração padrão da consulta/)).toHaveValue(30);
+    expect(screen.getByLabelText(/Duração padrão da consulta/)).toHaveValue(15);
   });
 
   it("renderiza os 6 dias da semana", () => {

@@ -9,9 +9,11 @@ describe("AgendaLoading", () => {
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
-  it("renderiza 4 cards de agendamento", () => {
+  it("renderiza card com linhas de horário", () => {
     const { container } = render(<AgendaLoading />);
     const cards = container.querySelectorAll(".rounded-xl.border");
-    expect(cards.length).toBe(4);
+    expect(cards.length).toBe(1);
+    const rows = container.querySelectorAll(".flex.items-center");
+    expect(rows.length).toBeGreaterThanOrEqual(10);
   });
 });

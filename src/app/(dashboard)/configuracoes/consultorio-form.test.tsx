@@ -30,6 +30,8 @@ const emptyClinica = {
   nome: "",
   cnpj: null,
   telefone: null,
+  telefone2: null,
+  telefone3: null,
   endereco: null,
   cidade: null,
   estado: null,
@@ -39,6 +41,8 @@ const filledClinica = {
   nome: "Clínica Saúde",
   cnpj: "12345678000100",
   telefone: "11987654321",
+  telefone2: null,
+  telefone3: null,
   endereco: "Rua Exemplo, 123",
   cidade: "São Paulo",
   estado: "SP",
@@ -55,7 +59,7 @@ describe("ConsultorioForm", () => {
     render(<ConsultorioForm clinica={emptyClinica} />);
     expect(screen.getByLabelText(/Nome do consultório/)).toBeInTheDocument();
     expect(screen.getByLabelText("CNPJ")).toBeInTheDocument();
-    expect(screen.getByLabelText("Telefone")).toBeInTheDocument();
+    expect(screen.getByLabelText("Telefone 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Endereço")).toBeInTheDocument();
     expect(screen.getByLabelText("Cidade")).toBeInTheDocument();
     expect(screen.getByLabelText("Estado")).toBeInTheDocument();
@@ -88,7 +92,7 @@ describe("ConsultorioForm", () => {
 
   it("aplica máscara de telefone ao digitar", async () => {
     render(<ConsultorioForm clinica={emptyClinica} />);
-    const input = screen.getByLabelText("Telefone");
+    const input = screen.getByLabelText("Telefone 1");
     await userEvent.type(input, "11987654321");
     expect(input).toHaveValue("(11) 98765-4321");
   });
@@ -110,7 +114,7 @@ describe("ConsultorioForm", () => {
 
   it("campo telefone tem maxLength de 15", () => {
     render(<ConsultorioForm clinica={emptyClinica} />);
-    expect(screen.getByLabelText("Telefone")).toHaveAttribute("maxlength", "15");
+    expect(screen.getByLabelText("Telefone 1")).toHaveAttribute("maxlength", "15");
   });
 
   it("campo endereco tem maxLength de 255", () => {

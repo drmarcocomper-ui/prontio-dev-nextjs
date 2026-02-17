@@ -9,6 +9,13 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+vi.mock("@/lib/date", () => ({
+  todayLocal: () => "2024-06-15",
+  toDateString: (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+  parseLocalDate: (s: string) => new Date(s + "T12:00:00"),
+}));
+
 import { DatePicker } from "./date-picker";
 
 describe("DatePicker", () => {
@@ -48,8 +55,7 @@ describe("DatePicker", () => {
   });
 
   it("desabilita botão Hoje quando já é hoje", () => {
-    const today = new Date().toISOString().split("T")[0];
-    render(<DatePicker currentDate={today} />);
+    render(<DatePicker currentDate="2024-06-15" />);
     expect(screen.getByText("Hoje")).toBeDisabled();
   });
 
@@ -61,8 +67,7 @@ describe("DatePicker", () => {
   it("navega para hoje ao clicar no botão Hoje", async () => {
     render(<DatePicker currentDate="2024-01-01" />);
     await userEvent.click(screen.getByText("Hoje"));
-    const today = new Date().toISOString().split("T")[0];
-    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining(`data=${today}`));
+    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("data=2024-06-15"));
   });
 
   it("navega ao alterar o input de data", () => {

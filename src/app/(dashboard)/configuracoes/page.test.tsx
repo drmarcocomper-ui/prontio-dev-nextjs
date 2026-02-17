@@ -6,8 +6,8 @@ vi.mock("./tabs", () => ({
 }));
 
 vi.mock("./tab-utils", () => ({
-  isValidTab: (tab: string) => ["consultorio", "profissional", "horarios", "valores", "conta", "aparencia", "clinicas", "dados"].includes(tab),
-  getDefaultTab: () => "consultorio",
+  isValidTab: (tab: string) => ["clinica", "minha-conta", "medicamentos", "exames", "gestao"].includes(tab),
+  getDefaultTab: () => "clinica",
 }));
 
 vi.mock("./consultorio-form", () => ({
@@ -46,6 +46,18 @@ vi.mock("./valores-form", () => ({
   ValoresForm: () => <form data-testid="valores-form" />,
 }));
 
+vi.mock("./medicamentos-form", () => ({
+  MedicamentosForm: () => <form data-testid="medicamentos-form" />,
+}));
+
+vi.mock("./catalogo-exames-form", () => ({
+  CatalogoExamesForm: () => <form data-testid="catalogo-exames-form" />,
+}));
+
+vi.mock("./horarios-profissional-form", () => ({
+  HorariosProfissionalForm: () => <form data-testid="horarios-profissional-form" />,
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
@@ -56,18 +68,19 @@ vi.mock("@/lib/clinica", () => ({
   getClinicasDoUsuario: vi.fn().mockResolvedValue([
     { id: "clinic-1", nome: "Clínica Teste", papel: "gestor" },
   ]),
+  isProfissional: (papel: string) => ["superadmin", "gestor", "profissional_saude"].includes(papel),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: () => ({
       select: () => ({
-        in: () => Promise.resolve({ data: [{ id: "clinic-1", user_id: "user-1", papel: "gestor" }] }),
+        in: () => Promise.resolve({ data: [] }),
       }),
     }),
     auth: {
       admin: {
-        listUsers: () => Promise.resolve({ data: { users: [{ id: "user-1", email: "doc@test.com" }] } }),
+        listUsers: () => Promise.resolve({ data: { users: [] } }),
         getUserById: (id: string) => Promise.resolve({ data: { user: { id, email: "doc@test.com" } } }),
       },
     },
@@ -75,7 +88,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 const mockClinica = {
-  data: { nome: "Clínica Teste", cnpj: "12345678000100", telefone: null, endereco: null, cidade: null, estado: null },
+  data: { nome: "Clínica Teste", cnpj: "12345678000100", telefone: null, telefone2: null, telefone3: null, endereco: null, cidade: null, estado: null },
 };
 const mockConfigData: { data: { chave: string; valor: string }[] | null } = {
   data: [
@@ -104,12 +117,31 @@ vi.mock("@/lib/supabase/server", () => ({
           if (table === "usuarios_clinicas") {
             return { in: () => Promise.resolve({ data: [] }) };
           }
+          if (table === "horarios_profissional") {
+            return {
+              eq: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [] }) }) }),
+            };
+          }
+          if (table === "medicamentos") {
+            return {
+              order: () => Promise.resolve({ data: [] }),
+            };
+          }
+          if (table === "catalogo_exames") {
+            return {
+              order: () => Promise.resolve({ data: [] }),
+            };
+          }
           // configuracoes
           return Promise.resolve(mockConfigData);
         },
       }),
       auth: { getUser: () => Promise.resolve(mockUser) },
     }),
+}));
+
+vi.mock("@/app/(dashboard)/agenda/utils", () => ({
+  invalidarCacheHorario: vi.fn(),
 }));
 
 import ConfiguracoesPage from "./page";
@@ -132,7 +164,7 @@ describe("ConfiguracoesPage", () => {
     expect(tabs).toHaveAttribute("data-papel", "gestor");
   });
 
-  it("renderiza ConsultorioForm por padrão", async () => {
+  it("renderiza ConsultorioForm por padrão (tab=clinica)", async () => {
     await renderPage();
     expect(screen.getByTestId("consultorio-form")).toBeInTheDocument();
   });
@@ -145,59 +177,47 @@ describe("ConfiguracoesPage", () => {
     expect(clinica.cnpj).toBe("12345678000100");
   });
 
-  it("renderiza ProfissionalForm quando tab=profissional", async () => {
-    await renderPage({ tab: "profissional" });
-    expect(screen.getByTestId("profissional-form")).toBeInTheDocument();
-    expect(screen.queryByTestId("consultorio-form")).not.toBeInTheDocument();
-  });
-
-  it("renderiza HorariosForm quando tab=horarios", async () => {
-    await renderPage({ tab: "horarios" });
+  it("renderiza HorariosForm e ValoresForm junto com ConsultorioForm na tab clinica", async () => {
+    await renderPage();
+    expect(screen.getByTestId("consultorio-form")).toBeInTheDocument();
     expect(screen.getByTestId("horarios-form")).toBeInTheDocument();
+    expect(screen.getByTestId("valores-form")).toBeInTheDocument();
   });
 
-  it("renderiza ContaForm quando tab=conta", async () => {
-    await renderPage({ tab: "conta" });
+  it("renderiza ContaForm quando tab=minha-conta", async () => {
+    await renderPage({ tab: "minha-conta" });
     expect(screen.getByTestId("conta-form")).toBeInTheDocument();
     expect(screen.getByTestId("conta-form")).toHaveAttribute("data-email", "doc@test.com");
   });
 
+  it("renderiza ProfissionalForm e AparenciaForm na tab minha-conta", async () => {
+    await renderPage({ tab: "minha-conta" });
+    expect(screen.getByTestId("profissional-form")).toBeInTheDocument();
+    expect(screen.getByTestId("aparencia-form")).toBeInTheDocument();
+    expect(screen.queryByTestId("consultorio-form")).not.toBeInTheDocument();
+  });
+
   it("passa email vazio quando user é null", async () => {
     mockUser.data = { user: null };
-    await renderPage({ tab: "conta" });
+    await renderPage({ tab: "minha-conta" });
     expect(screen.getByTestId("conta-form")).toHaveAttribute("data-email", "");
     mockUser.data = { user: { email: "doc@test.com" } };
   });
 
-  it("renderiza AparenciaForm quando tab=aparencia", async () => {
-    await renderPage({ tab: "aparencia" });
-    expect(screen.getByTestId("aparencia-form")).toBeInTheDocument();
-  });
-
-  it("renderiza ValoresForm quando tab=valores", async () => {
-    await renderPage({ tab: "valores" });
-    expect(screen.getByTestId("valores-form")).toBeInTheDocument();
-  });
-
-  it("renderiza ClinicasForm quando tab=clinicas", async () => {
-    await renderPage({ tab: "clinicas" });
+  it("renderiza ClinicasForm e DadosForm quando tab=gestao", async () => {
+    await renderPage({ tab: "gestao" });
     expect(screen.getByTestId("clinicas-form")).toBeInTheDocument();
-  });
-
-  it("renderiza DadosForm quando tab=dados", async () => {
-    await renderPage({ tab: "dados" });
     expect(screen.getByTestId("dados-form")).toBeInTheDocument();
   });
 
   it("transforma rows null em config vazio", async () => {
     mockConfigData.data = null;
-    await renderPage({ tab: "profissional" });
-    // Should render without errors even with null config data
-    expect(screen.getByTestId("profissional-form")).toBeInTheDocument();
+    await renderPage({ tab: "minha-conta" });
+    expect(screen.getByTestId("conta-form")).toBeInTheDocument();
     mockConfigData.data = [{ chave: "duracao_consulta", valor: "30" }];
   });
 
-  it("tab inválido faz fallback para consultorio", async () => {
+  it("tab inválido faz fallback para clinica", async () => {
     await renderPage({ tab: "invalido" });
     expect(screen.getByTestId("consultorio-form")).toBeInTheDocument();
   });

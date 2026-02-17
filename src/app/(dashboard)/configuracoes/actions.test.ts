@@ -46,6 +46,19 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
+    from: (table: string) => {
+      if (table === "clinicas") {
+        return {
+          update: (data: unknown) => mockUpdate(data),
+          select: (cols: string) => mockSelectClinica(cols),
+          delete: () => mockDeleteClinica(),
+        };
+      }
+      return {
+        insert: (rows: unknown) => mockInsert(rows),
+        delete: () => mockDelete(),
+      };
+    },
     auth: {
       admin: {
         createUser: (data: unknown) => mockAdminCreateUser(data),
@@ -118,7 +131,7 @@ describe("salvarConsultorio", () => {
 
   it("retorna erro quando telefone é inválido", async () => {
     const result = await salvarConsultorio({}, makeFormData({ nome: "Clínica", telefone: "123" }));
-    expect(result.error).toBe("Telefone deve ter 10 ou 11 dígitos.");
+    expect(result.error).toBe("Telefone 1 deve ter entre 8 e 11 dígitos.");
   });
 
   it("retorna erro quando estado é inválido", async () => {

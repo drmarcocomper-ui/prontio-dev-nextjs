@@ -125,30 +125,30 @@ describe("Sidebar", () => {
       }
     });
 
-    it("quando papel=profissional_saude, oculta Financeiro, Usuários e Configurações", () => {
+    it("quando papel=profissional_saude, oculta Financeiro e Usuários", () => {
       render(<Sidebar {...defaultProps} papel={"profissional_saude" as const} />);
 
       expect(screen.getByText("Início")).toBeInTheDocument();
       expect(screen.getByText("Agenda")).toBeInTheDocument();
       expect(screen.getByText("Pacientes")).toBeInTheDocument();
       expect(screen.getByText("Relatórios")).toBeInTheDocument();
+      expect(screen.getByText("Configurações")).toBeInTheDocument();
 
       expect(screen.queryByText("Financeiro")).not.toBeInTheDocument();
       expect(screen.queryByText("Usuários")).not.toBeInTheDocument();
-      expect(screen.queryByText("Configurações")).not.toBeInTheDocument();
     });
 
-    it("quando papel=secretaria, oculta Financeiro, Relatórios, Usuários e Configurações", () => {
+    it("quando papel=secretaria, oculta Financeiro, Relatórios e Usuários", () => {
       render(<Sidebar {...defaultProps} papel={"secretaria" as const} />);
 
       expect(screen.getByText("Início")).toBeInTheDocument();
       expect(screen.getByText("Agenda")).toBeInTheDocument();
       expect(screen.getByText("Pacientes")).toBeInTheDocument();
+      expect(screen.getByText("Configurações")).toBeInTheDocument();
 
       expect(screen.queryByText("Financeiro")).not.toBeInTheDocument();
       expect(screen.queryByText("Relatórios")).not.toBeInTheDocument();
       expect(screen.queryByText("Usuários")).not.toBeInTheDocument();
-      expect(screen.queryByText("Configurações")).not.toBeInTheDocument();
     });
   });
 });

@@ -190,7 +190,8 @@ describe("PacienteForm", () => {
     it("campo data de nascimento tem max igual a hoje", () => {
       render(<PacienteForm />);
       const input = screen.getByLabelText("Data de nascimento") as HTMLInputElement;
-      const today = new Date().toISOString().split("T")[0];
+      const n = new Date();
+      const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
       expect(input.max).toBe(today);
     });
   });

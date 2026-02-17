@@ -35,6 +35,11 @@ let configSingleResult: { data: unknown | null; error: unknown } = {
   error: null,
 };
 
+let profHorarioResult: { data: unknown[] | null; error: unknown } = {
+  data: null,
+  error: null,
+};
+
 function createSelectChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   chain.eq = vi.fn().mockReturnValue(chain);
@@ -76,12 +81,20 @@ vi.mock("@/lib/clinica", () => ({
     papel: "profissional_saude",
     userId: "user-1",
   }),
+  getMedicoId: vi.fn().mockResolvedValue("user-1"),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
       from: (table: string) => {
+        if (table === "horarios_profissional") {
+          return {
+            select: () => ({
+              eq: () => ({ eq: () => profHorarioResult }),
+            }),
+          };
+        }
         if (table === "configuracoes") {
           return { select: () => configChain };
         }
@@ -139,6 +152,7 @@ const validCreate = {
   paciente_id: "00000000-0000-0000-0000-000000000001",
   data: "2024-06-15",
   hora_inicio: "09:00",
+  tipo: "consulta",
 };
 
 const validUpdate = {
@@ -152,12 +166,25 @@ describe("criarAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     invalidarCacheHorario("clinic-1");
+    invalidarCacheHorario("clinic-1", "user-1");
     mockInsert.mockResolvedValue({ error: null });
     mockUpdateEq.mockResolvedValue({ error: null });
     conflitoResult = { data: [], error: null };
     configResult = { data: [], error: null };
     pacienteSingleResult = { data: null, error: null };
     configSingleResult = { data: null, error: null };
+    profHorarioResult = {
+      data: [0, 1, 2, 3, 4, 5, 6].map((d) => ({
+        dia_semana: d,
+        ativo: d !== 0,
+        hora_inicio: "08:00",
+        hora_fim: "18:00",
+        intervalo_inicio: null,
+        intervalo_fim: null,
+        duracao_consulta: 15,
+      })),
+      error: null,
+    };
     selectChain = createSelectChain();
     configChain = createConfigChain();
     pacienteChain = createPacienteChain();
@@ -198,8 +225,17 @@ describe("criarAgendamento", () => {
   });
 
   it("usa duracao_consulta do config quando configurado", async () => {
-    configResult = {
-      data: [{ chave: "duracao_consulta", valor: "45" }],
+    invalidarCacheHorario("clinic-1", "user-1");
+    profHorarioResult = {
+      data: [0, 1, 2, 3, 4, 5, 6].map((d) => ({
+        dia_semana: d,
+        ativo: d !== 0,
+        hora_inicio: "08:00",
+        hora_fim: "18:00",
+        intervalo_inicio: null,
+        intervalo_fim: null,
+        duracao_consulta: 45,
+      })),
       error: null,
     };
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
@@ -228,7 +264,7 @@ describe("criarAgendamento", () => {
       {},
       makeFormData({ ...validCreate, hora_inicio: "09:15" })
     );
-    expect(result.fieldErrors?.hora_inicio).toBe(
+    expect(result.conflito).toBe(
       "Conflito com agendamento de Maria Silva (09:00–09:30)."
     );
     expect(mockInsert).not.toHaveBeenCalled();
@@ -251,7 +287,7 @@ describe("criarAgendamento", () => {
       {},
       makeFormData({ ...validCreate, hora_inicio: "08:00" })
     );
-    expect(result.fieldErrors?.hora_inicio).toBe(
+    expect(result.conflito).toBe(
       "Conflito com agendamento de outro paciente (08:00–08:30)."
     );
   });
@@ -318,11 +354,17 @@ describe("criarAgendamento", () => {
   });
 
   it("bloqueia agendamento fora do horário comercial configurado", async () => {
-    configResult = {
-      data: [
-        { chave: "horario_sab_inicio", valor: "09:00" },
-        { chave: "horario_sab_fim", valor: "12:00" },
-      ],
+    invalidarCacheHorario("clinic-1", "user-1");
+    profHorarioResult = {
+      data: [0, 1, 2, 3, 4, 5, 6].map((d) => ({
+        dia_semana: d,
+        ativo: d === 6,
+        hora_inicio: d === 6 ? "09:00" : "08:00",
+        hora_fim: d === 6 ? "12:00" : "18:00",
+        intervalo_inicio: null,
+        intervalo_fim: null,
+        duracao_consulta: 15,
+      })),
       error: null,
     };
 
@@ -338,19 +380,18 @@ describe("criarAgendamento", () => {
   });
 
   it("bloqueia agendamento aos domingos", async () => {
+    // Default profHorarioResult has domingo (day 0) as ativo: false
     // 2024-06-16 is Sunday
     const result = await criarAgendamento(
       {},
       makeFormData({ ...validCreate, data: "2024-06-16" })
     );
-    expect(result.fieldErrors?.hora_inicio).toBe("Não há expediente aos domingos.");
+    expect(result.fieldErrors?.hora_inicio).toBe("O profissional não atende neste dia (domingo).");
     expect(mockInsert).not.toHaveBeenCalled();
   });
 
   it("usa horário padrão 08:00-18:00 quando não há configuração", async () => {
-    configResult = { data: [], error: null };
-
-    // 2024-06-15 is Saturday, default 08:00-18:00, trying 07:00-07:15
+    // Default profHorarioResult has sab 08:00-18:00, trying 07:00-07:15
     const result = await criarAgendamento(
       {},
       makeFormData({ ...validCreate, hora_inicio: "07:00" })
@@ -361,14 +402,6 @@ describe("criarAgendamento", () => {
   });
 
   it("permite agendamento dentro do horário comercial", async () => {
-    configResult = {
-      data: [
-        { chave: "horario_sab_inicio", valor: "08:00" },
-        { chave: "horario_sab_fim", valor: "18:00" },
-      ],
-      error: null,
-    };
-
     await expect(criarAgendamento({}, makeFormData(validCreate))).rejects.toThrow("REDIRECT");
     expect(mockInsert).toHaveBeenCalled();
   });
@@ -380,12 +413,25 @@ describe("atualizarAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     invalidarCacheHorario("clinic-1");
+    invalidarCacheHorario("clinic-1", "user-1");
     mockInsert.mockResolvedValue({ error: null });
     mockUpdateEq.mockResolvedValue({ error: null });
     conflitoResult = { data: [], error: null };
     configResult = { data: [], error: null };
     pacienteSingleResult = { data: null, error: null };
     configSingleResult = { data: null, error: null };
+    profHorarioResult = {
+      data: [0, 1, 2, 3, 4, 5, 6].map((d) => ({
+        dia_semana: d,
+        ativo: d !== 0,
+        hora_inicio: "08:00",
+        hora_fim: "18:00",
+        intervalo_inicio: null,
+        intervalo_fim: null,
+        duracao_consulta: 15,
+      })),
+      error: null,
+    };
     selectChain = createSelectChain();
     configChain = createConfigChain();
     pacienteChain = createPacienteChain();
@@ -437,7 +483,7 @@ describe("atualizarAgendamento", () => {
       {},
       makeFormData({ ...validUpdate, hora_inicio: "09:30" })
     );
-    expect(result.fieldErrors?.hora_inicio).toBe(
+    expect(result.conflito).toBe(
       "Conflito com agendamento de João Santos (09:00–10:00)."
     );
     expect(mockUpdateEq).not.toHaveBeenCalled();
@@ -484,11 +530,17 @@ describe("atualizarAgendamento", () => {
   });
 
   it("bloqueia atualização fora do horário comercial", async () => {
-    configResult = {
-      data: [
-        { chave: "horario_sab_inicio", valor: "09:00" },
-        { chave: "horario_sab_fim", valor: "12:00" },
-      ],
+    invalidarCacheHorario("clinic-1", "user-1");
+    profHorarioResult = {
+      data: [0, 1, 2, 3, 4, 5, 6].map((d) => ({
+        dia_semana: d,
+        ativo: d === 6,
+        hora_inicio: d === 6 ? "09:00" : "08:00",
+        hora_fim: d === 6 ? "12:00" : "18:00",
+        intervalo_inicio: null,
+        intervalo_fim: null,
+        duracao_consulta: 15,
+      })),
       error: null,
     };
 

@@ -76,11 +76,9 @@ describe("StatusSelect", () => {
     expect(screen.getByText("Agendado")).toBeInTheDocument();
   });
 
-  it("não renderiza select para status terminal (atendido)", () => {
-    const { container } = render(
-      <StatusSelect agendamentoId="ag-1" currentStatus="atendido" />
-    );
-    expect(container.innerHTML).toBe("");
+  it("renderiza badge estático para status terminal (atendido)", () => {
+    render(<StatusSelect agendamentoId="ag-1" currentStatus="atendido" />);
+    expect(screen.getByText("Atendido")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
