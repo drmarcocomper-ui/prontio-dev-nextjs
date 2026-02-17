@@ -1,6 +1,10 @@
 /**
  * Rate limiter em memória baseado em sliding window.
  * Bloqueia após `maxAttempts` tentativas dentro de `windowMs`.
+ *
+ * Limitação: usa Map em memória — o estado é perdido ao reiniciar o
+ * servidor e NÃO é compartilhado entre múltiplas instâncias/workers.
+ * Para produção com escala horizontal, considerar Redis ou similar.
  */
 
 interface RateLimitEntry {

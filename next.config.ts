@@ -8,7 +8,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   },
   {
     key: "Strict-Transport-Security",
@@ -22,6 +22,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
+      // 'unsafe-inline' necessário para Next.js (scripts inline) e Tailwind v4 (estilos inline)
       `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
