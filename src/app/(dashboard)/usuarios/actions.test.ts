@@ -1,16 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockInsert = vi.fn().mockResolvedValue({ error: null });
-const mockUpdate = vi.fn().mockReturnValue({
-  eq: vi.fn().mockReturnValue({ error: null }),
-});
-const mockDelete = vi.fn().mockReturnValue({
-  eq: vi.fn().mockReturnValue({ error: null }),
-});
+
+// Chainable .eq() for update: .update(data).eq().eq() → { error: null }
+const mockUpdateChain: Record<string, unknown> = { error: null };
+const mockUpdateEq = vi.fn().mockReturnValue(mockUpdateChain);
+mockUpdateChain.eq = mockUpdateEq;
+const mockUpdate = vi.fn().mockReturnValue(mockUpdateChain);
+
+// Chainable .eq() for delete: .delete().eq().eq() → { error: null }
+const mockDeleteChain: Record<string, unknown> = { error: null };
+const mockDeleteEq = vi.fn().mockReturnValue(mockDeleteChain);
+mockDeleteChain.eq = mockDeleteEq;
+const mockDelete = vi.fn().mockReturnValue(mockDeleteChain);
+
+// Chainable .eq() for select: .select().eq().eq().single()
 const mockSelectSingle = vi.fn().mockResolvedValue({
   data: { user_id: "other-user" },
   error: null,
 });
+const mockSelectChain: Record<string, unknown> = { single: () => mockSelectSingle() };
+const mockSelectEq = vi.fn().mockReturnValue(mockSelectChain);
+mockSelectChain.eq = mockSelectEq;
+
 const mockAdminCreateUser = vi.fn().mockResolvedValue({
   data: { user: { id: "new-user-id" } },
   error: null,
@@ -26,11 +38,7 @@ vi.mock("@/lib/supabase/server", () => ({
         insert: (rows: unknown) => mockInsert(rows),
         update: (data: unknown) => mockUpdate(data),
         delete: () => mockDelete(),
-        select: () => ({
-          eq: () => ({
-            single: () => mockSelectSingle(),
-          }),
-        }),
+        select: () => ({ eq: mockSelectEq }),
       }),
     }),
 }));
@@ -71,6 +79,12 @@ function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
   Object.entries(data).forEach(([k, v]) => fd.set(k, v));
   return fd;
+}
+
+function chainableError(error: unknown) {
+  const r: Record<string, unknown> = { error };
+  r.eq = vi.fn().mockReturnValue(r);
+  return r;
 }
 
 describe("criarUsuario", () => {
@@ -217,8 +231,14 @@ describe("atualizarUsuario", () => {
     expect(mockUpdate).toHaveBeenCalledWith({ papel: "gestor" });
   });
 
+  it("filtra update por clinica_id (previne IDOR)", async () => {
+    await atualizarUsuario({}, makeFormData({ vinculo_id: "v-1", user_id: "other-user", papel: "gestor" }));
+    expect(mockUpdateEq).toHaveBeenCalledWith("id", "v-1");
+    expect(mockUpdateEq).toHaveBeenCalledWith("clinica_id", "clinica-123");
+  });
+
   it("retorna erro quando update falha", async () => {
-    mockUpdate.mockReturnValueOnce({ eq: () => ({ error: { message: "DB error" } }) });
+    mockUpdate.mockReturnValueOnce(chainableError({ message: "DB error" }));
     const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "v-1", user_id: "other-user", papel: "gestor" }));
     expect(result.error).toContain("Erro ao atualizar usuário");
   });
@@ -256,8 +276,14 @@ describe("atualizarPapel", () => {
     expect(mockUpdate).toHaveBeenCalledWith({ papel: "gestor" });
   });
 
+  it("filtra update por clinica_id (previne IDOR)", async () => {
+    await atualizarPapel({}, makeFormData({ vinculo_id: "v-1", user_id: "other-user", papel: "gestor" }));
+    expect(mockUpdateEq).toHaveBeenCalledWith("id", "v-1");
+    expect(mockUpdateEq).toHaveBeenCalledWith("clinica_id", "clinica-123");
+  });
+
   it("retorna erro quando update falha", async () => {
-    mockUpdate.mockReturnValueOnce({ eq: () => ({ error: { message: "DB error" } }) });
+    mockUpdate.mockReturnValueOnce(chainableError({ message: "DB error" }));
     const result = await atualizarPapel({}, makeFormData({ vinculo_id: "v-1", user_id: "other-user", papel: "gestor" }));
     expect(result.error).toContain("Erro ao atualizar papel");
   });
@@ -293,6 +319,19 @@ describe("resetarSenha", () => {
   it("impede auto-reset", async () => {
     const result = await resetarSenha({}, makeFormData({ user_id: "user-456", senha: "123456" }));
     expect(result.error).toBe("Use a aba Conta nas Configurações para alterar sua própria senha.");
+  });
+
+  it("retorna erro quando usuário não pertence à clínica (previne IDOR)", async () => {
+    mockSelectSingle.mockResolvedValueOnce({ data: null, error: null });
+    const result = await resetarSenha({}, makeFormData({ user_id: "stranger-user", senha: "123456" }));
+    expect(result.error).toBe("Usuário não encontrado nesta clínica.");
+    expect(mockAdminUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it("verifica clinica_id ao buscar vínculo do usuário", async () => {
+    await resetarSenha({}, makeFormData({ user_id: "other-user", senha: "novaSenha123" }));
+    expect(mockSelectEq).toHaveBeenCalledWith("user_id", "other-user");
+    expect(mockSelectEq).toHaveBeenCalledWith("clinica_id", "clinica-123");
   });
 
   it("reseta senha com sucesso", async () => {
@@ -334,6 +373,19 @@ describe("removerVinculo", () => {
     await expect(removerVinculo("v-1")).rejects.toThrow("Sem permissão para remover vínculos.");
   });
 
+  it("lança erro quando vínculo não pertence à clínica (previne IDOR)", async () => {
+    mockSelectSingle.mockResolvedValueOnce({ data: null, error: null });
+    await expect(removerVinculo("v-1")).rejects.toThrow("Vínculo não encontrado nesta clínica.");
+  });
+
+  it("filtra select e delete por clinica_id", async () => {
+    await removerVinculo("v-1");
+    expect(mockSelectEq).toHaveBeenCalledWith("id", "v-1");
+    expect(mockSelectEq).toHaveBeenCalledWith("clinica_id", "clinica-123");
+    expect(mockDeleteEq).toHaveBeenCalledWith("id", "v-1");
+    expect(mockDeleteEq).toHaveBeenCalledWith("clinica_id", "clinica-123");
+  });
+
   it("impede auto-remoção", async () => {
     mockSelectSingle.mockResolvedValueOnce({
       data: { user_id: "user-456" },
@@ -348,9 +400,7 @@ describe("removerVinculo", () => {
   });
 
   it("lança erro quando delete falha", async () => {
-    mockDelete.mockReturnValueOnce({
-      eq: vi.fn().mockReturnValue({ error: { message: "FK constraint" } }),
-    });
+    mockDelete.mockReturnValueOnce(chainableError({ message: "FK constraint" }));
     await expect(removerVinculo("v-1")).rejects.toThrow("Erro ao excluir vínculo");
   });
 });

@@ -116,7 +116,8 @@ export async function atualizarUsuario(
   const { error } = await supabase
     .from("usuarios_clinicas")
     .update({ papel })
-    .eq("id", vinculoId);
+    .eq("id", vinculoId)
+    .eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "usuário") };
@@ -156,7 +157,8 @@ export async function atualizarPapel(
   const { error } = await supabase
     .from("usuarios_clinicas")
     .update({ papel: novoPapel })
-    .eq("id", vinculoId);
+    .eq("id", vinculoId)
+    .eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "papel do usuário") };
@@ -203,6 +205,19 @@ export async function resetarSenha(
     return { error: "Muitas tentativas. Aguarde 1 hora antes de tentar novamente." };
   }
 
+  // Verificar que o usuário-alvo pertence à clínica do caller
+  const supabase = await createClient();
+  const { data: vinculo } = await supabase
+    .from("usuarios_clinicas")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("clinica_id", ctx.clinicaId)
+    .single();
+
+  if (!vinculo) {
+    return { error: "Usuário não encontrado nesta clínica." };
+  }
+
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const adminSupabase = createAdminClient();
 
@@ -228,22 +243,28 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
     throw new Error("Sem permissão para remover vínculos.");
   }
 
-  // Buscar vínculo para verificar auto-remoção
+  // Buscar vínculo para verificar auto-remoção (scoped pela clínica atual)
   const supabase = await createClient();
   const { data: vinculo } = await supabase
     .from("usuarios_clinicas")
     .select("user_id")
     .eq("id", vinculoId)
+    .eq("clinica_id", ctx.clinicaId)
     .single();
 
-  if (vinculo?.user_id === ctx.userId) {
+  if (!vinculo) {
+    throw new Error("Vínculo não encontrado nesta clínica.");
+  }
+
+  if (vinculo.user_id === ctx.userId) {
     throw new Error("Você não pode remover seu próprio vínculo.");
   }
 
   const { error } = await supabase
     .from("usuarios_clinicas")
     .delete()
-    .eq("id", vinculoId);
+    .eq("id", vinculoId)
+    .eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "vínculo do usuário"));
