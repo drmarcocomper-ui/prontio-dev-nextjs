@@ -81,7 +81,7 @@ export async function criarExame(
   }
 
   revalidatePath("/exames");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   revalidatePath(`/pacientes/${fields.paciente_id}`);
   redirect(`/pacientes/${fields.paciente_id}?tab=prontuario&success=Solicitação+registrada`);
 }
@@ -138,7 +138,7 @@ export async function atualizarExame(
   }
 
   revalidatePath("/exames");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   revalidatePath(`/pacientes/${fields.paciente_id}`);
   redirect(`/exames/${id}?success=Solicitação+atualizada`);
 }
@@ -167,7 +167,7 @@ export async function excluirExame(id: string): Promise<void> {
   }
 
   revalidatePath("/exames");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   if (pacienteId) {
     revalidatePath(`/pacientes/${pacienteId}`);
     redirect(`/pacientes/${pacienteId}?tab=prontuario&success=Solicitação+exclu%C3%ADda`);

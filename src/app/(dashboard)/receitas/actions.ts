@@ -82,7 +82,7 @@ export async function criarReceita(
   }
 
   revalidatePath("/receitas");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect(`/receitas/${inserted.id}?success=Receita+registrada`);
 }
 
@@ -138,7 +138,7 @@ export async function atualizarReceita(
   }
 
   revalidatePath("/receitas");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect(`/receitas/${id}?success=Receita+atualizada`);
 }
 
@@ -167,7 +167,7 @@ export async function excluirReceita(id: string): Promise<void> {
   }
 
   revalidatePath("/receitas");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   if (pacienteId) {
     revalidatePath(`/pacientes/${pacienteId}`);
     redirect(`/pacientes/${pacienteId}?success=Receita+exclu%C3%ADda`);

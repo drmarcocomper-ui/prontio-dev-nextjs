@@ -87,7 +87,7 @@ export async function criarProntuario(
   }
 
   revalidatePath("/prontuarios");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect(`/prontuarios/${inserted.id}?success=Prontu%C3%A1rio+registrado`);
 }
 
@@ -146,7 +146,7 @@ export async function atualizarProntuario(
   }
 
   revalidatePath("/prontuarios");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect(`/prontuarios/${id}?success=Prontu%C3%A1rio+atualizado`);
 }
 
@@ -165,6 +165,6 @@ export async function excluirProntuario(id: string): Promise<void> {
   }
 
   revalidatePath("/prontuarios");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect("/prontuarios?success=Prontu%C3%A1rio+exclu%C3%ADdo");
 }

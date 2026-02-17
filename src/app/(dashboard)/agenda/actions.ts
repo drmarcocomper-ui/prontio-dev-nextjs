@@ -197,7 +197,7 @@ export async function criarAgendamento(
   }
 
   revalidatePath("/agenda");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect(`/agenda?data=${data}&success=Agendamento+criado`);
 }
 
@@ -247,7 +247,7 @@ export async function atualizarStatusAgendamento(
   });
 
   revalidatePath("/agenda");
-  revalidatePath("/");
+  revalidatePath("/", "page");
 }
 
 export async function atualizarAgendamento(
@@ -312,7 +312,7 @@ export async function atualizarAgendamento(
   }
 
   revalidatePath("/agenda");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect(`/agenda/${id}?success=Agendamento+atualizado`);
 }
 
@@ -332,6 +332,6 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
   }
 
   revalidatePath("/agenda");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect(`/agenda?data=${data}&success=Agendamento+exclu%C3%ADdo`);
 }

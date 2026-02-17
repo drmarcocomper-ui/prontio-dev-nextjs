@@ -134,7 +134,6 @@ describe("GET /api/seed", () => {
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
       error: "Erro ao inserir pacientes",
-      detail: "duplicate key",
     });
   });
 
@@ -148,7 +147,6 @@ describe("GET /api/seed", () => {
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
       error: "Erro ao inserir agendamentos",
-      detail: "fk violation",
     });
   });
 
@@ -162,7 +160,6 @@ describe("GET /api/seed", () => {
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
       error: "Erro ao inserir prontuários",
-      detail: "insert failed",
     });
   });
 
@@ -176,7 +173,6 @@ describe("GET /api/seed", () => {
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
       error: "Erro ao inserir transações",
-      detail: "transacao error",
     });
   });
 });

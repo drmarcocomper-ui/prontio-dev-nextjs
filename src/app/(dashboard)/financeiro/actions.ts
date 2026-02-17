@@ -98,7 +98,7 @@ export async function criarTransacao(
   }
 
   revalidatePath("/financeiro");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   revalidatePath("/relatorios/financeiro");
   redirect("/financeiro?success=Transa%C3%A7%C3%A3o+registrada");
 }
@@ -162,7 +162,7 @@ export async function atualizarTransacao(
   }
 
   revalidatePath("/financeiro");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   revalidatePath("/relatorios/financeiro");
   redirect(`/financeiro/${id}?success=Transa%C3%A7%C3%A3o+atualizada`);
 }
@@ -183,7 +183,7 @@ export async function excluirTransacao(id: string): Promise<void> {
   }
 
   revalidatePath("/financeiro");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   revalidatePath("/relatorios/financeiro");
   redirect("/financeiro?success=Transa%C3%A7%C3%A3o+exclu%C3%ADda");
 }

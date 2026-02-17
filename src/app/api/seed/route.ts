@@ -168,14 +168,14 @@ export async function GET(request: Request) {
     .insert(pacientesData)
     .select("id, nome");
 
-  if (errPacientes) {
+  if (errPacientes || !pacientes) {
     return NextResponse.json(
-      { error: "Erro ao inserir pacientes", detail: errPacientes.message },
+      { error: "Erro ao inserir pacientes" },
       { status: 500 }
     );
   }
 
-  const pIds = pacientes!.map((p) => p.id);
+  const pIds = pacientes.map((p) => p.id);
 
   // ===== AGENDAMENTOS =====
   const agendamentosData = [
@@ -207,7 +207,7 @@ export async function GET(request: Request) {
 
   if (errAgendamentos) {
     return NextResponse.json(
-      { error: "Erro ao inserir agendamentos", detail: errAgendamentos.message },
+      { error: "Erro ao inserir agendamentos" },
       { status: 500 }
     );
   }
@@ -283,7 +283,7 @@ export async function GET(request: Request) {
 
   if (errProntuarios) {
     return NextResponse.json(
-      { error: "Erro ao inserir prontuários", detail: errProntuarios.message },
+      { error: "Erro ao inserir prontuários" },
       { status: 500 }
     );
   }
@@ -315,7 +315,7 @@ export async function GET(request: Request) {
 
   if (errTransacoes) {
     return NextResponse.json(
-      { error: "Erro ao inserir transações", detail: errTransacoes.message },
+      { error: "Erro ao inserir transações" },
       { status: 500 }
     );
   }

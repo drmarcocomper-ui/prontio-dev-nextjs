@@ -118,7 +118,7 @@ export async function criarPaciente(
   }
 
   revalidatePath("/pacientes");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect("/pacientes?success=Paciente+cadastrado");
 }
 
@@ -168,7 +168,7 @@ export async function atualizarPaciente(
   }
 
   revalidatePath("/pacientes");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect(`/pacientes/${id}?success=Paciente+atualizado`);
 }
 
@@ -219,7 +219,7 @@ export async function criarPacienteRapido(data: {
   }
 
   revalidatePath("/pacientes");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   return { id: inserted.id, nome: nome! };
 }
 
@@ -238,6 +238,6 @@ export async function excluirPaciente(id: string): Promise<void> {
   }
 
   revalidatePath("/pacientes");
-  revalidatePath("/");
+  revalidatePath("/", "page");
   redirect("/pacientes?success=Paciente+exclu%C3%ADdo");
 }
