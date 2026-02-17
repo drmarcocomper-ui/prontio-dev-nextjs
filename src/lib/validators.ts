@@ -44,7 +44,7 @@ export function emailValido(
   valor: string | null | undefined
 ): void {
   if (!valor) return;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor)) {
     errors[campo] = "E-mail inválido.";
   }
 }

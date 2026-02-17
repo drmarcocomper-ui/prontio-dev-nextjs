@@ -129,6 +129,18 @@ describe("emailValido", () => {
     expect(errors.email).toBe("E-mail inválido.");
   });
 
+  it("adiciona erro para email com TLD de 1 caractere", () => {
+    const errors: Record<string, string> = {};
+    emailValido(errors, "email", "user@domain.c");
+    expect(errors.email).toBe("E-mail inválido.");
+  });
+
+  it("não adiciona erro para email com TLD de 2 caracteres", () => {
+    const errors: Record<string, string> = {};
+    emailValido(errors, "email", "user@domain.co");
+    expect(errors).not.toHaveProperty("email");
+  });
+
   it("não adiciona erro quando valor é null", () => {
     const errors: Record<string, string> = {};
     emailValido(errors, "email", null);
