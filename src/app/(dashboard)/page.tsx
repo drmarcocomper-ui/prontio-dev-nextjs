@@ -6,11 +6,16 @@ import { formatTime, formatCurrency, getInitials, formatRelativeTime, formatDate
 import { toDateString, parseLocalDate } from "@/lib/date";
 import dynamic from "next/dynamic";
 
+const ChartSkeleton = () => (
+  <div className="h-64 animate-pulse rounded-lg bg-gray-100" />
+);
 const FinanceiroChart = dynamic(
   () => import("./dashboard-charts").then((m) => ({ default: m.FinanceiroChart })),
+  { loading: ChartSkeleton },
 );
 const AgendamentosSemanaChart = dynamic(
   () => import("./dashboard-charts").then((m) => ({ default: m.AgendamentosSemanaChart })),
+  { loading: ChartSkeleton },
 );
 import { getClinicaAtual, getMedicoId, isProfissional, isGestor } from "@/lib/clinica";
 import {

@@ -41,8 +41,7 @@ vi.mock("@/lib/supabase/server", () => ({
 import DashboardLayout from "./layout";
 
 async function renderAsync(ui: React.ReactElement) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const resolved = await (ui.type as any)(ui.props);
+  const resolved = await (ui.type as (props: Record<string, unknown>) => Promise<React.ReactElement>)(ui.props);
   return render(resolved);
 }
 
