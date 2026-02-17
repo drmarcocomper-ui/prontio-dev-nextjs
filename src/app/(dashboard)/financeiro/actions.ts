@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
-import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS } from "./constants";
+import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA } from "./constants";
 import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 
 export type TransacaoFormState = {
@@ -29,6 +29,13 @@ function validarCamposTransacao(formData: FormData) {
 
   campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo.");
   valorPermitido(fieldErrors, "tipo", tipo, ["receita", "despesa"]);
+  if (categoria) {
+    const categoriasValidas = [
+      ...CATEGORIAS_RECEITA.map(c => c.value),
+      ...CATEGORIAS_DESPESA.map(c => c.value),
+    ];
+    valorPermitido(fieldErrors, "categoria", categoria, categoriasValidas);
+  }
   campoObrigatorio(fieldErrors, "descricao", descricao, "Descrição é obrigatória.");
   tamanhoMaximo(fieldErrors, "descricao", descricao, DESCRICAO_MAX_LENGTH);
 

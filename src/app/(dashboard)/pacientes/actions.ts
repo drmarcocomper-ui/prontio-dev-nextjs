@@ -156,6 +156,7 @@ export async function atualizarPaciente(
       nome, cpf, rg, data_nascimento, sexo, estado_civil,
       telefone, email, cep, endereco, numero, complemento,
       bairro, cidade, estado, convenio, observacoes,
+      updated_at: new Date().toISOString(),
     })
     .eq("id", id)
     .eq("medico_id", medicoId);
