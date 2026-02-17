@@ -8,11 +8,13 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export type LoginFormState = {
   error?: string;
+  fieldErrors?: Record<string, string>;
 };
 
 export type ResetSenhaFormState = {
   success?: boolean;
   error?: string;
+  fieldErrors?: Record<string, string>;
 };
 
 export async function login(

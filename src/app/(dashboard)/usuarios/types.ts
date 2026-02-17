@@ -43,4 +43,5 @@ export interface UsuarioDefaults {
 export type UsuarioFormState = {
   success?: boolean;
   error?: string;
+  fieldErrors?: Record<string, string>;
 };

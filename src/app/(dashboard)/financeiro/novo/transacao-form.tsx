@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { criarTransacao, atualizarTransacao, type TransacaoFormState } from "../actions";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import {
@@ -86,7 +86,7 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
             Despesa
           </label>
         </div>
-        <FieldError message={state.fieldErrors?.tipo} />
+        <FieldError id="tipo-error" message={state.fieldErrors?.tipo} />
       </fieldset>
 
       {/* Descrição e Valor */}
@@ -105,8 +105,9 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
             placeholder="Ex: Consulta particular"
             defaultValue={defaults?.descricao ?? ""}
             className={INPUT_CLASS}
+            {...ariaProps("descricao", state.fieldErrors?.descricao)}
           />
-          <FieldError message={state.fieldErrors?.descricao} />
+          <FieldError id="descricao-error" message={state.fieldErrors?.descricao} />
         </div>
 
         <div>
@@ -124,8 +125,9 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
             defaultValue={defaults?.valor ?? ""}
             onChange={(e) => (e.target.value = maskCurrency(e.target.value))}
             className={INPUT_CLASS}
+            {...ariaProps("valor", state.fieldErrors?.valor)}
           />
-          <FieldError message={state.fieldErrors?.valor} />
+          <FieldError id="valor-error" message={state.fieldErrors?.valor} />
         </div>
       </div>
 
@@ -143,15 +145,16 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
             disabled={isPending}
             defaultValue={defaults?.data ?? today}
             className={INPUT_CLASS}
+            {...ariaProps("data", state.fieldErrors?.data)}
           />
-          <FieldError message={state.fieldErrors?.data} />
+          <FieldError id="data-error" message={state.fieldErrors?.data} />
         </div>
 
         <div>
           <label htmlFor="categoria" className="block text-sm font-medium text-gray-700">
             Categoria
           </label>
-          <select id="categoria" name="categoria" disabled={isPending} defaultValue={defaults?.categoria ?? ""} className={INPUT_CLASS}>
+          <select id="categoria" name="categoria" disabled={isPending} defaultValue={defaults?.categoria ?? ""} className={INPUT_CLASS} {...ariaProps("categoria", state.fieldErrors?.categoria)}>
             <option value="">Selecione</option>
             {categorias.map((c) => (
               <option key={c.value} value={c.value}>
@@ -159,14 +162,14 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
               </option>
             ))}
           </select>
-          <FieldError message={state.fieldErrors?.categoria} />
+          <FieldError id="categoria-error" message={state.fieldErrors?.categoria} />
         </div>
 
         <div>
           <label htmlFor="forma_pagamento" className="block text-sm font-medium text-gray-700">
             Forma de pagamento
           </label>
-          <select id="forma_pagamento" name="forma_pagamento" disabled={isPending} defaultValue={defaults?.forma_pagamento ?? ""} className={INPUT_CLASS}>
+          <select id="forma_pagamento" name="forma_pagamento" disabled={isPending} defaultValue={defaults?.forma_pagamento ?? ""} className={INPUT_CLASS} {...ariaProps("forma_pagamento", state.fieldErrors?.forma_pagamento)}>
             <option value="">Selecione</option>
             {Object.entries(PAGAMENTO_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -174,7 +177,7 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
               </option>
             ))}
           </select>
-          <FieldError message={state.fieldErrors?.forma_pagamento} />
+          <FieldError id="forma_pagamento-error" message={state.fieldErrors?.forma_pagamento} />
         </div>
       </div>
 
@@ -184,14 +187,14 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
           <label htmlFor="status" className="block text-sm font-medium text-gray-700">
             Status
           </label>
-          <select id="status" name="status" disabled={isPending} defaultValue={defaults?.status ?? "pago"} className={INPUT_CLASS}>
+          <select id="status" name="status" disabled={isPending} defaultValue={defaults?.status ?? "pago"} className={INPUT_CLASS} {...ariaProps("status", state.fieldErrors?.status)}>
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
           </select>
-          <FieldError message={state.fieldErrors?.status} />
+          <FieldError id="status-error" message={state.fieldErrors?.status} />
         </div>
       </div>
 
@@ -224,8 +227,9 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
           maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
           className={INPUT_CLASS}
+          {...ariaProps("observacoes", state.fieldErrors?.observacoes)}
         />
-        <FieldError message={state.fieldErrors?.observacoes} />
+        <FieldError id="observacoes-error" message={state.fieldErrors?.observacoes} />
       </div>
 
       {/* Actions */}

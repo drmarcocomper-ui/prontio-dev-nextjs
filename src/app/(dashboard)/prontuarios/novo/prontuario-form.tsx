@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
-import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
 import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
@@ -76,7 +76,7 @@ export function ProntuarioForm({
               medicoId={medicoId}
             />
           </div>
-          <FieldError message={state.fieldErrors?.paciente_id} />
+          <FieldError id="paciente_id-error" message={state.fieldErrors?.paciente_id} />
         </div>
 
         <div>
@@ -92,8 +92,9 @@ export function ProntuarioForm({
             max={today}
             defaultValue={defaults?.data ?? today}
             className={INPUT_CLASS}
+            {...ariaProps("data", state.fieldErrors?.data)}
           />
-          <FieldError message={state.fieldErrors?.data} />
+          <FieldError id="data-error" message={state.fieldErrors?.data} />
         </div>
       </div>
 
@@ -102,7 +103,7 @@ export function ProntuarioForm({
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
           Tipo
         </label>
-        <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} disabled={isPending} className={INPUT_CLASS}>
+        <select id="tipo" name="tipo" defaultValue={defaults?.tipo ?? ""} disabled={isPending} className={INPUT_CLASS} {...ariaProps("tipo", state.fieldErrors?.tipo)}>
           <option value="">Selecione</option>
           {Object.entries(TIPO_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -110,7 +111,7 @@ export function ProntuarioForm({
             </option>
           ))}
         </select>
-        <FieldError message={state.fieldErrors?.tipo} />
+        <FieldError id="tipo-error" message={state.fieldErrors?.tipo} />
       </div>
 
       {/* Evolução */}
@@ -127,8 +128,9 @@ export function ProntuarioForm({
           placeholder="Registre a evolução clínica do atendimento..."
           defaultValue={defaults?.queixa_principal ?? ""}
           className={INPUT_CLASS}
+          {...ariaProps("queixa_principal", state.fieldErrors?.queixa_principal)}
         />
-        <FieldError message={state.fieldErrors?.queixa_principal} />
+        <FieldError id="queixa_principal-error" message={state.fieldErrors?.queixa_principal} />
       </div>
 
       {/* Actions */}

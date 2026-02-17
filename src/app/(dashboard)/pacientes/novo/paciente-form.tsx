@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
-import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import {
   criarPaciente,
@@ -91,8 +91,9 @@ export function PacienteForm({
               maxLength={NOME_MAX_LENGTH}
               defaultValue={defaults?.nome ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("nome", state.fieldErrors?.nome)}
             />
-            <FieldError message={state.fieldErrors?.nome} />
+            <FieldError id="nome-error" message={state.fieldErrors?.nome} />
           </div>
 
           <div>
@@ -110,8 +111,9 @@ export function PacienteForm({
               defaultValue={defaults?.cpf ? maskCPF(defaults.cpf) : ""}
               onChange={(e) => (e.target.value = maskCPF(e.target.value))}
               className={INPUT_CLASS}
+              {...ariaProps("cpf", state.fieldErrors?.cpf)}
             />
-            <FieldError message={state.fieldErrors?.cpf} />
+            <FieldError id="cpf-error" message={state.fieldErrors?.cpf} />
           </div>
 
           <div>
@@ -126,8 +128,9 @@ export function PacienteForm({
               maxLength={RG_MAX_LENGTH}
               defaultValue={defaults?.rg ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("rg", state.fieldErrors?.rg)}
             />
-            <FieldError message={state.fieldErrors?.rg} />
+            <FieldError id="rg-error" message={state.fieldErrors?.rg} />
           </div>
 
           <div>
@@ -142,8 +145,9 @@ export function PacienteForm({
               max={today}
               defaultValue={defaults?.data_nascimento ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("data_nascimento", state.fieldErrors?.data_nascimento)}
             />
-            <FieldError message={state.fieldErrors?.data_nascimento} />
+            <FieldError id="data_nascimento-error" message={state.fieldErrors?.data_nascimento} />
           </div>
 
           <div>
@@ -156,6 +160,7 @@ export function PacienteForm({
               disabled={isPending}
               defaultValue={defaults?.sexo ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("sexo", state.fieldErrors?.sexo)}
             >
               <option value="">Selecione</option>
               {Object.entries(SEXO_LABELS).map(([value, label]) => (
@@ -164,7 +169,7 @@ export function PacienteForm({
                 </option>
               ))}
             </select>
-            <FieldError message={state.fieldErrors?.sexo} />
+            <FieldError id="sexo-error" message={state.fieldErrors?.sexo} />
           </div>
 
           <div>
@@ -177,6 +182,7 @@ export function PacienteForm({
               disabled={isPending}
               defaultValue={defaults?.estado_civil ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("estado_civil", state.fieldErrors?.estado_civil)}
             >
               <option value="">Selecione</option>
               {Object.entries(ESTADO_CIVIL_LABELS).map(([value, label]) => (
@@ -185,7 +191,7 @@ export function PacienteForm({
                 </option>
               ))}
             </select>
-            <FieldError message={state.fieldErrors?.estado_civil} />
+            <FieldError id="estado_civil-error" message={state.fieldErrors?.estado_civil} />
           </div>
         </div>
       </fieldset>
@@ -209,8 +215,9 @@ export function PacienteForm({
               defaultValue={defaults?.telefone ? maskPhone(defaults.telefone) : ""}
               onChange={(e) => (e.target.value = maskPhone(e.target.value))}
               className={INPUT_CLASS}
+              {...ariaProps("telefone", state.fieldErrors?.telefone)}
             />
-            <FieldError message={state.fieldErrors?.telefone} />
+            <FieldError id="telefone-error" message={state.fieldErrors?.telefone} />
           </div>
 
           <div>
@@ -226,8 +233,9 @@ export function PacienteForm({
               placeholder="paciente@email.com"
               defaultValue={defaults?.email ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("email", state.fieldErrors?.email)}
             />
-            <FieldError message={state.fieldErrors?.email} />
+            <FieldError id="email-error" message={state.fieldErrors?.email} />
           </div>
         </div>
       </fieldset>
@@ -251,8 +259,9 @@ export function PacienteForm({
               defaultValue={defaults?.cep ? maskCEP(defaults.cep) : ""}
               onChange={(e) => (e.target.value = maskCEP(e.target.value))}
               className={INPUT_CLASS}
+              {...ariaProps("cep", state.fieldErrors?.cep)}
             />
-            <FieldError message={state.fieldErrors?.cep} />
+            <FieldError id="cep-error" message={state.fieldErrors?.cep} />
           </div>
 
           <div className="sm:col-span-4">
@@ -267,8 +276,9 @@ export function PacienteForm({
               maxLength={ENDERECO_MAX_LENGTH}
               defaultValue={defaults?.endereco ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("endereco", state.fieldErrors?.endereco)}
             />
-            <FieldError message={state.fieldErrors?.endereco} />
+            <FieldError id="endereco-error" message={state.fieldErrors?.endereco} />
           </div>
 
           <div className="sm:col-span-1">
@@ -283,8 +293,9 @@ export function PacienteForm({
               maxLength={NUMERO_MAX_LENGTH}
               defaultValue={defaults?.numero ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("numero", state.fieldErrors?.numero)}
             />
-            <FieldError message={state.fieldErrors?.numero} />
+            <FieldError id="numero-error" message={state.fieldErrors?.numero} />
           </div>
 
           <div className="sm:col-span-2">
@@ -299,8 +310,9 @@ export function PacienteForm({
               maxLength={COMPLEMENTO_MAX_LENGTH}
               defaultValue={defaults?.complemento ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("complemento", state.fieldErrors?.complemento)}
             />
-            <FieldError message={state.fieldErrors?.complemento} />
+            <FieldError id="complemento-error" message={state.fieldErrors?.complemento} />
           </div>
 
           <div className="sm:col-span-3">
@@ -315,8 +327,9 @@ export function PacienteForm({
               maxLength={BAIRRO_MAX_LENGTH}
               defaultValue={defaults?.bairro ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("bairro", state.fieldErrors?.bairro)}
             />
-            <FieldError message={state.fieldErrors?.bairro} />
+            <FieldError id="bairro-error" message={state.fieldErrors?.bairro} />
           </div>
 
           <div className="sm:col-span-4">
@@ -331,8 +344,9 @@ export function PacienteForm({
               maxLength={CIDADE_MAX_LENGTH}
               defaultValue={defaults?.cidade ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("cidade", state.fieldErrors?.cidade)}
             />
-            <FieldError message={state.fieldErrors?.cidade} />
+            <FieldError id="cidade-error" message={state.fieldErrors?.cidade} />
           </div>
 
           <div className="sm:col-span-2">
@@ -345,6 +359,7 @@ export function PacienteForm({
               disabled={isPending}
               defaultValue={defaults?.estado ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("estado", state.fieldErrors?.estado)}
             >
               <option value="">UF</option>
               {ESTADOS_UF.map((uf) => (
@@ -353,7 +368,7 @@ export function PacienteForm({
                 </option>
               ))}
             </select>
-            <FieldError message={state.fieldErrors?.estado} />
+            <FieldError id="estado-error" message={state.fieldErrors?.estado} />
           </div>
         </div>
       </fieldset>
@@ -375,6 +390,7 @@ export function PacienteForm({
               disabled={isPending}
               defaultValue={defaults?.convenio ?? ""}
               className={INPUT_CLASS}
+              {...ariaProps("convenio", state.fieldErrors?.convenio)}
             >
               <option value="">Selecione</option>
               {Object.entries(CONVENIO_LABELS).map(([value, label]) => (
@@ -383,7 +399,7 @@ export function PacienteForm({
                 </option>
               ))}
             </select>
-            <FieldError message={state.fieldErrors?.convenio} />
+            <FieldError id="convenio-error" message={state.fieldErrors?.convenio} />
           </div>
         </div>
 
@@ -399,8 +415,9 @@ export function PacienteForm({
             maxLength={OBSERVACOES_MAX_LENGTH}
             defaultValue={defaults?.observacoes ?? ""}
             className={INPUT_CLASS}
+            {...ariaProps("observacoes", state.fieldErrors?.observacoes)}
           />
-          <FieldError message={state.fieldErrors?.observacoes} />
+          <FieldError id="observacoes-error" message={state.fieldErrors?.observacoes} />
         </div>
       </fieldset>
 

@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState, useEffect } from "react";
 import Link from "next/link";
-import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { criarExame, atualizarExame, type ExameFormState } from "../actions";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import { ExameSearch } from "./exame-search";
@@ -60,7 +60,7 @@ export function ExameForm({
               medicoId={medicoId}
             />
           </div>
-          <FieldError message={state.fieldErrors?.paciente_id} />
+          <FieldError id="paciente_id-error" message={state.fieldErrors?.paciente_id} />
         </div>
 
         <div>
@@ -75,8 +75,9 @@ export function ExameForm({
             max={today}
             defaultValue={isEditing ? (defaults?.data ?? "") : (defaults?.data ?? today)}
             className={INPUT_CLASS}
+            {...ariaProps("data", state.fieldErrors?.data)}
           />
-          <FieldError message={state.fieldErrors?.data} />
+          <FieldError id="data-error" message={state.fieldErrors?.data} />
         </div>
       </div>
 
@@ -112,8 +113,9 @@ export function ExameForm({
           placeholder="Liste os exames solicitados..."
           defaultValue={defaults?.exames ?? ""}
           className={`${INPUT_CLASS} mt-1`}
+          {...ariaProps("exames", state.fieldErrors?.exames)}
         />
-        <FieldError message={state.fieldErrors?.exames} />
+        <FieldError id="exames-error" message={state.fieldErrors?.exames} />
       </div>
 
       {/* Indicação clínica */}
@@ -130,8 +132,9 @@ export function ExameForm({
           defaultValue={defaults?.indicacao_clinica ?? ""}
           placeholder="Indicação clínica ou hipótese diagnóstica..."
           className={INPUT_CLASS}
+          {...ariaProps("indicacao_clinica", state.fieldErrors?.indicacao_clinica)}
         />
-        <FieldError message={state.fieldErrors?.indicacao_clinica} />
+        <FieldError id="indicacao_clinica-error" message={state.fieldErrors?.indicacao_clinica} />
       </div>
 
       {/* Observações */}
@@ -147,8 +150,9 @@ export function ExameForm({
           maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
           className={INPUT_CLASS}
+          {...ariaProps("observacoes", state.fieldErrors?.observacoes)}
         />
-        <FieldError message={state.fieldErrors?.observacoes} />
+        <FieldError id="observacoes-error" message={state.fieldErrors?.observacoes} />
       </div>
 
       {/* Actions */}

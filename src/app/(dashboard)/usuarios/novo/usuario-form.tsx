@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { INPUT_CLASS, FormError, SubmitButton } from "@/components/form-utils";
+import { INPUT_CLASS, FieldError, FormError, SubmitButton, ariaProps } from "@/components/form-utils";
 import { criarUsuario, atualizarUsuario } from "../actions";
 import { PAPEL_OPTIONS, EMAIL_MAX, SENHA_MIN, SENHA_MAX, type UsuarioFormState, type UsuarioDefaults } from "../types";
 
@@ -50,17 +50,21 @@ export function UsuarioForm({ clinicas, defaults }: UsuarioFormProps) {
         {isEditing ? (
           <p className="mt-1 text-sm text-gray-900">{defaults.clinica_nome}</p>
         ) : (
-          <select
-            id="clinica_id"
-            name="clinica_id"
-            required
-            disabled={isPending}
-            className={INPUT_CLASS}
-          >
-            {clinicas.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </select>
+          <>
+            <select
+              id="clinica_id"
+              name="clinica_id"
+              required
+              disabled={isPending}
+              className={INPUT_CLASS}
+              {...ariaProps("clinica_id", state.fieldErrors?.clinica_id)}
+            >
+              {clinicas.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+            <FieldError id="clinica_id-error" message={state.fieldErrors?.clinica_id} />
+          </>
         )}
       </div>
 
@@ -71,16 +75,20 @@ export function UsuarioForm({ clinicas, defaults }: UsuarioFormProps) {
         {isEditing ? (
           <p className="mt-1 text-sm text-gray-900">{defaults.email}</p>
         ) : (
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            maxLength={EMAIL_MAX}
-            disabled={isPending}
-            placeholder="email@exemplo.com"
-            className={INPUT_CLASS}
-          />
+          <>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              maxLength={EMAIL_MAX}
+              disabled={isPending}
+              placeholder="email@exemplo.com"
+              className={INPUT_CLASS}
+              {...ariaProps("email", state.fieldErrors?.email)}
+            />
+            <FieldError id="email-error" message={state.fieldErrors?.email} />
+          </>
         )}
       </div>
 
@@ -99,7 +107,9 @@ export function UsuarioForm({ clinicas, defaults }: UsuarioFormProps) {
             disabled={isPending}
             placeholder={`Mínimo ${SENHA_MIN} caracteres`}
             className={INPUT_CLASS}
+            {...ariaProps("senha", state.fieldErrors?.senha)}
           />
+          <FieldError id="senha-error" message={state.fieldErrors?.senha} />
         </div>
       )}
 
@@ -114,11 +124,13 @@ export function UsuarioForm({ clinicas, defaults }: UsuarioFormProps) {
           disabled={isPending}
           defaultValue={defaults?.papel}
           className={INPUT_CLASS}
+          {...ariaProps("papel", state.fieldErrors?.papel)}
         >
           {PAPEL_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+        <FieldError id="papel-error" message={state.fieldErrors?.papel} />
       </div>
 
       <SubmitButton label={isEditing ? "Salvar alterações" : "Criar usuário"} isPending={isPending} />

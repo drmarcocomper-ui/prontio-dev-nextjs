@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { login } from "./actions";
 import type { LoginFormState } from "./actions";
-import { FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 
 export default function LoginForm() {
   const [state, formAction, isPending] = useActionState<LoginFormState, FormData>(
@@ -34,7 +34,9 @@ export default function LoginForm() {
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="seu@email.com"
+            {...ariaProps("email", state.fieldErrors?.email)}
           />
+          <FieldError id="email-error" message={state.fieldErrors?.email} />
         </div>
 
         <div>
@@ -62,7 +64,9 @@ export default function LoginForm() {
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="••••••••"
+            {...ariaProps("password", state.fieldErrors?.password)}
           />
+          <FieldError id="password-error" message={state.fieldErrors?.password} />
         </div>
 
         <button

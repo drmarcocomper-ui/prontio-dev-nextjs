@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,13 +30,23 @@ export interface ClinicaContexto {
 const COOKIE_NAME = "prontio_clinica_id";
 
 /**
- * Retorna a lista de clínicas do usuário autenticado com papel.
+ * Retorna o usuário autenticado (deduplicado por request via React.cache).
  */
-export async function getClinicasDoUsuario(): Promise<Clinica[]> {
+const getAuthUser = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  return user;
+});
+
+/**
+ * Retorna a lista de clínicas do usuário autenticado com papel.
+ * Deduplicado por request via React.cache.
+ */
+export const getClinicasDoUsuario = cache(async (): Promise<Clinica[]> => {
+  const user = await getAuthUser();
   if (!user) return [];
 
+  const supabase = await createClient();
   const { data } = await supabase
     .from("usuarios_clinicas")
     .select("clinica_id, papel, clinicas(id, nome)")
@@ -52,15 +63,15 @@ export async function getClinicasDoUsuario(): Promise<Clinica[]> {
     nome: uc.clinicas.nome,
     papel: uc.papel,
   }));
-}
+});
 
 /**
  * Retorna o contexto da clínica atualmente selecionada (cookie).
  * Se não há cookie, usa a primeira clínica disponível.
+ * Deduplicado por request via React.cache.
  */
-export async function getClinicaAtual(): Promise<ClinicaContexto | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export const getClinicaAtual = cache(async (): Promise<ClinicaContexto | null> => {
+  const user = await getAuthUser();
   if (!user) return null;
 
   const clinicas = await getClinicasDoUsuario();
@@ -77,7 +88,7 @@ export async function getClinicaAtual(): Promise<ClinicaContexto | null> {
     papel: clinicaAtual.papel,
     userId: user.id,
   };
-}
+});
 
 /**
  * Retorna o user_id do médico associado.

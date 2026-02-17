@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { redefinirSenha, type ResetSenhaFormState } from "../actions";
 
 export function RedefinirSenhaForm() {
@@ -48,7 +48,9 @@ export function RedefinirSenhaForm() {
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="Mínimo 6 caracteres"
+            {...ariaProps("password", state.fieldErrors?.password)}
           />
+          <FieldError id="password-error" message={state.fieldErrors?.password} />
         </div>
 
         <div>
@@ -66,7 +68,9 @@ export function RedefinirSenhaForm() {
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="Repita a senha"
+            {...ariaProps("confirm_password", state.fieldErrors?.confirm_password)}
           />
+          <FieldError id="confirm_password-error" message={state.fieldErrors?.confirm_password} />
         </div>
 
         <button

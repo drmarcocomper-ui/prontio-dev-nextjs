@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { enviarResetSenha, type ResetSenhaFormState } from "../actions";
 
 export function EsqueciSenhaForm() {
@@ -50,7 +50,9 @@ export function EsqueciSenhaForm() {
             disabled={isPending}
             className={INPUT_CLASS}
             placeholder="seu@email.com"
+            {...ariaProps("email", state.fieldErrors?.email)}
           />
+          <FieldError id="email-error" message={state.fieldErrors?.email} />
         </div>
 
         <button

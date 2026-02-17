@@ -2,7 +2,7 @@
 
 import { useState, useActionState } from "react";
 import Link from "next/link";
-import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
 import { type AgendamentoDefaults, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "../types";
 import { PatientSearch } from "./patient-search";
@@ -78,7 +78,7 @@ export function AgendamentoForm({
             medicoId={medicoId}
           />
         </div>
-        <FieldError message={state.fieldErrors?.paciente_id} />
+        <FieldError id="paciente_id-error" message={state.fieldErrors?.paciente_id} />
       </div>
 
       {/* Data e horário */}
@@ -96,8 +96,9 @@ export function AgendamentoForm({
             value={data}
             onChange={(e) => setData(e.target.value)}
             className={INPUT_CLASS}
+            {...ariaProps("data", state.fieldErrors?.data)}
           />
-          <FieldError message={state.fieldErrors?.data} />
+          <FieldError id="data-error" message={state.fieldErrors?.data} />
         </div>
 
         <div>
@@ -114,8 +115,9 @@ export function AgendamentoForm({
             value={horaInicio}
             onChange={(e) => setHoraInicio(e.target.value)}
             className={INPUT_CLASS}
+            {...ariaProps("hora_inicio", state.fieldErrors?.hora_inicio)}
           />
-          <FieldError message={state.fieldErrors?.hora_inicio} />
+          <FieldError id="hora_inicio-error" message={state.fieldErrors?.hora_inicio} />
         </div>
       </div>
 
@@ -132,6 +134,7 @@ export function AgendamentoForm({
           onChange={(e) => setTipo(e.target.value)}
           disabled={isPending}
           className={INPUT_CLASS}
+          {...ariaProps("tipo", state.fieldErrors?.tipo)}
         >
           <option value="">Selecione</option>
           {Object.entries(TIPO_LABELS).map(([value, label]) => (
@@ -140,7 +143,7 @@ export function AgendamentoForm({
             </option>
           ))}
         </select>
-        <FieldError message={state.fieldErrors?.tipo} />
+        <FieldError id="tipo-error" message={state.fieldErrors?.tipo} />
       </div>
 
       {/* Observações */}

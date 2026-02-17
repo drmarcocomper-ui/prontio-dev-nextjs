@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
+import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { criarReceita, atualizarReceita, type ReceitaFormState } from "../actions";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import { MedicamentoSearch } from "./medicamento-search";
@@ -117,7 +117,7 @@ export function ReceitaForm({
               medicoId={medicoId}
             />
           </div>
-          <FieldError message={state.fieldErrors?.paciente_id} />
+          <FieldError id="paciente_id-error" message={state.fieldErrors?.paciente_id} />
         </div>
 
         <div>
@@ -132,8 +132,9 @@ export function ReceitaForm({
             max={today}
             defaultValue={isEditing ? (defaults?.data ?? "") : (defaults?.data ?? today)}
             className={INPUT_CLASS}
+            {...ariaProps("data", state.fieldErrors?.data)}
           />
-          <FieldError message={state.fieldErrors?.data} />
+          <FieldError id="data-error" message={state.fieldErrors?.data} />
         </div>
       </div>
 
@@ -142,7 +143,7 @@ export function ReceitaForm({
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
           Tipo da receita <span className="text-red-500">*</span>
         </label>
-        <select id="tipo" name="tipo" required disabled={isPending} defaultValue={defaults?.tipo ?? ""} className={INPUT_CLASS}>
+        <select id="tipo" name="tipo" required disabled={isPending} defaultValue={defaults?.tipo ?? ""} className={INPUT_CLASS} {...ariaProps("tipo", state.fieldErrors?.tipo)}>
           <option value="">Selecione</option>
           {Object.entries(TIPO_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -150,7 +151,7 @@ export function ReceitaForm({
             </option>
           ))}
         </select>
-        <FieldError message={state.fieldErrors?.tipo} />
+        <FieldError id="tipo-error" message={state.fieldErrors?.tipo} />
       </div>
 
       {/* Medicamentos */}
@@ -252,8 +253,9 @@ export function ReceitaForm({
           placeholder="Liste os medicamentos, dosagens e posologias..."
           defaultValue={defaults?.medicamentos ?? ""}
           className={`${INPUT_CLASS} mt-1`}
+          {...ariaProps("medicamentos", state.fieldErrors?.medicamentos)}
         />
-        <FieldError message={state.fieldErrors?.medicamentos} />
+        <FieldError id="medicamentos-error" message={state.fieldErrors?.medicamentos} />
       </div>
 
       {/* Observações */}
@@ -269,8 +271,9 @@ export function ReceitaForm({
           maxLength={OBSERVACOES_MAX_LENGTH}
           defaultValue={defaults?.observacoes ?? ""}
           className={INPUT_CLASS}
+          {...ariaProps("observacoes", state.fieldErrors?.observacoes)}
         />
-        <FieldError message={state.fieldErrors?.observacoes} />
+        <FieldError id="observacoes-error" message={state.fieldErrors?.observacoes} />
       </div>
 
       {/* Actions */}
