@@ -360,13 +360,25 @@ create policy "Acesso agendamentos" on agendamentos for all to authenticated
 create policy "Medico acessa transacoes" on transacoes for all to authenticated
   using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
 
--- medicamentos: catálogo global, todos autenticados podem ler
-create policy "Acesso medicamentos" on medicamentos for all to authenticated
+-- medicamentos: catálogo global — leitura para todos, escrita apenas para admin
+create policy "Leitura medicamentos" on medicamentos for select to authenticated
   using (true);
+create policy "Admin gerencia medicamentos" on medicamentos for insert to authenticated
+  with check (public.is_admin());
+create policy "Admin atualiza medicamentos" on medicamentos for update to authenticated
+  using (public.is_admin());
+create policy "Admin exclui medicamentos" on medicamentos for delete to authenticated
+  using (public.is_admin());
 
--- catalogo_exames: catálogo global, todos autenticados podem ler
-create policy "Acesso catalogo_exames" on catalogo_exames for all to authenticated
+-- catalogo_exames: catálogo global — leitura para todos, escrita apenas para admin
+create policy "Leitura catalogo_exames" on catalogo_exames for select to authenticated
   using (true);
+create policy "Admin gerencia catalogo_exames" on catalogo_exames for insert to authenticated
+  with check (public.is_admin());
+create policy "Admin atualiza catalogo_exames" on catalogo_exames for update to authenticated
+  using (public.is_admin());
+create policy "Admin exclui catalogo_exames" on catalogo_exames for delete to authenticated
+  using (public.is_admin());
 
 -- solicitacoes_exames: médico e admin
 create policy "Medico acessa solicitacoes_exames" on solicitacoes_exames for all to authenticated

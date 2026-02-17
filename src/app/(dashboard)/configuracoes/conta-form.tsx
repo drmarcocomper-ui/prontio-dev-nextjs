@@ -30,6 +30,21 @@ export function ContaForm({ email }: { email: string }) {
 
         <FormError message={state.error} />
 
+        <div>
+          <label htmlFor="current_password" className="block text-sm font-medium text-gray-700">
+            Senha atual
+          </label>
+          <input
+            id="current_password"
+            name="current_password"
+            type="password"
+            required
+            disabled={isPending}
+            className={INPUT_CLASS}
+            placeholder="Informe sua senha atual"
+          />
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="new_password" className="block text-sm font-medium text-gray-700">

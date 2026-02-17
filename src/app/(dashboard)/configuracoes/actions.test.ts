@@ -7,6 +7,8 @@ const mockUpdate = vi.fn().mockReturnValue({
 const mockInsert = vi.fn().mockResolvedValue({ error: null });
 const mockDelete = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ in: vi.fn().mockResolvedValue({ error: null }) }) });
 const mockUpdateUser = vi.fn().mockResolvedValue({ error: null });
+const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: "user-456", email: "user@test.com" } } });
+const mockSignInWithPassword = vi.fn().mockResolvedValue({ error: null });
 const mockSelectClinica = vi.fn().mockReturnValue({
   eq: vi.fn().mockReturnValue({
     single: vi.fn().mockResolvedValue({ data: { ativo: true }, error: null }),
@@ -40,6 +42,8 @@ vi.mock("@/lib/supabase/server", () => ({
       },
       auth: {
         updateUser: (data: unknown) => mockUpdateUser(data),
+        getUser: () => mockGetUser(),
+        signInWithPassword: (data: unknown) => mockSignInWithPassword(data),
       },
     }),
 }));
@@ -410,32 +414,58 @@ describe("salvarProfissional", () => {
 describe("alterarSenha", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("retorna erro quando senha é curta", async () => {
-    const result = await alterarSenha({}, makeFormData({ new_password: "123", confirm_password: "123" }));
+  it("retorna erro quando senha atual não é informada", async () => {
+    const result = await alterarSenha({}, makeFormData({ current_password: "", new_password: "123456", confirm_password: "123456" }));
+    expect(result.error).toBe("Informe a senha atual.");
+  });
+
+  it("retorna erro quando nova senha é curta", async () => {
+    const result = await alterarSenha({}, makeFormData({ current_password: "atual123", new_password: "123", confirm_password: "123" }));
     expect(result.error).toBe("A senha deve ter pelo menos 6 caracteres.");
   });
 
   it("retorna erro quando senhas não coincidem", async () => {
-    const result = await alterarSenha({}, makeFormData({ new_password: "123456", confirm_password: "654321" }));
+    const result = await alterarSenha({}, makeFormData({ current_password: "atual123", new_password: "123456", confirm_password: "654321" }));
     expect(result.error).toBe("As senhas não coincidem.");
   });
 
+  it("retorna erro quando senha atual está incorreta", async () => {
+    mockSignInWithPassword.mockResolvedValueOnce({ error: { message: "Invalid login credentials" } });
+    const result = await alterarSenha({}, makeFormData({ current_password: "errada", new_password: "novaSenha123", confirm_password: "novaSenha123" }));
+    expect(result.error).toBe("Senha atual incorreta.");
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it("verifica senha atual via signInWithPassword", async () => {
+    await alterarSenha({}, makeFormData({ current_password: "senhaAtual", new_password: "novaSenha123", confirm_password: "novaSenha123" }));
+    expect(mockSignInWithPassword).toHaveBeenCalledWith({
+      email: "user@test.com",
+      password: "senhaAtual",
+    });
+  });
+
   it("altera senha com sucesso", async () => {
-    const result = await alterarSenha({}, makeFormData({ new_password: "novaSenha123", confirm_password: "novaSenha123" }));
+    const result = await alterarSenha({}, makeFormData({ current_password: "senhaAtual", new_password: "novaSenha123", confirm_password: "novaSenha123" }));
     expect(result.success).toBe(true);
     expect(mockUpdateUser).toHaveBeenCalledWith({ password: "novaSenha123" });
   });
 
   it("retorna erro quando senha excede max length", async () => {
     const longPassword = "a".repeat(129);
-    const result = await alterarSenha({}, makeFormData({ new_password: longPassword, confirm_password: longPassword }));
+    const result = await alterarSenha({}, makeFormData({ current_password: "atual123", new_password: longPassword, confirm_password: longPassword }));
     expect(result.error).toBe("A senha deve ter no máximo 128 caracteres.");
   });
 
   it("retorna erro quando updateUser falha", async () => {
     mockUpdateUser.mockResolvedValueOnce({ error: { message: "Auth error" } });
-    const result = await alterarSenha({}, makeFormData({ new_password: "novaSenha123", confirm_password: "novaSenha123" }));
+    const result = await alterarSenha({}, makeFormData({ current_password: "senhaAtual", new_password: "novaSenha123", confirm_password: "novaSenha123" }));
     expect(result.error).toBe("Erro ao alterar senha. Tente novamente.");
+  });
+
+  it("retorna erro quando usuário não está autenticado", async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null } });
+    const result = await alterarSenha({}, makeFormData({ current_password: "senhaAtual", new_password: "novaSenha123", confirm_password: "novaSenha123" }));
+    expect(result.error).toBe("Usuário não autenticado.");
   });
 });
 

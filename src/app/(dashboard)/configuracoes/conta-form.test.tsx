@@ -45,14 +45,21 @@ describe("ContaForm", () => {
 
   it("renderiza os campos de senha", () => {
     render(<ContaForm email="user@test.com" />);
+    expect(screen.getByLabelText("Senha atual")).toBeInTheDocument();
     expect(screen.getByLabelText("Nova senha")).toBeInTheDocument();
     expect(screen.getByLabelText("Confirmar nova senha")).toBeInTheDocument();
   });
 
   it("campos de senha são obrigatórios", () => {
     render(<ContaForm email="user@test.com" />);
+    expect(screen.getByLabelText("Senha atual")).toBeRequired();
     expect(screen.getByLabelText("Nova senha")).toBeRequired();
     expect(screen.getByLabelText("Confirmar nova senha")).toBeRequired();
+  });
+
+  it("campo senha atual é do tipo password", () => {
+    render(<ContaForm email="user@test.com" />);
+    expect(screen.getByLabelText("Senha atual")).toHaveAttribute("type", "password");
   });
 
   it("campos de senha têm minLength 6", () => {

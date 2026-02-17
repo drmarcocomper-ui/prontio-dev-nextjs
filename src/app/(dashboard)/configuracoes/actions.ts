@@ -370,8 +370,13 @@ export async function alterarSenha(
   _prev: ConfigFormState,
   formData: FormData
 ): Promise<ConfigFormState> {
+  const currentPassword = formData.get("current_password") as string;
   const newPassword = formData.get("new_password") as string;
   const confirmPassword = formData.get("confirm_password") as string;
+
+  if (!currentPassword) {
+    return { error: "Informe a senha atual." };
+  }
 
   if (!newPassword || newPassword.length < SENHA_MIN) {
     return { error: "A senha deve ter pelo menos 6 caracteres." };
@@ -386,6 +391,20 @@ export async function alterarSenha(
   }
 
   const supabase = await createClient();
+
+  // Verificar senha atual
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) {
+    return { error: "Usuário não autenticado." };
+  }
+
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (verifyError) {
+    return { error: "Senha atual incorreta." };
+  }
 
   const { error } = await supabase.auth.updateUser({
     password: newPassword,
