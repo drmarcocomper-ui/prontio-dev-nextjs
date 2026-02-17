@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { ClinicSelector } from "@/components/clinic-selector";
 import type { Clinica, Papel } from "@/lib/clinica";
+import { getInitials } from "@/lib/format";
 
 const allMainNavigation = [
   {
@@ -83,13 +84,6 @@ const allSecondaryNavigation = [
     ),
   },
 ];
-
-function getInitials(name: string): string {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 interface SidebarContentProps {
   onNavClick?: () => void;

@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockPush = vi.fn();
@@ -21,7 +21,7 @@ describe("KeyboardShortcuts", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    document.getElementById("shortcuts-help")?.remove();
+    // React-rendered modal is cleaned up automatically
   });
 
   it("renderiza sem elementos visíveis", () => {
@@ -74,26 +74,26 @@ describe("KeyboardShortcuts", () => {
 
   it("exibe overlay de ajuda ao pressionar ?", () => {
     render(<KeyboardShortcuts />);
-    pressKey("?");
-    const help = document.getElementById("shortcuts-help");
-    expect(help).not.toBeNull();
-    expect(help!.textContent).toContain("Atalhos de teclado");
+    act(() => pressKey("?"));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeDefined();
+    expect(dialog.textContent).toContain("Atalhos de teclado");
   });
 
   it("fecha overlay de ajuda ao pressionar Escape", () => {
     render(<KeyboardShortcuts />);
-    pressKey("?");
-    expect(document.getElementById("shortcuts-help")).not.toBeNull();
-    pressKey("Escape");
-    expect(document.getElementById("shortcuts-help")).toBeNull();
+    act(() => pressKey("?"));
+    expect(screen.getByRole("dialog")).toBeDefined();
+    act(() => pressKey("Escape"));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("fecha overlay de ajuda ao pressionar ? novamente", () => {
     render(<KeyboardShortcuts />);
-    pressKey("?");
-    expect(document.getElementById("shortcuts-help")).not.toBeNull();
-    pressKey("?");
-    expect(document.getElementById("shortcuts-help")).toBeNull();
+    act(() => pressKey("?"));
+    expect(screen.getByRole("dialog")).toBeDefined();
+    act(() => pressKey("?"));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("ignora atalhos quando foco está em input", () => {

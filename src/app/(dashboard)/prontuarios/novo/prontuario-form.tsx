@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
 import { type ProntuarioDefaults, TEXTO_MAX_LENGTH, TIPO_LABELS } from "../types";
+import { todayLocal } from "@/lib/date";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import { useFormDraft } from "@/hooks/use-form-draft";
 
@@ -18,7 +19,7 @@ export function ProntuarioForm({
   cancelHref?: string;
 }) {
   const isEditing = !!defaults?.id;
-  const today = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+  const today = todayLocal();
 
   const action = isEditing ? atualizarProntuario : criarProntuario;
 
@@ -147,7 +148,7 @@ export function ProntuarioForm({
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:opacity-50 w-full sm:w-auto"
         >
           {isPending && (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <div aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           )}
           {isEditing ? "Salvar alterações" : "Salvar prontuário"}
         </button>

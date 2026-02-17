@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
+import { todayLocal } from "@/lib/date";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import {
   criarPaciente,
@@ -29,7 +30,7 @@ export function PacienteForm({
   const isEditing = !!defaults?.id;
   const action = isEditing ? atualizarPaciente : criarPaciente;
   const cancelHref = isEditing ? `/pacientes/${defaults.id}` : "/pacientes";
-  const today = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+  const today = todayLocal();
 
   const [state, formAction, isPending] = useActionState<PacienteFormState, FormData>(
     action,
@@ -435,7 +436,7 @@ export function PacienteForm({
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:opacity-50 w-full sm:w-auto"
         >
           {isPending && (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <div aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           )}
           {isEditing ? "Salvar alterações" : "Cadastrar paciente"}
         </button>

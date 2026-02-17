@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { todayLocal } from "@/lib/date";
-import { formatDateBR } from "./types";
+import { formatDateLong } from "./types";
 
 function addDays(dateStr: string, days: number) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -111,7 +111,7 @@ export function DatePicker({
       )}
 
       <h2 className="text-sm font-medium capitalize text-gray-700">
-        {isWeekly ? formatWeekRange(monday, saturday) : formatDateBR(currentDate)}
+        {isWeekly ? formatWeekRange(monday, saturday) : formatDateLong(currentDate)}
       </h2>
     </div>
   );

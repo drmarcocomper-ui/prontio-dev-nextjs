@@ -23,14 +23,8 @@ export function formatDateMedium(dateStr: string) {
   });
 }
 
-export function formatDateBR(dateStr: string) {
-  return parseLocalDate(dateStr).toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
+/** @deprecated Use formatDateLong instead */
+export const formatDateBR = formatDateLong;
 
 export function formatTime(time: string) {
   return time.slice(0, 5);

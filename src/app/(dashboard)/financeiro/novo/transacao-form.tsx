@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { criarTransacao, atualizarTransacao, type TransacaoFormState } from "../actions";
+import { todayLocal } from "@/lib/date";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import {
   type TransacaoDefaults,
@@ -18,7 +19,7 @@ import {
 
 export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefaults; medicoId: string }) {
   const isEditing = !!defaults?.id;
-  const today = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; })();
+  const today = todayLocal();
   const [tipo, setTipo] = useState(defaults?.tipo ?? "receita");
 
   const action = isEditing ? atualizarTransacao : criarTransacao;

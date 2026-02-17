@@ -67,4 +67,4 @@ export const STATUS_STYLES: Record<AgendaStatus, string> = {
 };
 
 // --- Helpers de formatação (re-exports) ---
-export { formatTime, formatDateBR, getInitials } from "@/lib/format";
+export { formatTime, formatDateLong, getInitials } from "@/lib/format";

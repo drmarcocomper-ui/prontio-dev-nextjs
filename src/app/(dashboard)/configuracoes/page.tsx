@@ -84,13 +84,11 @@ export default async function ConfiguracoesPage({
 
       if (vinculosData && vinculosData.length > 0) {
         const userIds = [...new Set(vinculosData.map((v: { user_id: string }) => v.user_id))];
-        const userResults = await Promise.all(
-          userIds.map((uid) => adminSupabase.auth.admin.getUserById(uid))
-        );
+        const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
         const emailMap = new Map(
-          userResults
-            .filter((r) => r.data?.user)
-            .map((r) => [r.data.user!.id, r.data.user!.email])
+          (authUsers?.users ?? [])
+            .filter((u) => userIds.includes(u.id))
+            .map((u) => [u.id, u.email])
         );
         vinculos = vinculosData.map((v: { id: string; user_id: string; papel: string }) => ({
           ...v,

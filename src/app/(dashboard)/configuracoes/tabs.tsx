@@ -27,6 +27,7 @@ export function Tabs({ papel }: { papel: Papel }) {
             <Link
               key={tab.key}
               href={`/configuracoes?tab=${tab.key}`}
+              aria-current={isActive ? "page" : undefined}
               className={`rounded-md px-3 py-2 text-sm font-medium transition-all ${
                 isActive
                   ? "bg-white text-primary-600 shadow-sm"

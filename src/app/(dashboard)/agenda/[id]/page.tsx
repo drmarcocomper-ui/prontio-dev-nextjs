@@ -7,7 +7,7 @@ import { StatusBadge } from "../status-badge";
 import { DeleteButton } from "@/components/delete-button";
 import { getClinicaAtual } from "@/lib/clinica";
 import { excluirAgendamento } from "../actions";
-import { type Agendamento, TIPO_LABELS, formatTime, formatDateBR, getInitials } from "../types";
+import { type Agendamento, TIPO_LABELS, formatTime, formatDateLong, getInitials } from "../types";
 import { formatDateTime, formatCurrency } from "@/lib/format";
 import { UUID_RE } from "@/lib/validators";
 
@@ -79,7 +79,7 @@ export default async function AgendamentoDetalhesPage({
               {ag.pacientes.nome}
             </Link>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-              <span className="capitalize">{formatDateBR(ag.data)}</span>
+              <span className="capitalize">{formatDateLong(ag.data)}</span>
               {ag.tipo && (
                 <span className="inline-flex items-center rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
                   {TIPO_LABELS[ag.tipo] ?? ag.tipo}

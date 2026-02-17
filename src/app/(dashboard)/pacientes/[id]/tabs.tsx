@@ -20,6 +20,7 @@ export function Tabs({ pacienteId }: { pacienteId: string }) {
           <Link
             key={tab.key}
             href={`/pacientes/${pacienteId}?tab=${tab.key}`}
+            aria-current={current === tab.key ? "page" : undefined}
             className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
               current === tab.key
                 ? "border-primary-600 text-primary-600"
