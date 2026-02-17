@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useActionState } from "react";
+import { useState, useActionState } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS } from "@/components/form-utils";
 import { criarAgendamento, atualizarAgendamento, type AgendamentoFormState } from "../actions";
@@ -32,14 +32,14 @@ export function AgendamentoForm({
   );
 
   // Restaurar valores após aviso de conflito e forçar remount do select
-  useEffect(() => {
-    if (state.formValues) {
-      setData(state.formValues.data);
-      setHoraInicio(state.formValues.hora_inicio);
-      setTipo(state.formValues.tipo);
-      setSelectKey((k) => k + 1);
-    }
-  }, [state.formValues]);
+  const [appliedFormValues, setAppliedFormValues] = useState(state.formValues);
+  if (state.formValues && state.formValues !== appliedFormValues) {
+    setAppliedFormValues(state.formValues);
+    setData(state.formValues.data);
+    setHoraInicio(state.formValues.hora_inicio);
+    setTipo(state.formValues.tipo);
+    setSelectKey((k) => k + 1);
+  }
 
   const cancelHref = isEditing ? `/agenda/${defaults.id}` : `/agenda?data=${data}`;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { INPUT_CLASS, FieldError, FormError } from "@/components/form-utils";
 import { maskPhone } from "@/lib/masks";
@@ -29,15 +29,21 @@ export function QuickPatientModal({
   const nomeRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (open) {
-      setNome(defaultNome);
-      setTelefone("");
-      setConvenio("");
-      setError("");
-      setFieldErrors({});
-    }
-  }, [open, defaultNome]);
+  // Reset campos quando modal abre
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevDefaultNome, setPrevDefaultNome] = useState(defaultNome);
+  if (open && (!prevOpen || defaultNome !== prevDefaultNome)) {
+    setPrevOpen(open);
+    setPrevDefaultNome(defaultNome);
+    setNome(defaultNome);
+    setTelefone("");
+    setConvenio("");
+    setError("");
+    setFieldErrors({});
+  }
+  if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
 
   useEffect(() => {
     if (!open) return;

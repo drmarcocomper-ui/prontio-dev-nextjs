@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { type AgendaStatus, STATUS_STYLES, getInitials } from "./types";
+import { STATUS_STYLES, getInitials } from "./types";
 import type { TimeSlot } from "./time-grid";
 
 const DIAS_CURTOS: Record<number, string> = {
