@@ -136,12 +136,6 @@ export async function atualizarProntuario(
       data,
       tipo,
       queixa_principal,
-      cid: null,
-      historia_doenca: null,
-      exame_fisico: null,
-      hipotese_diagnostica: null,
-      conduta: null,
-      observacoes: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

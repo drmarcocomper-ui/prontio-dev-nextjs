@@ -205,6 +205,19 @@ describe("salvarHorarios", () => {
     }));
     expect(result.error).toContain("Erro ao salvar horários");
   });
+
+  it("retorna erro quando delete falha", async () => {
+    mockDelete.mockReturnValueOnce({
+      eq: vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({ error: { message: "DB error" } }),
+      }),
+    });
+    const result = await salvarHorarios({}, makeFormData({
+      config_duracao_consulta: "30",
+    }));
+    expect(result.error).toContain("Erro ao salvar horários");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
 
 describe("salvarValores", () => {

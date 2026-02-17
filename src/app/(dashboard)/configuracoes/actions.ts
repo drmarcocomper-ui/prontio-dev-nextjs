@@ -147,11 +147,15 @@ export async function salvarHorarios(
 
   // Delete existing horario configs for this clinic, then insert fresh
   const chaves = entries.map(e => e.chave);
-  await supabase
+  const { error: deleteError } = await supabase
     .from("configuracoes")
     .delete()
     .eq("clinica_id", ctx.clinicaId)
     .in("chave", chaves);
+
+  if (deleteError) {
+    return { error: tratarErroSupabase(deleteError, "salvar", "horários") };
+  }
 
   const { error } = await supabase.from("configuracoes").insert(entries);
 
@@ -231,14 +235,9 @@ export async function salvarHorariosProfissional(
 
   const supabase = await createClient();
 
-  // Delete existing rows for this user+clinic, then insert fresh
-  await supabase
-    .from("horarios_profissional")
-    .delete()
-    .eq("clinica_id", ctx.clinicaId)
-    .eq("user_id", ctx.userId);
-
-  const { error } = await supabase.from("horarios_profissional").insert(rows);
+  const { error } = await supabase.from("horarios_profissional").upsert(rows, {
+    onConflict: "clinica_id,user_id,dia_semana",
+  });
 
   if (error) {
     return { error: tratarErroSupabase(error, "salvar", "horários do profissional") };

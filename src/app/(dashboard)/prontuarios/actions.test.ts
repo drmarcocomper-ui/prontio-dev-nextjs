@@ -163,6 +163,19 @@ describe("atualizarProntuario", () => {
     }));
   });
 
+  it("não nullifica campos SOAP ao atualizar", async () => {
+    await expect(
+      atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }))
+    ).rejects.toThrow("REDIRECT");
+    const payload = mockUpdate.mock.calls[0][0].data;
+    expect(payload).not.toHaveProperty("cid");
+    expect(payload).not.toHaveProperty("observacoes");
+    expect(payload).not.toHaveProperty("historia_doenca");
+    expect(payload).not.toHaveProperty("exame_fisico");
+    expect(payload).not.toHaveProperty("hipotese_diagnostica");
+    expect(payload).not.toHaveProperty("conduta");
+  });
+
   it("redireciona após atualização com sucesso", async () => {
     await expect(
       atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor de cabeça" }))
