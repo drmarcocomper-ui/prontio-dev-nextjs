@@ -280,11 +280,15 @@ export async function salvarValores(
 
   // Delete all existing valor_convenio configs for this clinic
   const allKeys = [...VALORES_KEYS];
-  await supabase
+  const { error: deleteError } = await supabase
     .from("configuracoes")
     .delete()
     .eq("clinica_id", ctx.clinicaId)
     .in("chave", allKeys);
+
+  if (deleteError) {
+    return { error: tratarErroSupabase(deleteError, "salvar", "valores") };
+  }
 
   if (entries.length > 0) {
     const { error } = await supabase.from("configuracoes").insert(entries);
@@ -341,11 +345,15 @@ export async function salvarProfissional(
 
   // Delete existing profissional configs for this user, then insert fresh
   const chaves = entries.map(e => e.chave);
-  await supabase
+  const { error: deleteError } = await supabase
     .from("configuracoes")
     .delete()
     .eq("user_id", ctx.userId)
     .in("chave", chaves);
+
+  if (deleteError) {
+    return { error: tratarErroSupabase(deleteError, "salvar", "profissional") };
+  }
 
   const { error } = await supabase.from("configuracoes").insert(entries);
 

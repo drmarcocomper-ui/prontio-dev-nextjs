@@ -309,6 +309,19 @@ describe("salvarValores", () => {
     expect(result.success).toBe(true);
     expect(mockInsert).not.toHaveBeenCalled();
   });
+
+  it("retorna erro quando delete falha", async () => {
+    mockDelete.mockReturnValueOnce({
+      eq: vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({ error: { message: "DB error" } }),
+      }),
+    });
+    const result = await salvarValores({}, makeFormData({
+      config_valor_convenio_bradesco: "350,00",
+    }));
+    expect(result.error).toContain("Erro ao salvar valores");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
 
 describe("salvarProfissional", () => {
@@ -378,6 +391,19 @@ describe("salvarProfissional", () => {
     expect(mockInsert).toHaveBeenCalledWith([
       { chave: "email_profissional", valor: "dr@clinica.com", user_id: "user-456" },
     ]);
+  });
+
+  it("retorna erro quando delete falha", async () => {
+    mockDelete.mockReturnValueOnce({
+      eq: vi.fn().mockReturnValue({
+        in: vi.fn().mockResolvedValue({ error: { message: "DB error" } }),
+      }),
+    });
+    const result = await salvarProfissional({}, makeFormData({
+      config_nome_profissional: "Dr. João",
+    }));
+    expect(result.error).toContain("Erro ao salvar profissional");
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 });
 
