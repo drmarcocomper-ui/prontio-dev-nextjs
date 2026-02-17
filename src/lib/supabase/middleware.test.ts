@@ -187,6 +187,25 @@ describe("updateSession", () => {
     expect(dashRedirects.length).toBe(0);
   });
 
+  it("permite profissional_saude acessar /configuracoes", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "profissional_saude" } };
+    await updateSession(createMockRequest("/configuracoes", { prontio_clinica_id: "clinic-1" }));
+    const dashRedirects = mockRedirect.mock.calls.filter(
+      (call: unknown[]) => (call[0] as { pathname: string }).pathname === "/"
+    );
+    expect(dashRedirects.length).toBe(0);
+  });
+
+  it("redireciona secretária de /configuracoes para /", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    mockVinculoResult = { data: { clinica_id: "clinic-1", papel: "secretaria" } };
+    await updateSession(createMockRequest("/configuracoes", { prontio_clinica_id: "clinic-1" }));
+    expect(mockRedirect).toHaveBeenCalled();
+    const redirectCall = mockRedirect.mock.calls[0][0];
+    expect(redirectCall.pathname).toBe("/");
+  });
+
   describe("sem variáveis de ambiente", () => {
     beforeEach(() => {
       delete process.env.NEXT_PUBLIC_SUPABASE_URL;

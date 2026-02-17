@@ -8,7 +8,7 @@ const RESTRICTED_ROUTES: Record<string, string[]> = {
   "/financeiro": ["superadmin", "gestor", "financeiro"],
   "/relatorios": ["superadmin", "gestor", "profissional_saude", "financeiro"],
   "/usuarios": ["superadmin", "gestor"],
-  "/configuracoes": ["superadmin", "gestor"],
+  "/configuracoes": ["superadmin", "gestor", "profissional_saude"],
 };
 
 export async function updateSession(request: NextRequest) {

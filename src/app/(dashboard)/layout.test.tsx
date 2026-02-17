@@ -66,4 +66,12 @@ describe("DashboardLayout", () => {
     expect(wrapper?.className).toContain("flex");
     expect(wrapper?.className).toContain("h-screen");
   });
+
+  it("renderiza skip link apontando para #main-content", async () => {
+    await renderAsync(<DashboardLayout><p>conteúdo</p></DashboardLayout>);
+    const skipLink = screen.getByText("Ir para conteúdo principal");
+    expect(skipLink).toHaveAttribute("href", "#main-content");
+    const main = screen.getByRole("main");
+    expect(main).toHaveAttribute("id", "main-content");
+  });
 });

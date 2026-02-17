@@ -6,18 +6,18 @@ vi.mock("@/lib/supabase/middleware", () => ({
   updateSession: (...args: unknown[]) => mockUpdateSession(...args),
 }));
 
-import { proxy, config } from "./proxy";
+import { middleware, config } from "./middleware";
 
-describe("proxy", () => {
+describe("middleware", () => {
   it("chama updateSession com o request", async () => {
-    const mockRequest = { url: "http://localhost:3000/" } as Parameters<typeof proxy>[0];
-    await proxy(mockRequest);
+    const mockRequest = { url: "http://localhost:3000/" } as Parameters<typeof middleware>[0];
+    await middleware(mockRequest);
     expect(mockUpdateSession).toHaveBeenCalledWith(mockRequest);
   });
 
   it("retorna o resultado de updateSession", async () => {
-    const mockRequest = { url: "http://localhost:3000/" } as Parameters<typeof proxy>[0];
-    const result = await proxy(mockRequest);
+    const mockRequest = { url: "http://localhost:3000/" } as Parameters<typeof middleware>[0];
+    const result = await middleware(mockRequest);
     expect(result).toEqual({ status: 200 });
   });
 

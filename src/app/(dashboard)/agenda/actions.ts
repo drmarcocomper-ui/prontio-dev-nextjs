@@ -237,14 +237,20 @@ export async function atualizarStatusAgendamento(
     throw new Error("Transição de status não permitida.");
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("agendamentos")
     .update({ status: novoStatus, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("clinica_id", ctx.clinicaId);
+    .eq("clinica_id", ctx.clinicaId)
+    .eq("status", statusAtual)
+    .select("id");
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "atualizar", "status"));
+  }
+
+  if (!updated || updated.length === 0) {
+    throw new Error("Status foi alterado por outro usuário. Atualize a página.");
   }
 
   // Log de auditoria

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -27,24 +27,31 @@ describe("ClinicSelector", () => {
   it("renderiza nome da clínica atual sem botão quando há apenas uma", () => {
     render(<ClinicSelector clinicas={[clinicas[0]]} clinicaAtualId="c-1" />);
     expect(screen.getByText("Clínica Alpha")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
-  it("renderiza botão com nome da clínica quando há múltiplas", () => {
+  it("renderiza botão combobox com nome da clínica quando há múltiplas", () => {
     render(<ClinicSelector clinicas={clinicas} clinicaAtualId="c-1" />);
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("combobox");
     expect(button).toHaveTextContent("Clínica Alpha");
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveAttribute("aria-haspopup", "listbox");
   });
 
-  it("abre dropdown ao clicar no botão", async () => {
+  it("abre listbox ao clicar no botão", async () => {
     render(<ClinicSelector clinicas={clinicas} clinicaAtualId="c-1" />);
-    await userEvent.click(screen.getByRole("button"));
-    expect(screen.getByText("Clínica Beta")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("combobox"));
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    const options = screen.getAllByRole("option");
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveAttribute("aria-selected", "true");
+    expect(options[1]).toHaveAttribute("aria-selected", "false");
   });
 
   it("chama fetch e router.refresh ao selecionar outra clínica", async () => {
     render(<ClinicSelector clinicas={clinicas} clinicaAtualId="c-1" />);
-    await userEvent.click(screen.getByRole("button"));
+    await userEvent.click(screen.getByRole("combobox"));
     await userEvent.click(screen.getByText("Clínica Beta"));
     expect(mockFetch).toHaveBeenCalledWith("/api/clinica", expect.objectContaining({
       method: "POST",
@@ -55,10 +62,9 @@ describe("ClinicSelector", () => {
 
   it("não chama fetch ao selecionar a clínica atual", async () => {
     render(<ClinicSelector clinicas={clinicas} clinicaAtualId="c-1" />);
-    await userEvent.click(screen.getByRole("button"));
-    const items = screen.getAllByText("Clínica Alpha");
-    // Click the dropdown item (second one), not the button label
-    await userEvent.click(items[1]);
+    await userEvent.click(screen.getByRole("combobox"));
+    const options = screen.getAllByRole("option");
+    await userEvent.click(options[0]);
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -69,14 +75,48 @@ describe("ClinicSelector", () => {
         <ClinicSelector clinicas={clinicas} clinicaAtualId="c-1" />
       </div>
     );
-    await userEvent.click(screen.getByRole("button"));
-    expect(screen.getByText("Clínica Beta")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("combobox"));
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
     await userEvent.click(screen.getByTestId("outside"));
-    expect(screen.queryByText("Clínica Beta")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("navega com setas do teclado", async () => {
+    render(<ClinicSelector clinicas={clinicas} clinicaAtualId="c-1" />);
+    const button = screen.getByRole("combobox");
+    // Open with ArrowDown
+    fireEvent.keyDown(button, { key: "ArrowDown" });
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    // activeIndex starts at current clinic (c-1 = index 0), ArrowDown moves to c-2
+    fireEvent.keyDown(button, { key: "ArrowDown" });
+    expect(button).toHaveAttribute("aria-activedescendant", "clinic-option-c-2");
+  });
+
+  it("seleciona com Enter", async () => {
+    render(<ClinicSelector clinicas={clinicas} clinicaAtualId="c-1" />);
+    const button = screen.getByRole("combobox");
+    // Open
+    fireEvent.keyDown(button, { key: "ArrowDown" });
+    // Move to Clínica Beta (index 1)
+    fireEvent.keyDown(button, { key: "ArrowDown" });
+    // Select
+    fireEvent.keyDown(button, { key: "Enter" });
+    expect(mockFetch).toHaveBeenCalledWith("/api/clinica", expect.objectContaining({
+      body: JSON.stringify({ clinicaId: "c-2" }),
+    }));
+  });
+
+  it("fecha com Escape", async () => {
+    render(<ClinicSelector clinicas={clinicas} clinicaAtualId="c-1" />);
+    const button = screen.getByRole("combobox");
+    await userEvent.click(button);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    fireEvent.keyDown(button, { key: "Escape" });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
   it("exibe fallback 'Clínica' quando nome não encontrado", () => {
     render(<ClinicSelector clinicas={clinicas} clinicaAtualId="c-inexistente" />);
-    expect(screen.getByRole("button")).toHaveTextContent("Clínica Alpha");
+    expect(screen.getByRole("combobox")).toHaveTextContent("Clínica Alpha");
   });
 });

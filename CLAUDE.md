@@ -53,7 +53,7 @@ src/
 │       ├── client.ts               # createBrowserClient (Client Components)
 │       ├── server.ts               # createServerClient (Server Components / Actions)
 │       └── middleware.ts            # Refresh de sessão + proteção de rotas
-├── proxy.ts                        # Middleware do Next.js (renova sessão via updateSession)
+└── middleware.ts                    # Middleware do Next.js (renova sessão via updateSession)
 ```
 
 ## Padrões e convenções

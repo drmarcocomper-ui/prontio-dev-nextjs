@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockInsert = vi.fn().mockResolvedValue({ error: null });
 const mockLogInsert = vi.fn().mockResolvedValue({ error: null });
-const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
+const mockUpdateEq = vi.fn().mockResolvedValue({ error: null, data: [{ id: "updated" }] });
 const mockDeleteEq = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 
@@ -109,7 +109,14 @@ vi.mock("@/lib/supabase/server", () => ({
           insert: (data: unknown) => mockInsert(data),
           update: (data: unknown) => ({
             eq: (_col: string, val: string) => ({
-              eq: () => mockUpdateEq(data, val),
+              eq: () => {
+                const result = mockUpdateEq(data, val);
+                // Support further .eq().select() chaining for TOCTOU-safe updates
+                Object.assign(result, {
+                  eq: () => ({ select: () => result }),
+                });
+                return result;
+              },
             }),
           }),
           delete: () => ({
@@ -169,7 +176,7 @@ describe("criarAgendamento", () => {
     invalidarCacheHorario("clinic-1");
     invalidarCacheHorario("clinic-1", "user-1");
     mockInsert.mockResolvedValue({ error: null });
-    mockUpdateEq.mockResolvedValue({ error: null });
+    mockUpdateEq.mockResolvedValue({ error: null, data: [{ id: "updated" }] });
     conflitoResult = { data: [], error: null };
     configResult = { data: [], error: null };
     pacienteSingleResult = { data: null, error: null };
@@ -423,7 +430,7 @@ describe("atualizarAgendamento", () => {
     invalidarCacheHorario("clinic-1");
     invalidarCacheHorario("clinic-1", "user-1");
     mockInsert.mockResolvedValue({ error: null });
-    mockUpdateEq.mockResolvedValue({ error: null });
+    mockUpdateEq.mockResolvedValue({ error: null, data: [{ id: "updated" }] });
     conflitoResult = { data: [], error: null };
     configResult = { data: [], error: null };
     pacienteSingleResult = { data: null, error: null };
@@ -578,7 +585,7 @@ describe("atualizarAgendamento", () => {
 describe("atualizarStatusAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUpdateEq.mockResolvedValue({ error: null });
+    mockUpdateEq.mockResolvedValue({ error: null, data: [{ id: "updated" }] });
     selectChain = createSelectChain();
     singleResult = { data: { status: "agendado" }, error: null };
   });
@@ -647,9 +654,17 @@ describe("atualizarStatusAgendamento", () => {
 
   it("lança erro quando atualização no banco falha", async () => {
     singleResult = { data: { status: "agendado" }, error: null };
-    mockUpdateEq.mockResolvedValueOnce({ error: { message: "DB error" } });
+    mockUpdateEq.mockResolvedValueOnce({ error: { message: "DB error" }, data: null });
     await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")).rejects.toThrow(
       "Erro ao atualizar status."
+    );
+  });
+
+  it("lança erro quando status foi alterado por outro usuário (TOCTOU)", async () => {
+    singleResult = { data: { status: "agendado" }, error: null };
+    mockUpdateEq.mockResolvedValueOnce({ error: null, data: [] });
+    await expect(atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")).rejects.toThrow(
+      "Status foi alterado por outro usuário. Atualize a página."
     );
   });
 
