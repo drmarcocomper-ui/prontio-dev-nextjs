@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA } from "./constants";
-import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoIdSafe } from "@/lib/clinica";
 
 export type TransacaoFormState = {
   error?: string;
@@ -75,12 +75,8 @@ export async function criarTransacao(
   if (!ctx) return { error: "Clínica não selecionada." };
 
   if (fields.paciente_id) {
-    let medicoId: string;
-    try {
-      medicoId = await getMedicoId();
-    } catch {
-      return { error: "Não foi possível identificar o médico responsável." };
-    }
+    const medicoId = await getMedicoIdSafe();
+    if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
     const { data: paciente } = await supabase
       .from("pacientes")
       .select("id")
@@ -135,12 +131,8 @@ export async function atualizarTransacao(
   if (!ctx) return { error: "Clínica não selecionada." };
 
   if (fields.paciente_id) {
-    let medicoId: string;
-    try {
-      medicoId = await getMedicoId();
-    } catch {
-      return { error: "Não foi possível identificar o médico responsável." };
-    }
+    const medicoId = await getMedicoIdSafe();
+    if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
     const { data: paciente } = await supabase
       .from("pacientes")
       .select("id")

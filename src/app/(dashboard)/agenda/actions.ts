@@ -131,13 +131,13 @@ async function determinarValor(
 ): Promise<number | null> {
   if (tipo === "retorno") return 0;
 
-  const { data: paciente } = await supabase
+  const { data: paciente, error: pacienteError } = await supabase
     .from("pacientes")
     .select("convenio")
     .eq("id", pacienteId)
     .single();
 
-  if (!paciente?.convenio) return null;
+  if (pacienteError || !paciente?.convenio) return null;
 
   if (paciente.convenio === "cortesia") return 0;
 
@@ -146,7 +146,7 @@ async function determinarValor(
     .select("valor")
     .eq("clinica_id", clinicaId)
     .eq("chave", `valor_convenio_${paciente.convenio}`)
-    .single();
+    .maybeSingle();
 
   return config?.valor ? parseFloat(config.valor) : null;
 }

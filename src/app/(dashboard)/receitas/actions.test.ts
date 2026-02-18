@@ -9,6 +9,7 @@ const mockRedirect = vi.fn();
 
 vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
+  getMedicoIdSafe: vi.fn().mockResolvedValue("user-1"),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { TEXTO_MAX_LENGTH, TIPO_LABELS } from "./types";
-import { getMedicoId } from "@/lib/clinica";
+import { getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
 
 export type ProntuarioFormState = {
   error?: string;
@@ -58,12 +58,8 @@ export async function criarProntuario(
   }
 
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { error: "Não foi possível identificar o médico responsável." };
-  }
+  const medicoId = await getMedicoIdSafe();
+  if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const { data: paciente } = await supabase
     .from("pacientes")
@@ -117,12 +113,8 @@ export async function atualizarProntuario(
   }
 
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { error: "Não foi possível identificar o médico responsável." };
-  }
+  const medicoId = await getMedicoIdSafe();
+  if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const { data: paciente } = await supabase
     .from("pacientes")

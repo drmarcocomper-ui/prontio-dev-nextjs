@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido } from "@/lib/validators";
 import { EXAMES_MAX_LENGTH, INDICACAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./types";
-import { getMedicoId } from "@/lib/clinica";
+import { getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
 
 export type ExameFormState = {
   error?: string;
@@ -47,12 +47,8 @@ export async function criarExame(
   }
 
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { error: "Não foi possível identificar o médico responsável." };
-  }
+  const medicoId = await getMedicoIdSafe();
+  if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const { data: paciente } = await supabase
     .from("pacientes")
@@ -104,12 +100,8 @@ export async function atualizarExame(
   }
 
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { error: "Não foi possível identificar o médico responsável." };
-  }
+  const medicoId = await getMedicoIdSafe();
+  if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const { data: paciente } = await supabase
     .from("pacientes")

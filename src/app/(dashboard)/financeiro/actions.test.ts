@@ -15,6 +15,7 @@ vi.mock("@/lib/clinica", () => ({
     userId: "user-1",
   }),
   getMedicoId: (...args: unknown[]) => mockMedicoId(...args),
+  getMedicoIdSafe: async () => { try { return await mockMedicoId(); } catch { return null; } },
 }));
 
 const mockPacienteCheck = vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000001" } });

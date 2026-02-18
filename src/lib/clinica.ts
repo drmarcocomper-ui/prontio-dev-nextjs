@@ -115,3 +115,15 @@ export async function getMedicoId(): Promise<string> {
   if (!data) throw new Error("Médico não encontrado para esta clínica.");
   return data.user_id;
 }
+
+/**
+ * Versão safe de getMedicoId que retorna null em vez de lançar exceção.
+ * Ideal para server actions que precisam retornar { error } em vez de throw.
+ */
+export async function getMedicoIdSafe(): Promise<string | null> {
+  try {
+    return await getMedicoId();
+  } catch {
+    return null;
+  }
+}

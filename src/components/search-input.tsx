@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 interface SearchInputProps {
   basePath: string;
@@ -17,6 +17,12 @@ export function SearchInput({ basePath, placeholder, ariaLabel, defaultValue }: 
   const inputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
   const [value, setValue] = useState(defaultValue ?? "");
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   function handleSearch(term: string) {
     setValue(term);

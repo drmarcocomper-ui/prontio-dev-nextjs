@@ -202,6 +202,8 @@ export async function salvarHorariosProfissional(
     duracao_consulta: number;
   }[] = [];
 
+  const TIME_RE = /^\d{2}:\d{2}$/;
+
   for (let i = 0; i < 7; i++) {
     const key = DIAS_KEYS[i];
     const ativo = formData.get(`ativo_${key}`) === "true";
@@ -214,8 +216,17 @@ export async function salvarHorariosProfissional(
       if (!hora_inicio || !hora_fim) {
         return { error: `Horário de início e fim são obrigatórios para ${key}.` };
       }
+      if (!TIME_RE.test(hora_inicio) || !TIME_RE.test(hora_fim)) {
+        return { error: `Formato de horário inválido para ${key}.` };
+      }
       if (hora_fim <= hora_inicio) {
         return { error: `Horário de término deve ser posterior ao início (${key}).` };
+      }
+      if (intervalo_inicio && !TIME_RE.test(intervalo_inicio)) {
+        return { error: `Formato de intervalo inválido para ${key}.` };
+      }
+      if (intervalo_fim && !TIME_RE.test(intervalo_fim)) {
+        return { error: `Formato de intervalo inválido para ${key}.` };
       }
       if (intervalo_inicio && intervalo_fim && intervalo_fim <= intervalo_inicio) {
         return { error: `Intervalo inválido para ${key}.` };

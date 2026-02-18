@@ -9,6 +9,7 @@ const mockRedirect = vi.fn();
 
 vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
+  getMedicoIdSafe: vi.fn().mockResolvedValue("user-1"),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -69,7 +70,7 @@ vi.mock("./types", async () => {
 });
 
 import { criarExame, atualizarExame, excluirExame } from "./actions";
-import { getMedicoId } from "@/lib/clinica";
+import { getMedicoIdSafe } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -141,8 +142,8 @@ describe("criarExame", () => {
     expect(mockInsert).not.toHaveBeenCalled();
   });
 
-  it("retorna erro quando getMedicoId lança exceção", async () => {
-    vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Sem contexto"));
+  it("retorna erro quando getMedicoIdSafe retorna null", async () => {
+    vi.mocked(getMedicoIdSafe).mockResolvedValueOnce(null);
     const result = await criarExame({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", exames: "Hemograma completo" }));
     expect(result.error).toBe("Não foi possível identificar o médico responsável.");
     expect(mockInsert).not.toHaveBeenCalled();
@@ -214,8 +215,8 @@ describe("atualizarExame", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it("retorna erro quando getMedicoId lança exceção", async () => {
-    vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Sem contexto"));
+  it("retorna erro quando getMedicoIdSafe retorna null", async () => {
+    vi.mocked(getMedicoIdSafe).mockResolvedValueOnce(null);
     const result = await atualizarExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", exames: "Hemograma completo" }));
     expect(result.error).toBe("Não foi possível identificar o médico responsável.");
     expect(mockUpdate).not.toHaveBeenCalled();

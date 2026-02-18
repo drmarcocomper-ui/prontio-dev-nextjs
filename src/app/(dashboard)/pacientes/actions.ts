@@ -12,7 +12,7 @@ import {
   OBSERVACOES_MAX_LENGTH, validarCPF,
   SEXO_LABELS, ESTADO_CIVIL_LABELS, ESTADOS_UF, CONVENIO_LABELS,
 } from "./types";
-import { getMedicoId } from "@/lib/clinica";
+import { getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
 
 export type PacienteFormState = {
   error?: string;
@@ -96,12 +96,8 @@ export async function criarPaciente(
   }
 
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { error: "Não foi possível identificar o médico responsável." };
-  }
+  const medicoId = await getMedicoIdSafe();
+  if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const { error } = await supabase.from("pacientes").insert({
     medico_id: medicoId,
@@ -143,12 +139,8 @@ export async function atualizarPaciente(
   }
 
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { error: "Não foi possível identificar o médico responsável." };
-  }
+  const medicoId = await getMedicoIdSafe();
+  if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const { error } = await supabase
     .from("pacientes")
@@ -201,12 +193,8 @@ export async function criarPacienteRapido(data: {
     return { fieldErrors };
   }
 
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { error: "Não foi possível identificar o médico responsável." };
-  }
+  const medicoId = await getMedicoIdSafe();
+  if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const supabase = await createClient();
   const { data: inserted, error } = await supabase
