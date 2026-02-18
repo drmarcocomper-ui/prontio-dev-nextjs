@@ -46,6 +46,14 @@ export async function criarUsuario(
     return { error: "Sem permissão para criar usuários." };
   }
 
+  const { success: allowed } = rateLimit({
+    key: `criar_usuario:${ctx.userId}`,
+    windowMs: 60 * 60 * 1000, // 1 hora
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde 1 hora antes de tentar novamente." };
+  }
+
   // Verificar se o usuário tem acesso à clínica informada
   const clinicas = await getClinicasDoUsuario();
   if (!clinicas.some((c) => c.id === clinicaId)) {
@@ -239,6 +247,14 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para remover vínculos.");
+  }
+
+  const { success: allowed } = rateLimit({
+    key: `remover_vinculo:${ctx.userId}`,
+    windowMs: 60 * 60 * 1000, // 1 hora
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
   }
 
   // Buscar vínculo para verificar auto-remoção e último gestor

@@ -164,6 +164,12 @@ describe("criarUsuario", () => {
     expect(result.error).toBe("Sem permissão para criar usuários.");
   });
 
+  it("retorna erro quando rate limit é atingido", async () => {
+    vi.mocked(rateLimit).mockReturnValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
+  });
+
   it("retorna erro quando clinicaId não pertence ao usuário", async () => {
     const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000099" }));
     expect(result.error).toBe("Você não tem acesso a esta clínica.");
@@ -370,6 +376,11 @@ describe("removerVinculo", () => {
       clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000011",
     });
     await expect(removerVinculo("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Sem permissão para remover vínculos.");
+  });
+
+  it("lança erro quando rate limit é atingido", async () => {
+    vi.mocked(rateLimit).mockReturnValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    await expect(removerVinculo("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
   });
 
   it("lança erro quando vínculo não pertence à clínica (previne IDOR)", async () => {
