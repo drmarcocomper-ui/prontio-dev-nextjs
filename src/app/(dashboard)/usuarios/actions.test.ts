@@ -28,6 +28,7 @@ const mockAdminCreateUser = vi.fn().mockResolvedValue({
   error: null,
 });
 const mockAdminUpdateUser = vi.fn().mockResolvedValue({ error: null });
+const mockAdminDeleteUser = vi.fn().mockResolvedValue({ error: null });
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -49,6 +50,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       admin: {
         createUser: (data: unknown) => mockAdminCreateUser(data),
         updateUserById: (id: string, data: unknown) => mockAdminUpdateUser(id, data),
+        deleteUser: (id: string) => mockAdminDeleteUser(id),
       },
     },
   }),

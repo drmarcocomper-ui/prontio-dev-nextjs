@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import LoginForm from "./login-form";
+
+export const metadata: Metadata = { title: "Login" };
 
 const ERROR_MESSAGES: Record<string, string> = {
   auth_erro: "Erro ao autenticar. Tente novamente.",

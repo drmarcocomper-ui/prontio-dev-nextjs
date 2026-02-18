@@ -169,6 +169,7 @@ export default async function FinanceiroPage({
               saldo >= 0 ? "text-emerald-600" : "text-red-600"
             }`}
           >
+            <span className="sr-only">{saldo >= 0 ? "Positivo: " : "Negativo: "}</span>
             {formatCurrency(saldo)}
           </p>
         </div>

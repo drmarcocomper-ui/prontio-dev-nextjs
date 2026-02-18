@@ -30,10 +30,11 @@ function validarCamposTransacao(formData: FormData) {
   campoObrigatorio(fieldErrors, "tipo", tipo, "Selecione o tipo.");
   valorPermitido(fieldErrors, "tipo", tipo, ["receita", "despesa"]);
   if (categoria) {
-    const categoriasValidas = [
-      ...CATEGORIAS_RECEITA.map(c => c.value),
-      ...CATEGORIAS_DESPESA.map(c => c.value),
-    ];
+    const categoriasValidas = tipo === "receita"
+      ? CATEGORIAS_RECEITA.map(c => c.value)
+      : tipo === "despesa"
+        ? CATEGORIAS_DESPESA.map(c => c.value)
+        : [...CATEGORIAS_RECEITA.map(c => c.value), ...CATEGORIAS_DESPESA.map(c => c.value)];
     valorPermitido(fieldErrors, "categoria", categoria, categoriasValidas);
   }
   campoObrigatorio(fieldErrors, "descricao", descricao, "Descrição é obrigatória.");

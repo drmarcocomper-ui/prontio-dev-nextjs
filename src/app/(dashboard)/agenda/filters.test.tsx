@@ -21,6 +21,9 @@ vi.mock("./types", () => ({
   TIPO_LABELS: {
     consulta: "Consulta",
     retorno: "Retorno",
+    exame: "Exame",
+    procedimento: "Procedimento",
+    avaliacao: "Avaliação",
   },
 }));
 
@@ -59,7 +62,7 @@ describe("AgendaFilters", () => {
     const select = screen.getByLabelText("Filtrar por tipo");
     expect(select).toBeInTheDocument();
     const options = select.querySelectorAll("option");
-    expect(options).toHaveLength(3); // Todos os tipos + 2 tipos
+    expect(options).toHaveLength(6); // "Todos" + 5 tipos
   });
 
   it("seleciona tipo correto baseado em currentTipo", () => {

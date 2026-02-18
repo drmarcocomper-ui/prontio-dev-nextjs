@@ -41,7 +41,8 @@ async function verificarConflito(
 
   const { data: conflitos, error } = await query.limit(1);
 
-  if (error || !conflitos || conflitos.length === 0) return null;
+  if (error) throw new Error(tratarErroSupabase(error, "buscar", "conflito de horário"));
+  if (!conflitos || conflitos.length === 0) return null;
 
   const c = conflitos[0] as unknown as {
     hora_inicio: string;

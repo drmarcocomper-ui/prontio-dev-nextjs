@@ -78,6 +78,8 @@ export async function criarUsuario(
     });
 
   if (vinculoError) {
+    // Cleanup: delete orphaned auth user since vinculo failed
+    await adminSupabase.auth.admin.deleteUser(newUser.user.id);
     if (vinculoError.code === "23505") {
       return { error: "Este usuário já está vinculado a esta clínica." };
     }

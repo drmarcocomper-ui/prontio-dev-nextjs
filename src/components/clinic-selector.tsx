@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { Clinica } from "@/lib/clinica";
 
 interface ClinicSelectorProps {
@@ -49,13 +50,17 @@ export function ClinicSelector({ clinicas, clinicaAtualId }: ClinicSelectorProps
       setIsOpen(false);
       if (clinicaId === clinicaAtualId) return;
 
-      await fetch("/api/clinica", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clinicaId }),
-      });
-
-      router.refresh();
+      try {
+        const res = await fetch("/api/clinica", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clinicaId }),
+        });
+        if (!res.ok) throw new Error("fetch failed");
+        router.refresh();
+      } catch {
+        toast.error("Erro ao trocar de clínica.");
+      }
     },
     [clinicaAtualId, router],
   );
@@ -114,10 +119,10 @@ export function ClinicSelector({ clinicas, clinicaAtualId }: ClinicSelectorProps
     <div ref={ref} className="relative mx-3 mb-2">
       <button
         type="button"
-        role="combobox"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        aria-controls={isOpen ? listboxId : undefined}
+        aria-controls={listboxId}
+        aria-label="Selecionar clínica"
         aria-activedescendant={isOpen && activeIndex >= 0 ? `clinic-option-${clinicas[activeIndex].id}` : undefined}
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
