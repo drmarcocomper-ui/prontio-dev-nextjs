@@ -50,6 +50,8 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+const mockGetUserIdByEmail = vi.fn().mockResolvedValue("00000000-0000-0000-0000-000000000050");
+
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: () => ({
@@ -67,6 +69,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       },
     },
   }),
+  getUserIdByEmail: (...args: unknown[]) => mockGetUserIdByEmail(...args),
 }));
 
 vi.mock("@/lib/rate-limit", () => ({

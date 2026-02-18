@@ -100,6 +100,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       },
     },
   }),
+  getAuthEmailMap: () => Promise.resolve({}),
 }));
 
 const mockClinica = {

@@ -88,15 +88,11 @@ export default async function ConfiguracoesPage({
 
       if (vinculosData && vinculosData.length > 0) {
         const userIds = [...new Set(vinculosData.map((v: { user_id: string }) => v.user_id))];
-        const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
-        const emailMap = new Map(
-          (authUsers?.users ?? [])
-            .filter((u) => userIds.includes(u.id))
-            .map((u) => [u.id, u.email])
-        );
+        const { getAuthEmailMap } = await import("@/lib/supabase/admin");
+        const emailMap = await getAuthEmailMap(adminSupabase, userIds);
         vinculos = vinculosData.map((v: { id: string; user_id: string; papel: string }) => ({
           ...v,
-          email: emailMap.get(v.user_id),
+          email: emailMap[v.user_id],
         }));
       }
 
@@ -163,19 +159,26 @@ export default async function ConfiguracoesPage({
     usuariosClinicas = clinicasUser.map((c) => ({ id: c.id, nome: c.nome }));
     usuariosCurrentPage = Math.max(1, Number(pagina) || 1);
 
-    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { createAdminClient, getAuthEmailMap } = await import("@/lib/supabase/admin");
     const adminSupabase = createAdminClient();
 
     let userIdFilter: string[] | null = null;
 
-    // If searching, first find matching users by email
+    // If searching, find matching users by email using getAuthEmailMap
+    // We fetch all clinic users' emails once and reuse for both search and enrichment
+    const { data: allVinculos } = await adminSupabase
+      .from("usuarios_clinicas")
+      .select("user_id")
+      .eq("clinica_id", ctx.clinicaId);
+
+    const allUserIds = [...new Set((allVinculos ?? []).map((v: { user_id: string }) => v.user_id))];
+    const emailMap = await getAuthEmailMap(adminSupabase, allUserIds);
+
     if (q) {
-      const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
-      if (authUsers?.users) {
-        const escaped = q.toLowerCase();
-        const matched = authUsers.users.filter((u) => u.email?.toLowerCase().includes(escaped));
-        userIdFilter = matched.map((u) => u.id);
-      }
+      const escaped = q.toLowerCase();
+      userIdFilter = Object.entries(emailMap)
+        .filter(([, email]) => email.toLowerCase().includes(escaped))
+        .map(([id]) => id);
     }
 
     if (!q || (userIdFilter && userIdFilter.length > 0)) {
@@ -203,21 +206,6 @@ export default async function ConfiguracoesPage({
       if (error) {
         usuariosError = true;
       } else {
-        // Enrich with emails from auth
-        const userIds = (vinculosData ?? []).map((v: { user_id: string }) => v.user_id);
-        let emailMap: Record<string, string> = {};
-
-        if (userIds.length > 0) {
-          const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
-          if (authUsers?.users) {
-            emailMap = Object.fromEntries(
-              authUsers.users
-                .filter((u) => userIds.includes(u.id))
-                .map((u) => [u.id, u.email ?? ""])
-            );
-          }
-        }
-
         usuariosItems = ((vinculosData ?? []) as unknown as {
           id: string;
           user_id: string;

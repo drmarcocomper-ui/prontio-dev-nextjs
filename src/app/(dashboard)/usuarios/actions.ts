@@ -67,14 +67,12 @@ export async function criarUsuario(
   if (createError) {
     if (createError.message?.includes("already been registered") || createError.message?.includes("already exists")) {
       // Usuário já existe no Auth — buscar o ID para vincular à clínica
-      const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
-      const existing = authUsers?.users?.find(
-        (u) => u.email?.toLowerCase() === email.toLowerCase()
-      );
-      if (!existing) {
+      const { getUserIdByEmail } = await import("@/lib/supabase/admin");
+      const existingId = await getUserIdByEmail(adminSupabase, email);
+      if (!existingId) {
         return { error: "Usuário existente não encontrado. Tente novamente." };
       }
-      userId = existing.id;
+      userId = existingId;
     } else {
       return { error: "Erro ao criar usuário. Tente novamente." };
     }
