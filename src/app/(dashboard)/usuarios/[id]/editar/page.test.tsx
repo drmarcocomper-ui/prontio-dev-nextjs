@@ -74,6 +74,15 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: mockVinculo }),
+          }),
+        }),
+      }),
+    }),
     auth: {
       admin: {
         getUserById: (...args: unknown[]) => mockGetUserById(...args),

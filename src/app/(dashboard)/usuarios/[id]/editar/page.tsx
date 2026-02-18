@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getClinicaAtual, isGestor } from "@/lib/clinica";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { UsuarioForm } from "../../novo/usuario-form";
@@ -18,8 +17,9 @@ export async function generateMetadata({
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) return { title: "Editar Usuário" };
 
-  const supabase = await createClient();
-  const { data: vinculo } = await supabase
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminSupabase = createAdminClient();
+  const { data: vinculo } = await adminSupabase
     .from("usuarios_clinicas")
     .select("user_id")
     .eq("id", id)
@@ -27,9 +27,6 @@ export async function generateMetadata({
     .single();
 
   if (!vinculo) return { title: "Editar Usuário" };
-
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  const adminSupabase = createAdminClient();
   const { data: authUser } = await adminSupabase.auth.admin.getUserById(vinculo.user_id);
 
   return {
@@ -51,8 +48,10 @@ export default async function EditarUsuarioPage({
     notFound();
   }
 
-  const supabase = await createClient();
-  const { data: vinculo } = await supabase
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminSupabase = createAdminClient();
+
+  const { data: vinculo } = await adminSupabase
     .from("usuarios_clinicas")
     .select("id, user_id, papel, clinica_id, clinicas(nome)")
     .eq("id", id)
@@ -70,9 +69,6 @@ export default async function EditarUsuarioPage({
     clinica_id: string;
     clinicas: { nome: string };
   };
-
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  const adminSupabase = createAdminClient();
   const { data: authUser } = await adminSupabase.auth.admin.getUserById(v.user_id);
 
   const email = authUser?.user?.email ?? "";

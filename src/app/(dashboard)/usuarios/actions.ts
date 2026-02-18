@@ -135,8 +135,9 @@ export async function atualizarUsuario(
     return { error: "Você não pode editar seu próprio vínculo." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  const { createAdminClient: createAdmin } = await import("@/lib/supabase/admin");
+  const admin = createAdmin();
+  const { error } = await admin
     .from("usuarios_clinicas")
     .update({ papel })
     .eq("id", vinculoId)
@@ -179,8 +180,9 @@ export async function atualizarPapel(
     return { error: "Você não pode alterar seu próprio papel." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  const { createAdminClient: createAdmin } = await import("@/lib/supabase/admin");
+  const admin = createAdmin();
+  const { error } = await admin
     .from("usuarios_clinicas")
     .update({ papel: novoPapel })
     .eq("id", vinculoId)
@@ -272,8 +274,9 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
   }
 
   // Buscar vínculo para verificar auto-remoção (scoped pela clínica atual)
-  const supabase = await createClient();
-  const { data: vinculo } = await supabase
+  const { createAdminClient: createAdmin } = await import("@/lib/supabase/admin");
+  const admin = createAdmin();
+  const { data: vinculo } = await admin
     .from("usuarios_clinicas")
     .select("user_id")
     .eq("id", vinculoId)
@@ -288,7 +291,7 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
     throw new Error("Você não pode remover seu próprio vínculo.");
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from("usuarios_clinicas")
     .delete()
     .eq("id", vinculoId)

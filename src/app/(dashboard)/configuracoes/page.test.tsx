@@ -79,11 +79,20 @@ vi.mock("@/lib/clinica", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
-    from: () => ({
-      select: () => ({
-        in: () => Promise.resolve({ data: [] }),
-      }),
-    }),
+    from: () => {
+      const chainResult = Promise.resolve({ data: [], count: 0, error: null });
+      const eqChain: Record<string, unknown> = {
+        in: () => ({ order: () => ({ range: () => chainResult }) }),
+        eq: () => eqChain,
+        order: () => ({ range: () => chainResult }),
+      };
+      return {
+        select: () => ({
+          in: () => Promise.resolve({ data: [] }),
+          eq: () => eqChain,
+        }),
+      };
+    },
     auth: {
       admin: {
         listUsers: () => Promise.resolve({ data: { users: [] } }),
