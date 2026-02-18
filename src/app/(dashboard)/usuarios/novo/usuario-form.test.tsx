@@ -101,7 +101,7 @@ describe("UsuarioForm", () => {
     formState.current = { success: true };
     render(<UsuarioForm clinicas={clinicas} />);
     expect(mockToastSuccess).toHaveBeenCalledWith("Usuário criado com sucesso.");
-    expect(mockPush).toHaveBeenCalledWith("/usuarios");
+    expect(mockPush).toHaveBeenCalledWith("/configuracoes?tab=usuarios");
   });
 
   it("exibe mensagem de erro", () => {
@@ -151,6 +151,6 @@ describe("UsuarioForm — modo edição", () => {
     formState.current = { success: true };
     render(<UsuarioForm clinicas={[]} defaults={editDefaults} />);
     expect(mockToastSuccess).toHaveBeenCalledWith("Usuário atualizado com sucesso.");
-    expect(mockPush).toHaveBeenCalledWith("/usuarios");
+    expect(mockPush).toHaveBeenCalledWith("/configuracoes?tab=usuarios");
   });
 });

@@ -87,6 +87,7 @@ export async function criarUsuario(
   }
 
   revalidatePath("/usuarios");
+  revalidatePath("/configuracoes");
   return { success: true };
 }
 
@@ -130,6 +131,7 @@ export async function atualizarUsuario(
   }
 
   revalidatePath("/usuarios");
+  revalidatePath("/configuracoes");
   return { success: true };
 }
 
@@ -173,6 +175,7 @@ export async function atualizarPapel(
   }
 
   revalidatePath("/usuarios");
+  revalidatePath("/configuracoes");
   return { success: true };
 }
 
@@ -280,4 +283,5 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
   }
 
   revalidatePath("/usuarios");
+  revalidatePath("/configuracoes");
 }

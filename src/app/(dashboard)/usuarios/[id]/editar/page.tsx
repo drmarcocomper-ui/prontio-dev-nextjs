@@ -90,7 +90,7 @@ export default async function EditarUsuarioPage({
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       <div>
         <Breadcrumb items={[
-          { label: "Usuários", href: "/usuarios" },
+          { label: "Usuários", href: "/configuracoes?tab=usuarios" },
           { label: email || "Usuário" },
           { label: "Editar" },
         ]} />

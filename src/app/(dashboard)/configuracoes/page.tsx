@@ -157,7 +157,10 @@ export default async function ConfiguracoesPage({
   let usuariosTotalItems = 0;
   let usuariosCurrentPage = 1;
   let usuariosError = false;
+  let usuariosClinicas: { id: string; nome: string }[] = [];
   if (currentTab === "usuarios" && ctx) {
+    const clinicasUser = await getClinicasDoUsuario();
+    usuariosClinicas = clinicasUser.map((c) => ({ id: c.id, nome: c.nome }));
     usuariosCurrentPage = Math.max(1, Number(pagina) || 1);
 
     const { createAdminClient } = await import("@/lib/supabase/admin");
@@ -310,6 +313,7 @@ export default async function ConfiguracoesPage({
             q={q}
             papel={papelFilter}
             currentUserId={ctx.userId}
+            clinicas={usuariosClinicas}
           />
         )}
         {currentTab === "usuarios" && ctx && usuariosError && (

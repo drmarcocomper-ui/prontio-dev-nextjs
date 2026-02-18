@@ -28,7 +28,7 @@ export function UsuarioForm({ clinicas, defaults }: UsuarioFormProps) {
   useEffect(() => {
     if (state.success) {
       toast.success(isEditing ? "Usuário atualizado com sucesso." : "Usuário criado com sucesso.");
-      router.push("/usuarios");
+      router.push("/configuracoes?tab=usuarios");
     }
   }, [state, router, isEditing]);
 

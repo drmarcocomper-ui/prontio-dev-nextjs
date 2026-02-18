@@ -59,7 +59,9 @@ vi.mock("./horarios-profissional-form", () => ({
 }));
 
 vi.mock("./usuarios-tab", () => ({
-  UsuariosTab: () => <div data-testid="usuarios-tab" />,
+  UsuariosTab: ({ clinicas }: { clinicas?: { id: string; nome: string }[] }) => (
+    <div data-testid="usuarios-tab" data-clinicas={JSON.stringify(clinicas ?? [])} />
+  ),
 }));
 
 vi.mock("@/lib/clinica", () => ({

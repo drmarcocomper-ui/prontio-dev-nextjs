@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { Pagination } from "@/components/pagination";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { PapelFilter } from "@/app/(dashboard)/usuarios/filters";
 import { UsuarioRowActions } from "@/app/(dashboard)/usuarios/usuario-actions";
 import { type UsuarioListItem, PAPEL_BADGE } from "@/app/(dashboard)/usuarios/types";
+import { NovoUsuarioForm } from "./novo-usuario-form";
 
 const PAGE_SIZE = 20;
 
@@ -19,6 +19,7 @@ export function UsuariosTab({
   q,
   papel,
   currentUserId,
+  clinicas,
 }: {
   items: UsuarioListItem[];
   totalItems: number;
@@ -26,6 +27,7 @@ export function UsuariosTab({
   q: string | undefined;
   papel: string | undefined;
   currentUserId: string;
+  clinicas: { id: string; nome: string }[];
 }) {
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
@@ -36,22 +38,11 @@ export function UsuariosTab({
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Usuários</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            {totalItems} usuário{totalItems !== 1 ? "s" : ""} vinculado{totalItems !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <Link
-          href="/usuarios/novo"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
-        >
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Novo usuário
-        </Link>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">Usuários</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          {totalItems} usuário{totalItems !== 1 ? "s" : ""} vinculado{totalItems !== 1 ? "s" : ""}
+        </p>
       </div>
 
       {/* Search + Filters */}
@@ -172,19 +163,8 @@ export function UsuariosTab({
           <p className="mt-1 text-sm text-gray-500">
             {q
               ? "Tente buscar com outros termos."
-              : "Comece criando o primeiro usuário."}
+              : "Comece criando o primeiro usuário no formulário abaixo."}
           </p>
-          {!q && (
-            <Link
-              href="/usuarios/novo"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
-            >
-              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Novo usuário
-            </Link>
-          )}
         </div>
       )}
 
@@ -197,6 +177,9 @@ export function UsuariosTab({
         basePath="/configuracoes"
         searchParams={sp}
       />
+
+      {/* Inline create form */}
+      <NovoUsuarioForm clinicas={clinicas} />
     </div>
   );
 }

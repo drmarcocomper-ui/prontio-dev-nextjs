@@ -157,6 +157,6 @@ describe("EditarUsuarioPage", () => {
   it("passa link de volta para /usuarios no breadcrumb", async () => {
     await renderPage();
     const link = screen.getByText("Usuários").closest("a");
-    expect(link).toHaveAttribute("href", "/usuarios");
+    expect(link).toHaveAttribute("href", "/configuracoes?tab=usuarios");
   });
 });

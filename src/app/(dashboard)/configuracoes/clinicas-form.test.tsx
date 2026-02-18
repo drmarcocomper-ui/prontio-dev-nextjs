@@ -31,12 +31,6 @@ vi.mock("./actions", () => ({
   excluirClinica: mockExcluirClinica,
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: React.ReactNode; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
-  ),
-}));
-
 vi.mock("./constants", async () => {
   const actual = await vi.importActual("./constants");
   return { ...actual };
@@ -114,13 +108,6 @@ describe("ClinicasForm", () => {
     render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
     expect(screen.getByText("Suas clínicas")).toBeInTheDocument();
     expect(screen.getByText("Nova clínica")).toBeInTheDocument();
-    expect(screen.getByText("Usuários")).toBeInTheDocument();
-  });
-
-  it("renderiza link para gerenciar usuários", () => {
-    render(<ClinicasForm clinicas={clinicasAtivas} vinculos={[]} />);
-    const link = screen.getByText("Gerenciar usuários");
-    expect(link.closest("a")).toHaveAttribute("href", "/usuarios");
   });
 
   // --- Nova clínica form ---

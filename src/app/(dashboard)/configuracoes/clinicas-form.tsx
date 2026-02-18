@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState, useTransition, useEffect } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { FormError } from "@/components/form-utils";
 import { DeleteButton } from "@/components/delete-button";
@@ -298,22 +297,6 @@ export function ClinicasForm({
         </form>
       </div>
 
-      {/* Link to Usuarios */}
-      <div className="border-t border-gray-200 pt-6">
-        <h3 className="text-sm font-semibold text-gray-900">Usuários</h3>
-        <p className="mt-1 text-xs text-gray-500">
-          Gerencie os usuários vinculados às suas clínicas.
-        </p>
-        <Link
-          href="/usuarios"
-          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
-        >
-          Gerenciar usuários
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-          </svg>
-        </Link>
-      </div>
     </div>
   );
 }

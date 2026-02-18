@@ -13,7 +13,7 @@ export default async function NovoUsuarioPage() {
       {/* Header */}
       <div>
         <Breadcrumb items={[
-          { label: "Usuários", href: "/usuarios" },
+          { label: "Usuários", href: "/configuracoes?tab=usuarios" },
           { label: "Novo usuário" },
         ]} />
         <h1 className="mt-2 text-2xl font-bold text-gray-900">
