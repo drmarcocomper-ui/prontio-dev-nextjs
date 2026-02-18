@@ -58,6 +58,7 @@ function createConfigChain() {
   chain.eq = vi.fn().mockReturnValue(chain);
   chain.in = vi.fn().mockImplementation(() => configResult);
   chain.single = vi.fn().mockImplementation(() => configSingleResult);
+  chain.maybeSingle = vi.fn().mockImplementation(() => configSingleResult);
   return chain;
 }
 
