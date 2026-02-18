@@ -27,6 +27,9 @@ const mockAdminCreateUser = vi.fn().mockResolvedValue({
   data: { user: { id: "00000000-0000-0000-0000-000000000040" } },
   error: null,
 });
+const mockAdminListUsers = vi.fn().mockResolvedValue({
+  data: { users: [{ id: "00000000-0000-0000-0000-000000000050", email: "dup@test.com" }] },
+});
 const mockAdminUpdateUser = vi.fn().mockResolvedValue({ error: null });
 const mockAdminDeleteUser = vi.fn().mockResolvedValue({ error: null });
 
@@ -49,6 +52,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     auth: {
       admin: {
         createUser: (data: unknown) => mockAdminCreateUser(data),
+        listUsers: (opts: unknown) => mockAdminListUsers(opts),
         updateUserById: (id: string, data: unknown) => mockAdminUpdateUser(id, data),
         deleteUser: (id: string) => mockAdminDeleteUser(id),
       },
@@ -153,13 +157,18 @@ describe("criarUsuario", () => {
     expect(result.error).toBe("Você não tem acesso a esta clínica.");
   });
 
-  it("retorna erro quando email já existe", async () => {
+  it("vincula usuário existente quando email já existe no Auth", async () => {
     mockAdminCreateUser.mockResolvedValueOnce({
       data: { user: null },
       error: { message: "A user with this email address has already been registered" },
     });
     const result = await criarUsuario({}, makeFormData({ email: "dup@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
-    expect(result.error).toBe("Já existe um usuário com este e-mail.");
+    expect(result.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalledWith({
+      user_id: "00000000-0000-0000-0000-000000000050",
+      clinica_id: "00000000-0000-0000-0000-000000000001",
+      papel: "secretaria",
+    });
   });
 
   it("retorna erro genérico quando createUser falha", async () => {

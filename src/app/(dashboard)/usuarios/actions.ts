@@ -55,6 +55,9 @@ export async function criarUsuario(
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const adminSupabase = createAdminClient();
 
+  let userId: string;
+  let isNewUser = false;
+
   const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
     email,
     password: senha,
@@ -63,23 +66,37 @@ export async function criarUsuario(
 
   if (createError) {
     if (createError.message?.includes("already been registered") || createError.message?.includes("already exists")) {
-      return { error: "Já existe um usuário com este e-mail." };
+      // Usuário já existe no Auth — buscar o ID para vincular à clínica
+      const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
+      const existing = authUsers?.users?.find(
+        (u) => u.email?.toLowerCase() === email.toLowerCase()
+      );
+      if (!existing) {
+        return { error: "Usuário existente não encontrado. Tente novamente." };
+      }
+      userId = existing.id;
+    } else {
+      return { error: "Erro ao criar usuário. Tente novamente." };
     }
-    return { error: "Erro ao criar usuário. Tente novamente." };
+  } else {
+    userId = newUser.user.id;
+    isNewUser = true;
   }
 
   const supabase = await createClient();
   const { error: vinculoError } = await supabase
     .from("usuarios_clinicas")
     .insert({
-      user_id: newUser.user.id,
+      user_id: userId,
       clinica_id: clinicaId,
       papel,
     });
 
   if (vinculoError) {
-    // Cleanup: delete orphaned auth user since vinculo failed
-    await adminSupabase.auth.admin.deleteUser(newUser.user.id);
+    // Cleanup: delete orphaned auth user only if we just created it
+    if (isNewUser) {
+      await adminSupabase.auth.admin.deleteUser(userId);
+    }
     if (vinculoError.code === "23505") {
       return { error: "Este usuário já está vinculado a esta clínica." };
     }
