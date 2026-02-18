@@ -4,6 +4,7 @@ const mockSignInWithPassword = vi.fn();
 const mockSignOut = vi.fn();
 const mockResetPasswordForEmail = vi.fn().mockResolvedValue({ error: null });
 const mockUpdateUser = vi.fn();
+const mockGetUser = vi.fn().mockResolvedValue({ data: { user: { id: "u-1" } } });
 const mockRedirect = vi.fn();
 const mockRevalidatePath = vi.fn();
 const mockRateLimit = vi.fn();
@@ -16,6 +17,7 @@ vi.mock("@/lib/supabase/server", () => ({
         signOut: mockSignOut,
         resetPasswordForEmail: mockResetPasswordForEmail,
         updateUser: mockUpdateUser,
+        getUser: () => mockGetUser(),
       },
     }),
 }));
@@ -149,6 +151,8 @@ describe("enviarResetSenha", () => {
 describe("redefinirSenha", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+    mockRateLimit.mockReturnValue({ success: true, remaining: 4, resetIn: 900000 });
   });
 
   it("retorna erro quando senha está vazia", async () => {

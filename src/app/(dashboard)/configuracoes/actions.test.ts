@@ -17,6 +17,7 @@ const mockSelectClinica = vi.fn().mockReturnValue({
 const mockDeleteClinica = vi.fn().mockReturnValue({
   eq: vi.fn().mockReturnValue({ error: null }),
 });
+let mockAgendamentosCount = 0;
 const mockAdminCreateUser = vi.fn().mockResolvedValue({
   data: { user: { id: "new-user-id" } },
   error: null,
@@ -60,6 +61,13 @@ vi.mock("@/lib/supabase/server", () => ({
             update: (data: unknown) => mockUpdate(data),
             select: (cols: string) => mockSelectClinica(cols),
             delete: () => mockDeleteClinica(),
+          };
+        }
+        if (table === "agendamentos") {
+          return {
+            select: () => ({
+              eq: () => Promise.resolve({ count: mockAgendamentosCount, error: null }),
+            }),
           };
         }
         if (table === "usuarios_clinicas") {
@@ -661,6 +669,7 @@ describe("alternarStatusClinica", () => {
 describe("excluirClinica", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAgendamentosCount = 0;
     mockDeleteClinica.mockReturnValue({
       eq: vi.fn().mockReturnValue({ error: null }),
     });

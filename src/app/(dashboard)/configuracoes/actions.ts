@@ -585,6 +585,16 @@ export async function excluirClinica(id: string): Promise<void> {
 
   const supabase = await createClient();
 
+  // Verificar se há dados vinculados antes de excluir
+  const { count } = await supabase
+    .from("agendamentos")
+    .select("*", { count: "exact", head: true })
+    .eq("clinica_id", id);
+
+  if (count && count > 0) {
+    throw new Error("Não é possível excluir uma clínica com agendamentos. Desative-a em vez disso.");
+  }
+
   const { error } = await supabase
     .from("clinicas")
     .delete()

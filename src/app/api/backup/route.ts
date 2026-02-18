@@ -46,43 +46,31 @@ export async function GET() {
   const backup: Record<string, unknown[]> = {};
   const errors: string[] = [];
 
-  // Tables filtered by medico_id
-  for (const table of ["pacientes", "prontuarios", "receitas", "solicitacoes_exames"] as const) {
-    const { data, error } = await supabase
-      .from(table)
-      .select("*")
-      .eq("medico_id", medicoId);
-    if (error) {
-      errors.push(`Erro ao exportar ${table}. Tente novamente.`);
-    } else {
-      backup[table] = data ?? [];
-    }
-  }
+  const queries = [
+    // Tables filtered by medico_id
+    ...["pacientes", "prontuarios", "receitas", "solicitacoes_exames"].map(
+      (table) => ({ table, promise: supabase.from(table).select("*").eq("medico_id", medicoId) }),
+    ),
+    // Tables filtered by clinica_id
+    ...["agendamentos", "transacoes", "configuracoes", "horarios_profissional"].map(
+      (table) => ({ table, promise: supabase.from(table).select("*").eq("clinica_id", ctx.clinicaId) }),
+    ),
+    // Global tables (no filter)
+    ...["medicamentos", "catalogo_exames"].map(
+      (table) => ({ table, promise: supabase.from(table).select("*") }),
+    ),
+  ];
 
-  // Tables filtered by clinica_id
-  for (const table of ["agendamentos", "transacoes", "configuracoes", "horarios_profissional"] as const) {
-    const { data, error } = await supabase
-      .from(table)
-      .select("*")
-      .eq("clinica_id", ctx.clinicaId);
-    if (error) {
-      errors.push(`Erro ao exportar ${table}. Tente novamente.`);
-    } else {
-      backup[table] = data ?? [];
-    }
-  }
+  const results = await Promise.all(queries.map((q) => q.promise));
 
-  // Global tables (no filter)
-  for (const table of ["medicamentos", "catalogo_exames"] as const) {
-    const { data, error } = await supabase
-      .from(table)
-      .select("*");
+  queries.forEach(({ table }, i) => {
+    const { data, error } = results[i];
     if (error) {
       errors.push(`Erro ao exportar ${table}. Tente novamente.`);
     } else {
       backup[table] = data ?? [];
     }
-  }
+  });
 
   const payload = {
     version: "1.0",

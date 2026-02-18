@@ -121,6 +121,18 @@ export async function redefinirSenha(
 
   const supabase = await createClient();
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { success } = rateLimit({
+      key: `redefinir_senha:${user.id}`,
+      maxAttempts: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!success) {
+      return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+    }
+  }
+
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {

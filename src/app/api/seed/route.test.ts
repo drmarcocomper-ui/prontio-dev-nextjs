@@ -55,6 +55,16 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "gestor",
+    userId: "u-1",
+  }),
+  getMedicoId: vi.fn().mockResolvedValue("medico-1"),
+}));
+
 vi.mock("next/server", () => ({
   NextResponse: {
     json: (body: unknown, init?: { status?: number }) => ({

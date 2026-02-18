@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -20,6 +21,18 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  const ctx = await getClinicaAtual();
+  if (!ctx) {
+    return NextResponse.json({ error: "Clínica não encontrada" }, { status: 403 });
+  }
+
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    return NextResponse.json({ error: "Médico não encontrado" }, { status: 403 });
   }
 
   // Verifica se já tem dados
@@ -52,7 +65,7 @@ export async function GET(request: Request) {
   const pacientesData = [
     {
       nome: "Maria Silva Santos",
-      cpf: "123.456.789-00",
+      cpf: "12345678900",
       data_nascimento: "1985-03-15",
       sexo: "feminino",
       estado_civil: "casado",
@@ -68,7 +81,7 @@ export async function GET(request: Request) {
     },
     {
       nome: "João Pedro Oliveira",
-      cpf: "987.654.321-00",
+      cpf: "98765432100",
       data_nascimento: "1978-07-22",
       sexo: "masculino",
       estado_civil: "solteiro",
@@ -83,7 +96,7 @@ export async function GET(request: Request) {
     },
     {
       nome: "Ana Carolina Ferreira",
-      cpf: "456.789.123-00",
+      cpf: "45678912300",
       data_nascimento: "1992-11-08",
       sexo: "feminino",
       estado_civil: "solteiro",
@@ -99,7 +112,7 @@ export async function GET(request: Request) {
     },
     {
       nome: "Carlos Eduardo Lima",
-      cpf: "321.654.987-00",
+      cpf: "32165498700",
       data_nascimento: "1965-01-30",
       sexo: "masculino",
       estado_civil: "casado",
@@ -114,7 +127,7 @@ export async function GET(request: Request) {
     },
     {
       nome: "Beatriz Mendes Costa",
-      cpf: "654.321.987-00",
+      cpf: "65432198700",
       data_nascimento: "2000-05-12",
       sexo: "feminino",
       estado_civil: "solteiro",
@@ -130,7 +143,7 @@ export async function GET(request: Request) {
     },
     {
       nome: "Roberto Alves Souza",
-      cpf: "789.123.456-00",
+      cpf: "78912345600",
       data_nascimento: "1958-09-03",
       sexo: "masculino",
       estado_civil: "viuvo",
@@ -141,7 +154,7 @@ export async function GET(request: Request) {
     },
     {
       nome: "Fernanda Rodrigues",
-      cpf: "111.222.333-00",
+      cpf: "11122233300",
       data_nascimento: "1990-12-25",
       sexo: "feminino",
       estado_civil: "uniao_estavel",
@@ -153,7 +166,7 @@ export async function GET(request: Request) {
     },
     {
       nome: "Pedro Henrique Barbosa",
-      cpf: "444.555.666-00",
+      cpf: "44455566600",
       data_nascimento: "1973-04-18",
       sexo: "masculino",
       estado_civil: "divorciado",
@@ -165,7 +178,7 @@ export async function GET(request: Request) {
 
   const { data: pacientes, error: errPacientes } = await supabase
     .from("pacientes")
-    .insert(pacientesData)
+    .insert(pacientesData.map((p) => ({ ...p, medico_id: medicoId })))
     .select("id, nome");
 
   if (errPacientes || !pacientes) {
@@ -203,7 +216,7 @@ export async function GET(request: Request) {
 
   const { error: errAgendamentos } = await supabase
     .from("agendamentos")
-    .insert(agendamentosData);
+    .insert(agendamentosData.map((a) => ({ ...a, clinica_id: ctx.clinicaId })));
 
   if (errAgendamentos) {
     return NextResponse.json(
@@ -279,7 +292,7 @@ export async function GET(request: Request) {
 
   const { error: errProntuarios } = await supabase
     .from("prontuarios")
-    .insert(prontuariosData);
+    .insert(prontuariosData.map((p) => ({ ...p, medico_id: medicoId })));
 
   if (errProntuarios) {
     return NextResponse.json(
@@ -311,7 +324,7 @@ export async function GET(request: Request) {
 
   const { error: errTransacoes } = await supabase
     .from("transacoes")
-    .insert(transacoesData);
+    .insert(transacoesData.map((t) => ({ ...t, clinica_id: ctx.clinicaId })));
 
   if (errTransacoes) {
     return NextResponse.json(
