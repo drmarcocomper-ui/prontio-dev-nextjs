@@ -83,8 +83,7 @@ export async function criarUsuario(
     isNewUser = true;
   }
 
-  const supabase = await createClient();
-  const { error: vinculoError } = await supabase
+  const { error: vinculoError } = await adminSupabase
     .from("usuarios_clinicas")
     .insert({
       user_id: userId,

@@ -49,6 +49,9 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
+    from: () => ({
+      insert: (rows: unknown) => mockInsert(rows),
+    }),
     auth: {
       admin: {
         createUser: (data: unknown) => mockAdminCreateUser(data),
