@@ -179,7 +179,7 @@ export default async function ConfiguracoesPage({
     }
 
     if (!q || (userIdFilter && userIdFilter.length > 0)) {
-      let queryBuilder = supabase
+      let queryBuilder = adminSupabase
         .from("usuarios_clinicas")
         .select("id, user_id, papel, clinica_id, created_at, clinicas(nome)", { count: "exact" })
         .eq("clinica_id", ctx.clinicaId);
