@@ -5,12 +5,12 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { DeleteButton } from "@/components/delete-button";
 import { FormError } from "@/components/form-utils";
-import { atualizarPapel, resetarSenha, removerVinculo } from "./actions";
+import { atualizarUsuario, resetarSenha, removerVinculo } from "./actions";
 import { type UsuarioListItem, PAPEL_OPTIONS, SENHA_MIN, SENHA_MAX, type UsuarioFormState } from "./types";
 
 function PapelSelect({ usuario }: { usuario: UsuarioListItem }) {
   const [state, action, isPending] = useActionState<UsuarioFormState, FormData>(
-    atualizarPapel,
+    atualizarUsuario,
     {}
   );
   const formRef = useRef<HTMLFormElement>(null);

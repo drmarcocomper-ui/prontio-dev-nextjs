@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { getClinicaAtual, getClinicasDoUsuario, isGestor } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario, isGestor, type Papel } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 import { emailValido as validarEmail } from "@/lib/validators";
 import { uuidValido } from "@/lib/validators";
@@ -108,7 +108,7 @@ export async function criarUsuario(
 }
 
 /**
- * Atualizar usuário (papel) via formulário de edição
+ * Atualizar usuário (papel) via formulário de edição ou select inline
  */
 export async function atualizarUsuario(
   _prev: UsuarioFormState,
@@ -137,6 +137,21 @@ export async function atualizarUsuario(
 
   const { createAdminClient: createAdmin } = await import("@/lib/supabase/admin");
   const admin = createAdmin();
+
+  // Impedir rebaixar o último gestor da clínica
+  if (!isGestor(papel as Papel)) {
+    const { count } = await admin
+      .from("usuarios_clinicas")
+      .select("id", { count: "exact", head: true })
+      .eq("clinica_id", ctx.clinicaId)
+      .in("papel", ["gestor", "superadmin"])
+      .neq("id", vinculoId);
+
+    if ((count ?? 0) === 0) {
+      return { error: "A clínica deve ter pelo menos um gestor." };
+    }
+  }
+
   const { error } = await admin
     .from("usuarios_clinicas")
     .update({ papel })
@@ -145,51 +160,6 @@ export async function atualizarUsuario(
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "usuário") };
-  }
-
-  revalidatePath("/usuarios");
-  revalidatePath("/configuracoes");
-  return { success: true };
-}
-
-/**
- * Atualizar papel de um vínculo
- */
-export async function atualizarPapel(
-  _prev: UsuarioFormState,
-  formData: FormData
-): Promise<UsuarioFormState> {
-  const vinculoId = (formData.get("vinculo_id") as string)?.trim();
-  const userId = (formData.get("user_id") as string)?.trim();
-  const novoPapel = (formData.get("papel") as string)?.trim();
-
-  if (!vinculoId) return { error: "Vínculo não identificado." };
-  if (!uuidValido(vinculoId)) return { error: "Vínculo inválido." };
-
-  if (!PAPEIS_VALIDOS.includes(novoPapel as typeof PAPEIS_VALIDOS[number])) {
-    return { error: "Papel inválido." };
-  }
-
-  const ctx = await getClinicaAtual();
-  if (!ctx || !isGestor(ctx.papel)) {
-    return { error: "Sem permissão para alterar papéis." };
-  }
-
-  if (userId && !uuidValido(userId)) return { error: "Usuário inválido." };
-  if (userId === ctx.userId) {
-    return { error: "Você não pode alterar seu próprio papel." };
-  }
-
-  const { createAdminClient: createAdmin } = await import("@/lib/supabase/admin");
-  const admin = createAdmin();
-  const { error } = await admin
-    .from("usuarios_clinicas")
-    .update({ papel: novoPapel })
-    .eq("id", vinculoId)
-    .eq("clinica_id", ctx.clinicaId);
-
-  if (error) {
-    return { error: tratarErroSupabase(error, "atualizar", "papel do usuário") };
   }
 
   revalidatePath("/usuarios");
@@ -273,12 +243,12 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
     throw new Error("Sem permissão para remover vínculos.");
   }
 
-  // Buscar vínculo para verificar auto-remoção (scoped pela clínica atual)
+  // Buscar vínculo para verificar auto-remoção e último gestor
   const { createAdminClient: createAdmin } = await import("@/lib/supabase/admin");
   const admin = createAdmin();
   const { data: vinculo } = await admin
     .from("usuarios_clinicas")
-    .select("user_id")
+    .select("user_id, papel")
     .eq("id", vinculoId)
     .eq("clinica_id", ctx.clinicaId)
     .single();
@@ -289,6 +259,20 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
 
   if (vinculo.user_id === ctx.userId) {
     throw new Error("Você não pode remover seu próprio vínculo.");
+  }
+
+  // Impedir remover o último gestor da clínica
+  if (isGestor(vinculo.papel as Papel)) {
+    const { count } = await admin
+      .from("usuarios_clinicas")
+      .select("id", { count: "exact", head: true })
+      .eq("clinica_id", ctx.clinicaId)
+      .in("papel", ["gestor", "superadmin"])
+      .neq("id", vinculoId);
+
+    if ((count ?? 0) === 0) {
+      throw new Error("Não é possível remover o último gestor da clínica.");
+    }
   }
 
   const { error } = await admin

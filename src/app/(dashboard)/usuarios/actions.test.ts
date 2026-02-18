@@ -14,14 +14,17 @@ const mockDeleteEq = vi.fn().mockReturnValue(mockDeleteChain);
 mockDeleteChain.eq = mockDeleteEq;
 const mockDelete = vi.fn().mockReturnValue(mockDeleteChain);
 
-// Chainable .eq() for select: .select().eq().eq().single()
+// Chainable .eq() for select: .select().eq().eq().single() or .select().eq().in().neq()
 const mockSelectSingle = vi.fn().mockResolvedValue({
-  data: { user_id: "00000000-0000-0000-0000-000000000020" },
+  data: { user_id: "00000000-0000-0000-0000-000000000020", papel: "secretaria" },
   error: null,
 });
+const mockCountResult = vi.fn().mockResolvedValue({ count: 2, data: null, error: null });
 const mockSelectChain: Record<string, unknown> = { single: () => mockSelectSingle() };
 const mockSelectEq = vi.fn().mockReturnValue(mockSelectChain);
 mockSelectChain.eq = mockSelectEq;
+mockSelectChain.in = vi.fn().mockReturnValue(mockSelectChain);
+mockSelectChain.neq = mockCountResult;
 
 const mockAdminCreateUser = vi.fn().mockResolvedValue({
   data: { user: { id: "00000000-0000-0000-0000-000000000040" } },
@@ -83,7 +86,7 @@ vi.mock("@/lib/clinica", () => ({
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
-import { criarUsuario, atualizarUsuario, atualizarPapel, resetarSenha, removerVinculo } from "./actions";
+import { criarUsuario, atualizarUsuario, resetarSenha, removerVinculo } from "./actions";
 import { getClinicaAtual } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -259,50 +262,25 @@ describe("atualizarUsuario", () => {
     const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000020", papel: "gestor" }));
     expect(result.error).toContain("Erro ao atualizar usuário");
   });
-});
 
-describe("atualizarPapel", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("retorna erro quando vinculo_id está vazio", async () => {
-    const result = await atualizarPapel({}, makeFormData({ vinculo_id: "", user_id: "00000000-0000-0000-0000-000000000011", papel: "secretaria" }));
-    expect(result.error).toBe("Vínculo não identificado.");
+  it("impede rebaixar o último gestor da clínica", async () => {
+    mockCountResult.mockResolvedValueOnce({ count: 0, data: null, error: null });
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000020", papel: "secretaria" }));
+    expect(result.error).toBe("A clínica deve ter pelo menos um gestor.");
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it("retorna erro quando papel é inválido", async () => {
-    const result = await atualizarPapel({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000011", papel: "invalido" }));
-    expect(result.error).toBe("Papel inválido.");
-  });
-
-  it("retorna erro quando não tem permissão", async () => {
-    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
-      clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000011",
-    });
-    const result = await atualizarPapel({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000012", papel: "gestor" }));
-    expect(result.error).toBe("Sem permissão para alterar papéis.");
-  });
-
-  it("impede auto-alteração", async () => {
-    const result = await atualizarPapel({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000002", papel: "secretaria" }));
-    expect(result.error).toBe("Você não pode alterar seu próprio papel.");
-  });
-
-  it("atualiza papel com sucesso", async () => {
-    const result = await atualizarPapel({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000020", papel: "gestor" }));
+  it("permite rebaixar quando há outros gestores", async () => {
+    mockCountResult.mockResolvedValueOnce({ count: 1, data: null, error: null });
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000020", papel: "secretaria" }));
     expect(result.success).toBe(true);
-    expect(mockUpdate).toHaveBeenCalledWith({ papel: "gestor" });
+    expect(mockUpdate).toHaveBeenCalledWith({ papel: "secretaria" });
   });
 
-  it("filtra update por clinica_id (previne IDOR)", async () => {
-    await atualizarPapel({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000020", papel: "gestor" }));
-    expect(mockUpdateEq).toHaveBeenCalledWith("id", "00000000-0000-0000-0000-000000000010");
-    expect(mockUpdateEq).toHaveBeenCalledWith("clinica_id", "00000000-0000-0000-0000-000000000001");
-  });
-
-  it("retorna erro quando update falha", async () => {
-    mockUpdate.mockReturnValueOnce(chainableError({ message: "DB error" }));
-    const result = await atualizarPapel({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000020", papel: "gestor" }));
-    expect(result.error).toContain("Erro ao atualizar papel");
+  it("não verifica último gestor quando novo papel é gestor", async () => {
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000020", papel: "gestor" }));
+    expect(result.success).toBe(true);
+    expect(mockCountResult).not.toHaveBeenCalled();
   });
 });
 
@@ -374,9 +352,10 @@ describe("removerVinculo", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSelectSingle.mockResolvedValue({
-      data: { user_id: "00000000-0000-0000-0000-000000000020" },
+      data: { user_id: "00000000-0000-0000-0000-000000000020", papel: "secretaria" },
       error: null,
     });
+    mockCountResult.mockResolvedValue({ count: 2, data: null, error: null });
   });
 
   it("lança erro quando vinculoId está vazio", async () => {
@@ -405,7 +384,7 @@ describe("removerVinculo", () => {
 
   it("impede auto-remoção", async () => {
     mockSelectSingle.mockResolvedValueOnce({
-      data: { user_id: "00000000-0000-0000-0000-000000000002" },
+      data: { user_id: "00000000-0000-0000-0000-000000000002", papel: "gestor" },
       error: null,
     });
     await expect(removerVinculo("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Você não pode remover seu próprio vínculo.");
@@ -419,5 +398,31 @@ describe("removerVinculo", () => {
   it("lança erro quando delete falha", async () => {
     mockDelete.mockReturnValueOnce(chainableError({ message: "FK constraint" }));
     await expect(removerVinculo("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Erro ao excluir vínculo");
+  });
+
+  it("impede remover o último gestor da clínica", async () => {
+    mockSelectSingle.mockResolvedValueOnce({
+      data: { user_id: "00000000-0000-0000-0000-000000000020", papel: "gestor" },
+      error: null,
+    });
+    mockCountResult.mockResolvedValueOnce({ count: 0, data: null, error: null });
+    await expect(removerVinculo("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Não é possível remover o último gestor da clínica.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("permite remover gestor quando há outros", async () => {
+    mockSelectSingle.mockResolvedValueOnce({
+      data: { user_id: "00000000-0000-0000-0000-000000000020", papel: "gestor" },
+      error: null,
+    });
+    mockCountResult.mockResolvedValueOnce({ count: 1, data: null, error: null });
+    await removerVinculo("00000000-0000-0000-0000-000000000010");
+    expect(mockDelete).toHaveBeenCalled();
+  });
+
+  it("não verifica último gestor ao remover não-gestor", async () => {
+    await removerVinculo("00000000-0000-0000-0000-000000000010");
+    expect(mockCountResult).not.toHaveBeenCalled();
+    expect(mockDelete).toHaveBeenCalled();
   });
 });

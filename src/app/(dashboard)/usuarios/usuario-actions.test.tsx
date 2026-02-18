@@ -25,7 +25,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("./actions", () => ({
-  atualizarPapel: vi.fn(),
+  atualizarUsuario: vi.fn(),
   resetarSenha: vi.fn(),
   removerVinculo: mockRemoverVinculo,
 }));
