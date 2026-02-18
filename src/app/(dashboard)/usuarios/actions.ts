@@ -207,7 +207,6 @@ export async function resetarSenha(
 
   const { success: allowed } = rateLimit({
     key: `reset_senha:${ctx.userId}`,
-    maxAttempts: 5,
     windowMs: 60 * 60 * 1000, // 1 hora
   });
   if (!allowed) {

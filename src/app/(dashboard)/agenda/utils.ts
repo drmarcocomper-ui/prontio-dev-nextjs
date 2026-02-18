@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { type SupabaseServer } from "@/lib/supabase/server";
 
 export interface HorarioProfissional {
   dia_semana: number;
@@ -56,7 +56,7 @@ const HORARIO_CACHE_TTL = 5 * 60 * 1000;
 const horarioCache = new Map<string, { data: Record<string, string>; timestamp: number }>();
 
 export async function getHorarioConfig(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseServer,
   clinicaId: string,
   userId?: string,
 ): Promise<Record<string, string>> {

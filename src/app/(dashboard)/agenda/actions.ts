@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, type SupabaseServer } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { parseLocalDate } from "@/lib/date";
@@ -19,7 +19,7 @@ export type AgendamentoFormState = {
 };
 
 async function verificarConflito(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseServer,
   data: string,
   hora_inicio: string,
   hora_fim: string,
@@ -57,7 +57,7 @@ async function verificarConflito(
 }
 
 async function validarHorarioComercial(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseServer,
   clinicaId: string,
   data: string,
   horaInicio: string,
@@ -124,7 +124,7 @@ function validarCamposAgendamento(formData: FormData) {
 }
 
 async function determinarValor(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseServer,
   clinicaId: string,
   pacienteId: string,
   tipo: string | null,

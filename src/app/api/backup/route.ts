@@ -17,7 +17,6 @@ export async function GET() {
 
   const { success: allowed } = rateLimit({
     key: `backup:${user.id}`,
-    maxAttempts: 5,
     windowMs: 60 * 60 * 1000, // 1 hora
   });
   if (!allowed) {

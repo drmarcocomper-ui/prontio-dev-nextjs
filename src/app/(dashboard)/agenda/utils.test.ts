@@ -6,7 +6,7 @@ import {
   getHorarioConfig,
   invalidarCacheHorario,
 } from "./utils";
-import type { createClient } from "@/lib/supabase/server";
+import type { SupabaseServer } from "@/lib/supabase/server";
 
 function createMockSupabase(tableResponses: Record<string, unknown>) {
   return {
@@ -21,7 +21,7 @@ function createMockSupabase(tableResponses: Record<string, unknown>) {
         }),
       };
     },
-  } as unknown as Awaited<ReturnType<typeof createClient>>;
+  } as unknown as SupabaseServer;
 }
 
 describe("getWeekRange", () => {
