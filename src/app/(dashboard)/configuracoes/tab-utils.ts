@@ -12,6 +12,7 @@ export const TABS: Tab[] = [
   { key: "medicamentos", label: "Medicamentos", roles: ["superadmin"] },
   { key: "exames", label: "Exames", roles: ["superadmin"] },
   { key: "gestao", label: "Gestão", roles: ["superadmin", "gestor"] },
+  { key: "usuarios", label: "Usuários", roles: ["superadmin", "gestor"] },
 ];
 
 const ALL_TAB_KEYS = TABS.map((t) => t.key);

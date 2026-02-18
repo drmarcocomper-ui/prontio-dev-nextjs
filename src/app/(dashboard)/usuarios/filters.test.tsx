@@ -30,17 +30,24 @@ describe("PapelFilter", () => {
     expect(select.value).toBe("gestor");
   });
 
-  it("navega ao selecionar um papel", async () => {
+  it("navega ao selecionar um papel (default basePath)", async () => {
     render(<PapelFilter currentPapel="" />);
     const select = screen.getByLabelText("Filtrar por papel");
     await userEvent.selectOptions(select, "secretaria");
-    expect(mockReplace).toHaveBeenCalledWith("/usuarios?papel=secretaria");
+    expect(mockReplace).toHaveBeenCalledWith("/configuracoes?papel=secretaria");
   });
 
   it("remove filtro ao selecionar 'Todos os papéis'", async () => {
     render(<PapelFilter currentPapel="gestor" />);
     const select = screen.getByLabelText("Filtrar por papel");
     await userEvent.selectOptions(select, "");
-    expect(mockReplace).toHaveBeenCalledWith("/usuarios?");
+    expect(mockReplace).toHaveBeenCalledWith("/configuracoes?");
+  });
+
+  it("usa basePath customizado quando fornecido", async () => {
+    render(<PapelFilter currentPapel="" basePath="/usuarios" />);
+    const select = screen.getByLabelText("Filtrar por papel");
+    await userEvent.selectOptions(select, "gestor");
+    expect(mockReplace).toHaveBeenCalledWith("/usuarios?papel=gestor");
   });
 });

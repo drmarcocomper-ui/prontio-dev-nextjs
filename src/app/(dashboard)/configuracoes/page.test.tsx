@@ -6,7 +6,7 @@ vi.mock("./tabs", () => ({
 }));
 
 vi.mock("./tab-utils", () => ({
-  isValidTab: (tab: string) => ["clinica", "minha-conta", "medicamentos", "exames", "gestao"].includes(tab),
+  isValidTab: (tab: string) => ["clinica", "minha-conta", "medicamentos", "exames", "gestao", "usuarios"].includes(tab),
   getDefaultTab: () => "clinica",
 }));
 
@@ -56,6 +56,10 @@ vi.mock("./catalogo-exames-form", () => ({
 
 vi.mock("./horarios-profissional-form", () => ({
   HorariosProfissionalForm: () => <form data-testid="horarios-profissional-form" />,
+}));
+
+vi.mock("./usuarios-tab", () => ({
+  UsuariosTab: () => <div data-testid="usuarios-tab" />,
 }));
 
 vi.mock("@/lib/clinica", () => ({
@@ -115,7 +119,16 @@ vi.mock("@/lib/supabase/server", () => ({
             };
           }
           if (table === "usuarios_clinicas") {
-            return { in: () => Promise.resolve({ data: [] }) };
+            const chainResult = Promise.resolve({ data: [], count: 0, error: null });
+            const chain = {
+              in: () => Promise.resolve({ data: [] }),
+              eq: () => ({
+                in: () => ({ order: () => ({ range: () => chainResult }) }),
+                eq: () => ({ order: () => ({ range: () => chainResult }) }),
+                order: () => ({ range: () => chainResult }),
+              }),
+            };
+            return chain;
           }
           if (table === "horarios_profissional") {
             return {
@@ -220,5 +233,11 @@ describe("ConfiguracoesPage", () => {
   it("tab inválido faz fallback para clinica", async () => {
     await renderPage({ tab: "invalido" });
     expect(screen.getByTestId("consultorio-form")).toBeInTheDocument();
+  });
+
+  it("renderiza UsuariosTab quando tab=usuarios", async () => {
+    await renderPage({ tab: "usuarios" });
+    expect(screen.getByTestId("usuarios-tab")).toBeInTheDocument();
+    expect(screen.queryByTestId("consultorio-form")).not.toBeInTheDocument();
   });
 });

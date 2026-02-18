@@ -7,13 +7,13 @@ vi.mock("@/lib/clinica", () => ({
 import { isValidTab, getDefaultTab, TABS } from "./tab-utils";
 
 describe("TABS", () => {
-  it("contém 5 abas", () => {
-    expect(TABS).toHaveLength(5);
+  it("contém 6 abas", () => {
+    expect(TABS).toHaveLength(6);
   });
 
   it("contém as abas esperadas", () => {
     const keys = TABS.map((t) => t.key);
-    expect(keys).toEqual(["clinica", "minha-conta", "medicamentos", "exames", "gestao"]);
+    expect(keys).toEqual(["clinica", "minha-conta", "medicamentos", "exames", "gestao", "usuarios"]);
   });
 
   it("cada aba tem key, label e roles", () => {
@@ -49,6 +49,11 @@ describe("TABS", () => {
     const gestao = TABS.find((t) => t.key === "gestao");
     expect(gestao?.roles).toEqual(["superadmin", "gestor"]);
   });
+
+  it("aba usuarios é acessível por superadmin e gestor", () => {
+    const usuarios = TABS.find((t) => t.key === "usuarios");
+    expect(usuarios?.roles).toEqual(["superadmin", "gestor"]);
+  });
 });
 
 describe("isValidTab", () => {
@@ -58,6 +63,7 @@ describe("isValidTab", () => {
     expect(isValidTab("medicamentos")).toBe(true);
     expect(isValidTab("exames")).toBe(true);
     expect(isValidTab("gestao")).toBe(true);
+    expect(isValidTab("usuarios")).toBe(true);
   });
 
   it("retorna false para tab inválida", () => {

@@ -14,16 +14,20 @@ import { ValoresForm } from "./valores-form";
 import { MedicamentosForm, type Medicamento } from "./medicamentos-form";
 import { CatalogoExamesForm, type CatalogoExame } from "./catalogo-exames-form";
 import { HorariosProfissionalForm } from "./horarios-profissional-form";
+import { UsuariosTab } from "./usuarios-tab";
+import { type UsuarioListItem } from "@/app/(dashboard)/usuarios/types";
 import type { HorarioProfissional } from "@/app/(dashboard)/agenda/utils";
 
 export const metadata: Metadata = { title: "Configurações" };
 
+const USUARIOS_PAGE_SIZE = 20;
+
 export default async function ConfiguracoesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; q?: string; pagina?: string; papel?: string }>;
 }) {
-  const { tab } = await searchParams;
+  const { tab, q, pagina, papel: papelFilter } = await searchParams;
 
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
@@ -148,6 +152,91 @@ export default async function ConfiguracoesPage({
     horariosProfissional = (data ?? []) as HorarioProfissional[];
   }
 
+  // Load usuarios for "usuarios" tab
+  let usuariosItems: UsuarioListItem[] = [];
+  let usuariosTotalItems = 0;
+  let usuariosCurrentPage = 1;
+  let usuariosError = false;
+  if (currentTab === "usuarios" && ctx) {
+    usuariosCurrentPage = Math.max(1, Number(pagina) || 1);
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const adminSupabase = createAdminClient();
+
+    let userIdFilter: string[] | null = null;
+
+    // If searching, first find matching users by email
+    if (q) {
+      const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
+      if (authUsers?.users) {
+        const escaped = q.toLowerCase();
+        const matched = authUsers.users.filter((u) => u.email?.toLowerCase().includes(escaped));
+        userIdFilter = matched.map((u) => u.id);
+      }
+    }
+
+    if (!q || (userIdFilter && userIdFilter.length > 0)) {
+      let queryBuilder = supabase
+        .from("usuarios_clinicas")
+        .select("id, user_id, papel, clinica_id, created_at, clinicas(nome)", { count: "exact" })
+        .eq("clinica_id", ctx.clinicaId);
+
+      if (userIdFilter) {
+        queryBuilder = queryBuilder.in("user_id", userIdFilter);
+      }
+
+      if (papelFilter) {
+        queryBuilder = queryBuilder.eq("papel", papelFilter);
+      }
+
+      queryBuilder = queryBuilder.order("created_at", { ascending: true });
+
+      const from = (usuariosCurrentPage - 1) * USUARIOS_PAGE_SIZE;
+      const to = from + USUARIOS_PAGE_SIZE - 1;
+      queryBuilder = queryBuilder.range(from, to);
+
+      const { data: vinculosData, count, error } = await queryBuilder;
+
+      if (error) {
+        usuariosError = true;
+      } else {
+        // Enrich with emails from auth
+        const userIds = (vinculosData ?? []).map((v: { user_id: string }) => v.user_id);
+        let emailMap: Record<string, string> = {};
+
+        if (userIds.length > 0) {
+          const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
+          if (authUsers?.users) {
+            emailMap = Object.fromEntries(
+              authUsers.users
+                .filter((u) => userIds.includes(u.id))
+                .map((u) => [u.id, u.email ?? ""])
+            );
+          }
+        }
+
+        usuariosItems = ((vinculosData ?? []) as unknown as {
+          id: string;
+          user_id: string;
+          papel: string;
+          clinica_id: string;
+          created_at: string;
+          clinicas: { nome: string };
+        }[]).map((v) => ({
+          vinculo_id: v.id,
+          user_id: v.user_id,
+          email: emailMap[v.user_id] ?? "",
+          papel: v.papel as UsuarioListItem["papel"],
+          clinica_id: v.clinica_id,
+          clinica_nome: v.clinicas?.nome ?? "",
+          created_at: v.created_at,
+        }));
+
+        usuariosTotalItems = count ?? 0;
+      }
+    }
+  }
+
   return (
     <div className="animate-fade-in mx-auto max-w-3xl space-y-4 sm:space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
@@ -212,6 +301,26 @@ export default async function ConfiguracoesPage({
               <DadosForm />
             </div>
           </>
+        )}
+        {currentTab === "usuarios" && ctx && !usuariosError && (
+          <UsuariosTab
+            items={usuariosItems}
+            totalItems={usuariosTotalItems}
+            currentPage={usuariosCurrentPage}
+            q={q}
+            papel={papelFilter}
+            currentUserId={ctx.userId}
+          />
+        )}
+        {currentTab === "usuarios" && ctx && usuariosError && (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Não foi possível carregar os dados. Tente recarregar a página.
+          </div>
+        )}
+        {currentTab === "usuarios" && !ctx && (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Contexto de clínica não encontrado.
+          </div>
         )}
       </div>
     </div>

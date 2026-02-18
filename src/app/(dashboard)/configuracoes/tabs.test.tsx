@@ -26,7 +26,7 @@ vi.mock("next/link", () => ({
 import { Tabs, isValidTab, getDefaultTab } from "./tabs";
 
 describe("Tabs", () => {
-  it("renderiza todas as 5 abas para superadmin", () => {
+  it("renderiza todas as 6 abas para superadmin", () => {
     mockTab = "";
     render(<Tabs papel="superadmin" />);
     expect(screen.getByText("Clínica")).toBeInTheDocument();
@@ -34,14 +34,16 @@ describe("Tabs", () => {
     expect(screen.getByText("Medicamentos")).toBeInTheDocument();
     expect(screen.getByText("Exames")).toBeInTheDocument();
     expect(screen.getByText("Gestão")).toBeInTheDocument();
+    expect(screen.getByText("Usuários")).toBeInTheDocument();
   });
 
-  it("renderiza 3 abas para gestor (Clínica, Minha Conta, Gestão)", () => {
+  it("renderiza 4 abas para gestor (Clínica, Minha Conta, Gestão, Usuários)", () => {
     mockTab = "";
     render(<Tabs papel="gestor" />);
     expect(screen.getByText("Clínica")).toBeInTheDocument();
     expect(screen.getByText("Minha Conta")).toBeInTheDocument();
     expect(screen.getByText("Gestão")).toBeInTheDocument();
+    expect(screen.getByText("Usuários")).toBeInTheDocument();
     expect(screen.queryByText("Medicamentos")).not.toBeInTheDocument();
     expect(screen.queryByText("Exames")).not.toBeInTheDocument();
   });
@@ -119,6 +121,7 @@ describe("Tabs", () => {
     expect(screen.getByText("Medicamentos").closest("a")).toHaveAttribute("href", "/configuracoes?tab=medicamentos");
     expect(screen.getByText("Exames").closest("a")).toHaveAttribute("href", "/configuracoes?tab=exames");
     expect(screen.getByText("Gestão").closest("a")).toHaveAttribute("href", "/configuracoes?tab=gestao");
+    expect(screen.getByText("Usuários").closest("a")).toHaveAttribute("href", "/configuracoes?tab=usuarios");
   });
 
   it("renderiza nav com aria-label", () => {
@@ -135,6 +138,7 @@ describe("isValidTab", () => {
     expect(isValidTab("medicamentos")).toBe(true);
     expect(isValidTab("exames")).toBe(true);
     expect(isValidTab("gestao")).toBe(true);
+    expect(isValidTab("usuarios")).toBe(true);
   });
 
   it("retorna false para tabs inválidos", () => {

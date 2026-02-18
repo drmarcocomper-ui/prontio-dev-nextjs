@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
-export function PapelFilter({ currentPapel }: { currentPapel: string }) {
+export function PapelFilter({ currentPapel, basePath = "/configuracoes" }: { currentPapel: string; basePath?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -17,7 +17,7 @@ export function PapelFilter({ currentPapel }: { currentPapel: string }) {
     }
     params.delete("pagina");
     startTransition(() => {
-      router.replace(`/usuarios?${params.toString()}`);
+      router.replace(`${basePath}?${params.toString()}`);
     });
   }
 
