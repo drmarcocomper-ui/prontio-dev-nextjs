@@ -89,6 +89,8 @@ vi.mock("@/lib/clinica", () => ({
     userId: "user-1",
   }),
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
+  isGestor: (p: string) => p === "superadmin" || p === "gestor",
+  isProfissional: (p: string) => p === "superadmin" || p === "profissional_saude",
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -795,6 +797,19 @@ describe("excluirAgendamento", () => {
     await expect(
       excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")
     ).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDeleteEq).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia exclusão para secretaria", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "secretaria",
+      userId: "user-2",
+    });
+    await expect(
+      excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")
+    ).rejects.toThrow("Sem permissão para excluir agendamentos.");
     expect(mockDeleteEq).not.toHaveBeenCalled();
   });
 });

@@ -7,7 +7,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { parseLocalDate } from "@/lib/date";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
-import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, isGestor, isProfissional, type Papel } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 import { timeToMinutes, DIAS_SEMANA, getHorarioConfig } from "./utils";
@@ -374,6 +374,10 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) throw new Error("Clínica não selecionada.");
+
+  if (!isGestor(ctx.papel) && !isProfissional(ctx.papel)) {
+    throw new Error("Sem permissão para excluir agendamentos.");
+  }
 
   const { success: allowed } = await rateLimit({
     key: `excluir_agendamento:${ctx.userId}`,
