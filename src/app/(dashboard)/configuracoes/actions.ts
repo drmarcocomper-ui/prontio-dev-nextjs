@@ -86,6 +86,15 @@ export async function salvarConsultorio(
     return { error: "Sem permissão para editar o consultório." };
   }
 
+  const { success: allowed } = await rateLimit({
+    key: `salvar_consultorio:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const supabase = createAdminClient();
 
@@ -113,6 +122,15 @@ export async function salvarHorarios(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
   if (!isGestor(ctx.papel)) return { error: "Sem permissão para editar horários." };
+
+  const { success: allowed } = await rateLimit({
+    key: `salvar_horarios:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
 
   const entries: { chave: string; valor: string; clinica_id: string }[] = [];
 
@@ -182,6 +200,15 @@ export async function salvarHorariosProfissional(
 
   if (!isProfissional(ctx.papel)) {
     return { error: "Sem permissão para configurar horários de profissional." };
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `salvar_horarios_prof:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
   }
 
   const duracao = parseInt(formData.get("duracao_consulta") as string, 10);
@@ -273,6 +300,15 @@ export async function salvarValores(
   if (!ctx) return { error: "Clínica não selecionada." };
   if (!isGestor(ctx.papel)) return { error: "Sem permissão para editar valores." };
 
+  const { success: allowed } = await rateLimit({
+    key: `salvar_valores:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const entries: { chave: string; valor: string; clinica_id: string }[] = [];
 
   formData.forEach((value, key) => {
@@ -325,6 +361,15 @@ export async function salvarProfissional(
 ): Promise<ConfigFormState> {
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Contexto não encontrado." };
+
+  const { success: allowed } = await rateLimit({
+    key: `salvar_profissional:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
 
   const entries: { chave: string; valor: string; user_id: string }[] = [];
   let validationError: string | null = null;
@@ -452,6 +497,15 @@ export async function criarClinica(
     return { error: "Sem permissão para criar clínicas." };
   }
 
+  const { success: allowed } = await rateLimit({
+    key: `criar_clinica:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Usuário não autenticado." };
@@ -498,6 +552,15 @@ export async function editarClinica(
     return { error: "Sem permissão para editar clínicas." };
   }
 
+  const { success: allowed } = await rateLimit({
+    key: `editar_clinica:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const clinicaId = formData.get("clinica_id") as string;
   if (!uuidValido(clinicaId)) return { error: "Clínica não identificada." };
 
@@ -536,6 +599,15 @@ export async function alternarStatusClinica(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para alterar status de clínicas.");
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `alternar_status_clinica:${ctx.userId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
   }
 
   // Verificar se o usuário tem acesso à clínica
@@ -578,6 +650,15 @@ export async function excluirClinica(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
   if (!ctx || !isGestor(ctx.papel)) {
     throw new Error("Sem permissão para excluir clínicas.");
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `excluir_clinica:${ctx.userId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
   }
 
   if (id === ctx.clinicaId) {
@@ -634,6 +715,15 @@ export async function criarCatalogoExame(
     return { error: "Sem permissão." };
   }
 
+  const { success: allowed } = await rateLimit({
+    key: `criar_catalogo_exame:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const nome = (formData.get("nome") as string)?.trim();
   if (!nome) return { error: "Nome é obrigatório." };
   if (nome.length > NOME_EXAME_MAX) return { error: `Nome excede ${NOME_EXAME_MAX} caracteres.` };
@@ -665,6 +755,15 @@ export async function atualizarCatalogoExame(
   const ctx = await getClinicaAtual();
   if (!ctx || !isSuperAdmin(ctx.papel)) {
     return { error: "Sem permissão." };
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_catalogo_exame:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
   }
 
   const id = formData.get("id") as string;
@@ -701,6 +800,15 @@ export async function excluirCatalogoExame(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
   if (!ctx || !isSuperAdmin(ctx.papel)) {
     throw new Error("Sem permissão.");
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `excluir_catalogo_exame:${ctx.userId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
   }
 
   const supabase = await createClient();
@@ -742,6 +850,15 @@ export async function criarMedicamento(
     return { error: "Sem permissão." };
   }
 
+  const { success: allowed } = await rateLimit({
+    key: `criar_medicamento:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const nome = (formData.get("nome") as string)?.trim();
   if (!nome) return { error: "Nome é obrigatório." };
   if (nome.length > NOME_MEDICAMENTO_MAX) return { error: `Nome excede ${NOME_MEDICAMENTO_MAX} caracteres.` };
@@ -778,6 +895,15 @@ export async function atualizarMedicamento(
   const ctx = await getClinicaAtual();
   if (!ctx || !isSuperAdmin(ctx.papel)) {
     return { error: "Sem permissão." };
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_medicamento:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
   }
 
   const id = formData.get("id") as string;
@@ -819,6 +945,15 @@ export async function excluirMedicamento(id: string): Promise<void> {
   const ctx = await getClinicaAtual();
   if (!ctx || !isSuperAdmin(ctx.papel)) {
     throw new Error("Sem permissão.");
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `excluir_medicamento:${ctx.userId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
   }
 
   const supabase = await createClient();

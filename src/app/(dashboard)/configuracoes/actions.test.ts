@@ -158,6 +158,13 @@ function makeFormData(data: Record<string, string>) {
 describe("salvarConsultorio", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await salvarConsultorio({}, makeFormData({ nome: "Clínica" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
   it("retorna erro quando nome está vazio", async () => {
     const result = await salvarConsultorio({}, makeFormData({ nome: "" }));
     expect(result.error).toBe("Nome do consultório é obrigatório.");
@@ -212,6 +219,13 @@ describe("salvarConsultorio", () => {
 
 describe("salvarHorarios", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await salvarHorarios({}, makeFormData({ config_duracao_consulta: "30" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 
   it("salva horários com sucesso", async () => {
     const result = await salvarHorarios({}, makeFormData({
@@ -287,6 +301,13 @@ describe("salvarHorarios", () => {
 
 describe("salvarValores", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await salvarValores({}, makeFormData({ config_valor_convenio_bradesco: "350,00" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 
   it("salva valores com sucesso", async () => {
     const result = await salvarValores({}, makeFormData({
@@ -391,6 +412,13 @@ describe("salvarValores", () => {
 
 describe("salvarProfissional", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await salvarProfissional({}, makeFormData({ config_nome_profissional: "Dr." }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 
   it("salva dados profissionais com sucesso", async () => {
     const result = await salvarProfissional({}, makeFormData({
@@ -540,6 +568,13 @@ describe("alterarSenha", () => {
 describe("editarClinica", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000001", nome: "Nova" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
   it("edita nome da clínica com sucesso", async () => {
     const result = await editarClinica({}, makeFormData({ clinica_id: "00000000-0000-0000-0000-000000000001", nome: "Nova Clínica" }));
     expect(result.success).toBe(true);
@@ -605,6 +640,12 @@ describe("alternarStatusClinica", () => {
         single: vi.fn().mockResolvedValue({ data: { ativo: true }, error: null }),
       }),
     });
+  });
+
+  it("lança erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    await expect(alternarStatusClinica("00000000-0000-0000-0000-000000000001")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockSelectClinica).not.toHaveBeenCalledWith("ativo");
   });
 
   it("alterna de ativo para inativo", async () => {
@@ -680,6 +721,12 @@ describe("excluirClinica", () => {
     ]);
   });
 
+  it("lança erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    await expect(excluirClinica("00000000-0000-0000-0000-000000000088")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDeleteClinica).not.toHaveBeenCalled();
+  });
+
   it("exclui clínica com sucesso", async () => {
     await excluirClinica("00000000-0000-0000-0000-000000000088");
     expect(mockDeleteClinica).toHaveBeenCalled();
@@ -734,6 +781,13 @@ describe("criarClinica", () => {
     mockInsertClinicaSelect.mockReturnValue({
       single: vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000099" }, error: null }),
     });
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await criarClinica({}, makeFormData({ nome: "Nova Clínica" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsertClinica).not.toHaveBeenCalled();
   });
 
   it("retorna erro quando nome está vazio", async () => {
@@ -826,6 +880,13 @@ describe("salvarHorariosProfissional", () => {
       papel: "profissional_saude",
       userId: "00000000-0000-0000-0000-000000000002",
     });
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await salvarHorariosProfissional({}, makeHorariosProfFormData());
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpsertHorarios).not.toHaveBeenCalled();
   });
 
   it("retorna erro quando contexto é null", async () => {
@@ -990,6 +1051,13 @@ describe("criarCatalogoExame", () => {
     });
   });
 
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await criarCatalogoExame({}, makeFormData({ nome: "Hemograma" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsertCatalogoExame).not.toHaveBeenCalled();
+  });
+
   it("retorna erro quando contexto é null", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
     const result = await criarCatalogoExame({}, makeFormData({ nome: "Hemograma" }));
@@ -1056,6 +1124,13 @@ describe("atualizarCatalogoExame", () => {
     mockUpdateCatalogoExame.mockReturnValue({
       eq: vi.fn().mockReturnValue({ error: null }),
     });
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await atualizarCatalogoExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000010", nome: "Hemograma" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdateCatalogoExame).not.toHaveBeenCalled();
   });
 
   it("retorna erro quando contexto é null", async () => {
@@ -1127,6 +1202,12 @@ describe("excluirCatalogoExame", () => {
     });
   });
 
+  it("lança erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    await expect(excluirCatalogoExame("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDeleteCatalogoExame).not.toHaveBeenCalled();
+  });
+
   it("lança erro quando id não é UUID válido", async () => {
     await expect(excluirCatalogoExame("invalid")).rejects.toThrow("ID inválido.");
   });
@@ -1169,6 +1250,13 @@ describe("criarMedicamento", () => {
       papel: "superadmin",
       userId: "00000000-0000-0000-0000-000000000002",
     });
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await criarMedicamento({}, makeFormData({ nome: "Amoxicilina" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsertMedicamento).not.toHaveBeenCalled();
   });
 
   it("retorna erro quando contexto é null", async () => {
@@ -1266,6 +1354,13 @@ describe("atualizarMedicamento", () => {
     });
   });
 
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "Amoxicilina" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdateMedicamento).not.toHaveBeenCalled();
+  });
+
   it("retorna erro quando contexto é null", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce(null);
     const result = await atualizarMedicamento({}, makeFormData({ id: "00000000-0000-0000-0000-000000000020", nome: "Amoxicilina" }));
@@ -1356,6 +1451,12 @@ describe("excluirMedicamento", () => {
     mockDeleteMedicamento.mockReturnValue({
       eq: vi.fn().mockReturnValue({ error: null }),
     });
+  });
+
+  it("lança erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    await expect(excluirMedicamento("00000000-0000-0000-0000-000000000020")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDeleteMedicamento).not.toHaveBeenCalled();
   });
 
   it("lança erro quando id não é UUID válido", async () => {
