@@ -266,6 +266,13 @@ describe("excluirReceita", () => {
     expect(mockDelete).not.toHaveBeenCalled();
   });
 
+  it("lança erro quando getMedicoIdSafe retorna null", async () => {
+    const { getMedicoIdSafe } = await import("@/lib/clinica");
+    vi.mocked(getMedicoIdSafe).mockResolvedValueOnce(null as unknown as string);
+    await expect(excluirReceita("00000000-0000-0000-0000-000000000004")).rejects.toThrow("Não foi possível identificar o médico responsável.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
   it("lança erro quando rate limit é excedido", async () => {
     mockRateLimit.mockResolvedValueOnce({ success: false });
     await expect(excluirReceita("00000000-0000-0000-0000-000000000004")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
