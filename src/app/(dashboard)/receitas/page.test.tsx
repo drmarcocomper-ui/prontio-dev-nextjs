@@ -17,8 +17,18 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+const mockGetMedicoId = vi.fn().mockResolvedValue("doc-1");
+const mockRedirect = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  redirect: (...args: unknown[]) => {
+    mockRedirect(...args);
+    throw new Error("REDIRECT");
+  },
+}));
+
 vi.mock("@/lib/clinica", () => ({
-  getMedicoId: vi.fn().mockResolvedValue("doc-1"),
+  getMedicoId: (...args: unknown[]) => mockGetMedicoId(...args),
 }));
 
 vi.mock("./types", async () => {
@@ -97,6 +107,13 @@ describe("ReceitasPage", () => {
   beforeEach(() => {
     mockData.data = [];
     mockData.count = 0;
+    mockGetMedicoId.mockResolvedValue("doc-1");
+  });
+
+  it("redireciona para /login quando getMedicoId falha", async () => {
+    mockGetMedicoId.mockRejectedValueOnce(new Error("Sem clínica"));
+    await expect(ReceitasPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT");
+    expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 
   it("renderiza o título Receitas", async () => {

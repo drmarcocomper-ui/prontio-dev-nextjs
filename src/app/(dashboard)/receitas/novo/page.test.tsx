@@ -17,7 +17,17 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("@/lib/clinica", () => ({ getMedicoId: vi.fn().mockResolvedValue("doc-1") }));
+const mockGetMedicoId = vi.fn().mockResolvedValue("doc-1");
+const mockRedirect = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  redirect: (...args: unknown[]) => {
+    mockRedirect(...args);
+    throw new Error("REDIRECT");
+  },
+}));
+
+vi.mock("@/lib/clinica", () => ({ getMedicoId: (...args: unknown[]) => mockGetMedicoId(...args) }));
 
 vi.mock("./receita-form", () => ({
   ReceitaForm: (props: Record<string, unknown>) => {
@@ -36,6 +46,12 @@ async function renderPage(searchParams: { paciente_id?: string; paciente_nome?: 
 }
 
 describe("NovaReceitaPage", () => {
+  it("redireciona para /login quando getMedicoId falha", async () => {
+    mockGetMedicoId.mockRejectedValueOnce(new Error("Sem clínica"));
+    await expect(NovaReceitaPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT");
+    expect(mockRedirect).toHaveBeenCalledWith("/login");
+  });
+
   it("renderiza o título Nova receita", async () => {
     await renderPage();
     expect(screen.getByRole("heading", { name: "Nova receita" })).toBeInTheDocument();
