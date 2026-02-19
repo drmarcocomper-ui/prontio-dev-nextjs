@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { MEDICAMENTOS_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "./types";
-import { getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export type ReceitaFormState = {
@@ -50,6 +50,11 @@ export async function criarReceita(
 
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors };
+  }
+
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isProfissional(ctx.papel)) {
+    return { error: "Apenas profissionais de saúde podem emitir receitas." };
   }
 
   const supabase = await createClient();
@@ -113,6 +118,11 @@ export async function atualizarReceita(
     return { fieldErrors };
   }
 
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isProfissional(ctx.papel)) {
+    return { error: "Apenas profissionais de saúde podem editar receitas." };
+  }
+
   const supabase = await createClient();
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
@@ -162,6 +172,11 @@ export async function atualizarReceita(
 export async function excluirReceita(id: string): Promise<void> {
   if (!uuidValido(id)) {
     throw new Error("ID inválido.");
+  }
+
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isProfissional(ctx.papel)) {
+    throw new Error("Apenas profissionais de saúde podem excluir receitas.");
   }
 
   const supabase = await createClient();

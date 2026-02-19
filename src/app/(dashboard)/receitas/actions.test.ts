@@ -7,6 +7,12 @@ const mockSelectPacienteId = vi.fn().mockResolvedValue({ data: { paciente_id: "0
 const mockPacienteCheck = vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000001" }, error: null });
 const mockRedirect = vi.fn();
 const mockRateLimit = vi.fn().mockResolvedValue({ success: true });
+const mockGetClinicaAtual = vi.fn().mockResolvedValue({
+  clinicaId: "clinic-1",
+  clinicaNome: "Clínica Teste",
+  papel: "profissional_saude",
+  userId: "user-1",
+});
 
 vi.mock("@/lib/rate-limit", () => ({
   rateLimit: (...args: unknown[]) => mockRateLimit(...args),
@@ -15,6 +21,8 @@ vi.mock("@/lib/rate-limit", () => ({
 vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
   getMedicoIdSafe: vi.fn().mockResolvedValue("user-1"),
+  getClinicaAtual: (...args: unknown[]) => mockGetClinicaAtual(...args),
+  isProfissional: (p: string) => ["superadmin", "profissional_saude"].includes(p),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -86,6 +94,14 @@ describe("criarReceita", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRateLimit.mockResolvedValue({ success: true });
+    mockGetClinicaAtual.mockResolvedValue({ clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "profissional_saude", userId: "user-1" });
+  });
+
+  it("retorna erro quando secretaria tenta criar receita", async () => {
+    mockGetClinicaAtual.mockResolvedValueOnce({ clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "secretaria", userId: "user-1" });
+    const result = await criarReceita({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", tipo: "simples", medicamentos: "Amoxicilina" }));
+    expect(result.error).toBe("Apenas profissionais de saúde podem emitir receitas.");
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 
   it("retorna erro quando rate limit é excedido", async () => {
@@ -161,6 +177,14 @@ describe("atualizarReceita", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRateLimit.mockResolvedValue({ success: true });
+    mockGetClinicaAtual.mockResolvedValue({ clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "profissional_saude", userId: "user-1" });
+  });
+
+  it("retorna erro quando secretaria tenta editar receita", async () => {
+    mockGetClinicaAtual.mockResolvedValueOnce({ clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "secretaria", userId: "user-1" });
+    const result = await atualizarReceita({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", tipo: "simples", medicamentos: "Amoxicilina" }));
+    expect(result.error).toBe("Apenas profissionais de saúde podem editar receitas.");
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it("retorna erro quando rate limit é excedido", async () => {
@@ -233,6 +257,13 @@ describe("excluirReceita", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRateLimit.mockResolvedValue({ success: true });
+    mockGetClinicaAtual.mockResolvedValue({ clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "profissional_saude", userId: "user-1" });
+  });
+
+  it("lança erro quando secretaria tenta excluir receita", async () => {
+    mockGetClinicaAtual.mockResolvedValueOnce({ clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "secretaria", userId: "user-1" });
+    await expect(excluirReceita("00000000-0000-0000-0000-000000000004")).rejects.toThrow("Apenas profissionais de saúde podem excluir receitas.");
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 
   it("lança erro quando rate limit é excedido", async () => {
