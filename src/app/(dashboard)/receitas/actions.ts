@@ -7,6 +7,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { MEDICAMENTOS_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "./types";
 import { getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 
 export type ReceitaFormState = {
   error?: string;
@@ -54,6 +55,15 @@ export async function criarReceita(
   const supabase = await createClient();
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
+
+  const { success: allowed } = await rateLimit({
+    key: `criar_receita:${medicoId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
 
   const { data: paciente } = await supabase
     .from("pacientes")
@@ -107,6 +117,15 @@ export async function atualizarReceita(
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_receita:${medicoId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const { data: paciente } = await supabase
     .from("pacientes")
     .select("id")
@@ -147,6 +166,15 @@ export async function excluirReceita(id: string): Promise<void> {
 
   const supabase = await createClient();
   const medicoId = await getMedicoId();
+
+  const { success: allowed } = await rateLimit({
+    key: `excluir_receita:${medicoId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
+  }
 
   // Buscar paciente_id antes de deletar para redirecionar corretamente
   const { data: receita } = await supabase
