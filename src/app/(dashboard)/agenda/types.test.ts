@@ -12,8 +12,8 @@ describe("agenda/types", () => {
     expect(Object.keys(STATUS_LABELS)).toHaveLength(6);
   });
 
-  it("TIPO_LABELS tem 5 entradas", () => {
-    expect(Object.keys(TIPO_LABELS)).toHaveLength(5);
+  it("TIPO_LABELS tem 2 entradas", () => {
+    expect(Object.keys(TIPO_LABELS)).toHaveLength(2);
   });
 
   it("STATUS_STYLES tem estilo para cada status", () => {
