@@ -12,7 +12,8 @@ import {
   OBSERVACOES_MAX_LENGTH, validarCPF,
   SEXO_LABELS, ESTADO_CIVIL_LABELS, ESTADOS_UF, CONVENIO_LABELS,
 } from "./types";
-import { getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 
 export type PacienteFormState = {
   error?: string;
@@ -99,6 +100,16 @@ export async function criarPaciente(
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
+  const ctx = await getClinicaAtual();
+  const { success: allowed } = await rateLimit({
+    key: `criar_paciente:${ctx?.userId ?? medicoId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const { error } = await supabase.from("pacientes").insert({
     medico_id: medicoId,
     nome, cpf, rg, data_nascimento, sexo, estado_civil,
@@ -141,6 +152,16 @@ export async function atualizarPaciente(
   const supabase = await createClient();
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
+
+  const ctx = await getClinicaAtual();
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_paciente:${ctx?.userId ?? medicoId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
 
   const { error } = await supabase
     .from("pacientes")
@@ -196,6 +217,16 @@ export async function criarPacienteRapido(data: {
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
+  const ctx = await getClinicaAtual();
+  const { success: allowed } = await rateLimit({
+    key: `criar_paciente_rapido:${ctx?.userId ?? medicoId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const supabase = await createClient();
   const { data: inserted, error } = await supabase
     .from("pacientes")
@@ -219,6 +250,16 @@ export async function excluirPaciente(id: string): Promise<void> {
 
   const supabase = await createClient();
   const medicoId = await getMedicoId();
+
+  const ctx = await getClinicaAtual();
+  const { success: allowed } = await rateLimit({
+    key: `excluir_paciente:${ctx?.userId ?? medicoId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
+  }
 
   const { error } = await supabase.from("pacientes").delete().eq("id", id).eq("medico_id", medicoId);
 

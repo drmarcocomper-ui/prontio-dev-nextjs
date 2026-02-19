@@ -7,7 +7,19 @@ const mockRedirect = vi.fn();
 
 let insertResponse: { data: unknown; error: unknown };
 
+const mockRateLimit = vi.fn().mockResolvedValue({ success: true });
+
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
+
 vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "profissional_saude",
+    userId: "user-1",
+  }),
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
   getMedicoIdSafe: vi.fn().mockResolvedValue("user-1"),
 }));
@@ -66,7 +78,15 @@ function makeFormData(data: Record<string, string>) {
 describe("criarPaciente", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
     insertResponse = { data: null, error: null };
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    const result = await criarPaciente({}, makeFormData({ nome: "João" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 
   it("retorna fieldErrors quando nome está vazio", async () => {
@@ -137,7 +157,15 @@ describe("criarPaciente", () => {
 describe("criarPacienteRapido", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
     insertResponse = { data: { id: "new-uuid" }, error: null };
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    const result = await criarPacienteRapido({ nome: "João" });
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 
   it("retorna fieldErrors quando nome está vazio", async () => {
@@ -196,7 +224,15 @@ describe("criarPacienteRapido", () => {
 describe("atualizarPaciente", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
     insertResponse = { data: null, error: null };
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    const result = await atualizarPaciente({}, makeFormData({ id: "00000000-0000-0000-0000-000000000001", nome: "Maria" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it("retorna erro quando ID é inválido", async () => {
@@ -246,7 +282,16 @@ describe("atualizarPaciente", () => {
 });
 
 describe("excluirPaciente", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+  });
+
+  it("lança erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    await expect(excluirPaciente("00000000-0000-0000-0000-000000000001")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
 
   it("lança erro quando ID é inválido", async () => {
     await expect(excluirPaciente("invalido")).rejects.toThrow("ID inválido.");
