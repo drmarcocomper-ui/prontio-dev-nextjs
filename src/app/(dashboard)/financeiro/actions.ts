@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA } from "./constants";
-import { getClinicaAtual, getMedicoIdSafe } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoIdSafe, isFinanceiro, isGestor } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export type TransacaoFormState = {
@@ -75,6 +75,10 @@ export async function criarTransacao(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
 
+  if (!isFinanceiro(ctx.papel)) {
+    return { error: "Sem permissão para criar transações." };
+  }
+
   const { success: allowed } = await rateLimit({
     key: `criar_transacao:${ctx.userId}`,
     maxAttempts: 30,
@@ -140,6 +144,10 @@ export async function atualizarTransacao(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
 
+  if (!isFinanceiro(ctx.papel)) {
+    return { error: "Sem permissão para atualizar transações." };
+  }
+
   const { success: allowed } = await rateLimit({
     key: `atualizar_transacao:${ctx.userId}`,
     maxAttempts: 30,
@@ -198,6 +206,10 @@ export async function excluirTransacao(id: string): Promise<void> {
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) throw new Error("Clínica não selecionada.");
+
+  if (!isGestor(ctx.papel)) {
+    throw new Error("Sem permissão para excluir transações.");
+  }
 
   const { success: allowed } = await rateLimit({
     key: `excluir_transacao:${ctx.userId}`,

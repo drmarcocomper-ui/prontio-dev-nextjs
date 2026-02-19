@@ -141,6 +141,7 @@ vi.mock("@/lib/clinica", () => ({
     { id: "00000000-0000-0000-0000-000000000001", nome: "Clínica Teste", papel: "gestor" },
   ]),
   getMedicoId: vi.fn().mockResolvedValue("00000000-0000-0000-0000-000000000002"),
+  isSuperAdmin: (papel: string) => papel === "superadmin",
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
   isProfissional: (papel: string) => papel === "superadmin" || papel === "profissional_saude",
 }));

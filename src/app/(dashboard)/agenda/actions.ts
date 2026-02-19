@@ -7,7 +7,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { parseLocalDate } from "@/lib/date";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
-import { getClinicaAtual, getMedicoId, isGestor, isProfissional, type Papel } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, isAtendimento, isGestor, isProfissional, type Papel } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 import { timeToMinutes, DIAS_SEMANA, getHorarioConfig } from "./utils";
@@ -166,6 +166,11 @@ export async function criarAgendamento(
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
+
+  if (!isAtendimento(ctx.papel)) {
+    return { error: "Sem permissão para criar agendamentos." };
+  }
+
   const clinicaId = ctx.clinicaId;
 
   const { success: allowed } = await rateLimit({
@@ -244,6 +249,10 @@ export async function atualizarStatusAgendamento(
     throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
   }
 
+  if (!isAtendimento(ctx.papel)) {
+    throw new Error("Sem permissão para atualizar status de agendamentos.");
+  }
+
   const { data: agendamento } = await supabase
     .from("agendamentos")
     .select("status")
@@ -318,6 +327,10 @@ export async function atualizarAgendamento(
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
+
+  if (!isAtendimento(ctx.papel)) {
+    return { error: "Sem permissão para atualizar agendamentos." };
+  }
 
   const { success: allowed } = await rateLimit({
     key: `atualizar_agendamento:${ctx.userId}`,

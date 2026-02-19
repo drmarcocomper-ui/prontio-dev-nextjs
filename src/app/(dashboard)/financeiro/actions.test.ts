@@ -16,11 +16,13 @@ vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
     clinicaNome: "Clínica Teste",
-    papel: "profissional_saude",
+    papel: "gestor",
     userId: "user-1",
   }),
   getMedicoId: (...args: unknown[]) => mockMedicoId(...args),
   getMedicoIdSafe: async () => { try { return await mockMedicoId(); } catch { return null; } },
+  isFinanceiro: (p: string) => p === "superadmin" || p === "gestor" || p === "financeiro",
+  isGestor: (p: string) => p === "superadmin" || p === "gestor",
 }));
 
 const mockPacienteCheck = vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000001" } });
@@ -70,6 +72,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { criarTransacao, atualizarTransacao, excluirTransacao } from "./actions";
+import { getClinicaAtual } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -257,5 +260,47 @@ describe("excluirTransacao", () => {
   it("lança erro quando exclusão falha", async () => {
     mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
     await expect(excluirTransacao("00000000-0000-0000-0000-000000000006")).rejects.toThrow("Erro ao excluir transação.");
+  });
+
+  it("bloqueia papel financeiro de excluir transação", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "financeiro",
+      userId: "user-2",
+    });
+    await expect(excluirTransacao("00000000-0000-0000-0000-000000000006")).rejects.toThrow("Sem permissão para excluir transações.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("RBAC financeiro", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+  });
+
+  it("criarTransacao bloqueia papel secretaria", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "secretaria",
+      userId: "user-2",
+    });
+    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
+    expect(result.error).toBe("Sem permissão para criar transações.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("atualizarTransacao bloqueia papel secretaria", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "secretaria",
+      userId: "user-2",
+    });
+    const result = await atualizarTransacao({}, makeFormData({ id: "00000000-0000-0000-0000-000000000006", tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
+    expect(result.error).toBe("Sem permissão para atualizar transações.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
   });
 });

@@ -22,6 +22,8 @@ vi.mock("@/lib/clinica", () => ({
   }),
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
   getMedicoIdSafe: vi.fn().mockResolvedValue("user-1"),
+  isAtendimento: (p: string) => p === "superadmin" || p === "gestor" || p === "profissional_saude" || p === "secretaria",
+  isProfissional: (p: string) => p === "superadmin" || p === "profissional_saude",
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -68,6 +70,7 @@ vi.mock("./types", async () => {
 });
 
 import { criarPaciente, atualizarPaciente, excluirPaciente, criarPacienteRapido } from "./actions";
+import { getClinicaAtual } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -306,5 +309,60 @@ describe("excluirPaciente", () => {
   it("lança erro quando exclusão falha", async () => {
     mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
     await expect(excluirPaciente("00000000-0000-0000-0000-000000000001")).rejects.toThrow("Erro ao excluir paciente.");
+  });
+
+  it("bloqueia papel secretaria de excluir paciente", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "secretaria",
+      userId: "user-2",
+    });
+    await expect(excluirPaciente("00000000-0000-0000-0000-000000000001")).rejects.toThrow("Sem permissão para excluir pacientes.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("RBAC pacientes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+    insertResponse = { data: null, error: null };
+  });
+
+  it("criarPaciente bloqueia papel financeiro", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "financeiro",
+      userId: "user-2",
+    });
+    const result = await criarPaciente({}, makeFormData({ nome: "João" }));
+    expect(result.error).toBe("Sem permissão para criar pacientes.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("atualizarPaciente bloqueia papel financeiro", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "financeiro",
+      userId: "user-2",
+    });
+    const result = await atualizarPaciente({}, makeFormData({ id: "00000000-0000-0000-0000-000000000001", nome: "Maria" }));
+    expect(result.error).toBe("Sem permissão para atualizar pacientes.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("criarPacienteRapido bloqueia papel financeiro", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "financeiro",
+      userId: "user-2",
+    });
+    const result = await criarPacienteRapido({ nome: "João" });
+    expect(result.error).toBe("Sem permissão para criar pacientes.");
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 });

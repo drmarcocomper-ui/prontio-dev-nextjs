@@ -12,7 +12,7 @@ import {
   OBSERVACOES_MAX_LENGTH, validarCPF,
   SEXO_LABELS, ESTADO_CIVIL_LABELS, ESTADOS_UF, CONVENIO_LABELS,
 } from "./types";
-import { getClinicaAtual, getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, getMedicoIdSafe, isAtendimento, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export type PacienteFormState = {
@@ -101,8 +101,13 @@ export async function criarPaciente(
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const ctx = await getClinicaAtual();
+
+  if (!ctx || !isAtendimento(ctx.papel)) {
+    return { error: "Sem permissão para criar pacientes." };
+  }
+
   const { success: allowed } = await rateLimit({
-    key: `criar_paciente:${ctx?.userId ?? medicoId}`,
+    key: `criar_paciente:${ctx.userId}`,
     maxAttempts: 30,
     windowMs: 60 * 60 * 1000,
   });
@@ -154,8 +159,13 @@ export async function atualizarPaciente(
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const ctx = await getClinicaAtual();
+
+  if (!ctx || !isAtendimento(ctx.papel)) {
+    return { error: "Sem permissão para atualizar pacientes." };
+  }
+
   const { success: allowed } = await rateLimit({
-    key: `atualizar_paciente:${ctx?.userId ?? medicoId}`,
+    key: `atualizar_paciente:${ctx.userId}`,
     maxAttempts: 30,
     windowMs: 60 * 60 * 1000,
   });
@@ -218,8 +228,13 @@ export async function criarPacienteRapido(data: {
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
   const ctx = await getClinicaAtual();
+
+  if (!ctx || !isAtendimento(ctx.papel)) {
+    return { error: "Sem permissão para criar pacientes." };
+  }
+
   const { success: allowed } = await rateLimit({
-    key: `criar_paciente_rapido:${ctx?.userId ?? medicoId}`,
+    key: `criar_paciente_rapido:${ctx.userId}`,
     maxAttempts: 30,
     windowMs: 60 * 60 * 1000,
   });
@@ -252,8 +267,13 @@ export async function excluirPaciente(id: string): Promise<void> {
   const medicoId = await getMedicoId();
 
   const ctx = await getClinicaAtual();
+
+  if (!ctx || !isProfissional(ctx.papel)) {
+    throw new Error("Sem permissão para excluir pacientes.");
+  }
+
   const { success: allowed } = await rateLimit({
-    key: `excluir_paciente:${ctx?.userId ?? medicoId}`,
+    key: `excluir_paciente:${ctx.userId}`,
     maxAttempts: 20,
     windowMs: 60 * 60 * 1000,
   });

@@ -89,6 +89,7 @@ vi.mock("@/lib/clinica", () => ({
     userId: "user-1",
   }),
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
+  isAtendimento: (p: string) => p === "superadmin" || p === "gestor" || p === "profissional_saude" || p === "secretaria",
   isGestor: (p: string) => p === "superadmin" || p === "gestor",
   isProfissional: (p: string) => p === "superadmin" || p === "profissional_saude",
 }));
@@ -865,5 +866,51 @@ describe("excluirAgendamento", () => {
       excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")
     ).rejects.toThrow("Sem permissão para excluir agendamentos.");
     expect(mockDeleteEq).not.toHaveBeenCalled();
+  });
+});
+
+/* ── RBAC agenda ─────────────────────────────────────────────────── */
+
+describe("RBAC agenda", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 29, resetIn: 3600000 });
+  });
+
+  it("criarAgendamento bloqueia papel financeiro", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "financeiro",
+      userId: "user-2",
+    });
+    const result = await criarAgendamento({}, makeFormData(validCreate));
+    expect(result.error).toBe("Sem permissão para criar agendamentos.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("atualizarAgendamento bloqueia papel financeiro", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "financeiro",
+      userId: "user-2",
+    });
+    const result = await atualizarAgendamento({}, makeFormData(validUpdate));
+    expect(result.error).toBe("Sem permissão para atualizar agendamentos.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
+
+  it("atualizarStatusAgendamento bloqueia papel financeiro", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "financeiro",
+      userId: "user-2",
+    });
+    await expect(
+      atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")
+    ).rejects.toThrow("Sem permissão para atualizar status de agendamentos.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
   });
 });

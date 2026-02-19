@@ -14,6 +14,21 @@ export function isProfissional(papel: Papel): boolean {
   return papel === "superadmin" || papel === "profissional_saude";
 }
 
+/** superadmin */
+export function isSuperAdmin(papel: Papel): boolean {
+  return papel === "superadmin";
+}
+
+/** superadmin || gestor || financeiro — acesso ao módulo financeiro */
+export function isFinanceiro(papel: Papel): boolean {
+  return papel === "superadmin" || papel === "gestor" || papel === "financeiro";
+}
+
+/** superadmin || gestor || profissional_saude || secretaria — atendimento/recepção */
+export function isAtendimento(papel: Papel): boolean {
+  return papel === "superadmin" || papel === "gestor" || papel === "profissional_saude" || papel === "secretaria";
+}
+
 export interface Clinica {
   id: string;
   nome: string;
