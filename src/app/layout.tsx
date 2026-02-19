@@ -44,7 +44,9 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <Toaster richColors position="top-right" />
+        <div className="print:hidden">
+          <Toaster richColors position="top-right" />
+        </div>
       </body>
     </html>
   );
