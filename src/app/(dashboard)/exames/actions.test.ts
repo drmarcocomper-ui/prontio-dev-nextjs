@@ -6,6 +6,11 @@ const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockSelectPacienteId = vi.fn().mockResolvedValue({ data: { paciente_id: "00000000-0000-0000-0000-000000000001" } });
 const mockPacienteCheck = vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000001" }, error: null });
 const mockRedirect = vi.fn();
+const mockRateLimit = vi.fn().mockResolvedValue({ success: true });
+
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
 
 vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
@@ -79,7 +84,17 @@ function makeFormData(data: Record<string, string>) {
 }
 
 describe("criarExame", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    const result = await criarExame({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", exames: "Hemograma completo" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 
   it("retorna fieldErrors quando paciente não selecionado", async () => {
     const result = await criarExame({}, makeFormData({ data: "2024-06-15", exames: "Hemograma completo" }));
@@ -151,7 +166,17 @@ describe("criarExame", () => {
 });
 
 describe("atualizarExame", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    const result = await atualizarExame({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", exames: "Hemograma completo" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
 
   it("retorna erro quando ID é inválido", async () => {
     const result = await atualizarExame({}, makeFormData({ id: "invalido", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", exames: "Hemograma completo" }));
@@ -224,7 +249,16 @@ describe("atualizarExame", () => {
 });
 
 describe("excluirExame", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+  });
+
+  it("lança erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    await expect(excluirExame("00000000-0000-0000-0000-000000000004")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
 
   it("lança erro quando ID é inválido", async () => {
     await expect(excluirExame("invalido")).rejects.toThrow("ID inválido.");
