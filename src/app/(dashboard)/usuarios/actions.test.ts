@@ -224,7 +224,7 @@ describe("criarUsuario", () => {
   it("retorna erro quando vínculo duplicado (23505)", async () => {
     mockInsert.mockResolvedValueOnce({ error: { code: "23505", message: "duplicate" } });
     const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
-    expect(result.error).toBe("Este usuário já está vinculado a esta clínica.");
+    expect(result.error).toBe("Não foi possível criar o vínculo. Verifique os dados e tente novamente.");
   });
 });
 

@@ -103,7 +103,7 @@ export async function criarUsuario(
       await adminSupabase.auth.admin.deleteUser(userId);
     }
     if (vinculoError.code === "23505") {
-      return { error: "Este usuário já está vinculado a esta clínica." };
+      return { error: "Não foi possível criar o vínculo. Verifique os dados e tente novamente." };
     }
     return { error: tratarErroSupabase(vinculoError, "criar", "vínculo do usuário") };
   }
