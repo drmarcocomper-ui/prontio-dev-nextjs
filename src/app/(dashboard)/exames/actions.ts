@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido } from "@/lib/validators";
 import { EXAMES_MAX_LENGTH, INDICACAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./types";
-import { getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export type ExameFormState = {
@@ -45,6 +45,11 @@ export async function criarExame(
 
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors };
+  }
+
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isProfissional(ctx.papel)) {
+    return { error: "Apenas profissionais de saúde podem solicitar exames." };
   }
 
   const supabase = await createClient();
@@ -109,6 +114,11 @@ export async function atualizarExame(
     return { fieldErrors };
   }
 
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isProfissional(ctx.papel)) {
+    return { error: "Apenas profissionais de saúde podem editar solicitações de exames." };
+  }
+
   const supabase = await createClient();
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
@@ -159,6 +169,11 @@ export async function atualizarExame(
 export async function excluirExame(id: string): Promise<void> {
   if (!uuidValido(id)) {
     throw new Error("ID inválido.");
+  }
+
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isProfissional(ctx.papel)) {
+    throw new Error("Apenas profissionais de saúde podem excluir solicitações de exames.");
   }
 
   const supabase = await createClient();
