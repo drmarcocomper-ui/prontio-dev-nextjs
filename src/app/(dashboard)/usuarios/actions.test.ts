@@ -249,6 +249,13 @@ describe("atualizarUsuario", () => {
     expect(result.error).toBe("Sem permissão para editar usuários.");
   });
 
+  it("retorna erro quando rate limit é excedido", async () => {
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000012", papel: "gestor" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
   it("impede auto-edição", async () => {
     const result = await atualizarUsuario({}, makeFormData({ vinculo_id: "00000000-0000-0000-0000-000000000010", user_id: "00000000-0000-0000-0000-000000000002", papel: "secretaria" }));
     expect(result.error).toBe("Você não pode editar seu próprio vínculo.");

@@ -136,6 +136,15 @@ export async function atualizarUsuario(
     return { error: "Sem permissão para editar usuários." };
   }
 
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_usuario:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   if (userId && !uuidValido(userId)) return { error: "Usuário inválido." };
   if (userId === ctx.userId) {
     return { error: "Você não pode editar seu próprio vínculo." };
