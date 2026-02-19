@@ -177,7 +177,12 @@ export async function criarAgendamento(
     return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
   }
 
-  const medicoUserId = await getMedicoId();
+  let medicoUserId: string;
+  try {
+    medicoUserId = await getMedicoId();
+  } catch {
+    return { error: "Nenhum profissional de saúde encontrado para esta clínica." };
+  }
 
   // Obter duração configurada (padrão 15 min)
   const config = await getHorarioConfig(supabase, clinicaId, medicoUserId);
@@ -323,7 +328,12 @@ export async function atualizarAgendamento(
     return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
   }
 
-  const medicoUserId = await getMedicoId();
+  let medicoUserId: string;
+  try {
+    medicoUserId = await getMedicoId();
+  } catch {
+    return { error: "Nenhum profissional de saúde encontrado para esta clínica." };
+  }
 
   // Obter duração configurada (padrão 15 min)
   const config = await getHorarioConfig(supabase, ctx.clinicaId, medicoUserId);

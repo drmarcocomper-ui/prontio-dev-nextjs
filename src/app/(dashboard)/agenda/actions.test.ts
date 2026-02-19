@@ -157,7 +157,7 @@ import {
 } from "./actions";
 import { invalidarCacheHorario } from "./utils";
 import { STATUS_TRANSITIONS } from "./types";
-import { getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -437,6 +437,13 @@ describe("criarAgendamento", () => {
     expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
     expect(mockInsert).not.toHaveBeenCalled();
   });
+
+  it("retorna erro amigável quando getMedicoId falha", async () => {
+    vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Médico não encontrado para esta clínica."));
+    const result = await criarAgendamento({}, makeFormData(validCreate));
+    expect(result.error).toBe("Nenhum profissional de saúde encontrado para esta clínica.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
 
 /* ── atualizarAgendamento ──────────────────────────────────────────── */
@@ -601,6 +608,13 @@ describe("atualizarAgendamento", () => {
     mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
     const result = await atualizarAgendamento({}, makeFormData(validUpdate));
     expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
+
+  it("retorna erro amigável quando getMedicoId falha", async () => {
+    vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Médico não encontrado para esta clínica."));
+    const result = await atualizarAgendamento({}, makeFormData(validUpdate));
+    expect(result.error).toBe("Nenhum profissional de saúde encontrado para esta clínica.");
     expect(mockUpdateEq).not.toHaveBeenCalled();
   });
 });
