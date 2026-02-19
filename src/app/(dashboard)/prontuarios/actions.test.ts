@@ -13,8 +13,15 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "profissional_saude",
+    userId: "user-1",
+  }),
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
   getMedicoIdSafe: vi.fn().mockResolvedValue("user-1"),
+  isProfissional: (p: string) => p === "superadmin" || p === "profissional_saude",
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -68,7 +75,7 @@ vi.mock("./types", async () => {
 });
 
 import { criarProntuario, atualizarProntuario, excluirProntuario } from "./actions";
-import { getMedicoIdSafe } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoIdSafe } from "@/lib/clinica";
 
 function makeFormData(data: Record<string, string>) {
   const fd = new FormData();
@@ -145,6 +152,15 @@ describe("criarProntuario", () => {
     mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
     const result = await criarProntuario({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
     expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia secretaria de criar prontuário", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "secretaria", userId: "user-2",
+    });
+    const result = await criarProntuario({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.error).toBe("Apenas profissionais de saúde podem registrar prontuários.");
     expect(mockInsert).not.toHaveBeenCalled();
   });
 });
@@ -242,6 +258,15 @@ describe("atualizarProntuario", () => {
     expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
     expect(mockUpdate).not.toHaveBeenCalled();
   });
+
+  it("bloqueia secretaria de editar prontuário", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "secretaria", userId: "user-2",
+    });
+    const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.error).toBe("Apenas profissionais de saúde podem editar prontuários.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe("excluirProntuario", () => {
@@ -268,6 +293,14 @@ describe("excluirProntuario", () => {
   it("lança erro quando rate limit é excedido", async () => {
     mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
     await expect(excluirProntuario("00000000-0000-0000-0000-000000000002")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia secretaria de excluir prontuário", async () => {
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "secretaria", userId: "user-2",
+    });
+    await expect(excluirProntuario("00000000-0000-0000-0000-000000000002")).rejects.toThrow("Apenas profissionais de saúde podem excluir prontuários.");
     expect(mockDelete).not.toHaveBeenCalled();
   });
 });
