@@ -296,6 +296,12 @@ describe("excluirProntuario", () => {
     expect(mockDelete).not.toHaveBeenCalled();
   });
 
+  it("lança erro quando getMedicoIdSafe retorna null", async () => {
+    vi.mocked(getMedicoIdSafe).mockResolvedValueOnce(null);
+    await expect(excluirProntuario("00000000-0000-0000-0000-000000000002")).rejects.toThrow("Não foi possível identificar o médico responsável.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
   it("bloqueia secretaria de excluir prontuário", async () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
       clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "secretaria", userId: "user-2",
