@@ -8,6 +8,7 @@ import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } 
 import { parseLocalDate } from "@/lib/date";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
 import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 
 import { timeToMinutes, DIAS_SEMANA, getHorarioConfig } from "./utils";
 
@@ -167,6 +168,15 @@ export async function criarAgendamento(
   if (!ctx) return { error: "Clínica não selecionada." };
   const clinicaId = ctx.clinicaId;
 
+  const { success: allowed } = await rateLimit({
+    key: `criar_agendamento:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const medicoUserId = await getMedicoId();
 
   // Obter duração configurada (padrão 15 min)
@@ -219,6 +229,15 @@ export async function atualizarStatusAgendamento(
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) throw new Error("Clínica não selecionada.");
+
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_status:${ctx.userId}`,
+    maxAttempts: 60,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
+  }
 
   const { data: agendamento } = await supabase
     .from("agendamentos")
@@ -289,6 +308,15 @@ export async function atualizarAgendamento(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
 
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_agendamento:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const medicoUserId = await getMedicoId();
 
   // Obter duração configurada (padrão 15 min)
@@ -346,6 +374,15 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) throw new Error("Clínica não selecionada.");
+
+  const { success: allowed } = await rateLimit({
+    key: `excluir_agendamento:${ctx.userId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
+  }
 
   const { error } = await supabase.from("agendamentos").delete().eq("id", id).eq("clinica_id", ctx.clinicaId);
 

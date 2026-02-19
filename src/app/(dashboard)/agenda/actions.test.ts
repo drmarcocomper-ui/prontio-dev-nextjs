@@ -75,6 +75,12 @@ let pacienteChain = createPacienteChain();
 
 /* ── mock do Supabase ──────────────────────────────────────────────── */
 
+const mockRateLimit = vi.fn().mockResolvedValue({ success: true, remaining: 29, resetIn: 3600000 });
+
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
@@ -174,6 +180,7 @@ const validUpdate = {
 describe("criarAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 29, resetIn: 3600000 });
     invalidarCacheHorario("clinic-1");
     invalidarCacheHorario("clinic-1", "user-1");
     mockInsert.mockResolvedValue({ error: null });
@@ -421,6 +428,13 @@ describe("criarAgendamento", () => {
     expect(result.error).toBe("Clínica não selecionada.");
     expect(mockInsert).not.toHaveBeenCalled();
   });
+
+  it("bloqueia quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    const result = await criarAgendamento({}, makeFormData(validCreate));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
 
 /* ── atualizarAgendamento ──────────────────────────────────────────── */
@@ -428,6 +442,7 @@ describe("criarAgendamento", () => {
 describe("atualizarAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 29, resetIn: 3600000 });
     invalidarCacheHorario("clinic-1");
     invalidarCacheHorario("clinic-1", "user-1");
     mockInsert.mockResolvedValue({ error: null });
@@ -579,6 +594,13 @@ describe("atualizarAgendamento", () => {
     expect(result.error).toBe("Clínica não selecionada.");
     expect(mockUpdateEq).not.toHaveBeenCalled();
   });
+
+  it("bloqueia quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    const result = await atualizarAgendamento({}, makeFormData(validUpdate));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
 });
 
 /* ── atualizarStatusAgendamento ────────────────────────────────────── */
@@ -586,6 +608,7 @@ describe("atualizarAgendamento", () => {
 describe("atualizarStatusAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 59, resetIn: 3600000 });
     mockUpdateEq.mockResolvedValue({ error: null, data: [{ id: "updated" }] });
     selectChain = createSelectChain();
     singleResult = { data: { status: "agendado" }, error: null };
@@ -693,6 +716,14 @@ describe("atualizarStatusAgendamento", () => {
     ).rejects.toThrow("Clínica não selecionada.");
     expect(mockUpdateEq).not.toHaveBeenCalled();
   });
+
+  it("lança erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    await expect(
+      atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado")
+    ).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
 });
 
 /* ── STATUS_TRANSITIONS ────────────────────────────────────────────── */
@@ -728,6 +759,7 @@ describe("STATUS_TRANSITIONS", () => {
 describe("excluirAgendamento", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 19, resetIn: 3600000 });
     mockDeleteEq.mockResolvedValue({ error: null });
   });
 
@@ -755,6 +787,14 @@ describe("excluirAgendamento", () => {
     await expect(
       excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")
     ).rejects.toThrow("Clínica não selecionada.");
+    expect(mockDeleteEq).not.toHaveBeenCalled();
+  });
+
+  it("lança erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    await expect(
+      excluirAgendamento("00000000-0000-0000-0000-000000000007", "2024-06-15")
+    ).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
     expect(mockDeleteEq).not.toHaveBeenCalled();
   });
 });
