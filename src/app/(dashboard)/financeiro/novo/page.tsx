@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { getMedicoId } from "@/lib/clinica";
 import { TransacaoForm } from "./transacao-form";
@@ -6,7 +7,12 @@ import { TransacaoForm } from "./transacao-form";
 export const metadata: Metadata = { title: "Nova Transação" };
 
 export default async function NovaTransacaoPage() {
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    redirect("/login");
+  }
 
   return (
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">
