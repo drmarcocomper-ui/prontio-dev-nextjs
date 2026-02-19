@@ -94,6 +94,7 @@ export default async function ImprimirExamePage({
     supabase
       .from("configuracoes")
       .select("chave, valor")
+      .eq("user_id", medicoId)
       .in("chave", ["nome_profissional", "especialidade", "crm"]),
   ]);
 
