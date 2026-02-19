@@ -257,6 +257,12 @@ export async function atualizarStatusAgendamento(
     throw new Error("Transição de status não permitida.");
   }
 
+  // Status clínicos restritos a profissional_saude/gestor
+  const statusClinico = novoStatus === "em_atendimento" || novoStatus === "atendido";
+  if (statusClinico && !isGestor(ctx.papel) && !isProfissional(ctx.papel)) {
+    throw new Error("Apenas profissionais de saúde podem alterar para este status.");
+  }
+
   const { data: updated, error } = await supabase
     .from("agendamentos")
     .update({ status: novoStatus, updated_at: new Date().toISOString() })

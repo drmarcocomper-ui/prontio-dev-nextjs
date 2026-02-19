@@ -726,6 +726,46 @@ describe("atualizarStatusAgendamento", () => {
     ).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
     expect(mockUpdateEq).not.toHaveBeenCalled();
   });
+
+  it("bloqueia secretaria de marcar em_atendimento", async () => {
+    singleResult = { data: { status: "confirmado" }, error: null };
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "secretaria",
+      userId: "user-2",
+    });
+    await expect(
+      atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "em_atendimento")
+    ).rejects.toThrow("Apenas profissionais de saúde podem alterar para este status.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia secretaria de marcar atendido", async () => {
+    singleResult = { data: { status: "em_atendimento" }, error: null };
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "secretaria",
+      userId: "user-2",
+    });
+    await expect(
+      atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "atendido")
+    ).rejects.toThrow("Apenas profissionais de saúde podem alterar para este status.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
+
+  it("permite secretaria confirmar agendamento", async () => {
+    singleResult = { data: { status: "agendado" }, error: null };
+    vi.mocked(getClinicaAtual).mockResolvedValueOnce({
+      clinicaId: "clinic-1",
+      clinicaNome: "Clínica Teste",
+      papel: "secretaria",
+      userId: "user-2",
+    });
+    await atualizarStatusAgendamento("00000000-0000-0000-0000-000000000007", "confirmado");
+    expect(mockUpdateEq).toHaveBeenCalledWith(expect.objectContaining({ status: "confirmado" }), "00000000-0000-0000-0000-000000000007");
+  });
 });
 
 /* ── STATUS_TRANSITIONS ────────────────────────────────────────────── */
