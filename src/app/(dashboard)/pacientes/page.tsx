@@ -6,6 +6,7 @@ import { SortableHeader } from "@/components/sortable-header";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
+import { redirect } from "next/navigation";
 import { getMedicoId } from "@/lib/clinica";
 import { PacienteFilters } from "./filters";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
@@ -27,7 +28,12 @@ export default async function PacientesPage({
   const ascending = sortDir === "asc";
 
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    redirect("/login");
+  }
 
   let query = supabase
     .from("pacientes")
