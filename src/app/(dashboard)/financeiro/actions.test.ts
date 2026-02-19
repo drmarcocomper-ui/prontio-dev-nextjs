@@ -4,8 +4,13 @@ const mockInsert = vi.fn().mockResolvedValue({ error: null });
 const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
 const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
+const mockRateLimit = vi.fn().mockResolvedValue({ success: true });
 
 const mockMedicoId = vi.fn().mockResolvedValue("user-1");
+
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
 
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
@@ -73,7 +78,17 @@ function makeFormData(data: Record<string, string>) {
 }
 
 describe("criarTransacao", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 
   it("retorna fieldErrors quando tipo está vazio", async () => {
     const result = await criarTransacao({}, makeFormData({ descricao: "Teste", valor: "100,00", data: "2024-06-15" }));
@@ -158,7 +173,17 @@ describe("criarTransacao", () => {
 });
 
 describe("atualizarTransacao", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+  });
+
+  it("retorna erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    const result = await atualizarTransacao({}, makeFormData({ id: "00000000-0000-0000-0000-000000000006", tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdateEq).not.toHaveBeenCalled();
+  });
 
   it("retorna erro quando ID é inválido", async () => {
     const result = await atualizarTransacao({}, makeFormData({ id: "invalido", tipo: "receita", descricao: "Teste", valor: "100,00", data: "2024-06-15" }));
@@ -208,7 +233,16 @@ describe("atualizarTransacao", () => {
 });
 
 describe("excluirTransacao", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true });
+  });
+
+  it("lança erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false });
+    await expect(excluirTransacao("00000000-0000-0000-0000-000000000006")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
 
   it("lança erro quando ID é inválido", async () => {
     await expect(excluirTransacao("invalido")).rejects.toThrow("ID inválido.");

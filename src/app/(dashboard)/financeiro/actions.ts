@@ -7,6 +7,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA } from "./constants";
 import { getClinicaAtual, getMedicoIdSafe } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 
 export type TransacaoFormState = {
   error?: string;
@@ -74,6 +75,15 @@ export async function criarTransacao(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
 
+  const { success: allowed } = await rateLimit({
+    key: `criar_transacao:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   if (fields.paciente_id) {
     const medicoId = await getMedicoIdSafe();
     if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
@@ -130,6 +140,15 @@ export async function atualizarTransacao(
   const ctx = await getClinicaAtual();
   if (!ctx) return { error: "Clínica não selecionada." };
 
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_transacao:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   if (fields.paciente_id) {
     const medicoId = await getMedicoIdSafe();
     if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
@@ -179,6 +198,15 @@ export async function excluirTransacao(id: string): Promise<void> {
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
   if (!ctx) throw new Error("Clínica não selecionada.");
+
+  const { success: allowed } = await rateLimit({
+    key: `excluir_transacao:${ctx.userId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
+  }
 
   const { error } = await supabase.from("transacoes").delete().eq("id", id).eq("clinica_id", ctx.clinicaId);
 
