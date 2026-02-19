@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido } from "@/lib/validators";
 import { EXAMES_MAX_LENGTH, INDICACAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./types";
-import { getClinicaAtual, getMedicoId, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export type ExameFormState = {
@@ -177,7 +177,10 @@ export async function excluirExame(id: string): Promise<void> {
   }
 
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
+  const medicoId = await getMedicoIdSafe();
+  if (!medicoId) {
+    throw new Error("Não foi possível identificar o médico responsável.");
+  }
 
   const { success: allowed } = await rateLimit({
     key: `excluir_exame:${medicoId}`,

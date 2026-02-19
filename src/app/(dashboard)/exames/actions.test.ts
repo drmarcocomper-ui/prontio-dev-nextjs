@@ -285,6 +285,12 @@ describe("excluirExame", () => {
     expect(mockDelete).not.toHaveBeenCalled();
   });
 
+  it("lança erro quando getMedicoIdSafe retorna null", async () => {
+    vi.mocked(getMedicoIdSafe).mockResolvedValueOnce(null);
+    await expect(excluirExame("00000000-0000-0000-0000-000000000004")).rejects.toThrow("Não foi possível identificar o médico responsável.");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
   it("lança erro quando rate limit é excedido", async () => {
     mockRateLimit.mockResolvedValueOnce({ success: false });
     await expect(excluirExame("00000000-0000-0000-0000-000000000004")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
