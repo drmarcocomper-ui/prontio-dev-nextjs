@@ -42,8 +42,10 @@ vi.mock("@/components/breadcrumb", () => ({
   ),
 }));
 
+const mockGetMedicoId = vi.fn().mockResolvedValue("user-1");
+
 vi.mock("@/lib/clinica", () => ({
-  getMedicoId: vi.fn().mockResolvedValue("user-1"),
+  getMedicoId: (...args: unknown[]) => mockGetMedicoId(...args),
 }));
 
 vi.mock("./exame-form", () => ({
@@ -77,6 +79,12 @@ async function renderPage(
 describe("NovaSolicitacaoExamePage", () => {
   beforeEach(() => {
     mockRedirect.mockClear();
+  });
+
+  it("redireciona para /login quando getMedicoId falha", async () => {
+    mockGetMedicoId.mockRejectedValueOnce(new Error("Sem clínica"));
+    await expect(renderPage({ paciente_id: VALID_UUID })).rejects.toThrow("REDIRECT");
+    expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 
   it("redireciona para /pacientes quando paciente_id está ausente", async () => {

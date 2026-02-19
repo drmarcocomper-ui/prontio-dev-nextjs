@@ -13,7 +13,12 @@ export default async function NovaSolicitacaoExamePage({
   searchParams: Promise<{ paciente_id?: string; paciente_nome?: string }>;
 }) {
   const { paciente_id: rawPacienteId, paciente_nome } = await searchParams;
-  const medicoId = await getMedicoId();
+  let medicoId: string;
+  try {
+    medicoId = await getMedicoId();
+  } catch {
+    redirect("/login");
+  }
 
   const paciente_id = rawPacienteId && uuidValido(rawPacienteId) ? rawPacienteId : undefined;
 
