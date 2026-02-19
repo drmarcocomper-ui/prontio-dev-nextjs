@@ -7,6 +7,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { TEXTO_MAX_LENGTH, TIPO_LABELS } from "./types";
 import { getMedicoId, getMedicoIdSafe } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
 
 export type ProntuarioFormState = {
   error?: string;
@@ -60,6 +61,15 @@ export async function criarProntuario(
   const supabase = await createClient();
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
+
+  const { success: allowed } = await rateLimit({
+    key: `criar_prontuario:${medicoId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
 
   const { data: paciente } = await supabase
     .from("pacientes")
@@ -116,6 +126,15 @@ export async function atualizarProntuario(
   const medicoId = await getMedicoIdSafe();
   if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
 
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_prontuario:${medicoId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
   const { data: paciente } = await supabase
     .from("pacientes")
     .select("id")
@@ -155,6 +174,15 @@ export async function excluirProntuario(id: string): Promise<void> {
 
   const supabase = await createClient();
   const medicoId = await getMedicoId();
+
+  const { success: allowed } = await rateLimit({
+    key: `excluir_prontuario:${medicoId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
+  }
 
   const { error } = await supabase.from("prontuarios").delete().eq("id", id).eq("medico_id", medicoId);
 

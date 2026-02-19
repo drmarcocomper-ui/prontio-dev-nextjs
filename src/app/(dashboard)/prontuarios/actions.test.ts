@@ -6,6 +6,12 @@ const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockPacienteCheck = vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000001" }, error: null });
 const mockRedirect = vi.fn();
 
+const mockRateLimit = vi.fn().mockResolvedValue({ success: true, remaining: 29, resetIn: 3600000 });
+
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getMedicoId: vi.fn().mockResolvedValue("user-1"),
   getMedicoIdSafe: vi.fn().mockResolvedValue("user-1"),
@@ -71,7 +77,10 @@ function makeFormData(data: Record<string, string>) {
 }
 
 describe("criarProntuario", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 29, resetIn: 3600000 });
+  });
 
   it("retorna fieldErrors quando paciente não selecionado", async () => {
     const result = await criarProntuario({}, makeFormData({ data: "2024-06-15", queixa_principal: "Dor" }));
@@ -131,11 +140,19 @@ describe("criarProntuario", () => {
     expect(result.error).toBe("Não foi possível identificar o médico responsável.");
     expect(mockInsert).not.toHaveBeenCalled();
   });
+
+  it("bloqueia quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    const result = await criarProntuario({}, makeFormData({ paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
 
 describe("atualizarProntuario", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 29, resetIn: 3600000 });
   });
 
   it("retorna erro quando ID é inválido", async () => {
@@ -218,10 +235,20 @@ describe("atualizarProntuario", () => {
     expect(result.error).toBe("Não foi possível identificar o médico responsável.");
     expect(mockUpdate).not.toHaveBeenCalled();
   });
+
+  it("bloqueia quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    const result = await atualizarProntuario({}, makeFormData({ id: "00000000-0000-0000-0000-000000000002", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", queixa_principal: "Dor" }));
+    expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe("excluirProntuario", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 19, resetIn: 3600000 });
+  });
 
   it("lança erro quando ID é inválido", async () => {
     await expect(excluirProntuario("invalido")).rejects.toThrow("ID inválido.");
@@ -236,5 +263,11 @@ describe("excluirProntuario", () => {
   it("lança erro quando exclusão falha", async () => {
     mockDelete.mockResolvedValueOnce({ error: { message: "DB error" } });
     await expect(excluirProntuario("00000000-0000-0000-0000-000000000002")).rejects.toThrow("Erro ao excluir prontuário.");
+  });
+
+  it("lança erro quando rate limit é excedido", async () => {
+    mockRateLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    await expect(excluirProntuario("00000000-0000-0000-0000-000000000002")).rejects.toThrow("Muitas tentativas. Aguarde antes de tentar novamente.");
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 });
