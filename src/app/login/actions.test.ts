@@ -53,7 +53,7 @@ function makeFormData(data: Record<string, string>) {
 describe("login", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRateLimit.mockReturnValue({ success: true, remaining: 4, resetIn: 900000 });
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 4, resetIn: 900000 });
   });
 
   it("redireciona para / em caso de sucesso", async () => {
@@ -80,7 +80,7 @@ describe("login", () => {
   });
 
   it("bloqueia login quando rate limit é excedido", async () => {
-    mockRateLimit.mockReturnValue({ success: false, remaining: 0, resetIn: 600000 });
+    mockRateLimit.mockResolvedValue({ success: false, remaining: 0, resetIn: 600000 });
     const result = await login(
       {},
       makeFormData({ email: "doc@test.com", password: "123456" })
@@ -107,7 +107,7 @@ describe("logout", () => {
 describe("enviarResetSenha", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRateLimit.mockReturnValue({ success: true, remaining: 2, resetIn: 900000 });
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 2, resetIn: 900000 });
   });
 
   it("retorna erro quando email está vazio", async () => {
@@ -116,7 +116,7 @@ describe("enviarResetSenha", () => {
   });
 
   it("retorna success quando rate limit é atingido (não revela)", async () => {
-    mockRateLimit.mockReturnValue({ success: false, remaining: 0, resetIn: 900000 });
+    mockRateLimit.mockResolvedValue({ success: false, remaining: 0, resetIn: 900000 });
     const result = await enviarResetSenha({}, makeFormData({ email: "test@test.com" }));
     expect(result.success).toBe(true);
     expect(mockResetPasswordForEmail).not.toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe("redefinirSenha", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
-    mockRateLimit.mockReturnValue({ success: true, remaining: 4, resetIn: 900000 });
+    mockRateLimit.mockResolvedValue({ success: true, remaining: 4, resetIn: 900000 });
   });
 
   it("retorna erro quando senha está vazia", async () => {

@@ -28,7 +28,7 @@ export async function login(
     "unknown";
 
   // Rate limit: 5 tentativas por IP a cada 15 minutos
-  const { success, resetIn } = rateLimit({ key: `login:${ip}` });
+  const { success, resetIn } = await rateLimit({ key: `login:${ip}` });
 
   if (!success) {
     const minutes = Math.ceil(resetIn / 60000);
@@ -72,7 +72,7 @@ export async function enviarResetSenha(
   }
 
   // Rate limit: 3 tentativas por email a cada 15 minutos
-  const { success } = rateLimit({
+  const { success } = await rateLimit({
     key: `reset:${email.toLowerCase()}`,
     maxAttempts: 3,
   });
@@ -118,7 +118,7 @@ export async function redefinirSenha(
 
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
-    const { success } = rateLimit({ key: `redefinir_senha:${user.id}` });
+    const { success } = await rateLimit({ key: `redefinir_senha:${user.id}` });
     if (!success) {
       return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
     }

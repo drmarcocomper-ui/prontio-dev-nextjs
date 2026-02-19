@@ -48,7 +48,7 @@ const mockDeleteMedicamento = vi.fn().mockReturnValue({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/app/(dashboard)/agenda/utils", () => ({ invalidarCacheHorario: vi.fn() }));
 vi.mock("@/lib/rate-limit", () => ({
-  rateLimit: vi.fn().mockReturnValue({ success: true, remaining: 4, resetIn: 900000 }),
+  rateLimit: vi.fn().mockResolvedValue({ success: true, remaining: 4, resetIn: 900000 }),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -530,7 +530,7 @@ describe("alterarSenha", () => {
   });
 
   it("retorna erro quando rate limited", async () => {
-    vi.mocked(rateLimit).mockReturnValueOnce({ success: false, remaining: 0, resetIn: 900000 });
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 900000 });
     const result = await alterarSenha({}, makeFormData({ current_password: "senhaAtual", new_password: "novaSenha123", confirm_password: "novaSenha123" }));
     expect(result.error).toBe("Muitas tentativas. Aguarde antes de tentar novamente.");
     expect(mockUpdateUser).not.toHaveBeenCalled();

@@ -73,7 +73,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
-  rateLimit: vi.fn().mockReturnValue({ success: true, remaining: 4, resetIn: 3600000 }),
+  rateLimit: vi.fn().mockResolvedValue({ success: true, remaining: 4, resetIn: 3600000 }),
 }));
 
 vi.mock("@/lib/clinica", () => ({
@@ -165,7 +165,7 @@ describe("criarUsuario", () => {
   });
 
   it("retorna erro quando rate limit é atingido", async () => {
-    vi.mocked(rateLimit).mockReturnValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
     const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
   });
@@ -345,7 +345,7 @@ describe("resetarSenha", () => {
   });
 
   it("retorna erro quando rate limit é atingido", async () => {
-    vi.mocked(rateLimit).mockReturnValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
     const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000020", senha: "123456" }));
     expect(result.error).toBe("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
   });
@@ -379,7 +379,7 @@ describe("removerVinculo", () => {
   });
 
   it("lança erro quando rate limit é atingido", async () => {
-    vi.mocked(rateLimit).mockReturnValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
+    vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
     await expect(removerVinculo("00000000-0000-0000-0000-000000000010")).rejects.toThrow("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
   });
 

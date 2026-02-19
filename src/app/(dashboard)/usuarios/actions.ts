@@ -46,7 +46,7 @@ export async function criarUsuario(
     return { error: "Sem permissão para criar usuários." };
   }
 
-  const { success: allowed } = rateLimit({
+  const { success: allowed } = await rateLimit({
     key: `criar_usuario:${ctx.userId}`,
     windowMs: 60 * 60 * 1000, // 1 hora
   });
@@ -202,7 +202,7 @@ export async function resetarSenha(
     return { error: "Use a aba Conta nas Configurações para alterar sua própria senha." };
   }
 
-  const { success: allowed } = rateLimit({
+  const { success: allowed } = await rateLimit({
     key: `reset_senha:${ctx.userId}`,
     windowMs: 60 * 60 * 1000, // 1 hora
   });
@@ -249,7 +249,7 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
     throw new Error("Sem permissão para remover vínculos.");
   }
 
-  const { success: allowed } = rateLimit({
+  const { success: allowed } = await rateLimit({
     key: `remover_vinculo:${ctx.userId}`,
     windowMs: 60 * 60 * 1000, // 1 hora
   });

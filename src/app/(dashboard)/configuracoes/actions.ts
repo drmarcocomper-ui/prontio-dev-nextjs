@@ -412,7 +412,7 @@ export async function alterarSenha(
     return { error: "Usuário não autenticado." };
   }
 
-  const { success: allowed } = rateLimit({ key: `alterar_senha:${user.id}` });
+  const { success: allowed } = await rateLimit({ key: `alterar_senha:${user.id}` });
   if (!allowed) {
     return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
   }

@@ -15,7 +15,7 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 
-  const { success: allowed } = rateLimit({
+  const { success: allowed } = await rateLimit({
     key: `backup:${user.id}`,
     windowMs: 60 * 60 * 1000, // 1 hora
   });

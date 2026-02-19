@@ -14,7 +14,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
-  rateLimit: vi.fn().mockReturnValue({ success: true, remaining: 4, resetIn: 3600000 }),
+  rateLimit: vi.fn().mockResolvedValue({ success: true, remaining: 4, resetIn: 3600000 }),
 }));
 
 vi.mock("@/lib/clinica", () => ({
