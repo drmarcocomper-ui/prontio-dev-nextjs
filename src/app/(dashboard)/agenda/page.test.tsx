@@ -88,6 +88,7 @@ function createQueryResult() {
     then: (resolve: (value: typeof mockData) => void) => resolve(mockData),
     eq: () => createQueryResult(),
     order: () => createQueryResult(),
+    limit: () => createQueryResult(),
   };
   return result;
 }

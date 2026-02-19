@@ -57,7 +57,8 @@ export default async function AgendaPage({
     query = query.eq("tipo", currentTipo as AgendaTipo);
   }
 
-  const { data: agendamentos, error } = await query.order("data").order("hora_inicio");
+  const maxResults = view === "semana" ? 2000 : 500;
+  const { data: agendamentos, error } = await query.order("data").order("hora_inicio").limit(maxResults);
 
   if (error) {
     return (
