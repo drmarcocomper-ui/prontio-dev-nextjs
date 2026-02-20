@@ -84,7 +84,6 @@ export async function criarAtestado(
     .from("pacientes")
     .select("id")
     .eq("id", fields.paciente_id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!paciente) {
@@ -153,7 +152,6 @@ export async function atualizarAtestado(
     .from("pacientes")
     .select("id")
     .eq("id", fields.paciente_id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!paciente) {

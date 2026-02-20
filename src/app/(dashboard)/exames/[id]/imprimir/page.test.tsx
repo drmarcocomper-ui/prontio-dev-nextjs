@@ -34,9 +34,7 @@ vi.mock("@/lib/supabase/server", () => ({
           return {
             select: () => ({
               eq: () => ({
-                eq: () => ({
-                  single: () => Promise.resolve({ data: currentExame }),
-                }),
+                single: () => Promise.resolve({ data: currentExame }),
               }),
             }),
           };
@@ -93,7 +91,6 @@ vi.mock("@/components/breadcrumb", () => ({
 }));
 
 vi.mock("@/lib/clinica", () => ({
-  getMedicoId: vi.fn().mockResolvedValue("user-1"),
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "c-1",
     clinicaNome: "Clínica Teste",

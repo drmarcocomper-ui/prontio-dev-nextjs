@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA } from "./constants";
-import { getClinicaAtual, getMedicoIdSafe, isFinanceiro, isGestor } from "@/lib/clinica";
+import { getClinicaAtual, isFinanceiro, isGestor } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export type TransacaoFormState = {
@@ -89,13 +89,10 @@ export async function criarTransacao(
   }
 
   if (fields.paciente_id) {
-    const medicoId = await getMedicoIdSafe();
-    if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
     const { data: paciente } = await supabase
       .from("pacientes")
       .select("id")
       .eq("id", fields.paciente_id)
-      .eq("medico_id", medicoId)
       .single();
     if (!paciente) {
       return { fieldErrors: { paciente_id: "Paciente não encontrado." } };
@@ -158,13 +155,10 @@ export async function atualizarTransacao(
   }
 
   if (fields.paciente_id) {
-    const medicoId = await getMedicoIdSafe();
-    if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
     const { data: paciente } = await supabase
       .from("pacientes")
       .select("id")
       .eq("id", fields.paciente_id)
-      .eq("medico_id", medicoId)
       .single();
     if (!paciente) {
       return { fieldErrors: { paciente_id: "Paciente não encontrado." } };

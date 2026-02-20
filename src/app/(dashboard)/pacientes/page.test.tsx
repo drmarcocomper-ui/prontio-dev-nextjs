@@ -17,18 +17,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const mockGetMedicoId = vi.fn().mockResolvedValue("doc-1");
-const mockRedirect = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  redirect: (...args: unknown[]) => {
-    mockRedirect(...args);
-    throw new Error("REDIRECT");
-  },
-}));
-
 vi.mock("@/lib/clinica", () => ({
-  getMedicoId: (...args: unknown[]) => mockGetMedicoId(...args),
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "profissional_saude", userId: "doc-1",
+  }),
 }));
 
 vi.mock("./types", async () => {
@@ -106,12 +98,6 @@ describe("PacientesPage", () => {
   beforeEach(() => {
     mockData.data = [];
     mockData.count = 0;
-  });
-
-  it("redireciona para /login quando getMedicoId falha", async () => {
-    mockGetMedicoId.mockRejectedValueOnce(new Error("Sem clínica"));
-    await expect(renderPage()).rejects.toThrow("REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 
   it("renderiza o título Pacientes", async () => {

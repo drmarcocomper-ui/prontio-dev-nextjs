@@ -11,12 +11,10 @@ export function AgendamentoForm({
   defaultDate,
   defaultTime,
   defaults,
-  medicoId,
 }: {
   defaultDate?: string;
   defaultTime?: string;
   defaults?: AgendamentoDefaults;
-  medicoId: string;
 }) {
   const isEditing = !!defaults?.id;
   const action = isEditing ? atualizarAgendamento : criarAgendamento;
@@ -75,7 +73,6 @@ export function AgendamentoForm({
           <PatientSearch
             defaultPatientId={defaults?.paciente_id}
             defaultPatientName={defaults?.paciente_nome}
-            medicoId={medicoId}
           />
         </div>
         <FieldError id="paciente_id-error" message={state.fieldErrors?.paciente_id} />

@@ -17,20 +17,6 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const mockGetMedicoId = vi.fn().mockResolvedValue("doc-1");
-const mockRedirect = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  redirect: (...args: unknown[]) => {
-    mockRedirect(...args);
-    throw new Error("REDIRECT");
-  },
-}));
-
-vi.mock("@/lib/clinica", () => ({
-  getMedicoId: (...args: unknown[]) => mockGetMedicoId(...args),
-}));
-
 vi.mock("./transacao-form", () => ({
   TransacaoForm: () => <form data-testid="transacao-form" />,
 }));
@@ -43,12 +29,6 @@ async function renderPage() {
 }
 
 describe("NovaTransacaoPage", () => {
-  it("redireciona para /login quando getMedicoId falha", async () => {
-    mockGetMedicoId.mockRejectedValueOnce(new Error("Sem clínica"));
-    await expect(NovaTransacaoPage()).rejects.toThrow("REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith("/login");
-  });
-
   it("renderiza o título Nova transação", async () => {
     await renderPage();
     expect(screen.getByRole("heading", { name: "Nova transação" })).toBeInTheDocument();

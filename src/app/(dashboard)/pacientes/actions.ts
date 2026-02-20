@@ -12,7 +12,7 @@ import {
   OBSERVACOES_MAX_LENGTH, validarCPF,
   SEXO_LABELS, ESTADO_CIVIL_LABELS, ESTADOS_UF, CONVENIO_LABELS,
 } from "./types";
-import { getClinicaAtual, getMedicoId, getMedicoIdSafe, isAtendimento, isProfissional } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoIdSafe, isAtendimento, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export type PacienteFormState = {
@@ -154,15 +154,13 @@ export async function atualizarPaciente(
     return { fieldErrors };
   }
 
-  const supabase = await createClient();
-  const medicoId = await getMedicoIdSafe();
-  if (!medicoId) return { error: "Não foi possível identificar o médico responsável." };
-
   const ctx = await getClinicaAtual();
 
   if (!ctx || !isAtendimento(ctx.papel)) {
     return { error: "Sem permissão para atualizar pacientes." };
   }
+
+  const supabase = await createClient();
 
   const { success: allowed } = await rateLimit({
     key: `atualizar_paciente:${ctx.userId}`,
@@ -181,8 +179,7 @@ export async function atualizarPaciente(
       bairro, cidade, estado, convenio, observacoes,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id)
-    .eq("medico_id", medicoId);
+    .eq("id", id);
 
   if (error) {
     if (error.code === "23505") {
@@ -263,14 +260,13 @@ export async function excluirPaciente(id: string): Promise<void> {
     throw new Error("ID inválido.");
   }
 
-  const supabase = await createClient();
-  const medicoId = await getMedicoId();
-
   const ctx = await getClinicaAtual();
 
   if (!ctx || !isProfissional(ctx.papel)) {
     throw new Error("Sem permissão para excluir pacientes.");
   }
+
+  const supabase = await createClient();
 
   const { success: allowed } = await rateLimit({
     key: `excluir_paciente:${ctx.userId}`,
@@ -281,7 +277,7 @@ export async function excluirPaciente(id: string): Promise<void> {
     throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
   }
 
-  const { error } = await supabase.from("pacientes").delete().eq("id", id).eq("medico_id", medicoId);
+  const { error } = await supabase.from("pacientes").delete().eq("id", id);
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "paciente"));

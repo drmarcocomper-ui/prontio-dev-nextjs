@@ -10,7 +10,7 @@ import {
   parseExames,
 } from "../../types";
 import { CONVENIO_LABELS } from "@/app/(dashboard)/pacientes/types";
-import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -21,17 +21,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Imprimir Solicitação de Exame" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Imprimir Solicitação de Exame" };
-  }
   const { data } = await supabase
     .from("solicitacoes_exames")
     .select("pacientes(nome)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -54,20 +47,12 @@ export default async function ImprimirExamePage({
   const { formato: formatoParam, operadora: opParam, carteirinha: cartParam, registro_ans: ansParam } = await searchParams;
   if (!UUID_RE.test(id)) notFound();
 
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
-
   const supabase = await createClient();
 
   const { data: exame } = await supabase
     .from("solicitacoes_exames")
     .select("id, data, exames, indicacao_clinica, observacoes, pacientes(id, nome, cpf, convenio)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!exame) {
@@ -94,7 +79,7 @@ export default async function ImprimirExamePage({
     supabase
       .from("configuracoes")
       .select("chave, valor")
-      .eq("user_id", medicoId)
+      .eq("user_id", ctx?.userId ?? "")
       .in("chave", ["nome_profissional", "especialidade", "crm"]),
   ]);
 

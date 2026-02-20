@@ -69,7 +69,6 @@ export async function criarExame(
     .from("pacientes")
     .select("id")
     .eq("id", fields.paciente_id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!paciente) {
@@ -136,7 +135,6 @@ export async function atualizarExame(
     .from("pacientes")
     .select("id")
     .eq("id", fields.paciente_id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!paciente) {

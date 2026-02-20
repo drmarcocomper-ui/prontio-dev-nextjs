@@ -27,9 +27,7 @@ vi.mock("@/lib/supabase/server", () => ({
           return {
             select: () => ({
               eq: () => ({
-                eq: () => ({
-                  single: () => Promise.resolve({ data: mockReceita }),
-                }),
+                single: () => Promise.resolve({ data: mockReceita }),
               }),
             }),
           };
@@ -78,7 +76,6 @@ vi.mock("@/lib/clinica", () => ({
       papel: "superadmin",
       userId: "u-1",
     }),
-  getMedicoId: vi.fn().mockResolvedValue("medico-1"),
 }));
 
 vi.mock("@/lib/validators", () => ({

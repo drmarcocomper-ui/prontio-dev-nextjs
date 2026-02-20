@@ -10,7 +10,7 @@ import {
   formatCPF,
   parseMedicamentos,
 } from "../../types";
-import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -21,17 +21,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Imprimir Receita" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Imprimir Receita" };
-  }
   const { data } = await supabase
     .from("receitas")
     .select("pacientes(nome)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -46,20 +39,12 @@ export default async function ImprimirReceitaPage({
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
-
   const supabase = await createClient();
 
   const { data: receita } = await supabase
     .from("receitas")
     .select("id, data, tipo, medicamentos, observacoes, pacientes(id, nome, cpf)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!receita) {
@@ -81,7 +66,7 @@ export default async function ImprimirReceitaPage({
     supabase
       .from("configuracoes")
       .select("chave, valor")
-      .eq("user_id", medicoId)
+      .eq("user_id", ctx?.userId ?? "")
       .in("chave", ["nome_profissional", "especialidade", "crm"]),
   ]);
 

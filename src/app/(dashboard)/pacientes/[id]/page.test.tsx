@@ -59,7 +59,6 @@ vi.mock("@/lib/clinica", async () => {
       papel: "profissional_saude",
       userId: "user-1",
     }),
-    getMedicoId: vi.fn().mockResolvedValue("user-1"),
   };
 });
 
@@ -71,9 +70,7 @@ vi.mock("@/lib/supabase/server", () => ({
           eq: () => {
             if (table === "pacientes") {
               return {
-                eq: () => ({
-                  single: () => Promise.resolve({ data: mockPaciente }),
-                }),
+                single: () => Promise.resolve({ data: mockPaciente }),
               };
             }
             if (table === "receitas") {

@@ -13,7 +13,7 @@ import {
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
 import { formatDateMedium } from "@/lib/format";
-import { getClinicaAtual, getMedicoId, isProfissional } from "@/lib/clinica";
+import { getClinicaAtual, isProfissional } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -24,17 +24,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Paciente" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Paciente" };
-  }
   const { data } = await supabase
     .from("pacientes")
     .select("nome")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   return { title: data?.nome ?? "Paciente" };
 }
@@ -72,19 +65,13 @@ export default async function PacienteDetalhesPage({
   const currentTab = tab || "identificacao";
   const supabase = await createClient();
   const ctx = await getClinicaAtual();
-  const isMedico = ctx ? isProfissional(ctx.papel) : false;
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
+  if (!ctx) notFound();
+  const isMedico = isProfissional(ctx.papel);
 
   const { data: paciente } = await supabase
     .from("pacientes")
     .select("*")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single<Paciente>();
 
   if (!paciente) {

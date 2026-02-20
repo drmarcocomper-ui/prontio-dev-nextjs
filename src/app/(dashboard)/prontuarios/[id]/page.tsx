@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { DeleteButton } from "@/components/delete-button";
-import { getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual } from "@/lib/clinica";
 import { excluirProntuario } from "../actions";
 import { type Prontuario, TIPO_LABELS, formatDateLong, getInitials } from "../types";
 import { formatDateTime } from "@/lib/format";
@@ -18,17 +18,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Prontuário" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Prontuário" };
-  }
   const { data } = await supabase
     .from("prontuarios")
     .select("pacientes(nome)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -65,12 +58,6 @@ export default async function ProntuarioDetalhesPage({
   const { id } = await params;
   const { from } = await searchParams;
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
 
   const { data: prontuario } = await supabase
     .from("prontuarios")
@@ -78,7 +65,6 @@ export default async function ProntuarioDetalhesPage({
       "id, data, tipo, cid, queixa_principal, historia_doenca, exame_fisico, hipotese_diagnostica, conduta, observacoes, created_at, updated_at, pacientes(id, nome)"
     )
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!prontuario) {

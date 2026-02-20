@@ -25,9 +25,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const mockGetMedicoId = vi.fn().mockResolvedValue("doc-1");
 vi.mock("@/lib/clinica", () => ({
-  getMedicoId: (...args: unknown[]) => mockGetMedicoId(...args),
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
     clinicaNome: "Clínica Teste",
@@ -37,8 +35,8 @@ vi.mock("@/lib/clinica", () => ({
 }));
 
 vi.mock("../../novo/agendamento-form", () => ({
-  AgendamentoForm: ({ defaults, medicoId }: { defaults: Record<string, unknown>; medicoId: string }) => (
-    <form data-testid="agendamento-form" data-defaults={JSON.stringify(defaults)} data-medico-id={medicoId} />
+  AgendamentoForm: ({ defaults }: { defaults: Record<string, unknown> }) => (
+    <form data-testid="agendamento-form" data-defaults={JSON.stringify(defaults)} />
   ),
 }));
 
@@ -84,7 +82,6 @@ describe("EditarAgendamentoPage", () => {
   beforeEach(() => {
     mockAgendamento = agendamentoMock;
     mockNotFound.mockClear();
-    mockGetMedicoId.mockResolvedValue("doc-1");
   });
 
   it("chama notFound quando agendamento não existe", async () => {
@@ -130,15 +127,4 @@ describe("EditarAgendamentoPage", () => {
     expect(defaults.observacoes).toBe("Obs teste");
   });
 
-  it("passa medicoId para o AgendamentoForm", async () => {
-    await renderPage();
-    const form = screen.getByTestId("agendamento-form");
-    expect(form).toHaveAttribute("data-medico-id", "doc-1");
-  });
-
-  it("chama notFound quando getMedicoId falha", async () => {
-    mockGetMedicoId.mockRejectedValue(new Error("NO_MEDICO"));
-    await expect(renderPage()).rejects.toThrow("NOT_FOUND");
-    expect(mockNotFound).toHaveBeenCalled();
-  });
 });

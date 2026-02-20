@@ -17,7 +17,7 @@ const AgendamentosSemanaChart = dynamic(
   () => import("./dashboard-charts").then((m) => ({ default: m.AgendamentosSemanaChart })),
   { loading: ChartSkeleton },
 );
-import { getClinicaAtual, getMedicoId, isProfissional, isGestor } from "@/lib/clinica";
+import { getClinicaAtual, isProfissional, isGestor } from "@/lib/clinica";
 import {
   TIPO_LABELS as _TIPO_LABELS,
   STATUS_LABELS as _STATUS_LABELS,
@@ -60,12 +60,6 @@ export default async function DashboardPage() {
   const clinicaId = ctx.clinicaId;
   const isProfissionalSaude = isProfissional(ctx.papel);
   const temAcessoFinanceiro = isGestor(ctx.papel) || ctx.papel === "financeiro";
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    redirect("/login");
-  }
 
   const now = new Date();
   const hoje = toDateString(now);
@@ -94,8 +88,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("pacientes")
-      .select("*", { count: "exact", head: true })
-      .eq("medico_id", medicoId),
+      .select("*", { count: "exact", head: true }),
     supabase
       .from("agendamentos")
       .select("*", { count: "exact", head: true })
@@ -129,7 +122,6 @@ export default async function DashboardPage() {
     supabase
       .from("prontuarios")
       .select("id, data, tipo, created_at, pacientes(id, nome)")
-      .eq("medico_id", medicoId)
       .order("created_at", { ascending: false })
       .limit(5),
     temAcessoFinanceiro

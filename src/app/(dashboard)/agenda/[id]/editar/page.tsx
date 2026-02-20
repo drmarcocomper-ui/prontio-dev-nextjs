@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getMedicoId, getClinicaAtual } from "@/lib/clinica";
+import { getClinicaAtual } from "@/lib/clinica";
 import { AgendamentoForm } from "../../novo/agendamento-form";
 import { type Agendamento } from "../../types";
 import { UUID_RE } from "@/lib/validators";
@@ -51,12 +51,6 @@ export default async function EditarAgendamentoPage({
   }
 
   const ag = agendamento as unknown as Agendamento;
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
 
   return (
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4 sm:space-y-6">
@@ -75,7 +69,6 @@ export default async function EditarAgendamentoPage({
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <AgendamentoForm
-          medicoId={medicoId}
           defaults={{
             id: ag.id,
             paciente_id: ag.pacientes.id,

@@ -7,7 +7,7 @@ import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
-import { getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual } from "@/lib/clinica";
 import { QueryError } from "@/components/query-error";
 import { PacienteFilters } from "./filters";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
@@ -28,18 +28,14 @@ export default async function PacientesPage({
   const sortDir = dir === "desc" ? "desc" : "asc";
   const ascending = sortDir === "asc";
 
+  const ctx = await getClinicaAtual();
+  if (!ctx) redirect("/login");
+
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    redirect("/login");
-  }
 
   let query = supabase
     .from("pacientes")
     .select("id, nome, cpf, telefone, email, data_nascimento", { count: "exact" })
-    .eq("medico_id", medicoId)
     .order(sortColumn, { ascending });
 
   if (q) {

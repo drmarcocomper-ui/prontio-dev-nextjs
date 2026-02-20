@@ -15,11 +15,9 @@ import {
 } from "../types";
 
 export function AtestadoForm({
-  medicoId,
   defaults,
   cancelHref,
 }: {
-  medicoId: string;
   defaults?: AtestadoDefaults;
   cancelHref?: string;
 }) {
@@ -57,7 +55,6 @@ export function AtestadoForm({
             <PatientSearch
               defaultPatientId={defaults?.paciente_id}
               defaultPatientName={defaults?.paciente_nome}
-              medicoId={medicoId}
             />
           </div>
           <FieldError id="paciente_id-error" message={state.fieldErrors?.paciente_id} />

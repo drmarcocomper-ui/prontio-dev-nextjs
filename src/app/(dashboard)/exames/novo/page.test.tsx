@@ -42,10 +42,8 @@ vi.mock("@/components/breadcrumb", () => ({
   ),
 }));
 
-const mockGetMedicoId = vi.fn().mockResolvedValue("user-1");
-
 vi.mock("@/lib/clinica", () => ({
-  getMedicoId: (...args: unknown[]) => mockGetMedicoId(...args),
+  getClinicaAtual: vi.fn().mockResolvedValue({ clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "profissional_saude", userId: "user-1" }),
 }));
 
 vi.mock("./exame-form", () => ({
@@ -54,7 +52,6 @@ vi.mock("./exame-form", () => ({
     return (
       <div
         data-testid="exame-form"
-        data-medico-id={String(props.medicoId ?? "")}
         data-paciente-id={defaults?.paciente_id ?? ""}
         data-paciente-nome={defaults?.paciente_nome ?? ""}
         data-cancel-href={String(props.cancelHref ?? "")}
@@ -81,12 +78,6 @@ describe("NovaSolicitacaoExamePage", () => {
     mockRedirect.mockClear();
   });
 
-  it("redireciona para /login quando getMedicoId falha", async () => {
-    mockGetMedicoId.mockRejectedValueOnce(new Error("Sem clínica"));
-    await expect(renderPage({ paciente_id: VALID_UUID })).rejects.toThrow("REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith("/login");
-  });
-
   it("redireciona para /pacientes quando paciente_id está ausente", async () => {
     await expect(renderPage()).rejects.toThrow("REDIRECT");
     expect(mockRedirect).toHaveBeenCalledWith("/pacientes");
@@ -109,10 +100,9 @@ describe("NovaSolicitacaoExamePage", () => {
     expect(pacientesLink).toHaveAttribute("href", "/pacientes");
   });
 
-  it("passa medicoId e defaults para ExameForm", async () => {
+  it("passa defaults para ExameForm", async () => {
     await renderPage({ paciente_id: VALID_UUID, paciente_nome: "Maria Silva" });
     const form = screen.getByTestId("exame-form");
-    expect(form).toHaveAttribute("data-medico-id", "user-1");
     expect(form).toHaveAttribute("data-paciente-id", VALID_UUID);
     expect(form).toHaveAttribute("data-paciente-nome", "Maria Silva");
     expect(form).toHaveAttribute(

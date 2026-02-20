@@ -8,8 +8,6 @@ let mockSearchResults: { id: string; nome: string; cpf: string | null }[] = [
   { id: "p-2", nome: "Maria Oliveira", cpf: null },
 ];
 
-const mockEq = vi.fn();
-
 vi.mock("./quick-patient-modal", () => ({
   QuickPatientModal: () => null,
 }));
@@ -20,19 +18,14 @@ vi.mock("@/lib/supabase/client", () => ({
       select: (...args: unknown[]) => {
         mockSelect(...args);
         return {
-          eq: (...eqArgs: unknown[]) => {
-            mockEq(...eqArgs);
-            return {
-              ilike: () => ({
-                order: () => ({
-                  limit: () =>
-                    Promise.resolve({
-                      data: mockSearchResults,
-                    }),
+          ilike: () => ({
+            order: () => ({
+              limit: () =>
+                Promise.resolve({
+                  data: mockSearchResults,
                 }),
-              }),
-            };
-          },
+            }),
+          }),
         };
       },
     }),
@@ -45,7 +38,6 @@ describe("PatientSearch", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockSelect.mockClear();
-    mockEq.mockClear();
     mockSearchResults = [
       { id: "p-1", nome: "Maria Silva", cpf: "12345678901" },
       { id: "p-2", nome: "Maria Oliveira", cpf: null },
@@ -57,24 +49,24 @@ describe("PatientSearch", () => {
   });
 
   it("renderiza o input de busca com placeholder", () => {
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     expect(screen.getByPlaceholderText("Buscar paciente por nome...")).toBeInTheDocument();
   });
 
   it("renderiza com valor padrão quando fornecido", () => {
-    render(<PatientSearch defaultPatientId="p-1" defaultPatientName="Maria Silva" medicoId="doc-1" />);
+    render(<PatientSearch defaultPatientId="p-1" defaultPatientName="Maria Silva" />);
     expect(screen.getByDisplayValue("Maria Silva")).toBeInTheDocument();
   });
 
   it("inclui campo hidden para paciente_id", () => {
-    render(<PatientSearch defaultPatientId="p-1" defaultPatientName="Maria Silva" medicoId="doc-1" />);
+    render(<PatientSearch defaultPatientId="p-1" defaultPatientName="Maria Silva" />);
     const hidden = document.querySelector('input[name="paciente_id"]') as HTMLInputElement;
     expect(hidden).toBeInTheDocument();
     expect(hidden.value).toBe("p-1");
   });
 
   it("busca pacientes após digitar 2+ caracteres", async () => {
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Ma");
@@ -87,7 +79,7 @@ describe("PatientSearch", () => {
   });
 
   it("exibe iniciais e CPF formatado nos resultados", async () => {
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Ma");
@@ -101,7 +93,7 @@ describe("PatientSearch", () => {
   });
 
   it("seleciona paciente ao clicar no resultado", async () => {
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Ma");
@@ -119,7 +111,7 @@ describe("PatientSearch", () => {
   });
 
   it("não busca com menos de 2 caracteres", async () => {
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "M");
@@ -129,7 +121,7 @@ describe("PatientSearch", () => {
   });
 
   it("fecha dropdown ao clicar fora", async () => {
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Ma");
@@ -146,7 +138,7 @@ describe("PatientSearch", () => {
 
   it("exibe mensagem quando nenhum paciente é encontrado", async () => {
     mockSearchResults = [];
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Xyz");
@@ -158,7 +150,7 @@ describe("PatientSearch", () => {
   });
 
   it("limpa selectedId ao digitar após seleção", async () => {
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Ma");
@@ -178,21 +170,9 @@ describe("PatientSearch", () => {
     expect(hidden.value).toBe("");
   });
 
-  it("filtra pacientes pelo medico_id na query", async () => {
-    render(<PatientSearch medicoId="doc-1" />);
-    const input = screen.getByPlaceholderText("Buscar paciente por nome...");
-
-    await userEvent.type(input, "Ma");
-    vi.advanceTimersByTime(350);
-
-    await waitFor(() => {
-      expect(mockEq).toHaveBeenCalledWith("medico_id", "doc-1");
-    });
-  });
-
   it("usa array vazio quando Supabase retorna data null", async () => {
     mockSearchResults = null as unknown as typeof mockSearchResults;
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Ma");
@@ -205,7 +185,7 @@ describe("PatientSearch", () => {
 
   it("exibe botão 'Cadastrar novo paciente' quando sem resultados e sem erro", async () => {
     mockSearchResults = [];
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Xyz");
@@ -217,7 +197,7 @@ describe("PatientSearch", () => {
   });
 
   it("reabre dropdown ao focar no input quando há resultados", async () => {
-    render(<PatientSearch medicoId="doc-1" />);
+    render(<PatientSearch />);
     const input = screen.getByPlaceholderText("Buscar paciente por nome...");
 
     await userEvent.type(input, "Ma");

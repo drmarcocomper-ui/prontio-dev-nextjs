@@ -33,9 +33,7 @@ vi.mock("@/lib/supabase/server", () => ({
           return {
             select: () => ({
               eq: () => ({
-                eq: () => ({
-                  single: () => mockPacienteCheck(),
-                }),
+                single: () => mockPacienteCheck(),
               }),
             }),
           };

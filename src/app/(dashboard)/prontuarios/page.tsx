@@ -6,7 +6,7 @@ import { SortSelect } from "@/components/sort-select";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
-import { getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual } from "@/lib/clinica";
 import { uuidValido, DATE_RE } from "@/lib/validators";
 import { QueryError } from "@/components/query-error";
 import { ProntuarioFilters } from "./filters";
@@ -39,16 +39,17 @@ export default async function ProntuariosPage({
   const sortDir = dir === "asc" ? "asc" : "desc";
   const ascending = sortDir === "asc";
 
+  const ctx = await getClinicaAtual();
+  if (!ctx) return <QueryError title="Prontuários" message="Sessão expirada." />;
+
   const supabase = await createClient();
-  const medicoId = await getMedicoId();
 
   let query = supabase
     .from("prontuarios")
     .select(
       "id, data, tipo, queixa_principal, pacientes(id, nome)",
       { count: "exact" }
-    )
-    .eq("medico_id", medicoId);
+    );
 
   if (sortColumn === "paciente") {
     query = query.order("pacientes(nome)", { ascending });
@@ -105,7 +106,6 @@ export default async function ProntuariosPage({
         .from("pacientes")
         .select("nome")
         .eq("id", paciente_id)
-        .eq("medico_id", medicoId)
         .single();
       pacienteNome = pacienteData?.nome ?? "";
     }

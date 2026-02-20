@@ -18,7 +18,12 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/lib/clinica", () => ({
-  getMedicoId: vi.fn().mockResolvedValue("doc-1"),
+  getClinicaAtual: vi.fn().mockResolvedValue({
+    clinicaId: "clinic-1",
+    clinicaNome: "Clínica Teste",
+    papel: "profissional_saude",
+    userId: "doc-1",
+  }),
 }));
 
 vi.mock("@/components/search-input", () => ({

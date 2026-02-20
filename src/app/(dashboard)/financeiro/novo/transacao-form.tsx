@@ -17,7 +17,7 @@ import {
   maskCurrency,
 } from "../constants";
 
-export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefaults; medicoId: string }) {
+export function TransacaoForm({ defaults }: { defaults?: TransacaoDefaults }) {
   const isEditing = !!defaults?.id;
   const today = todayLocal();
   const [tipo, setTipo] = useState(defaults?.tipo ?? "receita");
@@ -209,7 +209,6 @@ export function TransacaoForm({ defaults, medicoId }: { defaults?: TransacaoDefa
             <PatientSearch
               defaultPatientId={defaults?.paciente_id ?? undefined}
               defaultPatientName={defaults?.paciente_nome ?? undefined}
-              medicoId={medicoId}
             />
           </div>
         </div>

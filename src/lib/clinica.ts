@@ -106,6 +106,22 @@ export const getClinicaAtual = cache(async (): Promise<ClinicaContexto | null> =
 });
 
 /**
+ * Retorna todos os user_ids de médicos/superadmin da clínica atual.
+ * Útil para queries que precisam filtrar por múltiplos médicos (ex: backup).
+ */
+export const getMedicoIdsDaClinica = cache(async (): Promise<string[]> => {
+  const ctx = await getClinicaAtual();
+  if (!ctx) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("usuarios_clinicas")
+    .select("user_id")
+    .eq("clinica_id", ctx.clinicaId)
+    .in("papel", ["superadmin", "profissional_saude"]);
+  return data?.map((d) => d.user_id) ?? [];
+});
+
+/**
  * Retorna o user_id do médico associado.
  * - Se o usuário logado é médico, retorna o próprio id.
  * - Se é secretária, retorna o id do médico vinculado à mesma clínica.

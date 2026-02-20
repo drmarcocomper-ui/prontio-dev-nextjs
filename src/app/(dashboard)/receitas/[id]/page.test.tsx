@@ -38,7 +38,9 @@ vi.mock("@/components/delete-button", () => ({
 
 let mockReceita: Record<string, unknown> | null = null;
 
-vi.mock("@/lib/clinica", () => ({ getMedicoId: vi.fn().mockResolvedValue("doc-1") }));
+vi.mock("@/lib/clinica", () => ({
+  getClinicaAtual: vi.fn().mockResolvedValue({ clinicaId: "clinic-1", clinicaNome: "Clínica Teste", papel: "profissional_saude", userId: "doc-1" }),
+}));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
@@ -46,9 +48,7 @@ vi.mock("@/lib/supabase/server", () => ({
       from: () => ({
         select: () => ({
           eq: () => ({
-            eq: () => ({
-              single: () => Promise.resolve({ data: mockReceita }),
-            }),
+            single: () => Promise.resolve({ data: mockReceita }),
           }),
         }),
       }),

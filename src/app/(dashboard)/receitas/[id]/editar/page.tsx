@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getMedicoId } from "@/lib/clinica";
 import { ReceitaForm } from "../../novo/receita-form";
 import type { ReceitaComPaciente } from "../../types";
 import { UUID_RE } from "@/lib/validators";
@@ -15,17 +14,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Editar Receita" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Editar Receita" };
-  }
   const { data } = await supabase
     .from("receitas")
     .select("pacientes(nome)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)?.pacientes?.nome;
   return { title: nome ? `Editar Receita - ${nome}` : "Editar Receita" };
@@ -38,12 +30,6 @@ export default async function EditarReceitaPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
 
   const { data: receita } = await supabase
     .from("receitas")
@@ -51,7 +37,6 @@ export default async function EditarReceitaPage({
       "id, data, tipo, medicamentos, observacoes, pacientes(id, nome)"
     )
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!receita) {
@@ -77,7 +62,6 @@ export default async function EditarReceitaPage({
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <ReceitaForm
-          medicoId={medicoId}
           defaults={{
             id: r.id,
             paciente_id: r.pacientes.id,

@@ -6,8 +6,6 @@ import { SortSelect } from "@/components/sort-select";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
-import { redirect } from "next/navigation";
-import { getMedicoId } from "@/lib/clinica";
 import { QueryError } from "@/components/query-error";
 import { ReceitaFilters } from "./filters";
 import {
@@ -40,17 +38,10 @@ export default async function ReceitasPage({
   const ascending = sortDir === "asc";
 
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    redirect("/login");
-  }
 
   let query = supabase
     .from("receitas")
-    .select("id, data, tipo, medicamentos, pacientes(id, nome)", { count: "exact" })
-    .eq("medico_id", medicoId);
+    .select("id, data, tipo, medicamentos, pacientes(id, nome)", { count: "exact" });
 
   if (sortColumn === "paciente") {
     query = query.order("pacientes(nome)", { ascending });

@@ -80,7 +80,6 @@ export async function criarProntuario(
     .from("pacientes")
     .select("id")
     .eq("id", paciente_id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!paciente) {
@@ -149,7 +148,6 @@ export async function atualizarProntuario(
     .from("pacientes")
     .select("id")
     .eq("id", paciente_id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!paciente) {

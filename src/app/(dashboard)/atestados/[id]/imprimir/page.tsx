@@ -20,17 +20,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Imprimir Atestado" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Imprimir Atestado" };
-  }
   const { data } = await supabase
     .from("atestados")
     .select("pacientes(nome)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -45,20 +38,12 @@ export default async function ImprimirAtestadoPage({
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
-
   const supabase = await createClient();
 
   const { data: atestado } = await supabase
     .from("atestados")
     .select("id, data, tipo, conteudo, cid, dias_afastamento, observacoes, pacientes(id, nome, cpf)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!atestado) {
@@ -67,7 +52,10 @@ export default async function ImprimirAtestadoPage({
 
   const a = atestado as unknown as AtestadoImpressao;
 
-  const ctx = await getClinicaAtual();
+  const [ctx, medicoId] = await Promise.all([
+    getClinicaAtual(),
+    getMedicoId().catch(() => null),
+  ]);
 
   const [{ data: clinica }, { data: profConfigs }] = await Promise.all([
     ctx?.clinicaId
@@ -77,11 +65,13 @@ export default async function ImprimirAtestadoPage({
           .eq("id", ctx.clinicaId)
           .single()
       : { data: null },
-    supabase
-      .from("configuracoes")
-      .select("chave, valor")
-      .eq("user_id", medicoId)
-      .in("chave", ["nome_profissional", "especialidade", "crm"]),
+    medicoId
+      ? supabase
+          .from("configuracoes")
+          .select("chave, valor")
+          .eq("user_id", medicoId)
+          .in("chave", ["nome_profissional", "especialidade", "crm"])
+      : { data: [] },
   ]);
 
   const cfg: Record<string, string> = {};

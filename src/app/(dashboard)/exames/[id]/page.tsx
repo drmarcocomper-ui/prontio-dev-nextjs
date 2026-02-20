@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { DeleteButton } from "@/components/delete-button";
-import { getMedicoId } from "@/lib/clinica";
 import { excluirExame } from "../actions";
 import {
   type Exame,
@@ -22,17 +21,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Solicitação de Exame" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Solicitação de Exame" };
-  }
   const { data } = await supabase
     .from("solicitacoes_exames")
     .select("pacientes(nome)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -46,12 +38,6 @@ export default async function ExameDetalhesPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
 
   const { data: exame } = await supabase
     .from("solicitacoes_exames")
@@ -59,7 +45,6 @@ export default async function ExameDetalhesPage({
       "id, data, exames, indicacao_clinica, observacoes, created_at, pacientes(id, nome)"
     )
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!exame) {

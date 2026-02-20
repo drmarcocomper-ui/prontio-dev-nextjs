@@ -74,7 +74,6 @@ export async function criarReceita(
     .from("pacientes")
     .select("id")
     .eq("id", fields.paciente_id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!paciente) {
@@ -140,7 +139,6 @@ export async function atualizarReceita(
     .from("pacientes")
     .select("id")
     .eq("id", fields.paciente_id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!paciente) {

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getMedicoId } from "@/lib/clinica";
 import { uuidValido } from "@/lib/validators";
 import { ReceitaForm } from "./receita-form";
 
@@ -13,12 +12,6 @@ export default async function NovaReceitaPage({
   searchParams: Promise<{ paciente_id?: string; paciente_nome?: string }>;
 }) {
   const { paciente_id: rawPacienteId, paciente_nome } = await searchParams;
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    redirect("/login");
-  }
 
   const paciente_id = rawPacienteId && uuidValido(rawPacienteId) ? rawPacienteId : undefined;
   const fromPaciente = !!paciente_id;
@@ -47,7 +40,6 @@ export default async function NovaReceitaPage({
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <ReceitaForm
-          medicoId={medicoId}
           defaults={
             paciente_id
               ? { paciente_id, paciente_nome }

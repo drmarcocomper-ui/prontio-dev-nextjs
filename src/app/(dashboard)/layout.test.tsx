@@ -29,11 +29,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue({
     from: () => ({
       select: () => ({
-        in: () => Promise.resolve({ data: [] }),
+        in: () => ({
+          eq: () => Promise.resolve({ data: [] }),
+        }),
       }),
     }),
     auth: {
-      getUser: () => Promise.resolve({ data: { user: { email: "test@test.com" } } }),
+      getUser: () => Promise.resolve({ data: { user: { id: "user-1", email: "test@test.com" } } }),
     },
   }),
 }));

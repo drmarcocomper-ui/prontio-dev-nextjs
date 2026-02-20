@@ -6,8 +6,6 @@ const mockDelete = vi.fn().mockResolvedValue({ error: null });
 const mockRedirect = vi.fn();
 const mockRateLimit = vi.fn().mockResolvedValue({ success: true });
 
-const mockMedicoId = vi.fn().mockResolvedValue("user-1");
-
 vi.mock("@/lib/rate-limit", () => ({
   rateLimit: (...args: unknown[]) => mockRateLimit(...args),
 }));
@@ -19,8 +17,6 @@ vi.mock("@/lib/clinica", () => ({
     papel: "gestor",
     userId: "user-1",
   }),
-  getMedicoId: (...args: unknown[]) => mockMedicoId(...args),
-  getMedicoIdSafe: async () => { try { return await mockMedicoId(); } catch { return null; } },
   isFinanceiro: (p: string) => p === "superadmin" || p === "gestor" || p === "financeiro",
   isGestor: (p: string) => p === "superadmin" || p === "gestor",
 }));
@@ -35,9 +31,7 @@ vi.mock("@/lib/supabase/server", () => ({
           return {
             select: () => ({
               eq: () => ({
-                eq: () => ({
-                  single: () => mockPacienteCheck(),
-                }),
+                single: () => mockPacienteCheck(),
               }),
             }),
           };
@@ -167,12 +161,6 @@ describe("criarTransacao", () => {
     ).resolves.toEqual({ fieldErrors: { paciente_id: "Paciente não encontrado." } });
   });
 
-  it("retorna erro quando getMedicoId lança exceção (com paciente_id)", async () => {
-    mockMedicoId.mockRejectedValueOnce(new Error("Sem contexto"));
-    const result = await criarTransacao({}, makeFormData({ tipo: "receita", descricao: "Consulta", valor: "100,00", data: "2024-06-15", paciente_id: "00000000-0000-0000-0000-000000000001" }));
-    expect(result.error).toBe("Não foi possível identificar o médico responsável.");
-    expect(mockInsert).not.toHaveBeenCalled();
-  });
 });
 
 describe("atualizarTransacao", () => {

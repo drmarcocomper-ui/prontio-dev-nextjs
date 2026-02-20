@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockGetUser = vi.fn();
 const mockGetClinicaAtual = vi.fn();
-const mockGetMedicoId = vi.fn();
+const mockGetMedicoIdsDaClinica = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -19,7 +19,7 @@ vi.mock("@/lib/rate-limit", () => ({
 
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: () => mockGetClinicaAtual(),
-  getMedicoId: () => mockGetMedicoId(),
+  getMedicoIdsDaClinica: () => mockGetMedicoIdsDaClinica(),
   isGestor: (papel: string) => papel === "superadmin" || papel === "gestor",
 }));
 
@@ -27,9 +27,10 @@ import { GET } from "./route";
 
 function makeSelectChain(data: unknown[] | null, error: unknown = null) {
   const result = { data, error };
-  // Thenable chain: supports both .select().eq() and direct .select() (await)
+  // Thenable chain: supports .select().eq(), .select().in(), and direct .select() (await)
   const chain: Record<string, unknown> = {
     eq: () => chain,
+    in: () => chain,
     then: (resolve: (v: unknown) => void) => Promise.resolve(result).then(resolve),
     catch: () => Promise.resolve(result),
   };
@@ -69,7 +70,7 @@ describe("GET /api/backup", () => {
     expect(body.error).toBe("Sem permissão para exportar dados.");
   });
 
-  it("retorna 403 quando médico não encontrado", async () => {
+  it("retorna 403 quando nenhum profissional encontrado na clínica", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u-1", email: "test@test.com" } } });
     mockGetClinicaAtual.mockResolvedValue({
       clinicaId: "c-1",
@@ -77,10 +78,10 @@ describe("GET /api/backup", () => {
       papel: "gestor",
       userId: "u-1",
     });
-    mockGetMedicoId.mockRejectedValue(new Error("Médico não encontrado"));
+    mockGetMedicoIdsDaClinica.mockResolvedValue([]);
     const res = await GET();
     const body = JSON.parse(await (res as unknown as Response).text());
-    expect(body.error).toBe("Médico não encontrado.");
+    expect(body.error).toBe("Nenhum profissional encontrado na clínica.");
   });
 
   it("exporta dados filtrados por clínica e médico", async () => {
@@ -91,7 +92,7 @@ describe("GET /api/backup", () => {
       papel: "gestor",
       userId: "u-1",
     });
-    mockGetMedicoId.mockResolvedValue("u-1");
+    mockGetMedicoIdsDaClinica.mockResolvedValue(["u-1"]);
 
     mockFrom.mockImplementation((table: string) => {
       const data = [{ id: `${table}-1`, nome: "Item 1" }];
@@ -111,16 +112,18 @@ describe("GET /api/backup", () => {
     expect(body.tables.configuracoes).toHaveLength(1);
     expect(body.tables.receitas).toHaveLength(1);
     expect(body.tables.solicitacoes_exames).toHaveLength(1);
+    expect(body.tables.atestados).toHaveLength(1);
     expect(body.tables.horarios_profissional).toHaveLength(1);
     expect(body.tables.medicamentos).toHaveLength(1);
     expect(body.tables.catalogo_exames).toHaveLength(1);
     expect(body.errors).toBeUndefined();
 
-    // Verify medico_id tables were called
+    // Verify medico_id tables were called (uses .in() now)
     expect(mockFrom).toHaveBeenCalledWith("pacientes");
     expect(mockFrom).toHaveBeenCalledWith("prontuarios");
     expect(mockFrom).toHaveBeenCalledWith("receitas");
     expect(mockFrom).toHaveBeenCalledWith("solicitacoes_exames");
+    expect(mockFrom).toHaveBeenCalledWith("atestados");
     // Verify clinica_id tables were called
     expect(mockFrom).toHaveBeenCalledWith("agendamentos");
     expect(mockFrom).toHaveBeenCalledWith("transacoes");
@@ -139,7 +142,7 @@ describe("GET /api/backup", () => {
       papel: "gestor",
       userId: "u-1",
     });
-    mockGetMedicoId.mockResolvedValue("u-1");
+    mockGetMedicoIdsDaClinica.mockResolvedValue(["u-1"]);
 
     mockFrom.mockImplementation((table: string) => {
       if (table === "pacientes") {
@@ -164,7 +167,7 @@ describe("GET /api/backup", () => {
       papel: "gestor",
       userId: "u-1",
     });
-    mockGetMedicoId.mockResolvedValue("u-1");
+    mockGetMedicoIdsDaClinica.mockResolvedValue(["u-1"]);
     mockFrom.mockImplementation(() => makeSelectChain([]));
 
     const res = await GET();

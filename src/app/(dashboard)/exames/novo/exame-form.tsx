@@ -14,11 +14,9 @@ import {
 } from "../types";
 
 export function ExameForm({
-  medicoId,
   defaults,
   cancelHref,
 }: {
-  medicoId: string;
   defaults?: ExameDefaults;
   cancelHref?: string;
 }) {
@@ -57,7 +55,6 @@ export function ExameForm({
             <PatientSearch
               defaultPatientId={defaults?.paciente_id}
               defaultPatientName={defaults?.paciente_nome}
-              medicoId={medicoId}
             />
           </div>
           <FieldError id="paciente_id-error" message={state.fieldErrors?.paciente_id} />

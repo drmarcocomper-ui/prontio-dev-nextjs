@@ -19,7 +19,6 @@ vi.mock("@/lib/clinica", () => ({
     papel: "profissional_saude",
     userId: "user-1",
   }),
-  getMedicoId: vi.fn().mockResolvedValue("user-1"),
   getMedicoIdSafe: vi.fn().mockResolvedValue("user-1"),
   isProfissional: (p: string) => p === "superadmin" || p === "profissional_saude",
 }));
@@ -32,9 +31,7 @@ vi.mock("@/lib/supabase/server", () => ({
           return {
             select: () => ({
               eq: () => ({
-                eq: () => ({
-                  single: () => mockPacienteCheck(),
-                }),
+                single: () => mockPacienteCheck(),
               }),
             }),
           };

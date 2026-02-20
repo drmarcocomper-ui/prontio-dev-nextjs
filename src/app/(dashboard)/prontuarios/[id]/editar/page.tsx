@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getMedicoId } from "@/lib/clinica";
+import { getClinicaAtual } from "@/lib/clinica";
 import { ProntuarioForm } from "../../novo/prontuario-form";
 import { type Prontuario } from "../../types";
 import { UUID_RE } from "@/lib/validators";
@@ -15,17 +15,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Editar Prontuário" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Editar Prontuário" };
-  }
   const { data } = await supabase
     .from("prontuarios")
     .select("pacientes(nome)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)?.pacientes?.nome;
   return { title: nome ? `Editar Prontuário - ${nome}` : "Editar Prontuário" };
@@ -38,12 +31,6 @@ export default async function EditarProntuarioPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
 
   const { data: prontuario } = await supabase
     .from("prontuarios")
@@ -51,7 +38,6 @@ export default async function EditarProntuarioPage({
       "id, data, tipo, queixa_principal, pacientes(id, nome)"
     )
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!prontuario) {
@@ -77,7 +63,6 @@ export default async function EditarProntuarioPage({
       {/* Form Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
         <ProntuarioForm
-          medicoId={medicoId}
           defaults={{
             id: p.id,
             paciente_id: p.pacientes.id,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getClinicaAtual, getMedicoId, isGestor } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoIdsDaClinica, isGestor } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET() {
@@ -35,20 +35,18 @@ export async function GET() {
     return NextResponse.json({ error: "Sem permissão para exportar dados." }, { status: 403 });
   }
 
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return NextResponse.json({ error: "Médico não encontrado." }, { status: 403 });
+  const medicoIds = await getMedicoIdsDaClinica();
+  if (medicoIds.length === 0) {
+    return NextResponse.json({ error: "Nenhum profissional encontrado na clínica." }, { status: 403 });
   }
 
   const backup: Record<string, unknown[]> = {};
   const errors: string[] = [];
 
   const queries = [
-    // Tables filtered by medico_id
-    ...["pacientes", "prontuarios", "receitas", "solicitacoes_exames"].map(
-      (table) => ({ table, promise: supabase.from(table).select("*").eq("medico_id", medicoId) }),
+    // Tables filtered by medico_id (clinic-wide)
+    ...["pacientes", "prontuarios", "receitas", "solicitacoes_exames", "atestados"].map(
+      (table) => ({ table, promise: supabase.from(table).select("*").in("medico_id", medicoIds) }),
     ),
     // Tables filtered by clinica_id
     ...["agendamentos", "transacoes", "configuracoes", "horarios_profissional"].map(

@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { DeleteButton } from "@/components/delete-button";
-import { getMedicoId } from "@/lib/clinica";
 import { excluirReceita } from "../actions";
 import {
   type Receita,
@@ -24,17 +23,10 @@ export async function generateMetadata({
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Receita" };
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    return { title: "Receita" };
-  }
   const { data } = await supabase
     .from("receitas")
     .select("pacientes(nome)")
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
   const nome = (data as unknown as { pacientes: { nome: string } } | null)
     ?.pacientes?.nome;
@@ -48,12 +40,6 @@ export default async function ReceitaDetalhesPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  let medicoId: string;
-  try {
-    medicoId = await getMedicoId();
-  } catch {
-    notFound();
-  }
 
   const { data: receita } = await supabase
     .from("receitas")
@@ -61,7 +47,6 @@ export default async function ReceitaDetalhesPage({
       "id, data, tipo, medicamentos, observacoes, created_at, pacientes(id, nome)"
     )
     .eq("id", id)
-    .eq("medico_id", medicoId)
     .single();
 
   if (!receita) {

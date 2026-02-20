@@ -366,14 +366,29 @@ create policy "Acesso pacientes" on pacientes for all to authenticated
     or public.is_admin()
   );
 
--- prontuarios/receitas: médico e admin
-create policy "Medico acessa prontuarios" on prontuarios for all to authenticated
-  using (medico_id = auth.uid() or public.is_admin())
-  with check (medico_id = auth.uid() or public.is_admin());
+-- prontuarios: leitura clinic-wide, escrita pelo autor ou admin
+create policy "Acesso prontuarios" on prontuarios for all to authenticated
+  using (
+    medico_id = auth.uid()
+    or medico_id in (select public.get_my_clinic_medico_ids())
+    or public.is_admin()
+  )
+  with check (
+    medico_id = auth.uid()
+    or public.is_admin()
+  );
 
-create policy "Medico acessa receitas" on receitas for all to authenticated
-  using (medico_id = auth.uid() or public.is_admin())
-  with check (medico_id = auth.uid() or public.is_admin());
+-- receitas: leitura clinic-wide, escrita pelo autor ou admin
+create policy "Acesso receitas" on receitas for all to authenticated
+  using (
+    medico_id = auth.uid()
+    or medico_id in (select public.get_my_clinic_medico_ids())
+    or public.is_admin()
+  )
+  with check (
+    medico_id = auth.uid()
+    or public.is_admin()
+  );
 
 -- agendamentos: por clínica (médico, secretária e admin)
 create policy "Acesso agendamentos" on agendamentos for all to authenticated
@@ -403,15 +418,29 @@ create policy "Admin atualiza catalogo_exames" on catalogo_exames for update to 
 create policy "Admin exclui catalogo_exames" on catalogo_exames for delete to authenticated
   using (public.is_admin());
 
--- solicitacoes_exames: médico e admin
-create policy "Medico acessa solicitacoes_exames" on solicitacoes_exames for all to authenticated
-  using (medico_id = auth.uid() or public.is_admin())
-  with check (medico_id = auth.uid() or public.is_admin());
+-- solicitacoes_exames: leitura clinic-wide, escrita pelo autor ou admin
+create policy "Acesso exames" on solicitacoes_exames for all to authenticated
+  using (
+    medico_id = auth.uid()
+    or medico_id in (select public.get_my_clinic_medico_ids())
+    or public.is_admin()
+  )
+  with check (
+    medico_id = auth.uid()
+    or public.is_admin()
+  );
 
--- atestados: médico e admin
-create policy "Medico acessa atestados" on atestados for all to authenticated
-  using (medico_id = auth.uid() or public.is_admin())
-  with check (medico_id = auth.uid() or public.is_admin());
+-- atestados: leitura clinic-wide, escrita pelo autor ou admin
+create policy "Acesso atestados" on atestados for all to authenticated
+  using (
+    medico_id = auth.uid()
+    or medico_id in (select public.get_my_clinic_medico_ids())
+    or public.is_admin()
+  )
+  with check (
+    medico_id = auth.uid()
+    or public.is_admin()
+  );
 
 -- horarios_profissional: profissional edita seus próprios; clínica pode ler
 create policy "Acesso horarios_profissional" on horarios_profissional for select to authenticated
