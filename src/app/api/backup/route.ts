@@ -45,7 +45,7 @@ export async function GET() {
 
   const queries = [
     // Tables filtered by medico_id (clinic-wide)
-    ...["pacientes", "prontuarios", "receitas", "solicitacoes_exames", "atestados"].map(
+    ...["pacientes", "prontuarios", "receitas", "solicitacoes_exames", "atestados", "encaminhamentos"].map(
       (table) => ({ table, promise: supabase.from(table).select("*").in("medico_id", medicoIds) }),
     ),
     // Tables filtered by clinica_id

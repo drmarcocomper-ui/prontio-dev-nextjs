@@ -103,6 +103,12 @@ export default async function PacienteDetalhesPage({
     .eq("paciente_id", id)
     .order("data", { ascending: false });
 
+  const { data: encaminhamentos } = await supabase
+    .from("encaminhamentos")
+    .select("id, data, profissional_destino, especialidade, motivo")
+    .eq("paciente_id", id)
+    .order("data", { ascending: false });
+
   // Timeline data (only fetch when needed)
   const { data: agendamentos } = currentTab === "historico"
     ? await supabase
@@ -495,6 +501,63 @@ export default async function PacienteDetalhesPage({
           </p>
         )}
       </div>
+
+      {/* Encaminhamentos */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <svg aria-hidden="true" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+            </svg>
+            Encaminhamentos
+          </h2>
+          <Link
+            href={`/encaminhamentos/novo?paciente_id=${paciente.id}&paciente_nome=${encodeURIComponent(paciente.nome)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+          >
+            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Novo encaminhamento
+          </Link>
+        </div>
+
+        {encaminhamentos && encaminhamentos.length > 0 ? (
+          <div className="space-y-3">
+            {encaminhamentos.map((enc) => (
+              <Link
+                key={enc.id}
+                href={`/encaminhamentos/${enc.id}`}
+                className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-gray-200 hover:bg-gray-50 sm:p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {enc.data ? formatDate(enc.data) : "Sem data"}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                        {enc.especialidade}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-sm text-gray-700">{enc.profissional_destino}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+                      {enc.motivo}
+                    </p>
+                  </div>
+                  <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-gray-400">
+            Nenhum encaminhamento registrado.
+          </p>
+        )}
+      </div>
       </>
       )}
 
@@ -503,7 +566,7 @@ export default async function PacienteDetalhesPage({
         type TimelineEvent = {
           id: string;
           date: string;
-          type: "prontuario" | "agendamento" | "receita" | "transacao" | "exame" | "atestado";
+          type: "prontuario" | "agendamento" | "receita" | "transacao" | "exame" | "atestado" | "encaminhamento";
           title: string;
           subtitle?: string;
           href: string;
@@ -588,6 +651,19 @@ export default async function PacienteDetalhesPage({
           });
         }
 
+        for (const enc of encaminhamentos ?? []) {
+          const encTyped = enc as { id: string; data: string; profissional_destino: string; especialidade: string; motivo: string };
+          events.push({
+            id: `enc-${encTyped.id}`,
+            date: encTyped.data,
+            type: "encaminhamento",
+            title: `Encaminhamento — ${encTyped.profissional_destino}`,
+            subtitle: encTyped.especialidade,
+            href: `/encaminhamentos/${encTyped.id}`,
+            color: "bg-sky-500",
+          });
+        }
+
         events.sort((a, b) => b.date.localeCompare(a.date));
 
         const TYPE_LABELS: Record<string, string> = {
@@ -597,6 +673,7 @@ export default async function PacienteDetalhesPage({
           transacao: "Financeiro",
           exame: "Exame",
           atestado: "Atestado",
+          encaminhamento: "Encaminhamento",
         };
 
         return (

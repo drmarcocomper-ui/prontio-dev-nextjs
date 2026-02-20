@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export type IllustrationType = "pacientes" | "agenda" | "prontuarios" | "receitas" | "financeiro" | "usuarios" | "exames";
+export type IllustrationType = "pacientes" | "agenda" | "prontuarios" | "receitas" | "financeiro" | "usuarios" | "exames" | "encaminhamentos";
 
 interface EmptyStateProps {
   icon: IllustrationType;
@@ -113,6 +113,17 @@ export function EmptyStateIllustration({ type }: { type: IllustrationType }) {
   return <Component />;
 }
 
+function EncaminhamentosIllustration() {
+  return (
+    <svg aria-hidden="true" className="h-24 w-24" viewBox="0 0 96 96" fill="none">
+      <circle cx="48" cy="48" r="48" className="fill-primary-50" />
+      <rect x="26" y="22" width="44" height="52" rx="4" className="stroke-primary-300" strokeWidth="2" fill="none" />
+      <path d="M36 38h24M36 46h18M36 54h20" className="stroke-primary-200" strokeWidth="2" strokeLinecap="round" />
+      <path d="M56 62l8-8m0 0l-8-8m8 8H40" className="stroke-primary-500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const illustrations = {
   pacientes: PacientesIllustration,
   agenda: AgendaIllustration,
@@ -121,6 +132,7 @@ const illustrations = {
   financeiro: FinanceiroIllustration,
   usuarios: UsuariosIllustration,
   exames: ExamesIllustration,
+  encaminhamentos: EncaminhamentosIllustration,
 };
 
 export function EmptyState({

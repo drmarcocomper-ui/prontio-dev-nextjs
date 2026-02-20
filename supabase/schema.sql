@@ -262,7 +262,29 @@ create index atestados_medico_idx on atestados (medico_id);
 
 comment on table atestados is 'Atestados médicos emitidos para pacientes (por médico)';
 
--- 12. Horários por profissional
+-- 12. Encaminhamentos
+-- --------------------------------------------
+create table encaminhamentos (
+  id                      uuid primary key default gen_random_uuid(),
+  paciente_id             uuid not null references pacientes(id) on delete cascade,
+  medico_id               uuid not null references auth.users(id),
+  data                    date,
+  profissional_destino    text not null,
+  especialidade           text not null,
+  telefone_profissional   text,
+  motivo                  text not null,
+  observacoes             text,
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz
+);
+
+create index encaminhamentos_paciente_idx on encaminhamentos (paciente_id);
+create index encaminhamentos_data_idx on encaminhamentos (data desc);
+create index encaminhamentos_medico_idx on encaminhamentos (medico_id);
+
+comment on table encaminhamentos is 'Encaminhamentos de pacientes para outros profissionais (por médico)';
+
+-- 13. Horários por profissional
 -- --------------------------------------------
 create table horarios_profissional (
   id               uuid primary key default gen_random_uuid(),
@@ -317,6 +339,7 @@ alter table medicamentos enable row level security;
 alter table catalogo_exames enable row level security;
 alter table solicitacoes_exames enable row level security;
 alter table atestados enable row level security;
+alter table encaminhamentos enable row level security;
 alter table horarios_profissional enable row level security;
 alter table agendamento_status_log enable row level security;
 alter table configuracoes enable row level security;
@@ -442,6 +465,18 @@ create policy "Acesso atestados" on atestados for all to authenticated
     or public.is_admin()
   );
 
+-- encaminhamentos: leitura clinic-wide, escrita pelo autor ou admin
+create policy "Acesso encaminhamentos" on encaminhamentos for all to authenticated
+  using (
+    medico_id = auth.uid()
+    or medico_id in (select public.get_my_clinic_medico_ids())
+    or public.is_admin()
+  )
+  with check (
+    medico_id = auth.uid()
+    or public.is_admin()
+  );
+
 -- horarios_profissional: profissional edita seus próprios; clínica pode ler
 create policy "Acesso horarios_profissional" on horarios_profissional for select to authenticated
   using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
@@ -496,3 +531,4 @@ create trigger set_updated_at before update on transacoes for each row execute f
 create trigger set_updated_at before update on receitas for each row execute function public.set_updated_at();
 create trigger set_updated_at before update on solicitacoes_exames for each row execute function public.set_updated_at();
 create trigger set_updated_at before update on atestados for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on encaminhamentos for each row execute function public.set_updated_at();
