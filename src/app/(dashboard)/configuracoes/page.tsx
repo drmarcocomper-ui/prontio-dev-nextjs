@@ -155,76 +155,80 @@ export default async function ConfiguracoesPage({
   let usuariosError = false;
   let usuariosClinicas: { id: string; nome: string }[] = [];
   if (currentTab === "usuarios" && ctx) {
-    const clinicasUser = await getClinicasDoUsuario();
-    usuariosClinicas = clinicasUser.map((c) => ({ id: c.id, nome: c.nome }));
-    usuariosCurrentPage = Math.max(1, Number(pagina) || 1);
+    try {
+      const clinicasUser = await getClinicasDoUsuario();
+      usuariosClinicas = clinicasUser.map((c) => ({ id: c.id, nome: c.nome }));
+      usuariosCurrentPage = Math.max(1, Number(pagina) || 1);
 
-    const { createAdminClient, getAuthEmailMap } = await import("@/lib/supabase/admin");
-    const adminSupabase = createAdminClient();
+      const { createAdminClient, getAuthEmailMap } = await import("@/lib/supabase/admin");
+      const adminSupabase = createAdminClient();
 
-    let userIdFilter: string[] | null = null;
+      let userIdFilter: string[] | null = null;
 
-    // If searching, find matching users by email using getAuthEmailMap
-    // We fetch all clinic users' emails once and reuse for both search and enrichment
-    const { data: allVinculos } = await adminSupabase
-      .from("usuarios_clinicas")
-      .select("user_id")
-      .eq("clinica_id", ctx.clinicaId);
-
-    const allUserIds = [...new Set((allVinculos ?? []).map((v: { user_id: string }) => v.user_id))];
-    const emailMap = await getAuthEmailMap(adminSupabase, allUserIds);
-
-    if (q) {
-      const escaped = q.toLowerCase();
-      userIdFilter = Object.entries(emailMap)
-        .filter(([, email]) => email.toLowerCase().includes(escaped))
-        .map(([id]) => id);
-    }
-
-    if (!q || (userIdFilter && userIdFilter.length > 0)) {
-      let queryBuilder = adminSupabase
+      // If searching, find matching users by email using getAuthEmailMap
+      // We fetch all clinic users' emails once and reuse for both search and enrichment
+      const { data: allVinculos } = await adminSupabase
         .from("usuarios_clinicas")
-        .select("id, user_id, papel, clinica_id, created_at, clinicas(nome)", { count: "exact" })
+        .select("user_id")
         .eq("clinica_id", ctx.clinicaId);
 
-      if (userIdFilter) {
-        queryBuilder = queryBuilder.in("user_id", userIdFilter);
+      const allUserIds = [...new Set((allVinculos ?? []).map((v: { user_id: string }) => v.user_id))];
+      const emailMap = await getAuthEmailMap(adminSupabase, allUserIds);
+
+      if (q) {
+        const escaped = q.toLowerCase();
+        userIdFilter = Object.entries(emailMap)
+          .filter(([, email]) => email.toLowerCase().includes(escaped))
+          .map(([id]) => id);
       }
 
-      if (papelFilter) {
-        queryBuilder = queryBuilder.eq("papel", papelFilter);
+      if (!q || (userIdFilter && userIdFilter.length > 0)) {
+        let queryBuilder = adminSupabase
+          .from("usuarios_clinicas")
+          .select("id, user_id, papel, clinica_id, created_at, clinicas(nome)", { count: "exact" })
+          .eq("clinica_id", ctx.clinicaId);
+
+        if (userIdFilter) {
+          queryBuilder = queryBuilder.in("user_id", userIdFilter);
+        }
+
+        if (papelFilter) {
+          queryBuilder = queryBuilder.eq("papel", papelFilter);
+        }
+
+        queryBuilder = queryBuilder.order("created_at", { ascending: true });
+
+        const from = (usuariosCurrentPage - 1) * USUARIOS_PAGE_SIZE;
+        const to = from + USUARIOS_PAGE_SIZE - 1;
+        queryBuilder = queryBuilder.range(from, to);
+
+        const { data: vinculosData, count, error } = await queryBuilder;
+
+        if (error) {
+          usuariosError = true;
+        } else {
+          usuariosItems = ((vinculosData ?? []) as unknown as {
+            id: string;
+            user_id: string;
+            papel: string;
+            clinica_id: string;
+            created_at: string;
+            clinicas: { nome: string };
+          }[]).map((v) => ({
+            vinculo_id: v.id,
+            user_id: v.user_id,
+            email: emailMap[v.user_id] ?? "",
+            papel: v.papel as UsuarioListItem["papel"],
+            clinica_id: v.clinica_id,
+            clinica_nome: v.clinicas?.nome ?? "",
+            created_at: v.created_at,
+          }));
+
+          usuariosTotalItems = count ?? 0;
+        }
       }
-
-      queryBuilder = queryBuilder.order("created_at", { ascending: true });
-
-      const from = (usuariosCurrentPage - 1) * USUARIOS_PAGE_SIZE;
-      const to = from + USUARIOS_PAGE_SIZE - 1;
-      queryBuilder = queryBuilder.range(from, to);
-
-      const { data: vinculosData, count, error } = await queryBuilder;
-
-      if (error) {
-        usuariosError = true;
-      } else {
-        usuariosItems = ((vinculosData ?? []) as unknown as {
-          id: string;
-          user_id: string;
-          papel: string;
-          clinica_id: string;
-          created_at: string;
-          clinicas: { nome: string };
-        }[]).map((v) => ({
-          vinculo_id: v.id,
-          user_id: v.user_id,
-          email: emailMap[v.user_id] ?? "",
-          papel: v.papel as UsuarioListItem["papel"],
-          clinica_id: v.clinica_id,
-          clinica_nome: v.clinicas?.nome ?? "",
-          created_at: v.created_at,
-        }));
-
-        usuariosTotalItems = count ?? 0;
-      }
+    } catch {
+      usuariosError = true;
     }
   }
 
