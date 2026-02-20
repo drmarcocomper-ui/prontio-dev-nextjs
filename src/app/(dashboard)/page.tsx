@@ -352,7 +352,7 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Atividade recente (profissional de saúde only) */}
+        {/* Atividade recente (médico only) */}
         {isProfissionalSaude && <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
             <h2 className="font-semibold text-gray-900">

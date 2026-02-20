@@ -32,7 +32,7 @@ export function PapelFilter({ currentPapel, basePath = "/configuracoes" }: { cur
         <option value="">Todos os papéis</option>
         <option value="superadmin">Superadmin</option>
         <option value="gestor">Gestor</option>
-        <option value="profissional_saude">Prof. Saúde</option>
+        <option value="profissional_saude">Médico</option>
         <option value="financeiro">Financeiro</option>
         <option value="secretaria">Secretária</option>
       </select>

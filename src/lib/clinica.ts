@@ -9,7 +9,7 @@ export function isGestor(papel: Papel): boolean {
   return papel === "superadmin" || papel === "gestor";
 }
 
-/** Papéis de profissional de saúde (prontuários, receitas, etc.) */
+/** Papéis de médico (prontuários, receitas, etc.) */
 export function isProfissional(papel: Papel): boolean {
   return papel === "superadmin" || papel === "profissional_saude";
 }
@@ -116,7 +116,7 @@ export async function getMedicoId(): Promise<string> {
 
   if (ctx.papel === "superadmin" || ctx.papel === "profissional_saude") return ctx.userId;
 
-  // Outros papéis: buscar o profissional de saúde da clínica (usa admin client para bypass de RLS)
+  // Outros papéis: buscar o médico da clínica (usa admin client para bypass de RLS)
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const adminSupabase = createAdminClient();
   const { data } = await adminSupabase

@@ -442,7 +442,7 @@ describe("criarAgendamento", () => {
   it("retorna erro amigável quando getMedicoId falha", async () => {
     vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Médico não encontrado para esta clínica."));
     const result = await criarAgendamento({}, makeFormData(validCreate));
-    expect(result.error).toBe("Nenhum profissional de saúde encontrado para esta clínica.");
+    expect(result.error).toBe("Nenhum médico encontrado para esta clínica.");
     expect(mockInsert).not.toHaveBeenCalled();
   });
 });
@@ -615,7 +615,7 @@ describe("atualizarAgendamento", () => {
   it("retorna erro amigável quando getMedicoId falha", async () => {
     vi.mocked(getMedicoId).mockRejectedValueOnce(new Error("Médico não encontrado para esta clínica."));
     const result = await atualizarAgendamento({}, makeFormData(validUpdate));
-    expect(result.error).toBe("Nenhum profissional de saúde encontrado para esta clínica.");
+    expect(result.error).toBe("Nenhum médico encontrado para esta clínica.");
     expect(mockUpdateEq).not.toHaveBeenCalled();
   });
 });

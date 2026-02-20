@@ -84,7 +84,7 @@ describe("ClinicasForm", () => {
 
   it("renderiza os vínculos com badges de papel", () => {
     render(<ClinicasForm clinicas={clinicasAtivas} vinculos={vinculos} />);
-    expect(screen.getAllByText("Prof. Saúde").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Médico").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Secretária").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Superadmin")).toBeInTheDocument();
   });

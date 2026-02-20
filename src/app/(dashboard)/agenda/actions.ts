@@ -186,7 +186,7 @@ export async function criarAgendamento(
   try {
     medicoUserId = await getMedicoId();
   } catch {
-    return { error: "Nenhum profissional de saúde encontrado para esta clínica." };
+    return { error: "Nenhum médico encontrado para esta clínica." };
   }
 
   // Obter duração configurada (padrão 15 min)
@@ -345,7 +345,7 @@ export async function atualizarAgendamento(
   try {
     medicoUserId = await getMedicoId();
   } catch {
-    return { error: "Nenhum profissional de saúde encontrado para esta clínica." };
+    return { error: "Nenhum médico encontrado para esta clínica." };
   }
 
   // Obter duração configurada (padrão 15 min)

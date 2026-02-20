@@ -50,7 +50,7 @@ describe("UsuarioItem", () => {
 
   it("renderiza badge de papel correto para profissional_saude", () => {
     render(<UsuarioItem usuario={{ ...baseUsuario, papel: "profissional_saude" }} isSelf={false} />);
-    expect(screen.getByText("Prof. Saúde")).toBeInTheDocument();
+    expect(screen.getByText("Médico")).toBeInTheDocument();
   });
 
   it("renderiza nome da clínica e data formatada", () => {

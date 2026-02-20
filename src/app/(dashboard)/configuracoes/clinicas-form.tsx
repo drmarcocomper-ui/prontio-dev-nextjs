@@ -17,7 +17,7 @@ import { INPUT_CLASS, NOME_CONSULTORIO_MAX } from "./constants";
 const PAPEL_BADGE: Record<string, { label: string; className: string }> = {
   superadmin: { label: "Superadmin", className: "bg-purple-50 text-purple-700" },
   gestor: { label: "Gestor", className: "bg-indigo-50 text-indigo-700" },
-  profissional_saude: { label: "Prof. Saúde", className: "bg-primary-50 text-primary-700" },
+  profissional_saude: { label: "Médico", className: "bg-primary-50 text-primary-700" },
   financeiro: { label: "Financeiro", className: "bg-green-50 text-green-700" },
   secretaria: { label: "Secretária", className: "bg-amber-50 text-amber-700" },
 };
