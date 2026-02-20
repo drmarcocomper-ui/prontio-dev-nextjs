@@ -12,23 +12,26 @@ export default async function DashboardLayout({
 }) {
   const supabase = await createClient();
 
-  // Load clinic context, clinics list, professional name, and user email
-  const [clinicaAtual, clinicas, { data: rows }, { data: { user } }] = await Promise.all([
+  // Load clinic context, clinics list, and current user
+  const [clinicaAtual, clinicas, { data: { user } }] = await Promise.all([
     getClinicaAtual(),
     getClinicasDoUsuario(),
-    supabase
-      .from("configuracoes")
-      .select("chave, valor")
-      .in("chave", ["profissional_nome"]),
     supabase.auth.getUser(),
   ]);
+
+  // Query configuracoes separately so we can filter by user_id
+  const { data: rows } = await supabase
+    .from("configuracoes")
+    .select("chave, valor")
+    .in("chave", ["nome_profissional"])
+    .eq("user_id", user?.id ?? "");
 
   const config: Record<string, string> = {};
   (rows ?? []).forEach((r: { chave: string; valor: string }) => {
     config[r.chave] = r.valor;
   });
 
-  const profissionalNome = config.profissional_nome || "";
+  const profissionalNome = config.nome_profissional || "";
   const userEmail = user?.email || "";
 
   return (

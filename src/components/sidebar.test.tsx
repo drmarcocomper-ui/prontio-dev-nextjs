@@ -24,8 +24,18 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("@/components/logout-button", () => ({
-  LogoutButton: () => <button>Sair</button>,
+vi.mock("@/app/login/actions", () => ({
+  logout: vi.fn(),
+}));
+
+vi.mock("@/app/(dashboard)/usuarios/types", () => ({
+  PAPEL_BADGE: {
+    superadmin: { label: "Superadmin", className: "bg-purple-50 text-purple-700" },
+    gestor: { label: "Gestor", className: "bg-indigo-50 text-indigo-700" },
+    profissional_saude: { label: "Prof. Saúde", className: "bg-primary-50 text-primary-700" },
+    financeiro: { label: "Financeiro", className: "bg-green-50 text-green-700" },
+    secretaria: { label: "Secretária", className: "bg-amber-50 text-amber-700" },
+  },
 }));
 
 vi.mock("@/components/clinic-selector", () => ({
@@ -111,9 +121,9 @@ describe("Sidebar", () => {
     expect(link?.className).toContain("text-gray-600");
   });
 
-  it("renderiza o LogoutButton", () => {
+  it("renderiza o nome do profissional no rodapé", () => {
     render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText("Sair")).toBeInTheDocument();
+    expect(screen.getAllByText("Dr. João Silva").length).toBeGreaterThanOrEqual(1);
   });
 
   describe("visibilidade por papel", () => {
