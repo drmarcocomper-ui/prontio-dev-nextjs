@@ -240,7 +240,29 @@ create index solicitacoes_exames_medico_idx on solicitacoes_exames (medico_id);
 
 comment on table solicitacoes_exames is 'Solicitações de exames prescritas aos pacientes (por médico)';
 
--- 11. Horários por profissional
+-- 11. Atestados médicos
+-- --------------------------------------------
+create table atestados (
+  id                uuid primary key default gen_random_uuid(),
+  paciente_id       uuid not null references pacientes(id) on delete cascade,
+  medico_id         uuid not null references auth.users(id),
+  data              date,
+  tipo              text not null check (tipo in ('comparecimento','afastamento','aptidao','acompanhante')),
+  conteudo          text not null,
+  cid               text,
+  dias_afastamento  integer check (dias_afastamento is null or dias_afastamento > 0),
+  observacoes       text,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz
+);
+
+create index atestados_paciente_idx on atestados (paciente_id);
+create index atestados_data_idx on atestados (data desc);
+create index atestados_medico_idx on atestados (medico_id);
+
+comment on table atestados is 'Atestados médicos emitidos para pacientes (por médico)';
+
+-- 12. Horários por profissional
 -- --------------------------------------------
 create table horarios_profissional (
   id               uuid primary key default gen_random_uuid(),
@@ -294,6 +316,7 @@ alter table receitas enable row level security;
 alter table medicamentos enable row level security;
 alter table catalogo_exames enable row level security;
 alter table solicitacoes_exames enable row level security;
+alter table atestados enable row level security;
 alter table horarios_profissional enable row level security;
 alter table agendamento_status_log enable row level security;
 alter table configuracoes enable row level security;
@@ -385,6 +408,11 @@ create policy "Medico acessa solicitacoes_exames" on solicitacoes_exames for all
   using (medico_id = auth.uid() or public.is_admin())
   with check (medico_id = auth.uid() or public.is_admin());
 
+-- atestados: médico e admin
+create policy "Medico acessa atestados" on atestados for all to authenticated
+  using (medico_id = auth.uid() or public.is_admin())
+  with check (medico_id = auth.uid() or public.is_admin());
+
 -- horarios_profissional: profissional edita seus próprios; clínica pode ler
 create policy "Acesso horarios_profissional" on horarios_profissional for select to authenticated
   using (clinica_id in (select public.get_my_clinica_ids()) or public.is_admin());
@@ -438,3 +466,4 @@ create trigger set_updated_at before update on prontuarios for each row execute 
 create trigger set_updated_at before update on transacoes for each row execute function public.set_updated_at();
 create trigger set_updated_at before update on receitas for each row execute function public.set_updated_at();
 create trigger set_updated_at before update on solicitacoes_exames for each row execute function public.set_updated_at();
+create trigger set_updated_at before update on atestados for each row execute function public.set_updated_at();

@@ -9,6 +9,7 @@ import { Tabs } from "./tabs";
 import {
   type Paciente,
   SEXO_LABELS, ESTADO_CIVIL_LABELS, TIPO_LABELS, RECEITA_TIPO_LABELS, CONVENIO_LABELS,
+  ATESTADO_TIPO_LABELS,
   formatCPF, formatPhone, formatCEP, formatDate, getInitials, calcAge,
 } from "../types";
 import { formatDateMedium } from "@/lib/format";
@@ -106,6 +107,12 @@ export default async function PacienteDetalhesPage({
   const { data: solicitacoesExames } = await supabase
     .from("solicitacoes_exames")
     .select("id, data, exames")
+    .eq("paciente_id", id)
+    .order("data", { ascending: false });
+
+  const { data: atestados } = await supabase
+    .from("atestados")
+    .select("id, data, tipo, conteudo")
     .eq("paciente_id", id)
     .order("data", { ascending: false });
 
@@ -445,6 +452,62 @@ export default async function PacienteDetalhesPage({
           </p>
         )}
       </div>
+
+      {/* Atestados */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <svg aria-hidden="true" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            Atestados
+          </h2>
+          <Link
+            href={`/atestados/novo?paciente_id=${paciente.id}&paciente_nome=${encodeURIComponent(paciente.nome)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+          >
+            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Novo atestado
+          </Link>
+        </div>
+
+        {atestados && atestados.length > 0 ? (
+          <div className="space-y-3">
+            {atestados.map((at) => (
+              <Link
+                key={at.id}
+                href={`/atestados/${at.id}`}
+                className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-gray-200 hover:bg-gray-50 sm:p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {at.data ? formatDate(at.data) : "Sem data"}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        {ATESTADO_TIPO_LABELS[at.tipo] ?? at.tipo}
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+                      {at.conteudo}
+                    </p>
+                  </div>
+                  <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-gray-400">
+            Nenhum atestado emitido.
+          </p>
+        )}
+      </div>
       </>
       )}
 
@@ -453,7 +516,7 @@ export default async function PacienteDetalhesPage({
         type TimelineEvent = {
           id: string;
           date: string;
-          type: "prontuario" | "agendamento" | "receita" | "transacao" | "exame";
+          type: "prontuario" | "agendamento" | "receita" | "transacao" | "exame" | "atestado";
           title: string;
           subtitle?: string;
           href: string;
@@ -525,6 +588,19 @@ export default async function PacienteDetalhesPage({
           });
         }
 
+        for (const at of atestados ?? []) {
+          const atTyped = at as { id: string; data: string; tipo: string; conteudo: string };
+          events.push({
+            id: `at-${atTyped.id}`,
+            date: atTyped.data,
+            type: "atestado",
+            title: "Atestado",
+            subtitle: ATESTADO_TIPO_LABELS[atTyped.tipo] ?? atTyped.tipo,
+            href: `/atestados/${atTyped.id}`,
+            color: "bg-amber-500",
+          });
+        }
+
         events.sort((a, b) => b.date.localeCompare(a.date));
 
         const TYPE_LABELS: Record<string, string> = {
@@ -533,6 +609,7 @@ export default async function PacienteDetalhesPage({
           receita: "Receita",
           transacao: "Financeiro",
           exame: "Exame",
+          atestado: "Atestado",
         };
 
         return (

@@ -129,6 +129,13 @@ export const RECEITA_TIPO_LABELS: Record<string, string> = {
   controle_especial: "Controle Especial",
 };
 
+export const ATESTADO_TIPO_LABELS: Record<string, string> = {
+  comparecimento: "Comparecimento",
+  afastamento: "Afastamento",
+  aptidao: "Aptidão / Saúde",
+  acompanhante: "Acompanhante",
+};
+
 export const ESTADOS_UF = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
   "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
