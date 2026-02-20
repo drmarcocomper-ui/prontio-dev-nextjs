@@ -34,8 +34,8 @@ describe("usuarios/types", () => {
     expect(EMAIL_MAX).toBe(254);
   });
 
-  it("SENHA_MIN é 6", () => {
-    expect(SENHA_MIN).toBe(6);
+  it("SENHA_MIN é 8", () => {
+    expect(SENHA_MIN).toBe(8);
   });
 
   it("SENHA_MAX é 128", () => {

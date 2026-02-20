@@ -115,24 +115,24 @@ describe("criarUsuario", () => {
   });
 
   it("retorna erro quando email está vazio", async () => {
-    const result = await criarUsuario({}, makeFormData({ email: "", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("E-mail é obrigatório.");
   });
 
   it("retorna erro quando email é inválido", async () => {
-    const result = await criarUsuario({}, makeFormData({ email: "invalido", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "invalido", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("E-mail inválido.");
   });
 
   it("retorna erro quando email excede max length", async () => {
     const longEmail = "a".repeat(250) + "@b.co";
-    const result = await criarUsuario({}, makeFormData({ email: longEmail, senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: longEmail, senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("E-mail excede 254 caracteres.");
   });
 
   it("retorna erro quando senha é curta", async () => {
     const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
-    expect(result.error).toBe("A senha deve ter pelo menos 6 caracteres.");
+    expect(result.error).toBe("A senha deve ter pelo menos 8 caracteres.");
   });
 
   it("retorna erro quando senha excede max length", async () => {
@@ -142,17 +142,17 @@ describe("criarUsuario", () => {
   });
 
   it("retorna erro quando papel é inválido", async () => {
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "invalido", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "invalido", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("Papel inválido.");
   });
 
   it("retorna erro quando papel é superadmin", async () => {
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "superadmin", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "superadmin", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("Papel inválido.");
   });
 
   it("retorna erro quando clinica_id está vazio", async () => {
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "secretaria", clinica_id: "" }));
     expect(result.error).toBe("Selecione uma clínica.");
   });
 
@@ -160,18 +160,18 @@ describe("criarUsuario", () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
       clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000011",
     });
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("Sem permissão para criar usuários.");
   });
 
   it("retorna erro quando rate limit é atingido", async () => {
     vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
   });
 
   it("retorna erro quando clinicaId não pertence ao usuário", async () => {
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000099" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000099" }));
     expect(result.error).toBe("Você não tem acesso a esta clínica.");
   });
 
@@ -180,7 +180,7 @@ describe("criarUsuario", () => {
       data: { user: null },
       error: { message: "A user with this email address has already been registered" },
     });
-    const result = await criarUsuario({}, makeFormData({ email: "dup@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "dup@test.com", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.success).toBe(true);
     expect(mockInsert).toHaveBeenCalledWith({
       user_id: "00000000-0000-0000-0000-000000000050",
@@ -194,7 +194,7 @@ describe("criarUsuario", () => {
       data: { user: null },
       error: { message: "Unknown error" },
     });
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("Erro ao criar usuário. Tente novamente.");
   });
 
@@ -217,13 +217,13 @@ describe("criarUsuario", () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
       clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "superadmin", userId: "00000000-0000-0000-0000-000000000011",
     });
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.success).toBe(true);
   });
 
   it("retorna erro quando vínculo duplicado (23505)", async () => {
     mockInsert.mockResolvedValueOnce({ error: { code: "23505", message: "duplicate" } });
-    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "123456", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
+    const result = await criarUsuario({}, makeFormData({ email: "user@test.com", senha: "12345678", papel: "secretaria", clinica_id: "00000000-0000-0000-0000-000000000001" }));
     expect(result.error).toBe("Não foi possível criar o vínculo. Verifique os dados e tente novamente.");
   });
 });
@@ -304,13 +304,13 @@ describe("resetarSenha", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("retorna erro quando user_id está vazio", async () => {
-    const result = await resetarSenha({}, makeFormData({ user_id: "", senha: "123456" }));
+    const result = await resetarSenha({}, makeFormData({ user_id: "", senha: "12345678" }));
     expect(result.error).toBe("Usuário não identificado.");
   });
 
   it("retorna erro quando senha é curta", async () => {
     const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000011", senha: "123" }));
-    expect(result.error).toBe("A senha deve ter pelo menos 6 caracteres.");
+    expect(result.error).toBe("A senha deve ter pelo menos 8 caracteres.");
   });
 
   it("retorna erro quando senha excede max length", async () => {
@@ -323,18 +323,18 @@ describe("resetarSenha", () => {
     vi.mocked(getClinicaAtual).mockResolvedValueOnce({
       clinicaId: "00000000-0000-0000-0000-000000000001", clinicaNome: "Teste", papel: "secretaria", userId: "00000000-0000-0000-0000-000000000011",
     });
-    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000012", senha: "123456" }));
+    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000012", senha: "12345678" }));
     expect(result.error).toBe("Sem permissão para resetar senhas.");
   });
 
   it("impede auto-reset", async () => {
-    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000002", senha: "123456" }));
+    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000002", senha: "12345678" }));
     expect(result.error).toBe("Use a aba Conta nas Configurações para alterar sua própria senha.");
   });
 
   it("retorna erro quando usuário não pertence à clínica (previne IDOR)", async () => {
     mockSelectSingle.mockResolvedValueOnce({ data: null, error: null });
-    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000030", senha: "123456" }));
+    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000030", senha: "12345678" }));
     expect(result.error).toBe("Usuário não encontrado nesta clínica.");
     expect(mockAdminUpdateUser).not.toHaveBeenCalled();
   });
@@ -353,13 +353,13 @@ describe("resetarSenha", () => {
 
   it("retorna erro quando rate limit é atingido", async () => {
     vi.mocked(rateLimit).mockResolvedValueOnce({ success: false, remaining: 0, resetIn: 3600000 });
-    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000020", senha: "123456" }));
+    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000020", senha: "12345678" }));
     expect(result.error).toBe("Muitas tentativas. Aguarde 1 hora antes de tentar novamente.");
   });
 
   it("retorna erro quando admin API falha", async () => {
     mockAdminUpdateUser.mockResolvedValueOnce({ error: { message: "API error" } });
-    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000020", senha: "123456" }));
+    const result = await resetarSenha({}, makeFormData({ user_id: "00000000-0000-0000-0000-000000000020", senha: "12345678" }));
     expect(result.error).toBe("Erro ao resetar senha. Tente novamente.");
   });
 });

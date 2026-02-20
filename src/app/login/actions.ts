@@ -102,8 +102,8 @@ export async function redefinirSenha(
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirm_password") as string;
 
-  if (!password || password.length < 6) {
-    return { error: "A senha deve ter pelo menos 6 caracteres." };
+  if (!password || password.length < 8) {
+    return { error: "A senha deve ter pelo menos 8 caracteres." };
   }
 
   if (password.length > 100) {

@@ -28,7 +28,7 @@ export const PAPEL_OPTIONS: { value: string; label: string }[] = [
 export const PAPEIS_VALIDOS = ["gestor", "profissional_saude", "financeiro", "secretaria"] as const;
 
 export const EMAIL_MAX = 254;
-export const SENHA_MIN = 6;
+export const SENHA_MIN = 8;
 export const SENHA_MAX = 128;
 
 export interface UsuarioDefaults {

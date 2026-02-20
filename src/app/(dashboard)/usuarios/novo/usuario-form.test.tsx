@@ -73,7 +73,7 @@ describe("UsuarioForm", () => {
     const input = screen.getByLabelText(/Senha/);
     expect(input).toBeRequired();
     expect(input).toHaveAttribute("type", "password");
-    expect(input).toHaveAttribute("minlength", "6");
+    expect(input).toHaveAttribute("minlength", "8");
     expect(input).toHaveAttribute("maxlength", "128");
   });
 

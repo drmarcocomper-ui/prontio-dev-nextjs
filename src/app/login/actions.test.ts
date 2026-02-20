@@ -160,15 +160,15 @@ describe("redefinirSenha", () => {
       {},
       makeFormData({ password: "", confirm_password: "" })
     );
-    expect(result.error).toBe("A senha deve ter pelo menos 6 caracteres.");
+    expect(result.error).toBe("A senha deve ter pelo menos 8 caracteres.");
   });
 
-  it("retorna erro quando senha tem menos de 6 caracteres", async () => {
+  it("retorna erro quando senha tem menos de 8 caracteres", async () => {
     const result = await redefinirSenha(
       {},
-      makeFormData({ password: "12345", confirm_password: "12345" })
+      makeFormData({ password: "1234567", confirm_password: "1234567" })
     );
-    expect(result.error).toBe("A senha deve ter pelo menos 6 caracteres.");
+    expect(result.error).toBe("A senha deve ter pelo menos 8 caracteres.");
   });
 
   it("retorna erro quando senha excede 100 caracteres", async () => {
@@ -183,7 +183,7 @@ describe("redefinirSenha", () => {
   it("retorna erro quando senhas não coincidem", async () => {
     const result = await redefinirSenha(
       {},
-      makeFormData({ password: "123456", confirm_password: "654321" })
+      makeFormData({ password: "12345678", confirm_password: "87654321" })
     );
     expect(result.error).toBe("As senhas não coincidem.");
   });

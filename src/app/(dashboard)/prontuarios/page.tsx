@@ -8,6 +8,7 @@ import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
 import { getMedicoId } from "@/lib/clinica";
 import { uuidValido, DATE_RE } from "@/lib/validators";
+import { QueryError } from "@/components/query-error";
 import { ProntuarioFilters } from "./filters";
 import { type ProntuarioListItem, TIPO_LABELS, formatDate, getInitials } from "./types";
 
@@ -58,18 +59,7 @@ export default async function ProntuariosPage({
 
   if (paciente_id) {
     if (!uuidValido(paciente_id)) {
-      return (
-        <div className="animate-fade-in space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Prontuários</h1>
-            </div>
-          </div>
-          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            Paciente inválido.
-          </div>
-        </div>
-      );
+      return <QueryError title="Prontuários" message="Paciente inválido." />;
     }
     query = query.eq("paciente_id", paciente_id);
   }
@@ -98,18 +88,7 @@ export default async function ProntuariosPage({
   const { data: prontuarios, count, error } = await query;
 
   if (error) {
-    return (
-      <div className="animate-fade-in space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Prontuários</h1>
-          </div>
-        </div>
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Não foi possível carregar os dados. Tente recarregar a página.
-        </div>
-      </div>
-    );
+    return <QueryError title="Prontuários" />;
   }
 
   const items = (prontuarios ?? []) as unknown as ProntuarioListItem[];

@@ -8,6 +8,7 @@ import { todayLocal, parseLocalDate } from "@/lib/date";
 import { DATE_RE } from "@/lib/validators";
 import { type Agendamento, type AgendaTipo, STATUS_LABELS, TIPO_LABELS } from "./types";
 import { AgendaFilters } from "./filters";
+import { QueryError } from "@/components/query-error";
 import { getClinicaAtual, getMedicoId } from "@/lib/clinica";
 import { getHorarioConfig, DIAS_SEMANA, getWeekRange } from "./utils";
 import { TimeGrid, generateTimeSlots, type TimeSlot } from "./time-grid";
@@ -61,18 +62,7 @@ export default async function AgendaPage({
   const { data: agendamentos, error } = await query.order("data").order("hora_inicio").limit(maxResults);
 
   if (error) {
-    return (
-      <div className="animate-fade-in space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
-          </div>
-        </div>
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Não foi possível carregar os dados. Tente recarregar a página.
-        </div>
-      </div>
-    );
+    return <QueryError title="Agenda" />;
   }
 
   const allItems = (agendamentos ?? []) as unknown as Agendamento[];

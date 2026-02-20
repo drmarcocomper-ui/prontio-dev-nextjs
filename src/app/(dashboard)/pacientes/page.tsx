@@ -8,6 +8,7 @@ import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
 import { getMedicoId } from "@/lib/clinica";
+import { QueryError } from "@/components/query-error";
 import { PacienteFilters } from "./filters";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
 
@@ -57,18 +58,7 @@ export default async function PacientesPage({
   const { data: pacientes, count, error } = await query;
 
   if (error) {
-    return (
-      <div className="animate-fade-in space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Pacientes</h1>
-          </div>
-        </div>
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Não foi possível carregar os dados. Tente recarregar a página.
-        </div>
-      </div>
-    );
+    return <QueryError title="Pacientes" />;
   }
 
   const items = (pacientes ?? []) as PacienteListItem[];

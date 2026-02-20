@@ -43,11 +43,11 @@ export function RedefinirSenhaForm() {
             type="password"
             autoComplete="new-password"
             required
-            minLength={6}
+            minLength={8}
             maxLength={100}
             disabled={isPending}
             className={INPUT_CLASS}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres"
             {...ariaProps("password", state.fieldErrors?.password)}
           />
           <FieldError id="password-error" message={state.fieldErrors?.password} />
@@ -63,7 +63,7 @@ export function RedefinirSenhaForm() {
             type="password"
             autoComplete="new-password"
             required
-            minLength={6}
+            minLength={8}
             maxLength={100}
             disabled={isPending}
             className={INPUT_CLASS}
