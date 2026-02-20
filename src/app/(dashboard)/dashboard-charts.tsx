@@ -43,7 +43,7 @@ export function FinanceiroChart({ data }: { data: FinanceiroItem[] }) {
       </div>
       <div className="p-4 sm:p-6">
         <div className="h-64 w-full min-w-0">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
             <BarChart data={data} barCategoryGap="20%">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis
@@ -108,7 +108,7 @@ export function AgendamentosSemanaChart({
       </div>
       <div className="p-4 sm:p-6">
         <div className="h-64 w-full min-w-0">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
             <BarChart data={data} barCategoryGap="20%">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis
