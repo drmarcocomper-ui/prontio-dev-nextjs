@@ -217,6 +217,20 @@ create index catalogo_exames_nome_idx on catalogo_exames using gin (nome gin_trg
 
 comment on table catalogo_exames is 'Catálogo global de exames do sistema';
 
+-- 9b. Catálogo de profissionais para encaminhamentos (catálogo global)
+-- --------------------------------------------
+create table catalogo_profissionais (
+  id              uuid primary key default gen_random_uuid(),
+  nome            text not null,
+  especialidade   text not null,
+  telefone        text,
+  created_at      timestamptz not null default now()
+);
+
+create index catalogo_profissionais_nome_idx on catalogo_profissionais using gin (nome gin_trgm_ops);
+
+comment on table catalogo_profissionais is 'Catálogo global de profissionais para encaminhamentos';
+
 -- 10. Solicitações de exames
 -- --------------------------------------------
 create table solicitacoes_exames (
@@ -337,6 +351,7 @@ alter table transacoes enable row level security;
 alter table receitas enable row level security;
 alter table medicamentos enable row level security;
 alter table catalogo_exames enable row level security;
+alter table catalogo_profissionais enable row level security;
 alter table solicitacoes_exames enable row level security;
 alter table atestados enable row level security;
 alter table encaminhamentos enable row level security;
@@ -439,6 +454,16 @@ create policy "Admin gerencia catalogo_exames" on catalogo_exames for insert to 
 create policy "Admin atualiza catalogo_exames" on catalogo_exames for update to authenticated
   using (public.is_admin());
 create policy "Admin exclui catalogo_exames" on catalogo_exames for delete to authenticated
+  using (public.is_admin());
+
+-- catalogo_profissionais: catálogo global — leitura para todos, escrita apenas para admin
+create policy "Leitura catalogo_profissionais" on catalogo_profissionais for select to authenticated
+  using (true);
+create policy "Admin gerencia catalogo_profissionais" on catalogo_profissionais for insert to authenticated
+  with check (public.is_admin());
+create policy "Admin atualiza catalogo_profissionais" on catalogo_profissionais for update to authenticated
+  using (public.is_admin());
+create policy "Admin exclui catalogo_profissionais" on catalogo_profissionais for delete to authenticated
   using (public.is_admin());
 
 -- solicitacoes_exames: leitura clinic-wide, escrita pelo autor ou admin

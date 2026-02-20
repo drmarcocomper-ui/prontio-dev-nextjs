@@ -44,24 +44,20 @@ export function ProfissionalSearch({
 
       const supabase = createClient();
       const { data } = await supabase
-        .from("encaminhamentos")
-        .select("profissional_destino, especialidade, telefone_profissional")
-        .ilike("profissional_destino", `%${escapeLikePattern(query)}%`)
-        .order("profissional_destino")
-        .limit(20);
+        .from("catalogo_profissionais")
+        .select("nome, especialidade, telefone")
+        .ilike("nome", `%${escapeLikePattern(query)}%`)
+        .order("nome")
+        .limit(8);
 
       if (data) {
-        // Deduplicate by profissional_destino + especialidade
-        const seen = new Set<string>();
-        const unique: ProfissionalResult[] = [];
-        for (const item of data) {
-          const key = `${item.profissional_destino}|${item.especialidade}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            unique.push(item);
-          }
-        }
-        setResults(unique.slice(0, 8));
+        setResults(
+          data.map((item) => ({
+            profissional_destino: item.nome,
+            especialidade: item.especialidade,
+            telefone_profissional: item.telefone,
+          }))
+        );
       } else {
         setResults([]);
       }

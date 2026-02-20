@@ -13,6 +13,7 @@ import { ClinicasForm } from "./clinicas-form";
 import { ValoresForm } from "./valores-form";
 import { MedicamentosForm, type Medicamento } from "./medicamentos-form";
 import { CatalogoExamesForm, type CatalogoExame } from "./catalogo-exames-form";
+import { CatalogoProfissionaisForm, type CatalogoProfissional } from "./catalogo-profissionais-form";
 import { HorariosProfissionalForm } from "./horarios-profissional-form";
 import { UsuariosTab } from "./usuarios-tab";
 import { type UsuarioListItem } from "@/app/(dashboard)/usuarios/types";
@@ -133,6 +134,17 @@ export default async function ConfiguracoesPage({
       .order("nome");
 
     examesList = (data ?? []) as CatalogoExame[];
+  }
+
+  // Load catalogo_profissionais for "profissionais" tab
+  let profissionaisList: CatalogoProfissional[] = [];
+  if (currentTab === "profissionais") {
+    const { data } = await supabase
+      .from("catalogo_profissionais")
+      .select("id, nome, especialidade, telefone")
+      .order("nome");
+
+    profissionaisList = (data ?? []) as CatalogoProfissional[];
   }
 
   // Load horarios_profissional for "minha-conta" tab
@@ -284,6 +296,9 @@ export default async function ConfiguracoesPage({
         )}
         {currentTab === "exames" && (
           <CatalogoExamesForm exames={examesList} />
+        )}
+        {currentTab === "profissionais" && (
+          <CatalogoProfissionaisForm profissionais={profissionaisList} />
         )}
         {currentTab === "gestao" && (
           <>

@@ -53,7 +53,7 @@ export async function GET() {
       (table) => ({ table, promise: supabase.from(table).select("*").eq("clinica_id", ctx.clinicaId) }),
     ),
     // Global tables (no filter)
-    ...["medicamentos", "catalogo_exames"].map(
+    ...["medicamentos", "catalogo_exames", "catalogo_profissionais"].map(
       (table) => ({ table, promise: supabase.from(table).select("*") }),
     ),
   ];

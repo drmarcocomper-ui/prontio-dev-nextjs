@@ -826,6 +826,144 @@ export async function excluirCatalogoExame(id: string): Promise<void> {
 }
 
 // ============================================
+// Catálogo de Profissionais (Encaminhamentos)
+// ============================================
+
+const NOME_PROF_CATALOGO_MAX = 255;
+const ESP_CATALOGO_MAX = 255;
+const TEL_CATALOGO_MAX = 20;
+
+/**
+ * Criar profissional no catálogo
+ */
+export async function criarCatalogoProfissional(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    return { error: "Sem permissão." };
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `criar_catalogo_prof:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome é obrigatório." };
+  if (nome.length > NOME_PROF_CATALOGO_MAX) return { error: `Nome excede ${NOME_PROF_CATALOGO_MAX} caracteres.` };
+
+  const especialidade = (formData.get("especialidade") as string)?.trim();
+  if (!especialidade) return { error: "Especialidade é obrigatória." };
+  if (especialidade.length > ESP_CATALOGO_MAX) return { error: `Especialidade excede ${ESP_CATALOGO_MAX} caracteres.` };
+
+  const telefone = (formData.get("telefone") as string)?.trim() || null;
+  if (telefone && telefone.length > TEL_CATALOGO_MAX) return { error: `Telefone excede ${TEL_CATALOGO_MAX} caracteres.` };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("catalogo_profissionais")
+    .insert({ nome, especialidade, telefone });
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "criar", "profissional") };
+  }
+
+  revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Atualizar profissional no catálogo
+ */
+export async function atualizarCatalogoProfissional(
+  _prev: ConfigFormState,
+  formData: FormData
+): Promise<ConfigFormState> {
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    return { error: "Sem permissão." };
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `atualizar_catalogo_prof:${ctx.userId}`,
+    maxAttempts: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
+
+  const id = formData.get("id") as string;
+  if (!uuidValido(id)) return { error: "Profissional não identificado." };
+
+  const nome = (formData.get("nome") as string)?.trim();
+  if (!nome) return { error: "Nome é obrigatório." };
+  if (nome.length > NOME_PROF_CATALOGO_MAX) return { error: `Nome excede ${NOME_PROF_CATALOGO_MAX} caracteres.` };
+
+  const especialidade = (formData.get("especialidade") as string)?.trim();
+  if (!especialidade) return { error: "Especialidade é obrigatória." };
+  if (especialidade.length > ESP_CATALOGO_MAX) return { error: `Especialidade excede ${ESP_CATALOGO_MAX} caracteres.` };
+
+  const telefone = (formData.get("telefone") as string)?.trim() || null;
+  if (telefone && telefone.length > TEL_CATALOGO_MAX) return { error: `Telefone excede ${TEL_CATALOGO_MAX} caracteres.` };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("catalogo_profissionais")
+    .update({ nome, especialidade, telefone })
+    .eq("id", id);
+
+  if (error) {
+    return { error: tratarErroSupabase(error, "atualizar", "profissional") };
+  }
+
+  revalidatePath("/configuracoes");
+  return { success: true };
+}
+
+/**
+ * Excluir profissional do catálogo
+ */
+export async function excluirCatalogoProfissional(id: string): Promise<void> {
+  if (!uuidValido(id)) throw new Error("ID inválido.");
+
+  const ctx = await getClinicaAtual();
+  if (!ctx || !isSuperAdmin(ctx.papel)) {
+    throw new Error("Sem permissão.");
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `excluir_catalogo_prof:${ctx.userId}`,
+    maxAttempts: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("catalogo_profissionais")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(tratarErroSupabase(error, "excluir", "profissional"));
+  }
+
+  revalidatePath("/configuracoes");
+}
+
+// ============================================
 // Medicamentos
 // ============================================
 
