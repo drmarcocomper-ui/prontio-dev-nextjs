@@ -7,7 +7,7 @@ import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { parseLocalDate } from "@/lib/date";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
-import { getClinicaAtual, getMedicoId, isAtendimento, isGestor, isProfissional, type Papel } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoId, isAtendimento, isGestor, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 import { timeToMinutes, DIAS_SEMANA, getHorarioConfig } from "./utils";

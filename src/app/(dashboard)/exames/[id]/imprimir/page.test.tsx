@@ -60,14 +60,16 @@ vi.mock("@/lib/supabase/server", () => ({
         // configuracoes
         return {
           select: () => ({
-            in: () =>
-              Promise.resolve({
-                data: [
-                  { chave: "nome_profissional", valor: "Dr. João" },
-                  { chave: "especialidade", valor: "Clínica Geral" },
-                  { chave: "crm", valor: "12345-SP" },
-                ],
-              }),
+            eq: () => ({
+              in: () =>
+                Promise.resolve({
+                  data: [
+                    { chave: "nome_profissional", valor: "Dr. João" },
+                    { chave: "especialidade", valor: "Clínica Geral" },
+                    { chave: "crm", valor: "12345-SP" },
+                  ],
+                }),
+            }),
           }),
         };
       },

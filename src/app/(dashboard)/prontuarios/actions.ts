@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidValido, DATE_RE } from "@/lib/validators";
 import { TEXTO_MAX_LENGTH, TIPO_LABELS } from "./types";
-import { getClinicaAtual, getMedicoIdSafe, isProfissional, type Papel } from "@/lib/clinica";
+import { getClinicaAtual, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
 
 export type ProntuarioFormState = {

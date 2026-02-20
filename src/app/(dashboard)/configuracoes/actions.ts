@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
-import { getClinicaAtual, getClinicasDoUsuario, isGestor, isProfissional, isSuperAdmin, type Papel } from "@/lib/clinica";
+import { getClinicaAtual, getClinicasDoUsuario, isGestor, isProfissional, isSuperAdmin } from "@/lib/clinica";
 import { invalidarCacheHorario } from "@/app/(dashboard)/agenda/utils";
 import { emailValido as validarEmail, uuidValido } from "@/lib/validators";
 import { rateLimit } from "@/lib/rate-limit";
