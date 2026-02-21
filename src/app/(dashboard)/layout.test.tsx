@@ -17,6 +17,18 @@ vi.mock("@/components/command-palette", () => ({
   CommandPalette: () => null,
 }));
 
+vi.mock("@/components/offline-banner", () => ({
+  OfflineBanner: () => null,
+}));
+
+vi.mock("@/components/offline-data-sync", () => ({
+  OfflineDataSync: () => null,
+}));
+
+vi.mock("@/components/online-refresh", () => ({
+  OnlineRefresh: () => null,
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",

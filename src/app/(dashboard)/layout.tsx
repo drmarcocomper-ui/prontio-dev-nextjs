@@ -3,6 +3,9 @@ import { Sidebar } from "@/components/sidebar";
 import { ToastHandler } from "@/components/toast-handler";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { CommandPalette } from "@/components/command-palette";
+import { OfflineBanner } from "@/components/offline-banner";
+import { OfflineDataSync } from "@/components/offline-data-sync";
+import { OnlineRefresh } from "@/components/online-refresh";
 import { createClient } from "@/lib/supabase/server";
 import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
 
@@ -53,10 +56,13 @@ export default async function DashboardLayout({
         />
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <OfflineBanner />
         <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
       <KeyboardShortcuts />
       <CommandPalette />
+      <OfflineDataSync />
+      <OnlineRefresh />
       <Suspense>
         <ToastHandler />
       </Suspense>

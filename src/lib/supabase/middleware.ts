@@ -28,7 +28,8 @@ export async function updateSession(request: NextRequest) {
       !request.nextUrl.pathname.startsWith("/auth") &&
       !request.nextUrl.pathname.startsWith("/onboarding") &&
       !request.nextUrl.pathname.startsWith("/termos") &&
-      !request.nextUrl.pathname.startsWith("/privacidade")
+      !request.nextUrl.pathname.startsWith("/privacidade") &&
+      !request.nextUrl.pathname.startsWith("/offline")
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
@@ -75,7 +76,8 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/auth") &&
     !request.nextUrl.pathname.startsWith("/onboarding") &&
     !request.nextUrl.pathname.startsWith("/termos") &&
-    !request.nextUrl.pathname.startsWith("/privacidade")
+    !request.nextUrl.pathname.startsWith("/privacidade") &&
+    !request.nextUrl.pathname.startsWith("/offline")
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

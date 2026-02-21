@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 import { getTheme } from "@/lib/theme.server";
 import "./globals.css";
 
@@ -22,12 +23,29 @@ export const metadata: Metadata = {
   description:
     "Sistema de gestão para consultório médico. Gerencie pacientes, agendamentos, prontuários e muito mais.",
   robots: { index: false, follow: false },
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Prontio",
+  },
   openGraph: {
     title: "Prontio - Gestão de Consultório Médico",
     description:
       "Sistema de gestão para consultório médico. Gerencie pacientes, agendamentos, prontuários e muito mais.",
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0284c7",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default async function RootLayout({
@@ -47,6 +65,7 @@ export default async function RootLayout({
         <div className="print:hidden">
           <Toaster richColors position="top-right" />
         </div>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

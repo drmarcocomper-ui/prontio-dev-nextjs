@@ -23,11 +23,19 @@ export function FormError({ message }: { message?: string }) {
   );
 }
 
-export function SubmitButton({ label, isPending }: { label: string; isPending: boolean }) {
+export function SubmitButton({
+  label,
+  isPending,
+  disabled,
+}: {
+  label: string;
+  isPending: boolean;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="submit"
-      disabled={isPending}
+      disabled={isPending || disabled}
       className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:opacity-50"
     >
       {isPending && (
