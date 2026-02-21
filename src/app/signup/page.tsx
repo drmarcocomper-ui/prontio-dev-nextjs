@@ -1,22 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import LoginForm from "./login-form";
+import SignupForm from "./signup-form";
 
-export const metadata: Metadata = { title: "Login" };
+export const metadata: Metadata = { title: "Criar conta" };
 
-const ERROR_MESSAGES: Record<string, string> = {
-  auth_erro: "Erro ao autenticar. Tente novamente.",
-};
-const FALLBACK_ERROR = "Ocorreu um erro. Tente novamente.";
-
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
-  const errorMessage = error ? (ERROR_MESSAGES[error] ?? FALLBACK_ERROR) : null;
-
+export default function SignupPage() {
   return (
     <div className="flex min-h-screen font-[family-name:var(--font-geist-sans)]">
       {/* Left panel — branding */}
@@ -38,7 +25,6 @@ export default async function LoginPage({
             Agenda, prontuários, financeiro e muito mais em um só lugar.
           </p>
 
-          {/* Feature highlights */}
           <div className="space-y-4 pt-4">
             {[
               { icon: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5", label: "Agenda inteligente" },
@@ -78,32 +64,19 @@ export default async function LoginPage({
           {/* Desktop heading */}
           <div className="hidden lg:block">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-              Bem-vindo de volta
+              Crie sua conta
             </h1>
             <p className="mt-2 text-sm text-gray-500">
-              Entre com suas credenciais para acessar o sistema
+              Comece a usar o Prontio gratuitamente
             </p>
           </div>
 
           {/* Mobile subheading */}
           <p className="text-center text-sm text-gray-500 lg:hidden">
-            Entre para acessar o sistema
+            Crie sua conta para começar
           </p>
 
-          {errorMessage && (
-            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {errorMessage}
-            </div>
-          )}
-
-          <LoginForm />
-
-          <p className="text-center text-sm text-gray-500">
-            Não tem uma conta?{" "}
-            <Link href="/signup" className="font-medium text-primary-600 hover:text-primary-700">
-              Criar conta
-            </Link>
-          </p>
+          <SignupForm />
 
           <div className="flex justify-center gap-4 text-xs text-gray-400">
             <a href="/termos" className="hover:text-gray-600 hover:underline">Termos de Uso</a>

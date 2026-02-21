@@ -24,7 +24,9 @@ export async function updateSession(request: NextRequest) {
     // Sem variáveis de ambiente configuradas, redireciona para /login
     if (
       !request.nextUrl.pathname.startsWith("/login") &&
+      !request.nextUrl.pathname.startsWith("/signup") &&
       !request.nextUrl.pathname.startsWith("/auth") &&
+      !request.nextUrl.pathname.startsWith("/onboarding") &&
       !request.nextUrl.pathname.startsWith("/termos") &&
       !request.nextUrl.pathname.startsWith("/privacidade")
     ) {
@@ -69,7 +71,9 @@ export async function updateSession(request: NextRequest) {
   if (
     !user &&
     !request.nextUrl.pathname.startsWith("/login") &&
+    !request.nextUrl.pathname.startsWith("/signup") &&
     !request.nextUrl.pathname.startsWith("/auth") &&
+    !request.nextUrl.pathname.startsWith("/onboarding") &&
     !request.nextUrl.pathname.startsWith("/termos") &&
     !request.nextUrl.pathname.startsWith("/privacidade")
   ) {
@@ -81,10 +85,37 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const clinicaCookie = request.cookies.get("prontio_clinica_id")?.value;
     const pathname = request.nextUrl.pathname;
+    const onboardingCookie = request.cookies.get("prontio_onboarding")?.value;
+
+    // Onboarding: cookie pending → force user to /onboarding
+    if (onboardingCookie === "pending" && !pathname.startsWith("/onboarding")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+
+    // User on /onboarding without pending cookie — check if they have a clinic
+    if (pathname.startsWith("/onboarding") && onboardingCookie !== "pending") {
+      const { data: vinculo } = await supabase
+        .from("usuarios_clinicas")
+        .select("clinica_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+
+      if (vinculo) {
+        // Has clinic and no pending cookie → done with onboarding
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        return NextResponse.redirect(url);
+      }
+      // No clinic — let them proceed to /onboarding (step 1)
+    }
+
     const restrictedEntry = Object.entries(RESTRICTED_ROUTES).find(([route]) => pathname.startsWith(route));
 
     // Uma única query quando precisamos do vínculo (cookie ausente ou rota protegida)
-    if (!clinicaCookie || restrictedEntry) {
+    if ((!clinicaCookie || restrictedEntry) && !pathname.startsWith("/onboarding")) {
       let query = supabase
         .from("usuarios_clinicas")
         .select("clinica_id, papel")
@@ -112,6 +143,11 @@ export async function updateSession(request: NextRequest) {
           url.pathname = "/";
           return NextResponse.redirect(url);
         }
+      } else if (!clinicaCookie) {
+        // No clinic at all — redirect to onboarding
+        const url = request.nextUrl.clone();
+        url.pathname = "/onboarding";
+        return NextResponse.redirect(url);
       }
     }
   }
