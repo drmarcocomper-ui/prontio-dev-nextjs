@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, getAuthEmailMap } from "@/lib/supabase/admin";
@@ -108,12 +109,14 @@ export default async function AuditoriaPage({
       </div>
 
       {/* Filters */}
-      <AuditFilters
-        currentAcao={acao ?? ""}
-        currentRecurso={recurso ?? ""}
-        currentDataInicio={data_inicio ?? ""}
-        currentDataFim={data_fim ?? ""}
-      />
+      <Suspense>
+        <AuditFilters
+          currentAcao={acao ?? ""}
+          currentRecurso={recurso ?? ""}
+          currentDataInicio={data_inicio ?? ""}
+          currentDataFim={data_fim ?? ""}
+        />
+      </Suspense>
 
       {/* Mobile Cards */}
       {itemsWithEmail.length > 0 ? (

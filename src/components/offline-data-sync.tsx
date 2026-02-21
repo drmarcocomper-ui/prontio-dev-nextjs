@@ -19,7 +19,7 @@ export function OfflineDataSync() {
         const today = new Date().toISOString().split("T")[0];
         const { data: agenda } = await supabase
           .from("agendamentos")
-          .select("id, data, hora_inicio, hora_fim, status, observacoes, pacientes(id, nome_completo, telefone)")
+          .select("id, data, hora_inicio, hora_fim, status, observacoes, pacientes(id, nome, telefone)")
           .eq("data", today)
           .order("hora_inicio");
 
@@ -28,7 +28,7 @@ export function OfflineDataSync() {
             "agenda",
             agenda.map((a) => ({
               ...a,
-              paciente_nome: (a.pacientes as unknown as { nome_completo: string })?.nome_completo ?? "",
+              paciente_nome: (a.pacientes as unknown as { nome: string })?.nome ?? "",
               paciente_telefone: (a.pacientes as unknown as { telefone: string })?.telefone ?? "",
             }))
           );
@@ -37,7 +37,7 @@ export function OfflineDataSync() {
         // Sync recent patients (200 most recent)
         const { data: pacientes } = await supabase
           .from("pacientes")
-          .select("id, nome_completo, cpf, telefone, email, data_nascimento")
+          .select("id, nome, cpf, telefone, email, data_nascimento")
           .order("created_at", { ascending: false })
           .limit(200);
 
@@ -48,8 +48,8 @@ export function OfflineDataSync() {
         // Sync recent records (50 most recent)
         const { data: prontuarios } = await supabase
           .from("prontuarios")
-          .select("id, paciente_id, data_consulta, subjetivo, objetivo, avaliacao, plano, pacientes(nome_completo)")
-          .order("data_consulta", { ascending: false })
+          .select("id, paciente_id, data, queixa_principal, historia_doenca, exame_fisico, hipotese_diagnostica, conduta, pacientes(nome)")
+          .order("data", { ascending: false })
           .limit(50);
 
         if (prontuarios?.length) {
@@ -57,7 +57,7 @@ export function OfflineDataSync() {
             "prontuarios",
             prontuarios.map((p) => ({
               ...p,
-              paciente_nome: (p.pacientes as unknown as { nome_completo: string })?.nome_completo ?? "",
+              paciente_nome: (p.pacientes as unknown as { nome: string })?.nome ?? "",
             }))
           );
         }

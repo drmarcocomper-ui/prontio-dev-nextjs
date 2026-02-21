@@ -56,10 +56,11 @@ export default async function RootLayout({
   const theme = await getTheme();
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body
         data-theme={theme}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         {children}
         <div className="print:hidden">
