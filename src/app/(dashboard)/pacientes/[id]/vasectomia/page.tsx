@@ -114,9 +114,10 @@ export default async function VasectomiaPage({
             @media print {
               .no-print { display: none !important; }
               html, body { margin: 0 !important; padding: 0 !important; }
-              @page { size: A4 portrait; margin: 0; }
-              .print-page { padding: 12mm 15mm; }
-              .page-break { page-break-after: always; }
+              @page { size: A4 portrait; margin: 8mm 12mm; }
+              /* Reset layout containers que bloqueiam paginação */
+              * { overflow: visible !important; }
+              main { padding: 0 !important; }
             }
           `,
         }}
@@ -132,42 +133,36 @@ export default async function VasectomiaPage({
         <PrintButton />
       </div>
 
-      {/* ============ PÁGINA 1 ============ */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
-        <div className="print-page p-6 sm:p-8">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6 sm:p-8 print:rounded-none print:border-0 print:shadow-none print:p-0">
+        {/* ============ PÁGINA 1 ============ */}
+        <div>
           {/* Cabeçalho do formulário */}
-          <div className="mb-6 text-center">
+          <div className="mb-3 text-center">
             <p className="text-xs font-bold">FRM.TURO.047</p>
-            <h1 className="mt-1 text-sm font-bold uppercase">
+            <h1 className="text-sm font-bold uppercase">
               Consentimento Informado Livre e Esclarecido
             </h1>
-            <div className="mt-1 flex items-center justify-center gap-6 text-xs">
-              <span>DATA: 29/05/2015</span>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-xs">
-              <span>REV 001</span>
-            </div>
-            <div className="flex items-center justify-center gap-6 text-xs">
-              <span>FL: 1/2</span>
-            </div>
+            <p className="text-xs">DATA: 29/05/2015</p>
+            <p className="text-xs">REV 001</p>
+            <p className="text-xs">FL: 1/2</p>
           </div>
 
-          <h2 className="mb-4 text-sm font-bold">VASECTOMIA &ndash; ANEXO II</h2>
+          <h2 className="mb-2 text-sm font-bold">VASECTOMIA &ndash; ANEXO II</h2>
 
           {/* Dados do paciente */}
-          <div className="space-y-3 text-xs leading-loose">
+          <div className="space-y-1 text-xs leading-normal">
             <div>
               <span className="font-semibold">Paciente:</span>{" "}
               <span className="border-b border-gray-900 px-1">{paciente.nome}</span>
             </div>
 
-            <div className="flex flex-wrap gap-x-6">
+            <div className="flex flex-wrap gap-x-4">
               <Field label="Idade" value={idade} />
               <Field label="Estado Civil" value={estadoCivil} />
               <Field label="Nacionalidade" />
             </div>
 
-            <div className="flex flex-wrap gap-x-6">
+            <div className="flex flex-wrap gap-x-4">
               <Field label="Identidade" value={paciente.rg ?? ""} />
               <Field label="CPF nº" value={cpfFormatado} />
               <Field label="Profissão" />
@@ -178,7 +173,7 @@ export default async function VasectomiaPage({
               <span className="border-b border-gray-900 px-1">{enderecoCompleto || ""}</span>
             </div>
 
-            <div className="flex flex-wrap gap-x-6">
+            <div className="flex flex-wrap gap-x-4">
               <Field label="Telefone" value={telefoneFormatado} />
               <span>
                 Endereço Eletrônico:{" "}
@@ -201,14 +196,14 @@ export default async function VasectomiaPage({
               </div>
             ))}
 
-            <div className="mt-2 flex flex-wrap gap-x-6">
+            <div className="flex flex-wrap gap-x-4">
               <span className="w-full">
                 Nome do cônjuge/convivente:{" "}
                 <span className="inline-block min-w-[200px] border-b border-gray-900" />
               </span>
             </div>
 
-            <div className="flex flex-wrap gap-x-6">
+            <div className="flex flex-wrap gap-x-4">
               <Field label="Identidade" />
               <Field label="CPF nº" />
               <Field label="nº Telefone" />
@@ -216,7 +211,7 @@ export default async function VasectomiaPage({
           </div>
 
           {/* Texto do consentimento */}
-          <div className="mt-6 space-y-3 text-xs leading-relaxed">
+          <div className="mt-3 space-y-1.5 text-xs leading-snug">
             <p className="text-justify">
               {'"'}Eu, abaixo assinado, autorizo o(a) Dr(a) <span className="font-semibold">{nomeMedico}</span> a
               realizar a cirurgia de vasectomia.
@@ -277,14 +272,11 @@ export default async function VasectomiaPage({
             </p>
           </div>
         </div>
-      </div>
 
-      {/* Page break */}
-      <div className="page-break" />
+        <hr className="my-8 border-gray-300 print:hidden" />
 
-      {/* ============ PÁGINA 2 ============ */}
-      <div className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm print:mt-0 print:rounded-none print:border-0 print:shadow-none">
-        <div className="print-page p-6 sm:p-8">
+        {/* ============ PÁGINA 2 ============ */}
+        <div className="break-before-page">
           {/* Cabeçalho página 2 */}
           <div className="mb-6 text-center">
             <p className="text-xs font-bold">FRM.TURO.047</p>
