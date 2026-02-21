@@ -8,6 +8,7 @@ const RESTRICTED_ROUTES: Record<string, string[]> = {
   "/financeiro": ["superadmin", "gestor", "financeiro"],
   "/relatorios": ["superadmin", "gestor", "profissional_saude", "financeiro"],
   "/usuarios": ["superadmin", "gestor"],
+  "/auditoria": ["superadmin", "gestor"],
   "/configuracoes": ["superadmin", "gestor", "profissional_saude"],
 };
 
@@ -23,7 +24,9 @@ export async function updateSession(request: NextRequest) {
     // Sem variáveis de ambiente configuradas, redireciona para /login
     if (
       !request.nextUrl.pathname.startsWith("/login") &&
-      !request.nextUrl.pathname.startsWith("/auth")
+      !request.nextUrl.pathname.startsWith("/auth") &&
+      !request.nextUrl.pathname.startsWith("/termos") &&
+      !request.nextUrl.pathname.startsWith("/privacidade")
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
@@ -66,7 +69,9 @@ export async function updateSession(request: NextRequest) {
   if (
     !user &&
     !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
+    !request.nextUrl.pathname.startsWith("/auth") &&
+    !request.nextUrl.pathname.startsWith("/termos") &&
+    !request.nextUrl.pathname.startsWith("/privacidade")
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

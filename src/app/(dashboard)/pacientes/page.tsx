@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { getClinicaAtual } from "@/lib/clinica";
 import { QueryError } from "@/components/query-error";
 import { PacienteFilters } from "./filters";
+import { ExportCsvButton, type PacienteCSV } from "./export-csv-button";
 import { type PacienteListItem, formatCPF, formatPhone, formatDate, getInitials } from "./types";
 
 export const metadata: Metadata = { title: "Pacientes" };
@@ -61,6 +62,24 @@ export default async function PacientesPage({
   const totalItems = count ?? 0;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 
+  // Query for CSV export (all matching records, no pagination)
+  let exportQuery = supabase
+    .from("pacientes")
+    .select("nome, cpf, rg, data_nascimento, sexo, estado_civil, telefone, email, endereco, numero, complemento, bairro, cidade, estado, cep, convenio")
+    .order("nome", { ascending: true })
+    .limit(10000);
+
+  if (q) {
+    const escaped = escapeLikePattern(q);
+    exportQuery = exportQuery.or(`nome.ilike.%${escaped}%,cpf.ilike.%${escaped}%,telefone.ilike.%${escaped}%`);
+  }
+  if (sexo) {
+    exportQuery = exportQuery.eq("sexo", sexo);
+  }
+
+  const { data: exportData } = await exportQuery;
+  const csvData = (exportData ?? []) as PacienteCSV[];
+
   const sp: Record<string, string> = {};
   if (q) sp.q = q;
   if (ordem) sp.ordem = ordem;
@@ -77,15 +96,18 @@ export default async function PacientesPage({
             {totalItems} paciente{totalItems !== 1 ? "s" : ""} cadastrado{totalItems !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/pacientes/novo"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
-        >
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Novo paciente
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportCsvButton data={csvData} />
+          <Link
+            href="/pacientes/novo"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+          >
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Novo paciente
+          </Link>
+        </div>
       </div>
 
       {/* Search + Filters */}

@@ -96,6 +96,12 @@ export default async function LoginPage({
           )}
 
           <LoginForm />
+
+          <div className="flex justify-center gap-4 text-xs text-gray-400">
+            <a href="/termos" className="hover:text-gray-600 hover:underline">Termos de Uso</a>
+            <span>&middot;</span>
+            <a href="/privacidade" className="hover:text-gray-600 hover:underline">Política de Privacidade</a>
+          </div>
         </div>
       </div>
     </div>

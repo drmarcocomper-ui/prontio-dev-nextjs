@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const SHORTCUTS = [
-  { label: "Buscar", keys: ["Ctrl + K"] },
+  { label: "Busca global", keys: ["Ctrl + K"] },
   { section: "Navegação (g + tecla)" },
   { label: "Painel", keys: ["g", "h"] },
   { label: "Pacientes", keys: ["g", "p"] },
@@ -66,16 +66,8 @@ export function KeyboardShortcuts() {
 
       const mod = e.metaKey || e.ctrlKey;
 
-      // Ctrl/Cmd + K → Focus search input (if present)
+      // Ctrl/Cmd + K → handled by CommandPalette
       if (mod && e.key === "k") {
-        e.preventDefault();
-        const searchInput = document.querySelector<HTMLInputElement>(
-          'input[type="search"], input[aria-label*="Buscar"]'
-        );
-        if (searchInput) {
-          searchInput.focus();
-          searchInput.select();
-        }
         return;
       }
 
