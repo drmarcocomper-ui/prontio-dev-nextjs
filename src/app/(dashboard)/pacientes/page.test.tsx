@@ -54,6 +54,7 @@ function createQueryResult() {
     or: () => createQueryResult(),
     order: () => createQueryResult(),
     range: () => createQueryResult(),
+    limit: () => createQueryResult(),
     eq: () => createQueryResult(),
   };
   return result;

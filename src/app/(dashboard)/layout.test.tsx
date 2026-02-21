@@ -13,6 +13,10 @@ vi.mock("@/components/keyboard-shortcuts", () => ({
   KeyboardShortcuts: () => null,
 }));
 
+vi.mock("@/components/command-palette", () => ({
+  CommandPalette: () => null,
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",

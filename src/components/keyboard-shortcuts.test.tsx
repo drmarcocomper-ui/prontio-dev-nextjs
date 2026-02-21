@@ -107,14 +107,9 @@ describe("KeyboardShortcuts", () => {
     document.body.removeChild(input);
   });
 
-  it("foca no input de busca com Ctrl+K", () => {
+  it("ignora Ctrl+K (delegado ao CommandPalette)", () => {
     render(<KeyboardShortcuts />);
-    const searchInput = document.createElement("input");
-    searchInput.type = "search";
-    document.body.appendChild(searchInput);
-    const focusSpy = vi.spyOn(searchInput, "focus");
     pressKey("k", { ctrlKey: true });
-    expect(focusSpy).toHaveBeenCalled();
-    document.body.removeChild(searchInput);
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });
