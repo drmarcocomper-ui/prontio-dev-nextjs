@@ -45,9 +45,9 @@ describe("TABS", () => {
     expect(exames?.roles).toEqual(["superadmin"]);
   });
 
-  it("aba profissionais é acessível apenas por superadmin", () => {
-    const profissionais = TABS.find((t) => t.key === "profissionais");
-    expect(profissionais?.roles).toEqual(["superadmin"]);
+  it("aba encaminhamentos é acessível apenas por superadmin", () => {
+    const encaminhamentos = TABS.find((t) => t.key === "profissionais");
+    expect(encaminhamentos?.roles).toEqual(["superadmin"]);
   });
 
   it("aba gestao é acessível por superadmin e gestor", () => {
