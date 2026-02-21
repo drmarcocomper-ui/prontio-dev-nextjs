@@ -8,6 +8,7 @@ import { campoObrigatorio, tamanhoMaximo, valorPermitido, uuidValido, DATE_RE } 
 import { DESCRICAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, VALOR_MAX, PAGAMENTO_LABELS, STATUS_LABELS, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA } from "./constants";
 import { getClinicaAtual, isFinanceiro, isGestor } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 export type TransacaoFormState = {
   error?: string;
@@ -116,6 +117,8 @@ export async function criarTransacao(
     return { error: tratarErroSupabase(error, "criar", "transação") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "transacao", detalhes: { tipo: fields.tipo, valor: fields.valor } });
+
   revalidatePath("/financeiro");
   revalidatePath("/", "page");
   revalidatePath("/relatorios/financeiro");
@@ -186,6 +189,8 @@ export async function atualizarTransacao(
     return { error: tratarErroSupabase(error, "atualizar", "transação") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "transacao", recursoId: id });
+
   revalidatePath("/financeiro");
   revalidatePath("/", "page");
   revalidatePath("/relatorios/financeiro");
@@ -219,6 +224,8 @@ export async function excluirTransacao(id: string): Promise<void> {
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "transação"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "transacao", recursoId: id });
 
   revalidatePath("/financeiro");
   revalidatePath("/", "page");

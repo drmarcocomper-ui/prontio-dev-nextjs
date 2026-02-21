@@ -14,6 +14,7 @@ import {
 } from "./types";
 import { getClinicaAtual, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 export type EncaminhamentoFormState = {
   error?: string;
@@ -110,6 +111,8 @@ export async function criarEncaminhamento(
     return { error: tratarErroSupabase(error!, "criar", "encaminhamento") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "encaminhamento", recursoId: inserted.id });
+
   revalidatePath("/encaminhamentos");
   revalidatePath("/", "page");
   revalidatePath(`/pacientes/${fields.paciente_id}`);
@@ -178,6 +181,8 @@ export async function atualizarEncaminhamento(
     return { error: tratarErroSupabase(error, "atualizar", "encaminhamento") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "encaminhamento", recursoId: id });
+
   revalidatePath("/encaminhamentos");
   revalidatePath("/", "page");
   revalidatePath(`/pacientes/${fields.paciente_id}`);
@@ -223,6 +228,8 @@ export async function excluirEncaminhamento(id: string): Promise<void> {
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "encaminhamento"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "encaminhamento", recursoId: id });
 
   revalidatePath("/encaminhamentos");
   revalidatePath("/", "page");

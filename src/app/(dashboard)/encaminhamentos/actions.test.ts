@@ -75,6 +75,10 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+vi.mock("@/lib/audit", () => ({
+  logAuditEvent: vi.fn(),
+}));
+
 vi.mock("./types", async () => {
   const actual = await vi.importActual("./types");
   return { ...actual };
@@ -178,7 +182,7 @@ describe("criarEncaminhamento", () => {
     ).rejects.toThrow("REDIRECT");
   });
 
-  it("retorna fieldError quando paciente não pertence ao médico", async () => {
+  it("retorna fieldError quando paciente não encontrado", async () => {
     mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
     const result = await criarEncaminhamento({}, makeFormData(validData));
     expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
@@ -237,6 +241,16 @@ describe("atualizarEncaminhamento", () => {
     expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
   });
 
+  it("retorna fieldErrors quando profissional_destino está vazio", async () => {
+    const result = await atualizarEncaminhamento({}, makeFormData({ ...validUpdateData, profissional_destino: "" }));
+    expect(result.fieldErrors?.profissional_destino).toBe("Informe o profissional de destino.");
+  });
+
+  it("retorna fieldErrors quando especialidade está vazia", async () => {
+    const result = await atualizarEncaminhamento({}, makeFormData({ ...validUpdateData, especialidade: "" }));
+    expect(result.fieldErrors?.especialidade).toBe("Informe a especialidade.");
+  });
+
   it("retorna fieldErrors quando motivo está vazio", async () => {
     const result = await atualizarEncaminhamento({}, makeFormData({ ...validUpdateData, motivo: "" }));
     expect(result.fieldErrors?.motivo).toBe("Informe o motivo do encaminhamento.");
@@ -245,6 +259,19 @@ describe("atualizarEncaminhamento", () => {
   it("retorna fieldErrors quando data é no futuro", async () => {
     const result = await atualizarEncaminhamento({}, makeFormData({ ...validUpdateData, data: "2099-01-01" }));
     expect(result.fieldErrors?.data).toBe("A data não pode ser no futuro.");
+  });
+
+  it("aceita data vazia (campo opcional)", async () => {
+    await expect(
+      atualizarEncaminhamento({}, makeFormData({ ...validUpdateData, data: "" }))
+    ).rejects.toThrow("REDIRECT");
+  });
+
+  it("retorna fieldError quando paciente não encontrado", async () => {
+    mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
+    const result = await atualizarEncaminhamento({}, makeFormData(validUpdateData));
+    expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it("redireciona após atualização com sucesso", async () => {
@@ -265,13 +292,6 @@ describe("atualizarEncaminhamento", () => {
     mockUpdate.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await atualizarEncaminhamento({}, makeFormData(validUpdateData));
     expect(result.error).toBe("Erro ao atualizar encaminhamento. Tente novamente.");
-  });
-
-  it("retorna fieldError quando paciente não pertence ao médico", async () => {
-    mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
-    const result = await atualizarEncaminhamento({}, makeFormData(validUpdateData));
-    expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
-    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
 

@@ -8,6 +8,7 @@ import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidVal
 import { MEDICAMENTOS_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, TIPO_LABELS } from "./types";
 import { getClinicaAtual, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 export type ReceitaFormState = {
   error?: string;
@@ -97,6 +98,8 @@ export async function criarReceita(
     return { error: tratarErroSupabase(error, "criar", "receita") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "receita", recursoId: inserted.id });
+
   revalidatePath("/receitas");
   revalidatePath("/", "page");
   redirect(`/receitas/${inserted.id}?success=Receita+registrada`);
@@ -162,6 +165,8 @@ export async function atualizarReceita(
     return { error: tratarErroSupabase(error, "atualizar", "receita") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "receita", recursoId: id });
+
   revalidatePath("/receitas");
   revalidatePath("/", "page");
   redirect(`/receitas/${id}?success=Receita+atualizada`);
@@ -207,6 +212,8 @@ export async function excluirReceita(id: string): Promise<void> {
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "receita"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "receita", recursoId: id });
 
   revalidatePath("/receitas");
   revalidatePath("/", "page");

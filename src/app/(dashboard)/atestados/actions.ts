@@ -8,6 +8,7 @@ import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido, valorPermit
 import { CONTEUDO_MAX_LENGTH, CID_MAX_LENGTH, OBSERVACOES_MAX_LENGTH, TIPOS_ATESTADO } from "./types";
 import { getClinicaAtual, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 export type AtestadoFormState = {
   error?: string;
@@ -109,6 +110,8 @@ export async function criarAtestado(
     return { error: tratarErroSupabase(error, "criar", "atestado") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "atestado", detalhes: { tipo: fields.tipo, paciente_id: fields.paciente_id } });
+
   revalidatePath("/atestados");
   revalidatePath("/", "page");
   revalidatePath(`/pacientes/${fields.paciente_id}`);
@@ -177,6 +180,8 @@ export async function atualizarAtestado(
     return { error: tratarErroSupabase(error, "atualizar", "atestado") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "atestado", recursoId: id });
+
   revalidatePath("/atestados");
   revalidatePath("/", "page");
   revalidatePath(`/pacientes/${fields.paciente_id}`);
@@ -222,6 +227,8 @@ export async function excluirAtestado(id: string): Promise<void> {
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "atestado"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "atestado", recursoId: id });
 
   revalidatePath("/atestados");
   revalidatePath("/", "page");

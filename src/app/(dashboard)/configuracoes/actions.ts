@@ -7,6 +7,7 @@ import { getClinicaAtual, getClinicasDoUsuario, isGestor, isProfissional, isSupe
 import { invalidarCacheHorario } from "@/app/(dashboard)/agenda/utils";
 import { emailValido as validarEmail, uuidValido } from "@/lib/validators";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 import {
   NOME_CONSULTORIO_MAX,
   ENDERECO_MAX,
@@ -106,6 +107,8 @@ export async function salvarConsultorio(
   if (error) {
     return { error: tratarErroSupabase(error, "salvar", "consultório") };
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "consultorio" });
 
   revalidatePath("/configuracoes");
   revalidatePath("/", "layout");
@@ -478,6 +481,8 @@ export async function alterarSenha(
     return { error: "Erro ao alterar senha. Tente novamente." };
   }
 
+  void logAuditEvent({ userId: user.id, acao: "alterar_senha", recurso: "conta" });
+
   return { success: true };
 }
 
@@ -534,6 +539,8 @@ export async function criarClinica(
   if (vinculoError) {
     return { error: tratarErroSupabase(vinculoError, "criar", "vínculo") };
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: clinica.id, acao: "criar", recurso: "clinica", recursoId: clinica.id, detalhes: { nome } });
 
   revalidatePath("/configuracoes");
   revalidatePath("/", "layout");
@@ -637,6 +644,8 @@ export async function alternarStatusClinica(id: string): Promise<void> {
     throw new Error(tratarErroSupabase(error, "atualizar", "clínica"));
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: id, acao: "alternar_status", recurso: "clinica", recursoId: id, detalhes: { ativo: !clinica.ativo } });
+
   revalidatePath("/configuracoes");
   revalidatePath("/", "layout");
 }
@@ -691,6 +700,8 @@ export async function excluirClinica(id: string): Promise<void> {
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "clínica"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "clinica", recursoId: id });
 
   revalidatePath("/configuracoes");
   revalidatePath("/", "layout");

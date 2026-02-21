@@ -14,6 +14,7 @@ import {
 } from "./types";
 import { getClinicaAtual, getMedicoIdSafe, isAtendimento, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 export type PacienteFormState = {
   error?: string;
@@ -129,6 +130,8 @@ export async function criarPaciente(
     return { error: tratarErroSupabase(error, "criar", "paciente") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "paciente", detalhes: { nome } });
+
   revalidatePath("/pacientes");
   revalidatePath("/", "page");
   redirect("/pacientes?success=Paciente+cadastrado");
@@ -187,6 +190,8 @@ export async function atualizarPaciente(
     }
     return { error: tratarErroSupabase(error, "atualizar", "paciente") };
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "paciente", recursoId: id });
 
   revalidatePath("/pacientes");
   revalidatePath("/", "page");
@@ -250,6 +255,8 @@ export async function criarPacienteRapido(data: {
     return { error: tratarErroSupabase(error, "criar", "paciente") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "paciente", recursoId: inserted.id });
+
   revalidatePath("/pacientes");
   revalidatePath("/", "page");
   return { id: inserted.id, nome: nome! };
@@ -282,6 +289,8 @@ export async function excluirPaciente(id: string): Promise<void> {
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "paciente"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "paciente", recursoId: id });
 
   revalidatePath("/pacientes");
   revalidatePath("/", "page");

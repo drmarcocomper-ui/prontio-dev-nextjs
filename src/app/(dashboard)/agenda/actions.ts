@@ -9,6 +9,7 @@ import { parseLocalDate } from "@/lib/date";
 import { STATUS_TRANSITIONS, OBSERVACOES_MAX_LENGTH, TIPO_LABELS, type AgendaStatus } from "./types";
 import { getClinicaAtual, getMedicoId, isAtendimento, isGestor, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 import { timeToMinutes, DIAS_SEMANA, getHorarioConfig } from "./utils";
 
@@ -226,6 +227,8 @@ export async function criarAgendamento(
     return { error: tratarErroSupabase(error, "criar", "agendamento") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "agendamento", detalhes: { data, hora_inicio } });
+
   revalidatePath("/agenda");
   revalidatePath("/", "page");
   redirect(`/agenda?data=${data}&success=Agendamento+criado`);
@@ -385,6 +388,8 @@ export async function atualizarAgendamento(
     return { error: tratarErroSupabase(error, "atualizar", "agendamento") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "agendamento", recursoId: id });
+
   revalidatePath("/agenda");
   revalidatePath("/", "page");
   redirect(`/agenda/${id}?success=Agendamento+atualizado`);
@@ -420,6 +425,8 @@ export async function excluirAgendamento(id: string, data: string): Promise<void
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "agendamento"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "agendamento", recursoId: id });
 
   revalidatePath("/agenda");
   revalidatePath("/", "page");

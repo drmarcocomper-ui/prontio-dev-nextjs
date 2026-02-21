@@ -8,6 +8,7 @@ import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, valorPermitido, uuidVal
 import { TEXTO_MAX_LENGTH, TIPO_LABELS } from "./types";
 import { getClinicaAtual, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 export type ProntuarioFormState = {
   error?: string;
@@ -102,6 +103,8 @@ export async function criarProntuario(
     return { error: tratarErroSupabase(error, "criar", "prontuário") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "prontuario", recursoId: inserted.id });
+
   revalidatePath("/prontuarios");
   revalidatePath("/", "page");
   redirect(`/prontuarios/${inserted.id}?success=Prontu%C3%A1rio+registrado`);
@@ -170,6 +173,8 @@ export async function atualizarProntuario(
     return { error: tratarErroSupabase(error, "atualizar", "prontuário") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "prontuario", recursoId: id });
+
   revalidatePath("/prontuarios");
   revalidatePath("/", "page");
   redirect(`/prontuarios/${id}?success=Prontu%C3%A1rio+atualizado`);
@@ -205,6 +210,8 @@ export async function excluirProntuario(id: string): Promise<void> {
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "prontuário"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "prontuario", recursoId: id });
 
   revalidatePath("/prontuarios");
   revalidatePath("/", "page");

@@ -8,6 +8,7 @@ import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, uuidValido } from "@/li
 import { EXAMES_MAX_LENGTH, INDICACAO_MAX_LENGTH, OBSERVACOES_MAX_LENGTH } from "./types";
 import { getClinicaAtual, getMedicoIdSafe, isProfissional } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 export type ExameFormState = {
   error?: string;
@@ -92,6 +93,8 @@ export async function criarExame(
     return { error: tratarErroSupabase(error, "criar", "solicitação de exame") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "criar", recurso: "exame", detalhes: { paciente_id: fields.paciente_id } });
+
   revalidatePath("/exames");
   revalidatePath("/", "page");
   revalidatePath(`/pacientes/${fields.paciente_id}`);
@@ -158,6 +161,8 @@ export async function atualizarExame(
     return { error: tratarErroSupabase(error, "atualizar", "solicitação de exame") };
   }
 
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "atualizar", recurso: "exame", recursoId: id });
+
   revalidatePath("/exames");
   revalidatePath("/", "page");
   revalidatePath(`/pacientes/${fields.paciente_id}`);
@@ -203,6 +208,8 @@ export async function excluirExame(id: string): Promise<void> {
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "solicitação de exame"));
   }
+
+  void logAuditEvent({ userId: ctx.userId, clinicaId: ctx.clinicaId, acao: "excluir", recurso: "exame", recursoId: id });
 
   revalidatePath("/exames");
   revalidatePath("/", "page");

@@ -25,6 +25,10 @@ vi.mock("@/lib/clinica", () => ({
   isProfissional: (p: string) => ["superadmin", "profissional_saude"].includes(p),
 }));
 
+vi.mock("@/lib/audit", () => ({
+  logAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: () =>
     Promise.resolve({
@@ -121,7 +125,7 @@ describe("criarAtestado", () => {
     expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
   });
 
-  it("retorna fieldErrors quando paciente_id é inválido", async () => {
+  it("retorna fieldErrors quando paciente_id é UUID inválido", async () => {
     const result = await criarAtestado({}, makeFormData({ ...validData, paciente_id: "invalido" }));
     expect(result.fieldErrors?.paciente_id).toBe("Paciente inválido.");
   });
@@ -156,13 +160,18 @@ describe("criarAtestado", () => {
     expect(result.fieldErrors?.observacoes).toBe("Máximo de 1000 caracteres.");
   });
 
-  it("retorna fieldErrors quando dias_afastamento é inválido", async () => {
+  it("retorna fieldErrors quando dias_afastamento é negativo", async () => {
     const result = await criarAtestado({}, makeFormData({ ...validData, dias_afastamento: "-1" }));
     expect(result.fieldErrors?.dias_afastamento).toBe("Informe um número inteiro positivo.");
   });
 
   it("retorna fieldErrors quando dias_afastamento não é número", async () => {
     const result = await criarAtestado({}, makeFormData({ ...validData, dias_afastamento: "abc" }));
+    expect(result.fieldErrors?.dias_afastamento).toBe("Informe um número inteiro positivo.");
+  });
+
+  it("retorna fieldErrors quando dias_afastamento é zero", async () => {
+    const result = await criarAtestado({}, makeFormData({ ...validData, dias_afastamento: "0" }));
     expect(result.fieldErrors?.dias_afastamento).toBe("Informe um número inteiro positivo.");
   });
 
@@ -177,7 +186,7 @@ describe("criarAtestado", () => {
     ).rejects.toThrow("REDIRECT");
   });
 
-  it("retorna fieldError quando paciente não pertence ao médico", async () => {
+  it("retorna fieldError quando paciente não encontrado", async () => {
     mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
     const result = await criarAtestado({}, makeFormData(validData));
     expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
@@ -245,6 +254,16 @@ describe("atualizarAtestado", () => {
     expect(result.fieldErrors?.paciente_id).toBe("Selecione um paciente.");
   });
 
+  it("retorna fieldErrors quando paciente_id é UUID inválido", async () => {
+    const result = await atualizarAtestado({}, makeFormData({ ...validUpdateData, paciente_id: "invalido" }));
+    expect(result.fieldErrors?.paciente_id).toBe("Paciente inválido.");
+  });
+
+  it("retorna fieldErrors quando tipo está vazio", async () => {
+    const result = await atualizarAtestado({}, makeFormData({ ...validUpdateData, tipo: "" }));
+    expect(result.fieldErrors?.tipo).toBe("Selecione o tipo de atestado.");
+  });
+
   it("retorna fieldErrors quando conteudo está vazio", async () => {
     const result = await atualizarAtestado({}, makeFormData({ ...validUpdateData, conteudo: "" }));
     expect(result.fieldErrors?.conteudo).toBe("Conteúdo é obrigatório.");
@@ -253,6 +272,19 @@ describe("atualizarAtestado", () => {
   it("retorna fieldErrors quando data é no futuro", async () => {
     const result = await atualizarAtestado({}, makeFormData({ ...validUpdateData, data: "2099-01-01" }));
     expect(result.fieldErrors?.data).toBe("A data não pode ser no futuro.");
+  });
+
+  it("aceita data vazia (campo opcional)", async () => {
+    await expect(
+      atualizarAtestado({}, makeFormData({ ...validUpdateData, data: "" }))
+    ).rejects.toThrow("REDIRECT");
+  });
+
+  it("retorna fieldError quando paciente não encontrado", async () => {
+    mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
+    const result = await atualizarAtestado({}, makeFormData(validUpdateData));
+    expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it("redireciona após atualização com sucesso", async () => {
@@ -273,13 +305,6 @@ describe("atualizarAtestado", () => {
     mockUpdate.mockResolvedValueOnce({ error: { message: "DB error" } });
     const result = await atualizarAtestado({}, makeFormData(validUpdateData));
     expect(result.error).toBe("Erro ao atualizar atestado. Tente novamente.");
-  });
-
-  it("retorna fieldError quando paciente não pertence ao médico", async () => {
-    mockPacienteCheck.mockResolvedValueOnce({ data: null, error: null });
-    const result = await atualizarAtestado({}, makeFormData(validUpdateData));
-    expect(result.fieldErrors?.paciente_id).toBe("Paciente não encontrado.");
-    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
 
