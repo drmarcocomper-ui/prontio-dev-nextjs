@@ -20,6 +20,7 @@ export default function DashboardLoading() {
             </div>
             <div className="mt-3 h-8 w-16 rounded skeleton" />
             <div className="mt-2 h-3 w-20 rounded skeleton" />
+            <div className="mt-2 h-3 w-28 rounded skeleton" />
           </div>
         ))}
       </div>
