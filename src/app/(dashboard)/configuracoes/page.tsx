@@ -16,6 +16,7 @@ import { CatalogoExamesForm, type CatalogoExame } from "./catalogo-exames-form";
 import { CatalogoProfissionaisForm, type CatalogoProfissional } from "./catalogo-profissionais-form";
 import { HorariosProfissionalForm } from "./horarios-profissional-form";
 import { UsuariosTab } from "./usuarios-tab";
+import { ProfissionaisClinicaTab, type ProfissionalClinicaItem } from "./profissionais-clinica-tab";
 import { type UsuarioListItem } from "@/app/(dashboard)/usuarios/types";
 import type { HorarioProfissional } from "@/app/(dashboard)/agenda/utils";
 
@@ -147,6 +148,53 @@ export default async function ConfiguracoesPage({
     profissionaisList = (data ?? []) as CatalogoProfissional[];
   }
 
+  // Load profissionais da clínica for "profissionais-clinica" tab
+  let profissionaisClinicaItems: ProfissionalClinicaItem[] = [];
+  let profissionaisClinicaClinicas: { id: string; nome: string }[] = [];
+  if (currentTab === "profissionais-clinica" && ctx) {
+    const { createAdminClient, getAuthEmailMap } = await import("@/lib/supabase/admin");
+    const adminSupabase = createAdminClient();
+
+    const { data: vinculosData } = await adminSupabase
+      .from("usuarios_clinicas")
+      .select("id, user_id, papel")
+      .eq("clinica_id", ctx.clinicaId)
+      .in("papel", ["profissional_saude", "superadmin"]);
+
+    if (vinculosData && vinculosData.length > 0) {
+      const userIds = [...new Set(vinculosData.map((v: { user_id: string }) => v.user_id))];
+      const emailMap = await getAuthEmailMap(adminSupabase, userIds);
+
+      // Fetch professional configs for each user
+      const { data: configRows } = await supabase
+        .from("configuracoes")
+        .select("chave, valor, user_id")
+        .in("user_id", userIds)
+        .in("chave", ["nome_profissional", "especialidade", "crm", "rqe"]);
+
+      const configByUser: Record<string, Record<string, string>> = {};
+      for (const row of configRows ?? []) {
+        const r = row as { chave: string; valor: string; user_id: string };
+        if (!configByUser[r.user_id]) configByUser[r.user_id] = {};
+        configByUser[r.user_id][r.chave] = r.valor;
+      }
+
+      profissionaisClinicaItems = (vinculosData as { id: string; user_id: string; papel: string }[]).map((v) => ({
+        vinculo_id: v.id,
+        user_id: v.user_id,
+        email: emailMap[v.user_id] ?? "",
+        papel: v.papel,
+        nome_profissional: configByUser[v.user_id]?.nome_profissional ?? "",
+        especialidade: configByUser[v.user_id]?.especialidade ?? "",
+        crm: configByUser[v.user_id]?.crm ?? "",
+        rqe: configByUser[v.user_id]?.rqe ?? "",
+      }));
+    }
+
+    const clinicasUser = await getClinicasDoUsuario();
+    profissionaisClinicaClinicas = clinicasUser.map((c) => ({ id: c.id, nome: c.nome }));
+  }
+
   // Load horarios_profissional for "minha-conta" tab
   let horariosProfissional: HorarioProfissional[] = [];
   if (currentTab === "minha-conta" && isProfissional(papel) && ctx) {
@@ -177,12 +225,15 @@ export default async function ConfiguracoesPage({
 
       let userIdFilter: string[] | null = null;
 
+      // Cross-clinic: fetch users from ALL clinics of the current user
+      const clinicaIds = clinicasUser.map((c) => c.id);
+
       // If searching, find matching users by email using getAuthEmailMap
       // We fetch all clinic users' emails once and reuse for both search and enrichment
       const { data: allVinculos } = await adminSupabase
         .from("usuarios_clinicas")
         .select("user_id")
-        .eq("clinica_id", ctx.clinicaId);
+        .in("clinica_id", clinicaIds);
 
       const allUserIds = [...new Set((allVinculos ?? []).map((v: { user_id: string }) => v.user_id))];
       const emailMap = await getAuthEmailMap(adminSupabase, allUserIds);
@@ -198,7 +249,7 @@ export default async function ConfiguracoesPage({
         let queryBuilder = adminSupabase
           .from("usuarios_clinicas")
           .select("id, user_id, papel, clinica_id, created_at, clinicas(nome)", { count: "exact" })
-          .eq("clinica_id", ctx.clinicaId);
+          .in("clinica_id", clinicaIds);
 
         if (userIdFilter) {
           queryBuilder = queryBuilder.in("user_id", userIdFilter);
@@ -299,6 +350,18 @@ export default async function ConfiguracoesPage({
         )}
         {currentTab === "profissionais" && (
           <CatalogoProfissionaisForm profissionais={profissionaisList} />
+        )}
+        {currentTab === "profissionais-clinica" && ctx && (
+          <ProfissionaisClinicaTab
+            items={profissionaisClinicaItems}
+            currentUserId={ctx.userId}
+            clinicas={profissionaisClinicaClinicas}
+          />
+        )}
+        {currentTab === "profissionais-clinica" && !ctx && (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Contexto de clínica não encontrado.
+          </div>
         )}
         {currentTab === "gestao" && (
           <>

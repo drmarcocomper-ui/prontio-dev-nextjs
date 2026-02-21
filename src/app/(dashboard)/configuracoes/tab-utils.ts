@@ -12,6 +12,7 @@ export const TABS: Tab[] = [
   { key: "medicamentos", label: "Medicamentos", roles: ["superadmin"] },
   { key: "exames", label: "Exames", roles: ["superadmin"] },
   { key: "profissionais", label: "Encaminhamentos", roles: ["superadmin"] },
+  { key: "profissionais-clinica", label: "Profissionais", roles: ["superadmin", "gestor"] },
   { key: "gestao", label: "Gestão", roles: ["superadmin", "gestor"] },
   { key: "usuarios", label: "Usuários", roles: ["superadmin", "gestor"] },
 ];

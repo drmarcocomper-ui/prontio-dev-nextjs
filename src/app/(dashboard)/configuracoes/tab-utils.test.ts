@@ -7,13 +7,13 @@ vi.mock("@/lib/clinica", () => ({
 import { isValidTab, getDefaultTab, TABS } from "./tab-utils";
 
 describe("TABS", () => {
-  it("contém 7 abas", () => {
-    expect(TABS).toHaveLength(7);
+  it("contém 8 abas", () => {
+    expect(TABS).toHaveLength(8);
   });
 
   it("contém as abas esperadas", () => {
     const keys = TABS.map((t) => t.key);
-    expect(keys).toEqual(["clinica", "minha-conta", "medicamentos", "exames", "profissionais", "gestao", "usuarios"]);
+    expect(keys).toEqual(["clinica", "minha-conta", "medicamentos", "exames", "profissionais", "profissionais-clinica", "gestao", "usuarios"]);
   });
 
   it("cada aba tem key, label e roles", () => {
@@ -50,6 +50,11 @@ describe("TABS", () => {
     expect(encaminhamentos?.roles).toEqual(["superadmin"]);
   });
 
+  it("aba profissionais-clinica é acessível por superadmin e gestor", () => {
+    const profClinica = TABS.find((t) => t.key === "profissionais-clinica");
+    expect(profClinica?.roles).toEqual(["superadmin", "gestor"]);
+  });
+
   it("aba gestao é acessível por superadmin e gestor", () => {
     const gestao = TABS.find((t) => t.key === "gestao");
     expect(gestao?.roles).toEqual(["superadmin", "gestor"]);
@@ -68,6 +73,7 @@ describe("isValidTab", () => {
     expect(isValidTab("medicamentos")).toBe(true);
     expect(isValidTab("exames")).toBe(true);
     expect(isValidTab("profissionais")).toBe(true);
+    expect(isValidTab("profissionais-clinica")).toBe(true);
     expect(isValidTab("gestao")).toBe(true);
     expect(isValidTab("usuarios")).toBe(true);
   });

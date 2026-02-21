@@ -6,7 +6,7 @@ vi.mock("./tabs", () => ({
 }));
 
 vi.mock("./tab-utils", () => ({
-  isValidTab: (tab: string) => ["clinica", "minha-conta", "medicamentos", "exames", "gestao", "usuarios"].includes(tab),
+  isValidTab: (tab: string) => ["clinica", "minha-conta", "medicamentos", "exames", "profissionais-clinica", "gestao", "usuarios"].includes(tab),
   getDefaultTab: () => "clinica",
 }));
 
@@ -64,6 +64,10 @@ vi.mock("./usuarios-tab", () => ({
   ),
 }));
 
+vi.mock("./profissionais-clinica-tab", () => ({
+  ProfissionaisClinicaTab: () => <div data-testid="profissionais-clinica-tab" />,
+}));
+
 vi.mock("@/lib/clinica", () => ({
   getClinicaAtual: vi.fn().mockResolvedValue({
     clinicaId: "clinic-1",
@@ -77,31 +81,32 @@ vi.mock("@/lib/clinica", () => ({
   isProfissional: (papel: string) => ["superadmin", "gestor", "profissional_saude"].includes(papel),
 }));
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({
-    from: () => {
-      const chainResult = Promise.resolve({ data: [], count: 0, error: null });
-      const eqChain: Record<string, unknown> = {
-        in: () => ({ order: () => ({ range: () => chainResult }) }),
-        eq: () => eqChain,
-        order: () => ({ range: () => chainResult }),
-      };
-      return {
-        select: () => ({
-          in: () => Promise.resolve({ data: [] }),
-          eq: () => eqChain,
-        }),
-      };
-    },
-    auth: {
-      admin: {
-        listUsers: () => Promise.resolve({ data: { users: [] } }),
-        getUserById: (id: string) => Promise.resolve({ data: { user: { id, email: "doc@test.com" } } }),
+vi.mock("@/lib/supabase/admin", () => {
+  const emptyResult = { data: [], count: 0, error: null };
+  function makeChain(): Record<string, unknown> {
+    const p = Promise.resolve(emptyResult);
+    const chain: Record<string, unknown> = {
+      in: () => makeChain(),
+      eq: () => makeChain(),
+      order: () => makeChain(),
+      range: () => p,
+      then: p.then.bind(p),
+    };
+    return chain;
+  }
+  return {
+    createAdminClient: () => ({
+      from: () => ({ select: () => makeChain() }),
+      auth: {
+        admin: {
+          listUsers: () => Promise.resolve({ data: { users: [] } }),
+          getUserById: (id: string) => Promise.resolve({ data: { user: { id, email: "doc@test.com" } } }),
+        },
       },
-    },
-  }),
-  getAuthEmailMap: () => Promise.resolve({}),
-}));
+    }),
+    getAuthEmailMap: () => Promise.resolve({}),
+  };
+});
 
 const mockClinica = {
   data: { nome: "Clínica Teste", cnpj: "12345678000100", telefone: null, telefone2: null, telefone3: null, endereco: null, cidade: null, estado: null },
@@ -158,6 +163,10 @@ vi.mock("@/lib/supabase/server", () => ({
             };
           }
           // configuracoes
+          if (cols === "chave, valor, user_id") {
+            const p = Promise.resolve({ data: [] });
+            return { in: () => ({ in: () => p, then: p.then.bind(p) }), then: p.then.bind(p) };
+          }
           return Promise.resolve(mockConfigData);
         },
       }),
