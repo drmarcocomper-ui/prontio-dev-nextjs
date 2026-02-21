@@ -24,17 +24,15 @@ export async function generateMetadata({
   return { title: data?.nome ? `Vasectomia - ${data.nome}` : "Vasectomia" };
 }
 
-function BlankField({ label, width = "flex-1" }: { label: string; width?: string }) {
+function Field({ label, value, className = "" }: { label: string; value?: string; className?: string }) {
   return (
-    <div className={`${width} flex items-end gap-1`}>
-      <span className="shrink-0 text-xs font-semibold">{label}:</span>
-      <span className="flex-1 border-b border-gray-400" />
-    </div>
+    <span className={`inline ${className}`}>
+      {label}: {value
+        ? <span className="border-b border-gray-900 px-1">{value}</span>
+        : <span className="inline-block min-w-[120px] border-b border-gray-900" />
+      }
+    </span>
   );
-}
-
-function BlankLine() {
-  return <div className="w-full border-b border-gray-400 py-2" />;
 }
 
 export default async function VasectomiaPage({
@@ -87,7 +85,7 @@ export default async function VasectomiaPage({
     cfg[c.chave] = c.valor;
   });
 
-  const idade = paciente.data_nascimento ? calcAge(paciente.data_nascimento) : null;
+  const idade = paciente.data_nascimento ? String(calcAge(paciente.data_nascimento)) : "";
   const estadoCivil = paciente.estado_civil
     ? (ESTADO_CIVIL_LABELS[paciente.estado_civil] ?? paciente.estado_civil)
     : "";
@@ -95,7 +93,7 @@ export default async function VasectomiaPage({
   const telefoneFormatado = paciente.telefone ? formatPhone(paciente.telefone) : "";
   const enderecoCompleto = [
     paciente.endereco,
-    paciente.numero ? `n\u00BA ${paciente.numero}` : null,
+    paciente.numero ? `nº ${paciente.numero}` : null,
     paciente.bairro,
     paciente.cidade,
     paciente.estado,
@@ -105,6 +103,8 @@ export default async function VasectomiaPage({
 
   const hoje = new Date();
   const dataHoje = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
+
+  const nomeMedico = cfg.nome_profissional ?? "_______________";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -136,160 +136,145 @@ export default async function VasectomiaPage({
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
         <div className="print-page p-6 sm:p-8">
           {/* Cabeçalho do formulário */}
-          <div className="mb-4 border border-gray-300">
-            <div className="flex items-center justify-between border-b border-gray-300 px-3 py-1.5">
-              <span className="text-xs font-bold">FRM.TURO.047</span>
-              <span className="text-xs">Data: 07/2022</span>
-              <span className="text-xs">Revisão: 00</span>
-              <span className="text-xs">Folha: 1/2</span>
+          <div className="mb-6 text-center">
+            <p className="text-xs font-bold">FRM.TURO.047</p>
+            <h1 className="mt-1 text-sm font-bold uppercase">
+              Consentimento Informado Livre e Esclarecido
+            </h1>
+            <div className="mt-1 flex items-center justify-center gap-6 text-xs">
+              <span>DATA: 29/05/2015</span>
             </div>
-            <div className="px-3 py-2 text-center">
-              <h1 className="text-sm font-bold uppercase leading-tight">
-                Consentimento Informado Livre e Esclarecido &mdash; Vasectomia
-              </h1>
-              <p className="text-xs font-semibold">Anexo II</p>
+            <div className="flex items-center justify-center gap-6 text-xs">
+              <span>REV 001</span>
+            </div>
+            <div className="flex items-center justify-center gap-6 text-xs">
+              <span>FL: 1/2</span>
             </div>
           </div>
 
+          <h2 className="mb-4 text-sm font-bold">VASECTOMIA &ndash; ANEXO II</h2>
+
           {/* Dados do paciente */}
-          <div className="space-y-2 text-xs leading-relaxed">
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <div className="flex items-end gap-1">
-                <span className="font-semibold">Paciente:</span>
-                <span className="border-b border-gray-400 px-1">{paciente.nome}</span>
-              </div>
-              <div className="flex items-end gap-1">
-                <span className="font-semibold">Idade:</span>
-                <span className="border-b border-gray-400 px-1">{idade ?? ""}</span>
-              </div>
+          <div className="space-y-3 text-xs leading-loose">
+            <div>
+              <span className="font-semibold">Paciente:</span>{" "}
+              <span className="border-b border-gray-900 px-1">{paciente.nome}</span>
             </div>
 
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <BlankField label="Nacionalidade" />
-              <div className="flex items-end gap-1">
-                <span className="font-semibold">Estado Civil:</span>
-                <span className="border-b border-gray-400 px-1">{estadoCivil}</span>
-              </div>
-              <BlankField label="Profiss\u00E3o" />
+            <div className="flex flex-wrap gap-x-6">
+              <Field label="Idade" value={idade} />
+              <Field label="Estado Civil" value={estadoCivil} />
+              <Field label="Nacionalidade" />
             </div>
 
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <div className="flex items-end gap-1">
-                <span className="font-semibold">CPF:</span>
-                <span className="border-b border-gray-400 px-1">{cpfFormatado}</span>
-              </div>
-              <div className="flex items-end gap-1">
-                <span className="font-semibold">Identidade/RG:</span>
-                <span className="border-b border-gray-400 px-1">{paciente.rg ?? ""}</span>
-              </div>
+            <div className="flex flex-wrap gap-x-6">
+              <Field label="Identidade" value={paciente.rg ?? ""} />
+              <Field label="CPF nº" value={cpfFormatado} />
+              <Field label="Profissão" />
             </div>
 
-            <div className="flex items-end gap-1">
-              <span className="font-semibold">Endere\u00E7o:</span>
-              <span className="flex-1 border-b border-gray-400 px-1">{enderecoCompleto}</span>
+            <div>
+              <span className="font-semibold">Endereço:</span>{" "}
+              <span className="border-b border-gray-900 px-1">{enderecoCompleto || ""}</span>
             </div>
 
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <div className="flex items-end gap-1">
-                <span className="font-semibold">Telefone:</span>
-                <span className="border-b border-gray-400 px-1">{telefoneFormatado}</span>
+            <div className="flex flex-wrap gap-x-6">
+              <Field label="Telefone" value={telefoneFormatado} />
+              <span>
+                Endereço Eletrônico:{" "}
+                <span className="border-b border-gray-900 px-1">{paciente.email ?? ""}</span>
+              </span>
+            </div>
+
+            <div>
+              <Field label="Número de Filhos vivos" />
+            </div>
+
+            <div>
+              <span className="font-semibold">Nome e Idade dos Filhos:</span>
+              <span className="inline-block w-full border-b border-gray-900" />
+            </div>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="flex items-end gap-1">
+                <span>{n})</span>
+                <span className="flex-1 border-b border-gray-900" />
               </div>
-              <div className="flex items-end gap-1">
-                <span className="font-semibold">Endere\u00E7o Eletr\u00F4nico:</span>
-                <span className="border-b border-gray-400 px-1">{paciente.email ?? ""}</span>
-              </div>
+            ))}
+
+            <div className="mt-2 flex flex-wrap gap-x-6">
+              <span className="w-full">
+                Nome do cônjuge/convivente:{" "}
+                <span className="inline-block min-w-[200px] border-b border-gray-900" />
+              </span>
             </div>
 
-            <div className="flex items-end gap-1">
-              <span className="font-semibold">N\u00FAmero de filhos vivos:</span>
-              <span className="w-16 border-b border-gray-400" />
-            </div>
-
-            {/* Filhos */}
-            <div className="mt-1 space-y-1">
-              <p className="font-semibold">Nomes e idades dos filhos:</p>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <div key={n} className="flex items-end gap-1 pl-2">
-                  <span className="shrink-0">{n}.</span>
-                  <span className="flex-1 border-b border-gray-400" />
-                </div>
-              ))}
+            <div className="flex flex-wrap gap-x-6">
+              <Field label="Identidade" />
+              <Field label="CPF nº" />
+              <Field label="nº Telefone" />
             </div>
           </div>
 
           {/* Texto do consentimento */}
-          <div className="mt-4 space-y-2 text-xs leading-relaxed">
+          <div className="mt-6 space-y-3 text-xs leading-relaxed">
             <p className="text-justify">
-              Declaro, para os devidos fins, que fui devidamente esclarecido(a) pelo
-              Dr(a). <span className="font-semibold">{cfg.nome_profissional ?? "_______________"}</span> sobre
-              os seguintes pontos referentes \u00E0 cirurgia de Vasectomia a que serei submetido:
+              {'"'}Eu, abaixo assinado, autorizo o(a) Dr(a) <span className="font-semibold">{nomeMedico}</span> a
+              realizar a cirurgia de vasectomia.
             </p>
 
             <p className="text-justify">
-              <span className="font-semibold">(A)</span> A vasectomia \u00E9 um m\u00E9todo
-              contraceptivo irrevers\u00EDvel. Ap\u00F3s a cirurgia, em geral, n\u00E3o ser\u00E1
-              mais poss\u00EDvel gerar filhos naturalmente. A revers\u00E3o (vasovasostomia)
-              \u00E9 uma cirurgia complexa, de alto custo e sem garantia de sucesso.
+              Por este termo, em plena capacidade de discernimento, manifesto a vontade de
+              submeter-me, voluntariamente, à cirurgia de vasectomia, e ainda, declaro:
             </p>
 
             <p className="text-justify">
-              <span className="font-semibold">(B)</span> Existem outros m\u00E9todos
-              contraceptivos revers\u00EDveis dispon\u00EDveis (p\u00EDlula, DIU,
-              preservativo, etc.) que me foram apresentados como alternativas.
+              <span className="font-semibold">(A)</span> Estar ciente das regras do planejamento
+              familiar, observado o prazo mínimo de 60 (sessenta) dias entre a manifestação da
+              vontade e o ato cirúrgico, de acordo com a Lei que normatiza a cirurgia de vasectomia
+              no Brasil, sabendo que não será aceita a minha manifestação de vontade se estiver
+              sobre influência de álcool, drogas, estado emocional alterado, ou por incapacidade
+              mental temporária ou permanente;
             </p>
 
             <p className="text-justify">
-              <span className="font-semibold">(C)</span> A cirurgia consiste na
-              sec\u00E7\u00E3o e/ou oclusão dos canais deferentes, impedindo a
-              passagem dos espermatozoides. O procedimento \u00E9 realizado com
-              anestesia local, com ou sem sedação.
+              <span className="font-semibold">(B)</span> Que foi me explicado e para minha esposa,
+              que existem outros métodos alternativos de contracepção a nossa disposição,
+              exemplificando: uso de camisinha, DIU, pílulas anticoncepcionais, e todos os demais
+              métodos naturais e de barreira. Fui também informado de que a intervenção de
+              vasectomia consiste basicamente na interrupção da continuidade do(s) duto(s)
+              deferente(s). Fui informado que existe possibilidade (1 em cada 2.000 vasectomias)
+              de ocorrer recanalização espontânea, ou seja de ocorrer a passagem dos
+              espermatozoides de um ducto para o outro, permitindo assim a fertilidade com
+              possível gravidez indesejada. Esse procedimento é usualmente realizado em nível
+              ambulatorial e sob anestesia local;
             </p>
 
             <p className="text-justify">
-              <span className="font-semibold">(D)</span> Como qualquer procedimento
-              cir\u00FArgico, a vasectomia apresenta riscos, incluindo: sangramento,
-              infec\u00E7\u00E3o, dor cr\u00F4nica, hematoma, granuloma
-              esperm\u00E1tico e, raramente, recanaliza\u00E7\u00E3o espont\u00E2nea.
+              <span className="font-semibold">(C)</span> Foi salientado pelo médico que após a
+              cirurgia de vasectomia poderei voltar a ter relações sexuais após uma semana e
+              continuar a ter os mesmos cuidados para evitar filhos até que se complete 25 (vinte
+              e cinco) ejaculações e, que se tenha feito um espermograma mostrando ausência de
+              espermatozoide no ejaculado, ou seja, depois da operação eu devo fazer um
+              espermograma, mostrar ao médico e só depois de ele constatar que não tem mais
+              espermatozoide é que poderei ter relações sem qualquer forma de método para evitar
+              filhos;
             </p>
 
             <p className="text-justify">
-              <span className="font-semibold">(E)</span> A esterilidade n\u00E3o \u00E9
-              imediata. \u00C9 necess\u00E1rio realizar espermograma de controle
-              ap\u00F3s 60 dias ou 20 ejacula\u00E7\u00F5es (o que ocorrer primeiro)
-              para confirmar a aus\u00EAncia de espermatozoides. At\u00E9 a
-              confirma\u00E7\u00E3o, deve-se manter outro m\u00E9todo contraceptivo.
+              <span className="font-semibold">(D)</span> Também foi explicado que a operação de
+              vasectomia é definitiva, vou ficar infértil para o resto da minha vida e que uma
+              operação que se faz para reverter a fertilidade não é segura nem coberta pelo plano
+              de saúde;
             </p>
 
             <p className="text-justify">
-              <span className="font-semibold">(F)</span> A vasectomia n\u00E3o protege
-              contra infec\u00E7\u00F5es sexualmente transmiss\u00EDveis (ISTs/AIDS).
-              O uso de preservativo continua sendo recomendado para preven\u00E7\u00E3o.
+              <span className="font-semibold">(E)</span> Que recebi do médico as orientações sobre
+              os cuidados que devo seguir para alcançar o melhor resultado, estando ciente de que
+              nessa cirurgia poderão ocorrer complicações Intra-operatórias: Hemorragias e
+              queimaduras por bisturi elétrico; E pós-operatórias: Seromas, hematomas (sangramento
+              interno), manchas escuras no escroto e/ou pênis (equimoses), dor ou infecção (febre)
+              entre outras; quando{'"'}
             </p>
-
-            <p className="text-justify">
-              <span className="font-semibold">(G)</span> Declaro que tive a oportunidade
-              de fazer perguntas e que todas as minhas d\u00FAvidas foram esclarecidas
-              de forma clara e satisfat\u00F3ria.
-            </p>
-
-            <p className="text-justify">
-              <span className="font-semibold">(H)</span> Declaro que li (ou me foi lido)
-              o presente termo, que compreendi seu conte\u00FAdo e que consinto
-              livremente com a realiza\u00E7\u00E3o da vasectomia.
-            </p>
-          </div>
-
-          {/* Dados do cônjuge */}
-          <div className="mt-4 space-y-2 text-xs">
-            <p className="font-semibold">Dados do c\u00F4njuge / companheiro(a):</p>
-            <div className="space-y-1 pl-2">
-              <BlankField label="Nome" />
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                <BlankField label="Identidade/RG" />
-                <BlankField label="CPF" />
-              </div>
-              <BlankField label="Telefone" />
-            </div>
           </div>
         </div>
       </div>
@@ -301,67 +286,98 @@ export default async function VasectomiaPage({
       <div className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm print:mt-0 print:rounded-none print:border-0 print:shadow-none">
         <div className="print-page p-6 sm:p-8">
           {/* Cabeçalho página 2 */}
-          <div className="mb-4 border border-gray-300">
-            <div className="flex items-center justify-between border-b border-gray-300 px-3 py-1.5">
-              <span className="text-xs font-bold">FRM.TURO.047</span>
-              <span className="text-xs">Data: 07/2022</span>
-              <span className="text-xs">Revisão: 00</span>
-              <span className="text-xs">Folha: 2/2</span>
+          <div className="mb-6 text-center">
+            <p className="text-xs font-bold">FRM.TURO.047</p>
+            <h2 className="mt-1 text-sm font-bold uppercase">
+              Consentimento Informado Livre e Esclarecido
+            </h2>
+            <div className="mt-1 flex items-center justify-center gap-6 text-xs">
+              <span>DATA: 29/05/2015</span>
             </div>
-            <div className="px-3 py-2 text-center">
-              <h2 className="text-sm font-bold uppercase leading-tight">
-                Consentimento Informado Livre e Esclarecido &mdash; Vasectomia
-              </h2>
-              <p className="text-xs font-semibold">Anexo II (continua\u00E7\u00E3o)</p>
+            <div className="flex items-center justify-center gap-6 text-xs">
+              <span>REV 001</span>
+            </div>
+            <div className="flex items-center justify-center gap-6 text-xs">
+              <span>FL: 2/2</span>
             </div>
           </div>
 
-          {/* Autorização */}
+          {/* Continuação do texto */}
           <div className="space-y-3 text-xs leading-relaxed">
             <p className="text-justify">
-              Diante do exposto, <span className="font-semibold">AUTORIZO</span> o(a)
-              Dr(a). <span className="font-semibold">{cfg.nome_profissional ?? "_______________"}</span> e
-              sua equipe a realizar a cirurgia de <span className="font-semibold">VASECTOMIA</span>,
-              estando ciente de todos os riscos, benef\u00EDcios e alternativas que me
-              foram explicados.
+              {'"'}então deverei informá-lo, imediatamente sobre essas possíveis
+              alterações/problemas que porventura possam surgir, assim como, retornar ao
+              consultório/hospital nos dias determinados por ele;
             </p>
-          </div>
 
-          {/* Dados cirurgia */}
-          <div className="mt-4 space-y-1 text-xs">
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <BlankField label="Data da Cirurgia" />
-              <BlankField label="Data da Alta" />
-              <BlankField label="Reg. Hospitalar" />
-            </div>
+            <p className="text-justify">
+              <span className="font-semibold">(F)</span> Que em toda intervenção existe um risco
+              excepcional de mortalidade derivado do ato cirúrgico e da situação vital de cada
+              paciente; que se no momento do ato cirúrgico surgir algum imprevisto, a equipe médica
+              poderá variar a técnica cirúrgica programada;
+            </p>
+
+            <p className="text-justify">
+              <span className="font-semibold">(G)</span> Que na vigência da sociedade conjugal a
+              realização dessa intervenção cirúrgica dependerá do consentimento expresso de ambos
+              os cônjuges;
+            </p>
+
+            <p className="text-justify">
+              <span className="font-semibold">(H)</span> Que foi esclarecido ser do meu livre
+              arbítrio a decisão a ser tomada, bem como que poderei desistir de realizar o
+              procedimento cirúrgico a qualquer momento, sem necessidade de apresentar explicações.
+            </p>
+
+            <p className="text-justify">
+              Pelo presente, DECLARO que entendi todas as informações, orientações e explicações
+              prestadas e repassadas pelo médico, em linguagem simples e clara, e que minhas
+              dúvidas foram plenamente esclarecidas. Assim sendo, declaro-me satisfeito com as
+              informações, orientações e explicações recebidas, compreendendo o alcance e os
+              riscos da cirurgia de vasectomia.
+            </p>
+
+            <p className="text-justify">
+              Por tal razão, manifesto expressamente minha concordância e consentimento para
+              realização do procedimento acima descrito.{'"'}
+            </p>
           </div>
 
           {/* Local e data */}
-          <div className="mt-6 text-xs">
-            <p>
-              {cfg.cidade || "_______________"}, {dataHoje}
-            </p>
+          <div className="mt-8 flex flex-wrap gap-x-16 text-xs">
+            <div>
+              <span className="border-b border-gray-900 px-1">{cfg.cidade || "_______________"}/ES</span>
+              <br />
+              <span className="text-gray-500">Cidade</span>
+            </div>
+            <div>
+              <span className="border-b border-gray-900 px-1">{dataHoje}</span>
+              <br />
+              <span className="text-gray-500">Data</span>
+            </div>
           </div>
 
           {/* Assinaturas */}
           <div className="mt-10 space-y-8 text-xs">
-            {/* Paciente */}
-            <div className="flex flex-col items-center">
-              <div className="w-80 border-b border-gray-900" />
-              <p className="mt-1 font-semibold">Assinatura do Paciente</p>
-              <p className="text-gray-600">{paciente.nome}</p>
-            </div>
-
-            {/* Cônjuge */}
-            <div className="flex flex-col items-center">
-              <div className="w-80 border-b border-gray-900" />
-              <p className="mt-1 font-semibold">Assinatura do C\u00F4njuge / Companheiro(a)</p>
+            {/* Paciente e Cônjuge */}
+            <div className="grid grid-cols-2 gap-8">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-full border-b border-gray-900" />
+                <p className="mt-1 font-semibold">Assinatura do paciente</p>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <div className="w-full border-b border-gray-900" />
+                <p className="mt-1 font-semibold">Assinatura do cônjuge*</p>
+                <p className="mt-0.5 text-[10px] text-gray-500">
+                  * afirmar de próprio punho, se for o caso {'"'}não há{'"'}.
+                </p>
+              </div>
             </div>
 
             {/* Médico */}
-            <div className="flex flex-col items-center">
-              <div className="w-80 border-b border-gray-900" />
-              <p className="mt-1 font-semibold">M\u00E9dico Respons\u00E1vel</p>
+            <div className="flex flex-col items-start">
+              <div className="w-64 border-b border-gray-900" />
+              <p className="mt-1 font-semibold">Assinatura/CRM do Médico</p>
               {cfg.nome_profissional && (
                 <p className="text-gray-600">{cfg.nome_profissional}</p>
               )}
@@ -372,20 +388,42 @@ export default async function VasectomiaPage({
 
             {/* Testemunhas */}
             <div className="grid grid-cols-2 gap-8">
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center text-center">
                 <div className="w-full border-b border-gray-900" />
-                <p className="mt-1 font-semibold">Testemunha 1</p>
-                <BlankLine />
-                <p className="text-[10px] text-gray-500">Nome / RG</p>
+                <p className="mt-1 font-semibold">Testemunha (1)</p>
               </div>
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center text-center">
                 <div className="w-full border-b border-gray-900" />
-                <p className="mt-1 font-semibold">Testemunha 2</p>
-                <BlankLine />
-                <p className="text-[10px] text-gray-500">Nome / RG</p>
+                <p className="mt-1 font-semibold">Testemunha (2)</p>
               </div>
             </div>
           </div>
+
+          {/* Cópias anexas */}
+          <div className="mt-8 text-xs">
+            <p className="font-semibold">Cópias anexas:</p>
+            <ul className="mt-1 list-inside list-disc space-y-0.5">
+              <li>Certidão de Casamento/Declaração de União Estável (quando aplicável);</li>
+              <li>Carteira de Identidade;</li>
+              <li>Certidões de Nascimento dos filhos.</li>
+            </ul>
+          </div>
+
+          {/* Dados finais */}
+          <div className="mt-6 space-y-2 text-xs">
+            <div className="flex flex-wrap gap-x-8">
+              <span>Data da Consulta: <span className="border-b border-gray-900 px-1">{dataHoje}</span></span>
+              <span>Data da Cirurgia: ___/___/___</span>
+            </div>
+            <div className="flex flex-wrap gap-x-8">
+              <span>Data da Alta: ___/___/___</span>
+              <Field label="Reg. Hospitalar" />
+            </div>
+          </div>
+
+          <p className="mt-4 text-[10px] text-gray-500">
+            Reconhecer firma da assinatura do paciente e seu cônjuge nas três vias.
+          </p>
         </div>
       </div>
     </div>
