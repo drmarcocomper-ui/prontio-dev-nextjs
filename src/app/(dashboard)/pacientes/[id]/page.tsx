@@ -172,7 +172,7 @@ export default async function PacienteDetalhesPage({
         </div>
 
         <div className="flex items-center gap-2">
-          {(isMedico || isGestor(ctx.papel)) && (
+          {(isMedico || isGestor(ctx.papel)) && paciente.sexo !== "feminino" && (
             <Link
               href={`/pacientes/${paciente.id}/vasectomia`}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
