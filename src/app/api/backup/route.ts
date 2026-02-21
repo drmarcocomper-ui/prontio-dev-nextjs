@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getClinicaAtual, getMedicoIdsDaClinica, isGestor } from "@/lib/clinica";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function GET() {
   const supabase = await createClient();
@@ -45,17 +46,21 @@ export async function GET() {
 
   const queries = [
     // Tables filtered by medico_id (clinic-wide)
-    ...["pacientes", "prontuarios", "receitas", "solicitacoes_exames", "atestados", "encaminhamentos"].map(
-      (table) => ({ table, promise: supabase.from(table).select("*").in("medico_id", medicoIds) }),
-    ),
+    { table: "pacientes", promise: supabase.from("pacientes").select("id, medico_id, nome, cpf, rg, data_nascimento, sexo, estado_civil, telefone, email, cep, endereco, numero, complemento, bairro, cidade, estado, convenio, observacoes, created_at").in("medico_id", medicoIds) },
+    { table: "prontuarios", promise: supabase.from("prontuarios").select("id, paciente_id, medico_id, data, tipo, cid, queixa_principal, historia_doenca, exame_fisico, hipotese_diagnostica, conduta, observacoes, created_at").in("medico_id", medicoIds) },
+    { table: "receitas", promise: supabase.from("receitas").select("id, paciente_id, medico_id, data, tipo, medicamentos, observacoes, created_at").in("medico_id", medicoIds) },
+    { table: "solicitacoes_exames", promise: supabase.from("solicitacoes_exames").select("id, paciente_id, medico_id, data, tipo, exames, indicacao_clinica, operadora, numero_carteirinha, observacoes, created_at").in("medico_id", medicoIds) },
+    { table: "atestados", promise: supabase.from("atestados").select("id, paciente_id, medico_id, data, tipo, conteudo, cid, dias_afastamento, observacoes, created_at").in("medico_id", medicoIds) },
+    { table: "encaminhamentos", promise: supabase.from("encaminhamentos").select("id, paciente_id, medico_id, data, profissional_destino, especialidade, telefone_profissional, motivo, observacoes, created_at").in("medico_id", medicoIds) },
     // Tables filtered by clinica_id
-    ...["agendamentos", "transacoes", "configuracoes", "horarios_profissional"].map(
-      (table) => ({ table, promise: supabase.from(table).select("*").eq("clinica_id", ctx.clinicaId) }),
-    ),
-    // Global tables (no filter)
-    ...["medicamentos", "catalogo_exames", "catalogo_profissionais"].map(
-      (table) => ({ table, promise: supabase.from(table).select("*") }),
-    ),
+    { table: "agendamentos", promise: supabase.from("agendamentos").select("id, paciente_id, clinica_id, data, hora_inicio, hora_fim, tipo, status, valor, observacoes, created_at").eq("clinica_id", ctx.clinicaId) },
+    { table: "transacoes", promise: supabase.from("transacoes").select("id, clinica_id, tipo, categoria, descricao, valor, data, paciente_id, forma_pagamento, status, observacoes, created_at").eq("clinica_id", ctx.clinicaId) },
+    { table: "configuracoes", promise: supabase.from("configuracoes").select("id, chave, valor, clinica_id, user_id").eq("clinica_id", ctx.clinicaId) },
+    { table: "horarios_profissional", promise: supabase.from("horarios_profissional").select("id, clinica_id, user_id, dia_semana, ativo, hora_inicio, hora_fim, intervalo_inicio, intervalo_fim, duracao_consulta").eq("clinica_id", ctx.clinicaId) },
+    // Global catalog tables
+    { table: "medicamentos", promise: supabase.from("medicamentos").select("id, nome, posologia, quantidade, via_administracao") },
+    { table: "catalogo_exames", promise: supabase.from("catalogo_exames").select("id, nome, codigo_tuss") },
+    { table: "catalogo_profissionais", promise: supabase.from("catalogo_profissionais").select("id, nome, especialidade, telefone") },
   ];
 
   const results = await Promise.all(queries.map((q) => q.promise));
@@ -77,6 +82,14 @@ export async function GET() {
     tables: backup,
     ...(errors.length > 0 && { errors }),
   };
+
+  void logAuditEvent({
+    userId: user.id,
+    clinicaId: ctx.clinicaId,
+    acao: "exportar",
+    recurso: "backup",
+    detalhes: { tabelas: Object.keys(backup), erros: errors.length },
+  });
 
   const json = JSON.stringify(payload, null, 2);
   const date = new Date().toISOString().split("T")[0];

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { uuidValido } from "@/lib/validators";
 import { ReceitaForm } from "./receita-form";

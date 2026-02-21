@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { DeleteButton } from "@/components/delete-button";
-import { getClinicaAtual } from "@/lib/clinica";
 import { excluirProntuario } from "../actions";
 import { type Prontuario, TIPO_LABELS, formatDateLong, getInitials } from "../types";
 import { formatDateTime } from "@/lib/format";

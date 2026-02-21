@@ -46,8 +46,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: [
         "localhost:3000",
-        "prontio.com.br",
-        "www.prontio.com.br",
+        "https://prontio.com.br",
+        "https://www.prontio.com.br",
         ...(codespaceOrigin ? [codespaceOrigin] : []),
       ],
     },

@@ -300,9 +300,7 @@ export async function atualizarStatusAgendamento(
     status_novo: novoStatus,
     user_id: ctx.userId,
   });
-  if (logError) {
-    console.error("Falha ao inserir log de auditoria:", logError.message);
-  }
+  void logError;
 
   revalidatePath("/agenda");
   revalidatePath("/", "page");

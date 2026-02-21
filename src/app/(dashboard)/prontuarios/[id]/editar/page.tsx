@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getClinicaAtual } from "@/lib/clinica";
 import { ProntuarioForm } from "../../novo/prontuario-form";
 import { type Prontuario } from "../../types";
 import { UUID_RE } from "@/lib/validators";

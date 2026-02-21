@@ -30,8 +30,7 @@ export async function getUserIdByEmail(
   let page = 1;
   const perPage = 50;
 
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  for (;;) {
     const { data } = await admin.auth.admin.listUsers({ page, perPage });
     const users = data?.users ?? [];
     if (users.length === 0) return null;
@@ -58,8 +57,7 @@ export async function getAuthEmailMap(
   let page = 1;
   const perPage = 50;
 
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  for (;;) {
     const { data } = await admin.auth.admin.listUsers({ page, perPage });
     const users = data?.users ?? [];
     if (users.length === 0) break;
