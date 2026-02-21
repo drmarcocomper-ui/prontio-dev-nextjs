@@ -246,9 +246,7 @@ describe("getHorarioConfig", () => {
       };
     });
 
-    const mockSupabase = { from: fromSpy } as unknown as Awaited<
-      ReturnType<typeof createClient>
-    >;
+    const mockSupabase = { from: fromSpy } as unknown as SupabaseServer;
 
     // First call
     const config1 = await getHorarioConfig(mockSupabase, clinicaId, userId);
@@ -357,9 +355,7 @@ describe("invalidarCacheHorario", () => {
       };
     });
 
-    const mockSupabase = { from: fromSpy } as unknown as Awaited<
-      ReturnType<typeof createClient>
-    >;
+    const mockSupabase = { from: fromSpy } as unknown as SupabaseServer;
 
     // Populate cache
     await getHorarioConfig(mockSupabase, clinicaId, userId);
@@ -389,9 +385,7 @@ describe("invalidarCacheHorario", () => {
       }),
     }));
 
-    const mockSupabase = { from: fromSpy } as unknown as Awaited<
-      ReturnType<typeof createClient>
-    >;
+    const mockSupabase = { from: fromSpy } as unknown as SupabaseServer;
 
     // Populate clinic cache (no userId)
     await getHorarioConfig(mockSupabase, clinicaId);

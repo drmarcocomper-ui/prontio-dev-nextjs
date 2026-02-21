@@ -43,7 +43,7 @@ vi.mock("@/lib/supabase/server", () => ({
 import DashboardLayout from "./layout";
 
 async function renderAsync(ui: React.ReactElement) {
-  const resolved = await (ui.type as (props: Record<string, unknown>) => Promise<React.ReactElement>)(ui.props);
+  const resolved = await (ui.type as (props: Record<string, unknown>) => Promise<React.ReactElement>)(ui.props as Record<string, unknown>);
   return render(resolved);
 }
 

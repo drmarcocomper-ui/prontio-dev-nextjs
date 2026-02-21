@@ -50,7 +50,7 @@ describe("AgendamentoForm", () => {
   });
 
   it("renderiza todos os campos do formulário", () => {
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByText(/Paciente/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Data/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Início/)).toBeInTheDocument();
@@ -59,12 +59,12 @@ describe("AgendamentoForm", () => {
   });
 
   it("preenche a data com o valor padrão", () => {
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByLabelText(/Data/)).toHaveValue("2024-06-15");
   });
 
   it("renderiza as opções de tipo", () => {
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     const select = screen.getByLabelText(/Tipo/);
     expect(select).toBeInTheDocument();
     expect(screen.getByText("Consulta")).toBeInTheDocument();
@@ -72,42 +72,42 @@ describe("AgendamentoForm", () => {
   });
 
   it("renderiza o botão Agendar", () => {
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByRole("button", { name: "Agendar" })).toBeInTheDocument();
   });
 
   it("link Cancelar aponta para agenda com data", () => {
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     const link = screen.getByText("Cancelar").closest("a");
     expect(link).toHaveAttribute("href", "/agenda?data=2024-06-15");
   });
 
   it("campos obrigatórios estão marcados", () => {
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByLabelText(/Data/)).toBeRequired();
     expect(screen.getByLabelText(/Início/)).toBeRequired();
   });
 
   it("renderiza o PatientSearch", () => {
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByTestId("patient-search")).toBeInTheDocument();
   });
 
   it("exibe mensagem de erro quando state.error está definido", () => {
     formState.current = { error: "Erro ao criar agendamento. Tente novamente." };
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByText("Erro ao criar agendamento. Tente novamente.")).toBeInTheDocument();
   });
 
   it("exibe erro de campo quando fieldErrors está definido", () => {
     formState.current = { fieldErrors: { paciente_id: "Selecione um paciente." } };
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     expect(screen.getByText("Selecione um paciente.")).toBeInTheDocument();
   });
 
   it("desabilita botão e exibe spinner quando isPending", () => {
     formPending.current = true;
-    render(<AgendamentoForm defaultDate="2024-06-15" medicoId="doc-1" />);
+    render(<AgendamentoForm defaultDate="2024-06-15" />);
     const button = screen.getByRole("button", { name: /Agendar/ });
     expect(button).toBeDisabled();
   });
@@ -116,7 +116,6 @@ describe("AgendamentoForm", () => {
   it("renderiza botão 'Salvar alterações' no modo edição", () => {
     render(
       <AgendamentoForm
-        medicoId="doc-1"
         defaults={{
           id: "ag-1",
           paciente_id: "p-1",
@@ -134,7 +133,6 @@ describe("AgendamentoForm", () => {
   it("link Cancelar aponta para o detalhe no modo edição", () => {
     render(
       <AgendamentoForm
-        medicoId="doc-1"
         defaults={{
           id: "ag-1",
           data: "2024-06-15",
@@ -149,7 +147,6 @@ describe("AgendamentoForm", () => {
   it("preenche campos com defaults no modo edição", () => {
     render(
       <AgendamentoForm
-        medicoId="doc-1"
         defaults={{
           id: "ag-1",
           paciente_id: "p-1",
@@ -169,7 +166,6 @@ describe("AgendamentoForm", () => {
   it("inclui hidden input com id no modo edição", () => {
     const { container } = render(
       <AgendamentoForm
-        medicoId="doc-1"
         defaults={{
           id: "ag-1",
           data: "2024-06-15",
