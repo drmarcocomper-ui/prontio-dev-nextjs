@@ -67,6 +67,7 @@ const navItems = [
   { label: "Pacientes", href: "/pacientes" },
   { label: "Financeiro", href: "/financeiro" },
   { label: "Relatórios", href: "/relatorios/financeiro" },
+  { label: "Auditoria", href: "/auditoria" },
   { label: "Produtividade", href: "/relatorios/produtividade" },
   { label: "Configurações", href: "/configuracoes" },
 ];
@@ -83,7 +84,7 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renderiza todos os 7 links de navegação quando papel é superadmin", () => {
+  it("renderiza todos os 8 links de navegação quando papel é superadmin", () => {
     render(<Sidebar {...defaultProps} papel={"superadmin" as const} />);
     for (const item of navItems) {
       expect(screen.getByText(item.label)).toBeInTheDocument();
