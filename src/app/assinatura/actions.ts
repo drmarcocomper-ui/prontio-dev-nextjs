@@ -93,7 +93,7 @@ export async function criarCheckoutAssinatura(
     line_items: [{
       price: priceId,
       quantity: numProfissionais,
-      adjustable_quantity: { enabled: true, minimum: 1 },
+      adjustable_quantity: { enabled: true, minimum: numProfissionais },
     }],
     success_url: `${siteUrl}/configuracoes?tab=assinatura&checkout=success`,
     cancel_url: `${siteUrl}/configuracoes?tab=assinatura`,

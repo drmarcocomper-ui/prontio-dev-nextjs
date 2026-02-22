@@ -416,7 +416,7 @@ export async function iniciarCheckout(): Promise<{ error?: string }> {
     line_items: [{
       price: priceId,
       quantity: numProfissionais,
-      adjustable_quantity: { enabled: true, minimum: 1 },
+      adjustable_quantity: { enabled: true, minimum: numProfissionais },
     }],
     ...(trialEndUnix ? { subscription_data: { trial_end: trialEndUnix } } : {}),
     success_url: `${siteUrl}/onboarding/sucesso?session_id={CHECKOUT_SESSION_ID}`,

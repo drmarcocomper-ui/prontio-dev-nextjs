@@ -53,11 +53,15 @@ export default async function AssinaturaPage() {
   const numProfissionais = Math.max(1, profCount ?? 0);
 
   // Determinar estado para a UI
-  let estado: "trial_expirado" | "past_due" | "canceled" = "trial_expirado";
+  let estado: "trial_expirado" | "past_due" | "canceled" | "unpaid" | "incomplete" = "trial_expirado";
   if (status === "past_due") {
     estado = "past_due";
   } else if (status === "canceled") {
     estado = "canceled";
+  } else if (status === "unpaid") {
+    estado = "unpaid";
+  } else if (status === "incomplete") {
+    estado = "incomplete";
   }
 
   return (
