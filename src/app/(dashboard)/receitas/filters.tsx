@@ -31,7 +31,6 @@ export function ReceitaFilters({ currentTipo }: { currentTipo: string }) {
       >
         <option value="">Todos os tipos</option>
         <option value="simples">Simples</option>
-        <option value="especial">Especial</option>
         <option value="controle_especial">Controle Especial</option>
       </select>
 

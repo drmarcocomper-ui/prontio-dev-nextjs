@@ -225,7 +225,7 @@ describe("atualizarReceita", () => {
 
   it("redireciona após atualização com sucesso", async () => {
     await expect(
-      atualizarReceita({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", tipo: "especial", medicamentos: "Ritalina 10mg" }))
+      atualizarReceita({}, makeFormData({ id: "00000000-0000-0000-0000-000000000004", paciente_id: "00000000-0000-0000-0000-000000000001", data: "2024-06-15", tipo: "controle_especial", medicamentos: "Ritalina 10mg" }))
     ).rejects.toThrow("REDIRECT");
     expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
       id: "00000000-0000-0000-0000-000000000004",

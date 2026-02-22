@@ -21,13 +21,13 @@ describe("ReceitaFilters", () => {
     const select = screen.getByLabelText("Filtrar por tipo");
     expect(select).toBeInTheDocument();
     const options = select.querySelectorAll("option");
-    expect(options).toHaveLength(4); // Todos os tipos + 3 tipos
+    expect(options).toHaveLength(3); // Todos os tipos + 2 tipos
   });
 
   it("seleciona valor correto baseado em currentTipo", () => {
-    render(<ReceitaFilters currentTipo="especial" />);
+    render(<ReceitaFilters currentTipo="controle_especial" />);
     const select = screen.getByLabelText("Filtrar por tipo") as HTMLSelectElement;
-    expect(select.value).toBe("especial");
+    expect(select.value).toBe("controle_especial");
   });
 
   it("navega ao selecionar um tipo", async () => {

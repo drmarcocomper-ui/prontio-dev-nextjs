@@ -105,39 +105,140 @@ export default async function ImprimirReceitaPage({
         <PrintButton />
       </div>
 
-      {/* Receita */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 print:rounded-none print:border-0 print:shadow-none print:p-[20mm]">
-        {/* Header Consultório */}
-        <div className="border-b border-gray-300 pb-6 text-center">
-          {cfg.nome_consultorio && (
-            <h1 className="text-xl font-bold text-gray-900">
-              {cfg.nome_consultorio}
-            </h1>
-          )}
-          {cfg.endereco_consultorio && (
-            <p className="mt-1 text-sm text-gray-600">
-              {cfg.endereco_consultorio}
+      {r.tipo === "controle_especial" ? (
+        <ReceitaControleEspecialLayout r={r} cfg={cfg} />
+      ) : (
+        <ReceitaSimplesLayout r={r} cfg={cfg} />
+      )}
+    </div>
+  );
+}
+
+function ReceitaSimplesLayout({
+  r,
+  cfg,
+}: {
+  r: ReceitaImpressao;
+  cfg: Record<string, string>;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 print:rounded-none print:border-0 print:shadow-none print:p-[20mm]">
+      {/* Header Consultório */}
+      <div className="border-b border-gray-300 pb-6 text-center">
+        {cfg.nome_consultorio && (
+          <h1 className="text-xl font-bold text-gray-900">
+            {cfg.nome_consultorio}
+          </h1>
+        )}
+        {cfg.endereco_consultorio && (
+          <p className="mt-1 text-sm text-gray-600">
+            {cfg.endereco_consultorio}
+          </p>
+        )}
+        {cfg.telefone_consultorio && (
+          <p className="text-sm text-gray-600">
+            Tel: {cfg.telefone_consultorio}
+          </p>
+        )}
+      </div>
+
+      {/* Tipo da receita */}
+      <div className="mt-6 text-center">
+        <h2 className="text-lg font-bold uppercase tracking-wider text-gray-900">
+          {TIPO_LABELS_IMPRESSAO[r.tipo] ?? r.tipo}
+        </h2>
+        {r.data && (
+          <p className="mt-1 text-sm text-gray-500">{formatDateMedium(r.data)}</p>
+        )}
+      </div>
+
+      {/* Dados do Paciente */}
+      <div className="mt-6 rounded-lg border border-gray-200 p-4">
+        <p className="text-sm text-gray-700">
+          <span className="font-semibold">Paciente:</span> {r.pacientes.nome}
+        </p>
+        {r.pacientes.cpf && (
+          <p className="mt-1 text-sm text-gray-700">
+            <span className="font-semibold">CPF:</span>{" "}
+            {formatCPF(r.pacientes.cpf)}
+          </p>
+        )}
+      </div>
+
+      {/* Medicamentos */}
+      <div className="mt-6">
+        <h3 className="mb-4 border-b border-gray-200 pb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+          Prescrição
+        </h3>
+        <MedicamentosFormatted text={r.medicamentos} />
+      </div>
+
+      {/* Observações */}
+      {r.observacoes && (
+        <div className="mt-6">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Observações
+          </h3>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+            {r.observacoes}
+          </p>
+        </div>
+      )}
+
+      {/* Assinatura */}
+      <div className="mt-16 flex flex-col items-center">
+        <div className="w-72 border-b border-gray-900" />
+        <div className="mt-3 text-center">
+          {cfg.nome_profissional && (
+            <p className="text-sm font-bold text-gray-900">
+              {cfg.nome_profissional}
             </p>
           )}
-          {cfg.telefone_consultorio && (
-            <p className="text-sm text-gray-600">
-              Tel: {cfg.telefone_consultorio}
+          {cfg.crm && (
+            <p className="mt-0.5 text-sm font-medium text-gray-700">
+              CRM {cfg.crm}
             </p>
           )}
-        </div>
-
-        {/* Tipo da receita */}
-        <div className="mt-6 text-center">
-          <h2 className="text-lg font-bold uppercase tracking-wider text-gray-900">
-            {TIPO_LABELS_IMPRESSAO[r.tipo] ?? r.tipo}
-          </h2>
-          {r.data && (
-            <p className="mt-1 text-sm text-gray-500">{formatDateMedium(r.data)}</p>
+          {cfg.especialidade && (
+            <p className="mt-0.5 text-xs text-gray-500">{cfg.especialidade}</p>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
 
-        {/* Dados do Paciente */}
-        <div className="mt-6 rounded-lg border border-gray-200 p-4">
+function ReceitaControleEspecialLayout({
+  r,
+  cfg,
+}: {
+  r: ReceitaImpressao;
+  cfg: Record<string, string>;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 print:rounded-none print:border-0 print:shadow-none print:p-[20mm]">
+      {/* Header */}
+      <div className="border-b-2 border-gray-900 pb-4 text-center">
+        <h1 className="text-lg font-bold uppercase tracking-widest text-gray-900">
+          Receituário de Controle Especial
+        </h1>
+        <p className="mt-1 text-xs text-gray-500">
+          1ª Via &ndash; Retenção da Farmácia
+        </p>
+      </div>
+
+      {/* Dados do consultório */}
+      {cfg.nome_consultorio && (
+        <div className="mt-4 text-center text-sm text-gray-700">
+          <p className="font-semibold">{cfg.nome_consultorio}</p>
+          {cfg.endereco_consultorio && <p>{cfg.endereco_consultorio}</p>}
+          {cfg.telefone_consultorio && <p>Tel: {cfg.telefone_consultorio}</p>}
+        </div>
+      )}
+
+      {/* Paciente e data */}
+      <div className="mt-6 grid grid-cols-[1fr_auto] gap-4 border-b border-gray-300 pb-4">
+        <div>
           <p className="text-sm text-gray-700">
             <span className="font-semibold">Paciente:</span> {r.pacientes.nome}
           </p>
@@ -148,47 +249,116 @@ export default async function ImprimirReceitaPage({
             </p>
           )}
         </div>
-
-        {/* Medicamentos */}
-        <div className="mt-6">
-          <h3 className="mb-4 border-b border-gray-200 pb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
-            Prescrição
-          </h3>
-          <MedicamentosFormatted text={r.medicamentos} />
-        </div>
-
-        {/* Observações */}
-        {r.observacoes && (
-          <div className="mt-6">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
-              Observações
-            </h3>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-              {r.observacoes}
-            </p>
-          </div>
+        {r.data && (
+          <p className="text-sm text-gray-700">
+            <span className="font-semibold">Data:</span> {formatDateMedium(r.data)}
+          </p>
         )}
+      </div>
 
-        {/* Assinatura */}
-        <div className="mt-16 flex flex-col items-center">
-          <div className="w-72 border-b border-gray-900" />
-          <div className="mt-3 text-center">
-            {cfg.nome_profissional && (
-              <p className="text-sm font-bold text-gray-900">
-                {cfg.nome_profissional}
-              </p>
-            )}
-            {cfg.crm && (
-              <p className="mt-0.5 text-sm font-medium text-gray-700">
-                CRM {cfg.crm}
-              </p>
-            )}
-            {cfg.especialidade && (
-              <p className="mt-0.5 text-xs text-gray-500">{cfg.especialidade}</p>
-            )}
+      {/* Prescrição */}
+      <div className="mt-6">
+        <h3 className="mb-4 border-b border-gray-200 pb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+          Prescrição
+        </h3>
+        <MedicamentosFormatted text={r.medicamentos} />
+      </div>
+
+      {/* Observações */}
+      {r.observacoes && (
+        <div className="mt-6">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Observações
+          </h3>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+            {r.observacoes}
+          </p>
+        </div>
+      )}
+
+      {/* Assinatura do médico */}
+      <div className="mt-12 flex flex-col items-center">
+        <div className="w-72 border-b border-gray-900" />
+        <div className="mt-3 text-center">
+          {cfg.nome_profissional && (
+            <p className="text-sm font-bold text-gray-900">
+              {cfg.nome_profissional}
+            </p>
+          )}
+          {cfg.crm && (
+            <p className="mt-0.5 text-sm font-medium text-gray-700">
+              CRM {cfg.crm}
+            </p>
+          )}
+          {cfg.especialidade && (
+            <p className="mt-0.5 text-xs text-gray-500">{cfg.especialidade}</p>
+          )}
+        </div>
+      </div>
+
+      {/* 2ª Via */}
+      <div className="mt-8 border-t-2 border-dashed border-gray-400 pt-2 text-center">
+        <p className="text-xs font-semibold text-gray-500">
+          2ª Via &ndash; Orientação ao Paciente
+        </p>
+      </div>
+
+      {/* Identificação do Comprador */}
+      <div className="mt-8 border border-gray-300 rounded-lg p-4">
+        <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-700">
+          Identificação do Comprador
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Nome:</span>
+            <span className="flex-1 border-b border-gray-300" />
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Identidade:</span>
+            <span className="flex-1 border-b border-gray-300" />
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Órgão Emissor:</span>
+            <span className="flex-1 border-b border-gray-300" />
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Endereço:</span>
+            <span className="flex-1 border-b border-gray-300" />
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Cidade:</span>
+            <span className="flex-1 border-b border-gray-300" />
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Estado:</span>
+            <span className="w-16 border-b border-gray-300" />
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Telefone:</span>
+            <span className="flex-1 border-b border-gray-300" />
           </div>
         </div>
       </div>
+
+      {/* Identificação do Fornecedor */}
+      <div className="mt-6 border border-gray-300 rounded-lg p-4">
+        <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-700">
+          Identificação do Fornecedor
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Assinatura do Farmacêutico:</span>
+            <span className="flex-1 border-b border-gray-300" />
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Data:</span>
+            <span className="w-40 border-b border-gray-300" />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      {cfg.nome_consultorio && (
+        <div className="mt-6 border-t border-gray-200 pt-4 text-center text-xs text-gray-400">
+          <p>{cfg.nome_consultorio}</p>
+          {cfg.endereco_consultorio && <p>{cfg.endereco_consultorio}</p>}
+          {cfg.telefone_consultorio && <p>Tel: {cfg.telefone_consultorio}</p>}
+        </div>
+      )}
     </div>
   );
 }

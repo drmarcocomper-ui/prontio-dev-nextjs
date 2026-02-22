@@ -176,7 +176,7 @@ create table receitas (
   paciente_id   uuid not null references pacientes (id) on delete cascade,
   medico_id     uuid not null references auth.users(id),
   data          date,
-  tipo          text not null check (tipo in ('simples', 'especial', 'controle_especial')),
+  tipo          text not null check (tipo in ('simples', 'controle_especial')),
   medicamentos  text not null,
   observacoes   text,
   created_at    timestamptz not null default now(),

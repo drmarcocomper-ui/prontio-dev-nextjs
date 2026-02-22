@@ -83,7 +83,6 @@ describe("ReceitaForm", () => {
   it("renderiza opções de tipo", () => {
     render(<ReceitaForm />);
     expect(screen.getByText("Simples")).toBeInTheDocument();
-    expect(screen.getByText("Especial")).toBeInTheDocument();
     expect(screen.getByText("Controle Especial")).toBeInTheDocument();
   });
 

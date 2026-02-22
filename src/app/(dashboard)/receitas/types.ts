@@ -1,4 +1,4 @@
-export type ReceitaTipo = "simples" | "especial" | "controle_especial";
+export type ReceitaTipo = "simples" | "controle_especial";
 
 export interface ReceitaPaciente {
   id: string;
@@ -60,13 +60,11 @@ export { OBSERVACOES_MAX_LENGTH } from "@/lib/validators";
 
 export const TIPO_LABELS: Record<ReceitaTipo, string> = {
   simples: "Simples",
-  especial: "Especial",
   controle_especial: "Controle Especial",
 };
 
 export const TIPO_LABELS_IMPRESSAO: Record<ReceitaTipo, string> = {
   simples: "Receita Simples",
-  especial: "Receita Especial",
   controle_especial: "Receita de Controle Especial",
 };
 

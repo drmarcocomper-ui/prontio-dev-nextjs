@@ -15,12 +15,12 @@ describe("receitas/types", () => {
     expect(OBSERVACOES_MAX_LENGTH).toBe(1000);
   });
 
-  it("TIPO_LABELS tem 3 entradas", () => {
-    expect(Object.keys(TIPO_LABELS)).toHaveLength(3);
+  it("TIPO_LABELS tem 2 entradas", () => {
+    expect(Object.keys(TIPO_LABELS)).toHaveLength(2);
   });
 
-  it("TIPO_LABELS_IMPRESSAO tem 3 entradas", () => {
-    expect(Object.keys(TIPO_LABELS_IMPRESSAO)).toHaveLength(3);
+  it("TIPO_LABELS_IMPRESSAO tem 2 entradas", () => {
+    expect(Object.keys(TIPO_LABELS_IMPRESSAO)).toHaveLength(2);
   });
 
   it("TIPO_LABELS_IMPRESSAO valores começam com 'Receita'", () => {

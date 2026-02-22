@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockReceita = vi.hoisted(() => ({
   id: "550e8400-e29b-41d4-a716-446655440000",
   data: "2024-06-15",
-  tipo: "simples" as const,
+  tipo: "simples" as string,
   medicamentos: "Amoxicilina 500mg",
   observacoes: "Tomar com água",
   pacientes: { id: "p-1", nome: "Maria Silva", cpf: "52998224725" },
@@ -97,7 +97,6 @@ vi.mock("../../types", async () => {
     ...actual,
     TIPO_LABELS_IMPRESSAO: {
       simples: "Receita Simples",
-      especial: "Receita Especial",
       controle_especial: "Receita de Controle Especial",
     },
     formatDateMedium: (d: string) => d,
@@ -115,6 +114,10 @@ async function renderPage(id = "550e8400-e29b-41d4-a716-446655440000") {
 }
 
 describe("ImprimirReceitaPage", () => {
+  beforeEach(() => {
+    mockReceita.tipo = "simples";
+  });
+
   it("renderiza nome do paciente \"Maria Silva\"", async () => {
     await renderPage();
     expect(screen.getByText("Maria Silva")).toBeInTheDocument();
@@ -150,5 +153,48 @@ describe("ImprimirReceitaPage", () => {
   it("chama notFound para ID inválido", async () => {
     await expect(renderPage("invalid")).rejects.toThrow("NOT_FOUND");
     expect(mockNotFound).toHaveBeenCalled();
+  });
+
+  describe("layout controle especial", () => {
+    beforeEach(() => {
+      mockReceita.tipo = "controle_especial";
+    });
+
+    it("renderiza título 'RECEITUÁRIO DE CONTROLE ESPECIAL'", async () => {
+      await renderPage();
+      expect(screen.getByText(/Receituário de Controle Especial/i)).toBeInTheDocument();
+    });
+
+    it("renderiza indicação de retenção da farmácia", async () => {
+      await renderPage();
+      expect(screen.getByText(/1ª Via/)).toBeInTheDocument();
+      expect(screen.getByText(/Retenção da Farmácia/)).toBeInTheDocument();
+    });
+
+    it("renderiza indicação de orientação ao paciente", async () => {
+      await renderPage();
+      expect(screen.getByText(/2ª Via/)).toBeInTheDocument();
+      expect(screen.getByText(/Orientação ao Paciente/)).toBeInTheDocument();
+    });
+
+    it("renderiza seção de identificação do comprador", async () => {
+      await renderPage();
+      expect(screen.getByText("Identificação do Comprador")).toBeInTheDocument();
+      expect(screen.getByText("Identidade:")).toBeInTheDocument();
+      expect(screen.getByText("Órgão Emissor:")).toBeInTheDocument();
+    });
+
+    it("renderiza seção de identificação do fornecedor", async () => {
+      await renderPage();
+      expect(screen.getByText("Identificação do Fornecedor")).toBeInTheDocument();
+      expect(screen.getByText("Assinatura do Farmacêutico:")).toBeInTheDocument();
+    });
+
+    it("renderiza dados do paciente e profissional", async () => {
+      await renderPage();
+      expect(screen.getByText("Maria Silva")).toBeInTheDocument();
+      expect(screen.getByText("Dr. João")).toBeInTheDocument();
+      expect(screen.getByText(/CRM.*12345-SP/)).toBeInTheDocument();
+    });
   });
 });

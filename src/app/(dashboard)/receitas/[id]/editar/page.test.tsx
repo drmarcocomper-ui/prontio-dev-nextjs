@@ -55,7 +55,7 @@ import EditarReceitaPage from "./page";
 const receitaMock = {
   id: "rec-123",
   data: "2024-06-15",
-  tipo: "especial",
+  tipo: "controle_especial",
   medicamentos: "Ritalina 10mg 1x ao dia",
   observacoes: "Uso contínuo",
   pacientes: {
@@ -101,7 +101,7 @@ describe("EditarReceitaPage", () => {
     expect(defaults.paciente_id).toBe("pac-456");
     expect(defaults.paciente_nome).toBe("Maria Silva");
     expect(defaults.data).toBe("2024-06-15");
-    expect(defaults.tipo).toBe("especial");
+    expect(defaults.tipo).toBe("controle_especial");
     expect(defaults.medicamentos).toBe("Ritalina 10mg 1x ao dia");
     expect(defaults.observacoes).toBe("Uso contínuo");
   });
