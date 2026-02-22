@@ -13,6 +13,7 @@ import {
   parseMedicamentos,
 } from "../types";
 import { formatDateTime } from "@/lib/format";
+import { getClinicaAtual } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -39,6 +40,9 @@ export default async function ReceitaDetalhesPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const ctx = await getClinicaAtual();
+  if (!ctx) notFound();
+
   const supabase = await createClient();
 
   const { data: receita } = await supabase

@@ -3,9 +3,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortSelect } from "@/components/sort-select";
+import { SortableHeader } from "@/components/sortable-header";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
+import { getClinicaAtual } from "@/lib/clinica";
 import { QueryError } from "@/components/query-error";
 import { ReceitaFilters } from "./filters";
 import {
@@ -36,6 +38,9 @@ export default async function ReceitasPage({
   const sortColumn = VALID_SORT_COLUMNS.includes(ordem ?? "") ? ordem! : "data";
   const sortDir = dir === "asc" ? "asc" : "desc";
   const ascending = sortDir === "asc";
+
+  const ctx = await getClinicaAtual();
+  if (!ctx) return <QueryError title="Receitas" message="Sessão expirada." />;
 
   const supabase = await createClient();
 
@@ -123,53 +128,108 @@ export default async function ReceitasPage({
 
       {/* List */}
       {items.length > 0 ? (
-        <div className="space-y-3">
+        <>
+        {/* Mobile Cards */}
+        <div className="space-y-3 lg:hidden">
           {items.map((r) => (
             <Link
               key={r.id}
               href={`/receitas/${r.id}`}
-              className="block rounded-xl border border-gray-200 bg-white shadow-sm p-4 transition-all hover:border-gray-300 hover:shadow-md sm:p-5"
+              className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white shadow-sm p-4 transition-all hover:border-gray-300 hover:shadow-md"
             >
-              <div className="flex items-start gap-4">
-                {/* Avatar */}
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
-                  {getInitials(r.pacientes.nome)}
-                </div>
-
-                {/* Content */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="truncate text-sm font-semibold text-gray-900">
-                      {r.pacientes.nome}
-                    </p>
-                    {r.data && (
-                      <span className="shrink-0 text-xs text-gray-500">
-                        {formatDate(r.data)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Tags */}
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                      {TIPO_LABELS[r.tipo] ?? r.tipo}
-                    </span>
-                  </div>
-
-                  {/* Preview */}
-                  <p className="mt-2 line-clamp-2 text-sm text-gray-600">
-                    {r.medicamentos}
-                  </p>
-                </div>
-
-                {/* Chevron */}
-                <svg aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
+                {getInitials(r.pacientes.nome)}
               </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-medium text-gray-900">{r.pacientes.nome}</p>
+                  {r.data && <span className="shrink-0 text-xs text-gray-500">{formatDate(r.data)}</span>}
+                </div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    {TIPO_LABELS[r.tipo] ?? r.tipo}
+                  </span>
+                  <span className="truncate">{r.medicamentos}</span>
+                </div>
+              </div>
+              <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
             </Link>
           ))}
         </div>
+
+        {/* Desktop Table */}
+        <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <SortableHeader
+                  label="Paciente"
+                  column="paciente"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/receitas"
+                  searchParams={sp}
+                />
+                <SortableHeader
+                  label="Data"
+                  column="data"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/receitas"
+                  searchParams={sp}
+                />
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Tipo
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Medicamentos
+                </th>
+                <th scope="col" className="w-12">
+                  <span className="sr-only">Ações</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {items.map((r) => (
+                <tr key={r.id} className="transition-colors even:bg-gray-50/50 hover:bg-primary-50/50">
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <Link href={`/receitas/${r.id}`} className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
+                        {getInitials(r.pacientes.nome)}
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">{r.pacientes.nome}</p>
+                    </Link>
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                    {r.data ? formatDate(r.data) : <span className="text-gray-400">&mdash;</span>}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                      {TIPO_LABELS[r.tipo] ?? r.tipo}
+                    </span>
+                  </td>
+                  <td className="max-w-xs truncate px-6 py-4 text-sm text-gray-500">
+                    {r.medicamentos}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-right">
+                    <Link
+                      href={`/receitas/${r.id}`}
+                      aria-label="Ver detalhes"
+                      className="text-gray-400 transition-colors hover:text-gray-600"
+                    >
+                      <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm px-6 py-16 text-center">
           <EmptyStateIllustration type="receitas" />

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ReceitaForm } from "../../novo/receita-form";
 import type { ReceitaComPaciente } from "../../types";
+import { getClinicaAtual } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -29,6 +30,9 @@ export default async function EditarReceitaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const ctx = await getClinicaAtual();
+  if (!ctx) notFound();
+
   const supabase = await createClient();
 
   const { data: receita } = await supabase
