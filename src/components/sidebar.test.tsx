@@ -68,7 +68,6 @@ const navItems = [
   { label: "Financeiro", href: "/financeiro" },
   { label: "Relatórios", href: "/relatorios/financeiro" },
   { label: "Auditoria", href: "/auditoria" },
-  { label: "Produtividade", href: "/relatorios/produtividade" },
   { label: "Configurações", href: "/configuracoes" },
 ];
 
@@ -84,7 +83,7 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("Prontio").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renderiza todos os 8 links de navegação quando papel é superadmin", () => {
+  it("renderiza todos os 7 links de navegação quando papel é superadmin", () => {
     render(<Sidebar {...defaultProps} papel={"superadmin" as const} />);
     for (const item of navItems) {
       expect(screen.getByText(item.label)).toBeInTheDocument();
@@ -143,13 +142,12 @@ describe("Sidebar", () => {
       expect(screen.getByText("Agenda")).toBeInTheDocument();
       expect(screen.getByText("Pacientes")).toBeInTheDocument();
       expect(screen.getByText("Relatórios")).toBeInTheDocument();
-      expect(screen.getByText("Produtividade")).toBeInTheDocument();
       expect(screen.getByText("Configurações")).toBeInTheDocument();
 
       expect(screen.queryByText("Financeiro")).not.toBeInTheDocument();
     });
 
-    it("quando papel=secretaria, oculta Financeiro, Relatórios e Produtividade", () => {
+    it("quando papel=secretaria, oculta Financeiro e Relatórios", () => {
       render(<Sidebar {...defaultProps} papel={"secretaria" as const} />);
 
       expect(screen.getByText("Início")).toBeInTheDocument();
@@ -159,7 +157,6 @@ describe("Sidebar", () => {
 
       expect(screen.queryByText("Financeiro")).not.toBeInTheDocument();
       expect(screen.queryByText("Relatórios")).not.toBeInTheDocument();
-      expect(screen.queryByText("Produtividade")).not.toBeInTheDocument();
     });
   });
 });
