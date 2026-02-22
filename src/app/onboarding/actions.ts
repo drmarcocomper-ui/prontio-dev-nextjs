@@ -413,7 +413,11 @@ export async function iniciarCheckout(): Promise<{ error?: string }> {
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: priceId, quantity: numProfissionais }],
+    line_items: [{
+      price: priceId,
+      quantity: numProfissionais,
+      adjustable_quantity: { enabled: true, minimum: 1 },
+    }],
     ...(trialEndUnix ? { subscription_data: { trial_end: trialEndUnix } } : {}),
     success_url: `${siteUrl}/onboarding/sucesso?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${siteUrl}/onboarding?step=4`,

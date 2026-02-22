@@ -8,7 +8,6 @@ interface AssinaturaTabProps {
   subscriptionStatus: string | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
-  stripePriceId: string | null;
   numProfissionais: number;
 }
 

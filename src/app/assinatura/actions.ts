@@ -2,13 +2,34 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getClinicaAtual, isGestor, type Papel } from "@/lib/clinica";
+import { rateLimit } from "@/lib/rate-limit";
+import { uuidValido } from "@/lib/validators";
 
 export async function criarCheckoutAssinatura(
   clinicaId: string
 ): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Usuário não autenticado." };
+  if (!clinicaId || !uuidValido(clinicaId)) {
+    return { error: "Clínica inválida." };
+  }
+
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Usuário não autenticado." };
+  if (!isGestor(ctx.papel as Papel)) {
+    return { error: "Sem permissão para gerenciar assinatura." };
+  }
+  if (ctx.clinicaId !== clinicaId) {
+    return { error: "Você não tem acesso a esta clínica." };
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `checkout_assinatura:${ctx.userId}`,
+    maxAttempts: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
 
   const { getStripe, STRIPE_PRICES } = await import("@/lib/stripe");
   const stripe = getStripe();
@@ -37,8 +58,10 @@ export async function criarCheckoutAssinatura(
   let customerId = clinica?.stripe_customer_id;
 
   if (!customerId) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
     const customer = await stripe.customers.create({
-      email: user.email,
+      email: user?.email,
       metadata: { clinica_id: clinicaId },
     });
     customerId = customer.id;
@@ -73,9 +96,27 @@ export async function criarCheckoutAssinatura(
 export async function abrirPortalCliente(
   clinicaId: string
 ): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Usuário não autenticado." };
+  if (!clinicaId || !uuidValido(clinicaId)) {
+    return { error: "Clínica inválida." };
+  }
+
+  const ctx = await getClinicaAtual();
+  if (!ctx) return { error: "Usuário não autenticado." };
+  if (!isGestor(ctx.papel as Papel)) {
+    return { error: "Sem permissão para gerenciar assinatura." };
+  }
+  if (ctx.clinicaId !== clinicaId) {
+    return { error: "Você não tem acesso a esta clínica." };
+  }
+
+  const { success: allowed } = await rateLimit({
+    key: `portal_assinatura:${ctx.userId}`,
+    maxAttempts: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
 
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();

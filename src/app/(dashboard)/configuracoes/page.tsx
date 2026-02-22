@@ -40,15 +40,15 @@ export default async function ConfiguracoesPage({
   const currentTab = tab && isValidTab(tab) ? tab : defaultTab;
 
   // Load subscription data for "assinatura" tab
-  type AssinaturaInfo = { subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; stripe_price_id: string | null };
-  let assinaturaData: AssinaturaInfo = { subscription_status: null, trial_ends_at: null, current_period_end: null, stripe_price_id: null };
+  type AssinaturaInfo = { subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null };
+  let assinaturaData: AssinaturaInfo = { subscription_status: null, trial_ends_at: null, current_period_end: null };
   let numProfissionais = 0;
   if (currentTab === "assinatura" && ctx?.clinicaId) {
     const { createAdminClient } = await import("@/lib/supabase/admin");
     const adminSupabase = createAdminClient();
     const { data } = await adminSupabase
       .from("clinicas")
-      .select("subscription_status, trial_ends_at, current_period_end, stripe_price_id")
+      .select("subscription_status, trial_ends_at, current_period_end")
       .eq("id", ctx.clinicaId)
       .single();
 
@@ -336,7 +336,6 @@ export default async function ConfiguracoesPage({
             subscriptionStatus={assinaturaData.subscription_status}
             trialEndsAt={assinaturaData.trial_ends_at}
             currentPeriodEnd={assinaturaData.current_period_end}
-            stripePriceId={assinaturaData.stripe_price_id}
             numProfissionais={numProfissionais}
           />
         )}
