@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState, useCallback } from "react";
+import { useActionState, useRef, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { FieldError, FormError, INPUT_CLASS, ariaProps } from "@/components/form-utils";
 import { criarProntuario, atualizarProntuario, type ProntuarioFormState } from "../actions";
@@ -64,14 +64,25 @@ export function ProntuarioForm({
   const evolucaoRef = useRef<HTMLTextAreaElement>(null);
   const draftId = isEditing ? `prontuario-edit-${defaults?.id}` : "prontuario-novo";
   const { restoreDraft, hasDraft, clearDraft } = useFormDraft(draftId, formRef);
-  const [showDraftBanner, setShowDraftBanner] = useState(() => !isEditing && hasDraft());
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing && hasDraft()) {
+      setShowDraftBanner(true);
+    }
+  }, [isEditing, hasDraft]);
 
   const templatesKey = getTemplatesKey(userId);
   const seededKey = getSeededKey(userId);
 
-  const [templates, setTemplates] = useState<AnamneseTemplate[]>(() => {
+  const [templates, setTemplates] = useState<AnamneseTemplate[]>([]);
+
+  useEffect(() => {
     const existing = loadTemplates(templatesKey);
-    if (existing.length > 0) return existing;
+    if (existing.length > 0) {
+      setTemplates(existing);
+      return;
+    }
 
     if (seedTemplates && seedTemplates.length > 0) {
       try {
@@ -79,14 +90,13 @@ export function ProntuarioForm({
         if (!alreadySeeded) {
           saveTemplates(templatesKey, seedTemplates);
           localStorage.setItem(seededKey, "1");
-          return seedTemplates;
+          setTemplates(seedTemplates);
         }
       } catch {
         // ignore
       }
     }
-    return [];
-  });
+  }, [templatesKey, seededKey, seedTemplates]);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [showManageTemplates, setShowManageTemplates] = useState(false);
