@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { uuidValido } from "@/lib/validators";
+import { createClient } from "@/lib/supabase/server";
 import { ProntuarioForm } from "./prontuario-form";
 import { TIPO_LABELS, type ProntuarioTipo } from "../types";
+import { SEED_TEMPLATES, SEED_EMAIL } from "./anamnese-seeds";
 
 export const metadata: Metadata = { title: "Nova Evolução" };
 
@@ -12,6 +14,11 @@ export default async function NovoProntuarioPage({
   searchParams: Promise<{ paciente_id?: string; paciente_nome?: string; tipo?: string }>;
 }) {
   const { paciente_id: rawPacienteId, paciente_nome, tipo: rawTipo } = await searchParams;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  const userEmail = user?.email;
 
   const paciente_id = rawPacienteId && uuidValido(rawPacienteId) ? rawPacienteId : undefined;
   const tipo = rawTipo && rawTipo in TIPO_LABELS ? (rawTipo as ProntuarioTipo) : undefined;
@@ -49,6 +56,8 @@ export default async function NovoProntuarioPage({
                 : undefined
           }
           cancelHref={fromPaciente ? `/pacientes/${paciente_id}` : undefined}
+          userId={userId}
+          seedTemplates={userEmail === SEED_EMAIL ? SEED_TEMPLATES : undefined}
         />
       </div>
     </div>

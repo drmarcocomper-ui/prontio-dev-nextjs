@@ -40,8 +40,8 @@ vi.mock("@/lib/clinica", () => ({
 }));
 
 vi.mock("../../novo/prontuario-form", () => ({
-  ProntuarioForm: ({ defaults }: { defaults: Record<string, unknown> }) => (
-    <form data-testid="prontuario-form" data-defaults={JSON.stringify(defaults)} />
+  ProntuarioForm: ({ defaults, userId }: { defaults: Record<string, unknown>; userId?: string }) => (
+    <form data-testid="prontuario-form" data-defaults={JSON.stringify(defaults)} data-user-id={userId ?? ""} />
   ),
 }));
 
@@ -57,6 +57,9 @@ vi.mock("@/lib/supabase/server", () => ({
           }),
         }),
       }),
+      auth: {
+        getUser: () => Promise.resolve({ data: { user: { id: "doc-1", email: "doc@test.com" } } }),
+      },
     }),
 }));
 
@@ -112,5 +115,11 @@ describe("EditarProntuarioPage", () => {
     expect(defaults.data).toBe("2024-06-15");
     expect(defaults.tipo).toBe("consulta");
     expect(defaults.queixa_principal).toBe("Dor de cabeça");
+  });
+
+  it("passa userId para o ProntuarioForm", async () => {
+    await renderPage();
+    const form = screen.getByTestId("prontuario-form");
+    expect(form).toHaveAttribute("data-user-id", "doc-1");
   });
 });

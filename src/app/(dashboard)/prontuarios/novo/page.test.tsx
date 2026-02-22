@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
+let mockUser = { id: "user-123", email: "test@example.com" };
+
 vi.mock("next/link", () => ({
   default: ({
     href,
@@ -19,11 +21,20 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/lib/clinica", () => ({ getMedicoId: vi.fn().mockResolvedValue("doc-1") }));
 
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: () =>
+    Promise.resolve({
+      auth: {
+        getUser: () => Promise.resolve({ data: { user: mockUser } }),
+      },
+    }),
+}));
+
 vi.mock("./prontuario-form", () => ({
   ProntuarioForm: (props: Record<string, unknown>) => {
     const defaults = props.defaults as Record<string, string> | undefined;
     return (
-      <form data-testid="prontuario-form" data-patient-id={defaults?.paciente_id ?? ""} data-tipo={defaults?.tipo ?? ""} data-cancel-href={props.cancelHref ?? ""} />
+      <form data-testid="prontuario-form" data-patient-id={defaults?.paciente_id ?? ""} data-tipo={defaults?.tipo ?? ""} data-cancel-href={props.cancelHref ?? ""} data-user-id={props.userId ?? ""} data-has-seeds={props.seedTemplates ? "true" : "false"} />
     );
   },
 }));
@@ -70,5 +81,26 @@ describe("NovoProntuarioPage", () => {
     await renderPage({ paciente_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", paciente_nome: "Maria", tipo: "invalido" });
     const form = screen.getByTestId("prontuario-form");
     expect(form).toHaveAttribute("data-tipo", "");
+  });
+
+  it("passa userId para o ProntuarioForm", async () => {
+    mockUser = { id: "user-abc", email: "test@example.com" };
+    await renderPage();
+    const form = screen.getByTestId("prontuario-form");
+    expect(form).toHaveAttribute("data-user-id", "user-abc");
+  });
+
+  it("passa seedTemplates quando email é do marcocomper", async () => {
+    mockUser = { id: "user-marco", email: "marcocomper@yahoo.com.br" };
+    await renderPage();
+    const form = screen.getByTestId("prontuario-form");
+    expect(form).toHaveAttribute("data-has-seeds", "true");
+  });
+
+  it("não passa seedTemplates para outros emails", async () => {
+    mockUser = { id: "user-other", email: "outro@email.com" };
+    await renderPage();
+    const form = screen.getByTestId("prontuario-form");
+    expect(form).toHaveAttribute("data-has-seeds", "false");
   });
 });

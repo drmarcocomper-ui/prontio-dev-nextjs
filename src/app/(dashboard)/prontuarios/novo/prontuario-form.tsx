@@ -9,26 +9,28 @@ import { todayLocal } from "@/lib/date";
 import { PatientSearch } from "@/app/(dashboard)/agenda/novo/patient-search";
 import { useFormDraft } from "@/hooks/use-form-draft";
 
-interface AnamneseTemplate {
-  id: string;
-  nome: string;
-  texto: string;
+import type { AnamneseTemplate } from "./anamnese-seeds";
+
+function getTemplatesKey(userId?: string) {
+  return userId ? `prontio_anamnese_templates_${userId}` : "prontio_anamnese_templates";
 }
 
-const TEMPLATES_KEY = "prontio_anamnese_templates";
+function getSeededKey(userId?: string) {
+  return userId ? `prontio_anamnese_seeded_${userId}` : "prontio_anamnese_seeded";
+}
 
-function loadTemplates(): AnamneseTemplate[] {
+function loadTemplates(key: string): AnamneseTemplate[] {
   try {
-    const stored = localStorage.getItem(TEMPLATES_KEY);
+    const stored = localStorage.getItem(key);
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
   }
 }
 
-function saveTemplates(templates: AnamneseTemplate[]) {
+function saveTemplates(key: string, templates: AnamneseTemplate[]) {
   try {
-    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+    localStorage.setItem(key, JSON.stringify(templates));
   } catch {
     // ignore
   }
@@ -37,9 +39,13 @@ function saveTemplates(templates: AnamneseTemplate[]) {
 export function ProntuarioForm({
   defaults,
   cancelHref,
+  userId,
+  seedTemplates,
 }: {
   defaults?: ProntuarioDefaults;
   cancelHref?: string;
+  userId?: string;
+  seedTemplates?: AnamneseTemplate[];
 }) {
   const isEditing = !!defaults?.id;
   const today = todayLocal();
@@ -60,7 +66,27 @@ export function ProntuarioForm({
   const { restoreDraft, hasDraft, clearDraft } = useFormDraft(draftId, formRef);
   const [showDraftBanner, setShowDraftBanner] = useState(() => !isEditing && hasDraft());
 
-  const [templates, setTemplates] = useState<AnamneseTemplate[]>(() => loadTemplates());
+  const templatesKey = getTemplatesKey(userId);
+  const seededKey = getSeededKey(userId);
+
+  const [templates, setTemplates] = useState<AnamneseTemplate[]>(() => {
+    const existing = loadTemplates(templatesKey);
+    if (existing.length > 0) return existing;
+
+    if (seedTemplates && seedTemplates.length > 0) {
+      try {
+        const alreadySeeded = localStorage.getItem(seededKey);
+        if (!alreadySeeded) {
+          saveTemplates(templatesKey, seedTemplates);
+          localStorage.setItem(seededKey, "1");
+          return seedTemplates;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return [];
+  });
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
 
@@ -81,7 +107,7 @@ export function ProntuarioForm({
       texto,
     };
     const updated = [...templates, newTemplate];
-    saveTemplates(updated);
+    saveTemplates(templatesKey, updated);
     setTemplates(updated);
     setShowSaveTemplate(false);
     setTemplateName("");
@@ -89,7 +115,7 @@ export function ProntuarioForm({
 
   function handleDeleteTemplate(id: string) {
     const updated = templates.filter((t) => t.id !== id);
-    saveTemplates(updated);
+    saveTemplates(templatesKey, updated);
     setTemplates(updated);
   }
 

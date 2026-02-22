@@ -167,4 +167,32 @@ describe("ProntuarioForm", () => {
     render(<ProntuarioForm />);
     expect(screen.getByText("Salvar como template")).toBeInTheDocument();
   });
+
+  it("carrega seed templates quando não há templates existentes", () => {
+    const seeds = [
+      { id: "s1", nome: "Template 1", texto: "Texto 1" },
+      { id: "s2", nome: "Template 2", texto: "Texto 2" },
+    ];
+    render(<ProntuarioForm userId="user-1" seedTemplates={seeds} />);
+    expect(screen.getByText("Template 1")).toBeInTheDocument();
+    expect(screen.getByText("Template 2")).toBeInTheDocument();
+  });
+
+  it("não carrega seed templates se já foi semeado anteriormente", () => {
+    localStorage.setItem("prontio_anamnese_seeded_user-2", "1");
+    const seeds = [{ id: "s1", nome: "Seed", texto: "Texto" }];
+    render(<ProntuarioForm userId="user-2" seedTemplates={seeds} />);
+    expect(screen.queryByText("Seed")).not.toBeInTheDocument();
+    localStorage.removeItem("prontio_anamnese_seeded_user-2");
+  });
+
+  it("usa chave de localStorage por userId", () => {
+    localStorage.setItem(
+      "prontio_anamnese_templates_user-3",
+      JSON.stringify([{ id: "t1", nome: "Meu Template", texto: "Texto" }])
+    );
+    render(<ProntuarioForm userId="user-3" />);
+    expect(screen.getByText("Meu Template")).toBeInTheDocument();
+    localStorage.removeItem("prontio_anamnese_templates_user-3");
+  });
 });

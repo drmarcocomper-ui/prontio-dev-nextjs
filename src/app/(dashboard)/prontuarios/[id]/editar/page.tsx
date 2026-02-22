@@ -31,13 +31,15 @@ export default async function EditarProntuarioPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: prontuario } = await supabase
-    .from("prontuarios")
-    .select(
-      "id, data, tipo, queixa_principal, pacientes(id, nome)"
-    )
-    .eq("id", id)
-    .single();
+  const [{ data: prontuario }, { data: { user } }] = await Promise.all([
+    supabase
+      .from("prontuarios")
+      .select("id, data, tipo, queixa_principal, pacientes(id, nome)")
+      .eq("id", id)
+      .single(),
+    supabase.auth.getUser(),
+  ]);
+  const userId = user?.id;
 
   if (!prontuario) {
     notFound();
@@ -70,6 +72,7 @@ export default async function EditarProntuarioPage({
             tipo: p.tipo,
             queixa_principal: p.queixa_principal,
           }}
+          userId={userId}
         />
       </div>
     </div>
