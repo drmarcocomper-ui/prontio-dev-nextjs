@@ -24,7 +24,7 @@ export function getWeekRange(dateStr: string): {
   monday.setDate(monday.getDate() + diffToMonday);
 
   const weekDates: string[] = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 7; i++) {
     const cur = new Date(monday);
     cur.setDate(cur.getDate() + i);
     const yy = cur.getFullYear();
@@ -33,7 +33,7 @@ export function getWeekRange(dateStr: string): {
     weekDates.push(`${yy}-${mm}-${dd}`);
   }
 
-  return { weekStart: weekDates[0], weekEnd: weekDates[5], weekDates };
+  return { weekStart: weekDates[0], weekEnd: weekDates[6], weekDates };
 }
 
 export function timeToMinutes(time: string): number {

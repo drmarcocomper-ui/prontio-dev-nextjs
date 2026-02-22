@@ -342,6 +342,23 @@ export async function atualizarAgendamento(
     return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
   }
 
+  // Verificar se o agendamento está em status editável
+  const { data: agExistente } = await supabase
+    .from("agendamentos")
+    .select("status")
+    .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId)
+    .single();
+
+  if (!agExistente) {
+    return { error: "Agendamento não encontrado." };
+  }
+
+  const statusNaoEditavel: AgendaStatus[] = ["atendido", "cancelado", "faltou"];
+  if (statusNaoEditavel.includes(agExistente.status as AgendaStatus)) {
+    return { error: "Não é possível editar um agendamento com status finalizado." };
+  }
+
   let medicoUserId: string;
   try {
     medicoUserId = await getMedicoId();

@@ -4,6 +4,7 @@ import { STATUS_STYLES, getInitials } from "./types";
 import type { TimeSlot } from "./time-grid";
 
 const DIAS_CURTOS: Record<number, string> = {
+  0: "dom",
   1: "seg",
   2: "ter",
   3: "qua",
@@ -54,7 +55,7 @@ export function WeeklyGrid({
         <div
           className="grid"
           style={{
-            gridTemplateColumns: "60px repeat(6, 1fr)",
+            gridTemplateColumns: "60px repeat(7, 1fr)",
           }}
         >
           {/* Header: empty corner */}

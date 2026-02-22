@@ -34,7 +34,12 @@ export default async function AgendaPage({
   const ctx = await getClinicaAtual();
   if (!ctx) redirect("/login");
 
-  const medicoUserId = await getMedicoId();
+  let medicoUserId: string | undefined;
+  try {
+    medicoUserId = await getMedicoId();
+  } catch {
+    // Clínica sem médico cadastrado — usa config geral
+  }
   const config = await getHorarioConfig(supabase, ctx.clinicaId, medicoUserId);
   const duracao = config.duracao_consulta ? parseInt(config.duracao_consulta, 10) : 15;
 
