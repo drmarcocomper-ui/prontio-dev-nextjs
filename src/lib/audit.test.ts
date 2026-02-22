@@ -5,10 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockInsert = vi.fn();
 const mockFrom = vi.fn(() => ({ insert: mockInsert }));
 
-const mockCreateClient = vi.fn();
-
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: (...args: unknown[]) => mockCreateClient(...args),
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({ from: mockFrom }),
 }));
 
 import { logAuditEvent } from "./audit";
@@ -18,7 +16,6 @@ import { logAuditEvent } from "./audit";
 describe("logAuditEvent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCreateClient.mockResolvedValue({ from: mockFrom });
     mockInsert.mockResolvedValue({ error: null });
   });
 
@@ -62,7 +59,7 @@ describe("logAuditEvent", () => {
   });
 
   it("não lança erro quando insert falha", async () => {
-    mockInsert.mockRejectedValue(new Error("DB error"));
+    mockInsert.mockResolvedValue({ error: { message: "DB error", code: "500" } });
 
     await expect(
       logAuditEvent({
@@ -73,8 +70,8 @@ describe("logAuditEvent", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("não lança erro quando createClient falha", async () => {
-    mockCreateClient.mockRejectedValue(new Error("Auth error"));
+  it("não lança erro quando createAdminClient lança exceção", async () => {
+    mockFrom.mockImplementationOnce(() => { throw new Error("Admin error"); });
 
     await expect(
       logAuditEvent({
