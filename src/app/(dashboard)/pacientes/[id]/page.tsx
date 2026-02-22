@@ -109,6 +109,18 @@ export default async function PacienteDetalhesPage({
     .eq("paciente_id", id)
     .order("data", { ascending: false });
 
+  const { data: laudos } = await supabase
+    .from("laudos")
+    .select("id, data, conteudo")
+    .eq("paciente_id", id)
+    .order("data", { ascending: false });
+
+  const { data: internacoes } = await supabase
+    .from("internacoes")
+    .select("id, data, hospital_nome, indicacao_clinica")
+    .eq("paciente_id", id)
+    .order("data", { ascending: false });
+
   // Timeline data (only fetch when needed)
   const { data: agendamentos } = currentTab === "historico"
     ? await supabase
@@ -569,6 +581,123 @@ export default async function PacienteDetalhesPage({
           </p>
         )}
       </div>
+
+      {/* Laudos */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <svg aria-hidden="true" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5A3.375 3.375 0 0 0 6.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0 0 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
+            </svg>
+            Laudos
+          </h2>
+          <Link
+            href={`/laudos/novo?paciente_id=${paciente.id}&paciente_nome=${encodeURIComponent(paciente.nome)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+          >
+            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Novo laudo
+          </Link>
+        </div>
+
+        {laudos && laudos.length > 0 ? (
+          <div className="space-y-3">
+            {laudos.map((lau) => (
+              <Link
+                key={lau.id}
+                href={`/laudos/${lau.id}`}
+                className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-gray-200 hover:bg-gray-50 sm:p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {lau.data ? formatDate(lau.data) : "Sem data"}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                        Laudo
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+                      {lau.conteudo}
+                    </p>
+                  </div>
+                  <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-gray-400">
+            Nenhum laudo emitido.
+          </p>
+        )}
+      </div>
+
+      {/* Internações */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <svg aria-hidden="true" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21" />
+            </svg>
+            Internações
+          </h2>
+          <Link
+            href={`/internacoes/novo?paciente_id=${paciente.id}&paciente_nome=${encodeURIComponent(paciente.nome)}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+          >
+            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Nova internação
+          </Link>
+        </div>
+
+        {internacoes && internacoes.length > 0 ? (
+          <div className="space-y-3">
+            {internacoes.map((int) => (
+              <Link
+                key={int.id}
+                href={`/internacoes/${int.id}`}
+                className="block rounded-lg border border-gray-100 p-3 transition-colors hover:border-gray-200 hover:bg-gray-50 sm:p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {int.data ? formatDate(int.data) : "Sem data"}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">
+                        Internação
+                      </span>
+                      {int.hospital_nome && (
+                        <span className="text-sm text-gray-500">
+                          {int.hospital_nome}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+                      {int.indicacao_clinica}
+                    </p>
+                  </div>
+                  <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-gray-400">
+            Nenhuma internação registrada.
+          </p>
+        )}
+      </div>
       </>
       )}
 
@@ -577,7 +706,7 @@ export default async function PacienteDetalhesPage({
         type TimelineEvent = {
           id: string;
           date: string;
-          type: "prontuario" | "agendamento" | "receita" | "transacao" | "exame" | "atestado" | "encaminhamento";
+          type: "prontuario" | "agendamento" | "receita" | "transacao" | "exame" | "atestado" | "encaminhamento" | "laudo" | "internacao";
           title: string;
           subtitle?: string;
           href: string;
@@ -675,6 +804,32 @@ export default async function PacienteDetalhesPage({
           });
         }
 
+        for (const lau of laudos ?? []) {
+          const lauTyped = lau as { id: string; data: string; conteudo: string };
+          events.push({
+            id: `lau-${lauTyped.id}`,
+            date: lauTyped.data,
+            type: "laudo",
+            title: "Laudo",
+            subtitle: lauTyped.conteudo?.slice(0, 80),
+            href: `/laudos/${lauTyped.id}`,
+            color: "bg-indigo-500",
+          });
+        }
+
+        for (const int of internacoes ?? []) {
+          const intTyped = int as { id: string; data: string; hospital_nome: string | null; indicacao_clinica: string };
+          events.push({
+            id: `int-${intTyped.id}`,
+            date: intTyped.data,
+            type: "internacao",
+            title: "Internação",
+            subtitle: [intTyped.hospital_nome, intTyped.indicacao_clinica?.slice(0, 60)].filter(Boolean).join(" — "),
+            href: `/internacoes/${intTyped.id}`,
+            color: "bg-rose-500",
+          });
+        }
+
         events.sort((a, b) => b.date.localeCompare(a.date));
 
         const TYPE_LABELS: Record<string, string> = {
@@ -685,6 +840,8 @@ export default async function PacienteDetalhesPage({
           exame: "Exame",
           atestado: "Atestado",
           encaminhamento: "Encaminhamento",
+          laudo: "Laudo",
+          internacao: "Internação",
         };
 
         return (
