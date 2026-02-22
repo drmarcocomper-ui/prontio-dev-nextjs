@@ -2,17 +2,19 @@ import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { uuidValido } from "@/lib/validators";
 import { ProntuarioForm } from "./prontuario-form";
+import { TIPO_LABELS, type ProntuarioTipo } from "../types";
 
 export const metadata: Metadata = { title: "Nova Evolução" };
 
 export default async function NovoProntuarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ paciente_id?: string; paciente_nome?: string }>;
+  searchParams: Promise<{ paciente_id?: string; paciente_nome?: string; tipo?: string }>;
 }) {
-  const { paciente_id: rawPacienteId, paciente_nome } = await searchParams;
+  const { paciente_id: rawPacienteId, paciente_nome, tipo: rawTipo } = await searchParams;
 
   const paciente_id = rawPacienteId && uuidValido(rawPacienteId) ? rawPacienteId : undefined;
+  const tipo = rawTipo && rawTipo in TIPO_LABELS ? (rawTipo as ProntuarioTipo) : undefined;
   const fromPaciente = !!paciente_id;
 
   return (
@@ -41,8 +43,10 @@ export default async function NovoProntuarioPage({
         <ProntuarioForm
           defaults={
             paciente_id
-              ? { paciente_id, paciente_nome }
-              : undefined
+              ? { paciente_id, paciente_nome, tipo }
+              : tipo
+                ? { tipo }
+                : undefined
           }
           cancelHref={fromPaciente ? `/pacientes/${paciente_id}` : undefined}
         />

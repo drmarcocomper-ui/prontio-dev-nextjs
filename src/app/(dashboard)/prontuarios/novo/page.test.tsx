@@ -23,14 +23,14 @@ vi.mock("./prontuario-form", () => ({
   ProntuarioForm: (props: Record<string, unknown>) => {
     const defaults = props.defaults as Record<string, string> | undefined;
     return (
-      <form data-testid="prontuario-form" data-patient-id={defaults?.paciente_id ?? ""} data-cancel-href={props.cancelHref ?? ""} />
+      <form data-testid="prontuario-form" data-patient-id={defaults?.paciente_id ?? ""} data-tipo={defaults?.tipo ?? ""} data-cancel-href={props.cancelHref ?? ""} />
     );
   },
 }));
 
 import NovoProntuarioPage from "./page";
 
-async function renderPage(searchParams: { paciente_id?: string; paciente_nome?: string } = {}) {
+async function renderPage(searchParams: { paciente_id?: string; paciente_nome?: string; tipo?: string } = {}) {
   const jsx = await NovoProntuarioPage({ searchParams: Promise.resolve(searchParams) });
   return render(jsx);
 }
@@ -58,5 +58,17 @@ describe("NovoProntuarioPage", () => {
     expect(screen.getByText("Paciente")).toBeInTheDocument();
     const link = screen.getByText("Paciente").closest("a");
     expect(link).toHaveAttribute("href", "/pacientes/a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+  });
+
+  it("passa tipo válido como default para ProntuarioForm", async () => {
+    await renderPage({ paciente_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", paciente_nome: "Maria", tipo: "consulta" });
+    const form = screen.getByTestId("prontuario-form");
+    expect(form).toHaveAttribute("data-tipo", "consulta");
+  });
+
+  it("ignora tipo inválido", async () => {
+    await renderPage({ paciente_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", paciente_nome: "Maria", tipo: "invalido" });
+    const form = screen.getByTestId("prontuario-form");
+    expect(form).toHaveAttribute("data-tipo", "");
   });
 });

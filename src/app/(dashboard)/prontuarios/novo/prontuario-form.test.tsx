@@ -145,4 +145,26 @@ describe("ProntuarioForm", () => {
     expect(hidden).toBeInTheDocument();
     expect(hidden.value).toBe("pr-1");
   });
+
+  it("desabilita select tipo quando tipo vem da agenda", () => {
+    render(<ProntuarioForm defaults={{ paciente_id: "p-1", tipo: "consulta" }} />);
+    const select = screen.getByLabelText("Tipo") as HTMLSelectElement;
+    expect(select).toBeDisabled();
+    expect(select.value).toBe("consulta");
+    const hidden = document.querySelector('input[type="hidden"][name="tipo"]') as HTMLInputElement;
+    expect(hidden).toBeInTheDocument();
+    expect(hidden.value).toBe("consulta");
+  });
+
+  it("mantém select tipo editável quando tipo não é pré-definido", () => {
+    render(<ProntuarioForm />);
+    const select = screen.getByLabelText("Tipo") as HTMLSelectElement;
+    expect(select).not.toBeDisabled();
+    expect(select.name).toBe("tipo");
+  });
+
+  it("renderiza botão 'Salvar como template'", () => {
+    render(<ProntuarioForm />);
+    expect(screen.getByText("Salvar como template")).toBeInTheDocument();
+  });
 });

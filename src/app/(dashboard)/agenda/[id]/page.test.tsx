@@ -168,4 +168,29 @@ describe("AgendamentoDetalhesPage", () => {
     await renderPage();
     expect(screen.getByText("tipo_desconhecido")).toBeInTheDocument();
   });
+
+  it("link 'Registrar evolução' inclui tipo na URL quando status é atendido", async () => {
+    mockAgendamento = { ...agendamentoCompleto, status: "atendido" };
+    await renderPage();
+    const link = screen.getByText("Registrar evolução").closest("a");
+    expect(link).toHaveAttribute(
+      "href",
+      "/prontuarios/novo?paciente_id=p-1&paciente_nome=Maria%20Silva&tipo=consulta"
+    );
+  });
+
+  it("link 'Registrar evolução' não inclui tipo quando tipo é null", async () => {
+    mockAgendamento = { ...agendamentoCompleto, status: "em_atendimento", tipo: null };
+    await renderPage();
+    const link = screen.getByText("Registrar evolução").closest("a");
+    expect(link).toHaveAttribute(
+      "href",
+      "/prontuarios/novo?paciente_id=p-1&paciente_nome=Maria%20Silva"
+    );
+  });
+
+  it("não exibe link 'Registrar evolução' para status agendado", async () => {
+    await renderPage();
+    expect(screen.queryByText("Registrar evolução")).not.toBeInTheDocument();
+  });
 });
