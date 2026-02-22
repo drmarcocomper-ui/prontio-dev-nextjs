@@ -7,6 +7,7 @@ export interface Tab {
 }
 
 export const TABS: Tab[] = [
+  { key: "assinatura", label: "Assinatura", roles: ["superadmin", "gestor"] },
   { key: "clinica", label: "Clínica", roles: ["superadmin", "gestor"] },
   { key: "minha-conta", label: "Minha Conta", roles: ["superadmin", "gestor", "profissional_saude", "financeiro", "secretaria"] },
   { key: "medicamentos", label: "Medicamentos", roles: ["superadmin"] },

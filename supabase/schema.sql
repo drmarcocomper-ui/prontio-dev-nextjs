@@ -18,6 +18,12 @@ create table clinicas (
   cidade     text,
   estado     text check (estado is null or char_length(estado) = 2),
   ativo      boolean not null default true,
+  stripe_customer_id     text unique,
+  stripe_subscription_id text unique,
+  stripe_price_id        text,
+  subscription_status    text check (subscription_status is null or subscription_status in ('trialing','active','past_due','canceled','unpaid','incomplete')),
+  trial_ends_at          timestamptz,
+  current_period_end     timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz
 );

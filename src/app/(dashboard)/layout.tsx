@@ -8,6 +8,7 @@ import { OfflineDataSync } from "@/components/offline-data-sync";
 import { OnlineRefresh } from "@/components/online-refresh";
 import { createClient } from "@/lib/supabase/server";
 import { getClinicaAtual, getClinicasDoUsuario } from "@/lib/clinica";
+import { TrialBanner } from "@/components/trial-banner";
 
 export default async function DashboardLayout({
   children,
@@ -22,6 +23,28 @@ export default async function DashboardLayout({
     getClinicasDoUsuario(),
     supabase.auth.getUser(),
   ]);
+
+  // Verificar trial da clínica
+  let diasRestantesTrial: number | null = null;
+  if (clinicaAtual?.clinicaId) {
+    const { data: clinicaSub } = await supabase
+      .from("clinicas")
+      .select("trial_ends_at, subscription_status")
+      .eq("id", clinicaAtual.clinicaId)
+      .single();
+
+    if (clinicaSub) {
+      const status = clinicaSub.subscription_status;
+      const trialEndsAt = clinicaSub.trial_ends_at ? new Date(clinicaSub.trial_ends_at) : null;
+      // Mostrar banner apenas se está em trial (sem assinatura ativa)
+      if (!status || status === "trialing") {
+        if (trialEndsAt) {
+          const now = new Date();
+          diasRestantesTrial = Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        }
+      }
+    }
+  }
 
   // Query configuracoes separately so we can filter by user_id
   const { data: rows } = await supabase
@@ -57,6 +80,9 @@ export default async function DashboardLayout({
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <OfflineBanner />
+        {diasRestantesTrial !== null && diasRestantesTrial >= 0 && (
+          <TrialBanner diasRestantes={diasRestantesTrial} />
+        )}
         <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
       <KeyboardShortcuts />

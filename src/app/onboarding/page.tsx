@@ -5,6 +5,7 @@ import { StepIndicator } from "./step-indicator";
 import { StepClinicaForm } from "./step-clinica-form";
 import { StepProfissionalForm } from "./step-profissional-form";
 import { StepHorariosForm } from "./step-horarios-form";
+import { StepPlanoForm } from "./step-plano-form";
 
 export const metadata: Metadata = { title: "Configurar consultório" };
 
@@ -12,12 +13,14 @@ const STEP_TITLES: Record<number, string> = {
   1: "Dados do consultório",
   2: "Perfil profissional",
   3: "Horários de atendimento",
+  4: "Escolha seu plano",
 };
 
 const STEP_DESCRIPTIONS: Record<number, string> = {
   1: "Informe os dados básicos do seu consultório para começar.",
   2: "Configure seu perfil profissional. Você pode pular e configurar depois.",
   3: "Defina seus horários de atendimento. Você pode pular e configurar depois.",
+  4: "Selecione o plano que melhor atende às suas necessidades.",
 };
 
 export default async function OnboardingPage({
@@ -34,7 +37,7 @@ export default async function OnboardingPage({
 
   const { step: stepParam } = await searchParams;
   let step = parseInt(stepParam || "1", 10);
-  if (![1, 2, 3].includes(step)) step = 1;
+  if (![1, 2, 3, 4].includes(step)) step = 1;
 
   // Check if user already has a clinic
   const { data: vinculo } = await supabase
@@ -79,6 +82,7 @@ export default async function OnboardingPage({
         {step === 1 && <StepClinicaForm />}
         {step === 2 && <StepProfissionalForm />}
         {step === 3 && <StepHorariosForm />}
+        {step === 4 && <StepPlanoForm />}
       </div>
     </div>
   );

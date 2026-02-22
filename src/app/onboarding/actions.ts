@@ -112,7 +112,15 @@ export async function criarClinicaOnboarding(
   // Insert clinic
   const { data: clinica, error: clinicaError } = await admin
     .from("clinicas")
-    .insert({ nome, cnpj, telefone, endereco, cidade, estado })
+    .insert({
+      nome,
+      cnpj,
+      telefone,
+      endereco,
+      cidade,
+      estado,
+      trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    })
     .select("id")
     .single();
 
@@ -328,11 +336,8 @@ export async function salvarHorariosOnboarding(
     return { error: tratarErroSupabase(error, "salvar", "horários") };
   }
 
-  // Clear onboarding cookie — user is done
-  cookieStore.delete("prontio_onboarding");
-
   revalidatePath("/agenda");
-  redirect("/");
+  redirect("/onboarding?step=4");
 }
 
 // ============================================
@@ -340,6 +345,88 @@ export async function salvarHorariosOnboarding(
 // ============================================
 
 export async function pularOnboarding(): Promise<void> {
+  redirect("/onboarding?step=4");
+}
+
+// ============================================
+// Step 4: Iniciar checkout Stripe
+// ============================================
+
+export async function iniciarCheckout(
+  plano: "mensal" | "anual"
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Usuário não autenticado." };
+
+  const cookieStore = await cookies();
+  const clinicaId = cookieStore.get("prontio_clinica_id")?.value;
+  if (!clinicaId) return { error: "Clínica não encontrada." };
+
+  const { getStripe, STRIPE_PRICES } = await import("@/lib/stripe");
+  const stripe = getStripe();
+
+  const priceId = plano === "anual" ? STRIPE_PRICES.anual : STRIPE_PRICES.mensal;
+  if (!priceId) return { error: "Preço não configurado." };
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  // Buscar ou criar Stripe Customer
+  const { data: clinica } = await admin
+    .from("clinicas")
+    .select("stripe_customer_id, trial_ends_at")
+    .eq("id", clinicaId)
+    .single();
+
+  let customerId = clinica?.stripe_customer_id;
+
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: user.email,
+      metadata: { clinica_id: clinicaId },
+    });
+    customerId = customer.id;
+
+    await admin
+      .from("clinicas")
+      .update({ stripe_customer_id: customerId })
+      .eq("id", clinicaId);
+  }
+
+  // Calcular trial restante para sincronizar com Stripe
+  const trialEndsAt = clinica?.trial_ends_at ? new Date(clinica.trial_ends_at) : null;
+  const now = new Date();
+  const trialEndUnix = trialEndsAt && trialEndsAt > now
+    ? Math.floor(trialEndsAt.getTime() / 1000)
+    : undefined;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    mode: "subscription",
+    line_items: [{ price: priceId, quantity: 1 }],
+    ...(trialEndUnix ? { subscription_data: { trial_end: trialEndUnix } } : {}),
+    success_url: `${siteUrl}/onboarding/sucesso?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${siteUrl}/onboarding?step=4`,
+  });
+
+  // Limpar cookie de onboarding
+  cookieStore.delete("prontio_onboarding");
+
+  if (session.url) {
+    redirect(session.url);
+  }
+
+  return { error: "Não foi possível criar a sessão de pagamento." };
+}
+
+// ============================================
+// Step 4: Pular assinatura (continuar com trial)
+// ============================================
+
+export async function pularAssinatura(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete("prontio_onboarding");
   redirect("/");

@@ -17,6 +17,7 @@ import { CatalogoProfissionaisForm, type CatalogoProfissional } from "./catalogo
 import { HorariosProfissionalForm } from "./horarios-profissional-form";
 import { UsuariosTab } from "./usuarios-tab";
 import { ProfissionaisClinicaTab, type ProfissionalClinicaItem } from "./profissionais-clinica-tab";
+import { AssinaturaTab } from "./assinatura-tab";
 import { type UsuarioListItem } from "@/app/(dashboard)/usuarios/types";
 import type { HorarioProfissional } from "@/app/(dashboard)/agenda/utils";
 
@@ -37,6 +38,21 @@ export default async function ConfiguracoesPage({
 
   const defaultTab = getDefaultTab(papel);
   const currentTab = tab && isValidTab(tab) ? tab : defaultTab;
+
+  // Load subscription data for "assinatura" tab
+  type AssinaturaInfo = { subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; stripe_price_id: string | null };
+  let assinaturaData: AssinaturaInfo | null = null;
+  if (currentTab === "assinatura" && ctx?.clinicaId) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const adminSupabase = createAdminClient();
+    const { data } = await adminSupabase
+      .from("clinicas")
+      .select("subscription_status, trial_ends_at, current_period_end, stripe_price_id")
+      .eq("id", ctx.clinicaId)
+      .single();
+
+    assinaturaData = data as unknown as AssinaturaInfo | null;
+  }
 
   // Load clinic data for "clinica" tab
   let clinicaData = { nome: "", cnpj: null as string | null, telefone: null as string | null, telefone2: null as string | null, telefone3: null as string | null, endereco: null as string | null, cidade: null as string | null, estado: null as string | null };
@@ -302,6 +318,15 @@ export default async function ConfiguracoesPage({
       <Tabs papel={papel} />
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
+        {currentTab === "assinatura" && ctx && assinaturaData && (
+          <AssinaturaTab
+            clinicaId={ctx.clinicaId}
+            subscriptionStatus={assinaturaData.subscription_status}
+            trialEndsAt={assinaturaData.trial_ends_at}
+            currentPeriodEnd={assinaturaData.current_period_end}
+            stripePriceId={assinaturaData.stripe_price_id}
+          />
+        )}
         {currentTab === "clinica" && (
           <>
             <ConsultorioForm clinica={clinicaData} />

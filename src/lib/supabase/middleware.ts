@@ -29,7 +29,9 @@ export async function updateSession(request: NextRequest) {
       !request.nextUrl.pathname.startsWith("/onboarding") &&
       !request.nextUrl.pathname.startsWith("/termos") &&
       !request.nextUrl.pathname.startsWith("/privacidade") &&
-      !request.nextUrl.pathname.startsWith("/offline")
+      !request.nextUrl.pathname.startsWith("/offline") &&
+      !request.nextUrl.pathname.startsWith("/assinatura") &&
+      !request.nextUrl.pathname.startsWith("/api/webhooks")
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
@@ -77,7 +79,9 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/onboarding") &&
     !request.nextUrl.pathname.startsWith("/termos") &&
     !request.nextUrl.pathname.startsWith("/privacidade") &&
-    !request.nextUrl.pathname.startsWith("/offline")
+    !request.nextUrl.pathname.startsWith("/offline") &&
+    !request.nextUrl.pathname.startsWith("/assinatura") &&
+    !request.nextUrl.pathname.startsWith("/api/webhooks")
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -97,6 +101,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // User on /onboarding without pending cookie — check if they have a clinic
+    // (also allow /onboarding/sucesso for Stripe redirect)
     if (pathname.startsWith("/onboarding") && onboardingCookie !== "pending") {
       const { data: vinculo } = await supabase
         .from("usuarios_clinicas")
@@ -112,6 +117,40 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
       // No clinic — let them proceed to /onboarding (step 1)
+    }
+
+    // Subscription gating: check if clinic has active subscription or valid trial
+    const isExemptPath =
+      pathname.startsWith("/login") ||
+      pathname.startsWith("/signup") ||
+      pathname.startsWith("/auth") ||
+      pathname.startsWith("/onboarding") ||
+      pathname.startsWith("/termos") ||
+      pathname.startsWith("/privacidade") ||
+      pathname.startsWith("/offline") ||
+      pathname.startsWith("/assinatura") ||
+      pathname.startsWith("/api/webhooks");
+
+    if (clinicaCookie && !isExemptPath) {
+      const { data: clinicaSub } = await supabase
+        .from("clinicas")
+        .select("trial_ends_at, subscription_status")
+        .eq("id", clinicaCookie)
+        .single();
+
+      if (clinicaSub) {
+        const status = clinicaSub.subscription_status;
+        const trialEndsAt = clinicaSub.trial_ends_at ? new Date(clinicaSub.trial_ends_at) : null;
+        const now = new Date();
+        const trialAtivo = trialEndsAt && trialEndsAt > now;
+        const isAtiva = status === "active" || status === "trialing" || trialAtivo;
+
+        if (!isAtiva) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/assinatura";
+          return NextResponse.redirect(url);
+        }
+      }
     }
 
     const restrictedEntry = Object.entries(RESTRICTED_ROUTES).find(([route]) => pathname.startsWith(route));

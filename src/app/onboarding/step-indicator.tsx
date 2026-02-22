@@ -4,6 +4,7 @@ const STEPS = [
   { number: 1, label: "Consultório" },
   { number: 2, label: "Profissional" },
   { number: 3, label: "Horários" },
+  { number: 4, label: "Assinatura" },
 ];
 
 export function StepIndicator({ currentStep }: { currentStep: number }) {
