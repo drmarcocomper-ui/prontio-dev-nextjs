@@ -7,6 +7,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { excluirProntuario } from "../actions";
 import { type Prontuario, TIPO_LABELS, formatDateLong, getInitials } from "../types";
 import { formatDateTime } from "@/lib/format";
+import { getClinicaAtual } from "@/lib/clinica";
 import { UUID_RE } from "@/lib/validators";
 
 export async function generateMetadata({
@@ -57,6 +58,8 @@ export default async function ProntuarioDetalhesPage({
   const { id } = await params;
   const { from } = await searchParams;
   const supabase = await createClient();
+  const ctx = await getClinicaAtual();
+  if (!ctx) notFound();
 
   const { data: prontuario } = await supabase
     .from("prontuarios")
