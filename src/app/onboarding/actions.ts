@@ -19,6 +19,7 @@ import {
   RQE_MAX,
 } from "@/app/(dashboard)/configuracoes/constants";
 import { ESTADOS_UF } from "@/app/(dashboard)/pacientes/types";
+import { uuidValido } from "@/lib/validators";
 
 export type OnboardingFormState = {
   success?: boolean;
@@ -264,7 +265,7 @@ export async function salvarHorariosOnboarding(
 
   const cookieStore = await cookies();
   const clinicaId = cookieStore.get("prontio_clinica_id")?.value;
-  if (!clinicaId) return { error: "Clínica não encontrada. Volte ao passo 1." };
+  if (!clinicaId || !uuidValido(clinicaId)) return { error: "Clínica não encontrada. Volte ao passo 1." };
 
   const duracao = parseInt(formData.get("duracao_consulta") as string, 10);
   if (isNaN(duracao) || duracao < 5 || duracao > 240) {
@@ -272,6 +273,10 @@ export async function salvarHorariosOnboarding(
   }
 
   const DIAS_KEYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+  const DIAS_LABELS: Record<string, string> = {
+    dom: "Domingo", seg: "Segunda", ter: "Terça", qua: "Quarta",
+    qui: "Quinta", sex: "Sexta", sab: "Sábado",
+  };
   const TIME_RE = /^\d{2}:\d{2}$/;
 
   const rows: {
@@ -296,22 +301,22 @@ export async function salvarHorariosOnboarding(
 
     if (ativo) {
       if (!hora_inicio || !hora_fim) {
-        return { error: `Horário de início e fim são obrigatórios para ${key}.` };
+        return { error: `Horário de início e fim são obrigatórios para ${DIAS_LABELS[key]}.` };
       }
       if (!TIME_RE.test(hora_inicio) || !TIME_RE.test(hora_fim)) {
-        return { error: `Formato de horário inválido para ${key}.` };
+        return { error: `Formato de horário inválido para ${DIAS_LABELS[key]}.` };
       }
       if (hora_fim <= hora_inicio) {
-        return { error: `Horário de término deve ser posterior ao início (${key}).` };
+        return { error: `Horário de término deve ser posterior ao início (${DIAS_LABELS[key]}).` };
       }
       if (intervalo_inicio && !TIME_RE.test(intervalo_inicio)) {
-        return { error: `Formato de intervalo inválido para ${key}.` };
+        return { error: `Formato de intervalo inválido para ${DIAS_LABELS[key]}.` };
       }
       if (intervalo_fim && !TIME_RE.test(intervalo_fim)) {
-        return { error: `Formato de intervalo inválido para ${key}.` };
+        return { error: `Formato de intervalo inválido para ${DIAS_LABELS[key]}.` };
       }
       if (intervalo_inicio && intervalo_fim && intervalo_fim <= intervalo_inicio) {
-        return { error: `Intervalo inválido para ${key}.` };
+        return { error: `Intervalo inválido para ${DIAS_LABELS[key]}.` };
       }
     }
 
@@ -341,14 +346,6 @@ export async function salvarHorariosOnboarding(
 }
 
 // ============================================
-// Pular onboarding
-// ============================================
-
-export async function pularOnboarding(): Promise<void> {
-  redirect("/onboarding?step=4");
-}
-
-// ============================================
 // Step 4: Iniciar checkout Stripe
 // ============================================
 
@@ -356,6 +353,15 @@ export async function iniciarCheckout(): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Usuário não autenticado." };
+
+  const { success: allowed } = await rateLimit({
+    key: `onboarding_checkout:${user.id}`,
+    maxAttempts: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de tentar novamente." };
+  }
 
   const cookieStore = await cookies();
   const clinicaId = cookieStore.get("prontio_clinica_id")?.value;
@@ -438,6 +444,10 @@ export async function iniciarCheckout(): Promise<{ error?: string }> {
 // ============================================
 
 export async function pularAssinatura(): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const cookieStore = await cookies();
   cookieStore.delete("prontio_onboarding");
   redirect("/");

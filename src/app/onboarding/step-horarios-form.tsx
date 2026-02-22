@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { salvarHorariosOnboarding, pularOnboarding, type OnboardingFormState } from "./actions";
+import Link from "next/link";
+import { salvarHorariosOnboarding, type OnboardingFormState } from "./actions";
 import { FormError } from "@/components/form-utils";
 
 const DIAS = [
@@ -182,14 +183,12 @@ export function StepHorariosForm() {
       </div>
 
       <div className="flex items-center justify-between pt-4">
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => pularOnboarding()}
-          className="text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50"
+        <Link
+          href="/onboarding?step=4"
+          className="text-sm font-medium text-gray-500 hover:text-gray-700"
         >
           Pular
-        </button>
+        </Link>
         <button
           type="submit"
           disabled={isPending}
