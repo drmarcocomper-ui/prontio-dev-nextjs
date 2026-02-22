@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { emailValido as validarEmail } from "@/lib/validators";
 import { uuidValido } from "@/lib/validators";
 import { EMAIL_MAX, SENHA_MIN, SENHA_MAX, PAPEIS_VALIDOS, type UsuarioFormState } from "./types";
+import { syncSubscriptionQuantity } from "@/lib/stripe-sync";
 
 /**
  * Criar usuário (auth + vínculo com clínica)
@@ -108,6 +109,10 @@ export async function criarUsuario(
     return { error: tratarErroSupabase(vinculoError, "criar", "vínculo do usuário") };
   }
 
+  if (papel === "profissional_saude") {
+    syncSubscriptionQuantity(clinicaId); // fire-and-forget
+  }
+
   revalidatePath("/usuarios");
   revalidatePath("/configuracoes");
   return { success: true };
@@ -167,6 +172,16 @@ export async function atualizarUsuario(
     }
   }
 
+  // Buscar papel anterior para detectar mudança envolvendo profissional_saude
+  const { data: vinculoAtual } = await admin
+    .from("usuarios_clinicas")
+    .select("papel")
+    .eq("id", vinculoId)
+    .eq("clinica_id", ctx.clinicaId)
+    .single();
+
+  const papelAnterior = vinculoAtual?.papel;
+
   const { error } = await admin
     .from("usuarios_clinicas")
     .update({ papel })
@@ -175,6 +190,11 @@ export async function atualizarUsuario(
 
   if (error) {
     return { error: tratarErroSupabase(error, "atualizar", "usuário") };
+  }
+
+  if (papelAnterior !== papel &&
+      (papelAnterior === "profissional_saude" || papel === "profissional_saude")) {
+    syncSubscriptionQuantity(ctx.clinicaId); // fire-and-forget
   }
 
   revalidatePath("/usuarios");
@@ -306,6 +326,10 @@ export async function removerVinculo(vinculoId: string): Promise<void> {
 
   if (error) {
     throw new Error(tratarErroSupabase(error, "excluir", "vínculo do usuário"));
+  }
+
+  if (vinculo.papel === "profissional_saude") {
+    syncSubscriptionQuantity(ctx.clinicaId); // fire-and-forget
   }
 
   revalidatePath("/usuarios");
