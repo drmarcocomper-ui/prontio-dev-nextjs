@@ -216,20 +216,20 @@ function ReceitaControleEspecialLayout({
   cfg: Record<string, string>;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 print:rounded-none print:border-0 print:shadow-none print:p-[20mm]">
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 print:rounded-none print:border-0 print:shadow-none print:p-[12mm]">
       {/* Header */}
-      <div className="border-b-2 border-gray-900 pb-4 text-center">
+      <div className="border-b-2 border-gray-900 pb-2 text-center">
         <h1 className="text-lg font-bold uppercase tracking-widest text-gray-900">
           Receituário de Controle Especial
         </h1>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-0.5 text-xs text-gray-500">
           1ª Via &ndash; Retenção da Farmácia
         </p>
       </div>
 
       {/* Dados do consultório */}
       {cfg.nome_consultorio && (
-        <div className="mt-4 text-center text-sm text-gray-700">
+        <div className="mt-2 text-center text-sm text-gray-700">
           <p className="font-semibold">{cfg.nome_consultorio}</p>
           {cfg.endereco_consultorio && <p>{cfg.endereco_consultorio}</p>}
           {cfg.telefone_consultorio && <p>Tel: {cfg.telefone_consultorio}</p>}
@@ -237,13 +237,13 @@ function ReceitaControleEspecialLayout({
       )}
 
       {/* Paciente e data */}
-      <div className="mt-6 grid grid-cols-[1fr_auto] gap-4 border-b border-gray-300 pb-4">
+      <div className="mt-3 grid grid-cols-[1fr_auto] gap-4 border-b border-gray-300 pb-2">
         <div>
           <p className="text-sm text-gray-700">
             <span className="font-semibold">Paciente:</span> {r.pacientes.nome}
           </p>
           {r.pacientes.cpf && (
-            <p className="mt-1 text-sm text-gray-700">
+            <p className="mt-0.5 text-sm text-gray-700">
               <span className="font-semibold">CPF:</span>{" "}
               {formatCPF(r.pacientes.cpf)}
             </p>
@@ -257,8 +257,8 @@ function ReceitaControleEspecialLayout({
       </div>
 
       {/* Prescrição */}
-      <div className="mt-6">
-        <h3 className="mb-4 border-b border-gray-200 pb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+      <div className="mt-3">
+        <h3 className="mb-2 border-b border-gray-200 pb-1 text-xs font-semibold uppercase tracking-widest text-gray-400">
           Prescrição
         </h3>
         <MedicamentosFormatted text={r.medicamentos} />
@@ -266,20 +266,20 @@ function ReceitaControleEspecialLayout({
 
       {/* Observações */}
       {r.observacoes && (
-        <div className="mt-6">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+        <div className="mt-3">
+          <h3 className="mb-1 text-xs font-semibold uppercase tracking-widest text-gray-400">
             Observações
           </h3>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+          <p className="whitespace-pre-wrap text-sm leading-snug text-gray-700">
             {r.observacoes}
           </p>
         </div>
       )}
 
       {/* Assinatura do médico */}
-      <div className="mt-12 flex flex-col items-center">
+      <div className="mt-6 flex flex-col items-center">
         <div className="w-72 border-b border-gray-900" />
-        <div className="mt-3 text-center">
+        <div className="mt-1.5 text-center">
           {cfg.nome_profissional && (
             <p className="text-sm font-bold text-gray-900">
               {cfg.nome_profissional}
@@ -297,18 +297,18 @@ function ReceitaControleEspecialLayout({
       </div>
 
       {/* 2ª Via */}
-      <div className="mt-8 border-t-2 border-dashed border-gray-400 pt-2 text-center">
+      <div className="mt-4 border-t-2 border-dashed border-gray-400 pt-1 text-center">
         <p className="text-xs font-semibold text-gray-500">
           2ª Via &ndash; Orientação ao Paciente
         </p>
       </div>
 
       {/* Identificação do Comprador */}
-      <div className="mt-8 border border-gray-300 rounded-lg p-4">
-        <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-700">
+      <div className="mt-4 border border-gray-300 rounded-lg p-3">
+        <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-700">
           Identificação do Comprador
         </h3>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex items-end gap-2">
             <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Nome:</span>
             <span className="flex-1 border-b border-gray-300" />
@@ -335,11 +335,11 @@ function ReceitaControleEspecialLayout({
       </div>
 
       {/* Identificação do Fornecedor */}
-      <div className="mt-6 border border-gray-300 rounded-lg p-4">
-        <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-700">
+      <div className="mt-3 border border-gray-300 rounded-lg p-3">
+        <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-700">
           Identificação do Fornecedor
         </h3>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex items-end gap-2">
             <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Assinatura do Farmacêutico:</span>
             <span className="flex-1 border-b border-gray-300" />
@@ -351,14 +351,6 @@ function ReceitaControleEspecialLayout({
         </div>
       </div>
 
-      {/* Footer */}
-      {cfg.nome_consultorio && (
-        <div className="mt-6 border-t border-gray-200 pt-4 text-center text-xs text-gray-400">
-          <p>{cfg.nome_consultorio}</p>
-          {cfg.endereco_consultorio && <p>{cfg.endereco_consultorio}</p>}
-          {cfg.telefone_consultorio && <p>Tel: {cfg.telefone_consultorio}</p>}
-        </div>
-      )}
     </div>
   );
 }
