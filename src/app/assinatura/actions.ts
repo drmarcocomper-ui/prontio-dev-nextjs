@@ -73,8 +73,9 @@ export async function criarCheckoutAssinatura(
   if (!customerId) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Sessão expirada. Faça login novamente." };
     const customer = await stripe.customers.create({
-      email: user?.email,
+      email: user.email,
       metadata: { clinica_id: clinicaId },
     });
     customerId = customer.id;
