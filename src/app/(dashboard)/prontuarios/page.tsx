@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Pagination } from "@/components/pagination";
 import { SortSelect } from "@/components/sort-select";
+import { SortableHeader } from "@/components/sortable-header";
 import { SearchInput } from "@/components/search-input";
 import { EmptyStateIllustration } from "@/components/empty-state";
 import { escapeLikePattern } from "@/lib/sanitize";
@@ -168,55 +169,116 @@ export default async function ProntuariosPage({
 
       {/* List */}
       {items.length > 0 ? (
-        <div className="space-y-3">
+        <>
+        {/* Mobile Cards */}
+        <div className="space-y-3 lg:hidden">
           {items.map((p) => (
             <Link
               key={p.id}
               href={`/prontuarios/${p.id}`}
-              className="block rounded-xl border border-gray-200 bg-white shadow-sm p-4 transition-all hover:border-gray-300 hover:shadow-md sm:p-5"
+              className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white shadow-sm p-4 transition-all hover:border-gray-300 hover:shadow-md"
             >
-              <div className="flex items-start gap-4">
-                {/* Avatar */}
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">
-                  {getInitials(p.pacientes.nome)}
-                </div>
-
-                {/* Content */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="truncate text-sm font-semibold text-gray-900">
-                      {p.pacientes.nome}
-                    </p>
-                    <span className="shrink-0 text-xs text-gray-500">
-                      {formatDate(p.data)}
-                    </span>
-                  </div>
-
-                  {/* Tags */}
-                  {p.tipo && (
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
-                        {TIPO_LABELS[p.tipo] ?? p.tipo}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Preview */}
-                  {p.queixa_principal && (
-                    <p className="mt-2 line-clamp-2 text-sm text-gray-600">
-                      {p.queixa_principal}
-                    </p>
-                  )}
-                </div>
-
-                {/* Chevron */}
-                <svg aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">
+                {getInitials(p.pacientes.nome)}
               </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-medium text-gray-900">{p.pacientes.nome}</p>
+                  <span className="shrink-0 text-xs text-gray-500">{formatDate(p.data)}</span>
+                </div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                  {p.tipo && (
+                    <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+                      {TIPO_LABELS[p.tipo] ?? p.tipo}
+                    </span>
+                  )}
+                  {p.queixa_principal && (
+                    <span className="truncate">{p.queixa_principal}</span>
+                  )}
+                </div>
+              </div>
+              <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
             </Link>
           ))}
         </div>
+
+        {/* Desktop Table */}
+        <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <SortableHeader
+                  label="Paciente"
+                  column="paciente"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/prontuarios"
+                  searchParams={sp}
+                />
+                <SortableHeader
+                  label="Data"
+                  column="data"
+                  currentColumn={sortColumn}
+                  currentDirection={sortDir}
+                  basePath="/prontuarios"
+                  searchParams={sp}
+                />
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Tipo
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Evolução
+                </th>
+                <th scope="col" className="w-12">
+                  <span className="sr-only">Ações</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {items.map((p) => (
+                <tr key={p.id} className="transition-colors even:bg-gray-50/50 hover:bg-primary-50/50">
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <Link href={`/prontuarios/${p.id}`} className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-700">
+                        {getInitials(p.pacientes.nome)}
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">{p.pacientes.nome}</p>
+                    </Link>
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                    {formatDate(p.data)}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    {p.tipo ? (
+                      <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+                        {TIPO_LABELS[p.tipo] ?? p.tipo}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">&mdash;</span>
+                    )}
+                  </td>
+                  <td className="max-w-xs truncate px-6 py-4 text-sm text-gray-500">
+                    {p.queixa_principal || <span className="text-gray-400">&mdash;</span>}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-right">
+                    <Link
+                      href={`/prontuarios/${p.id}`}
+                      aria-label="Ver detalhes"
+                      className="text-gray-400 transition-colors hover:text-gray-600"
+                    >
+                      <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm px-6 py-16 text-center">
           <EmptyStateIllustration type="prontuarios" />
