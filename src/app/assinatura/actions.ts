@@ -54,7 +54,11 @@ export async function criarCheckoutAssinatura(
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: priceId, quantity: numProfissionais }],
+    line_items: [{
+      price: priceId,
+      quantity: numProfissionais,
+      adjustable_quantity: { enabled: true, minimum: 1 },
+    }],
     success_url: `${siteUrl}/configuracoes?tab=assinatura&checkout=success`,
     cancel_url: `${siteUrl}/configuracoes?tab=assinatura`,
   });

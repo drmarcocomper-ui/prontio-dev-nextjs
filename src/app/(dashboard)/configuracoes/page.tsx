@@ -41,7 +41,7 @@ export default async function ConfiguracoesPage({
 
   // Load subscription data for "assinatura" tab
   type AssinaturaInfo = { subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; stripe_price_id: string | null };
-  let assinaturaData: AssinaturaInfo | null = null;
+  let assinaturaData: AssinaturaInfo = { subscription_status: null, trial_ends_at: null, current_period_end: null, stripe_price_id: null };
   let numProfissionais = 0;
   if (currentTab === "assinatura" && ctx?.clinicaId) {
     const { createAdminClient } = await import("@/lib/supabase/admin");
@@ -52,7 +52,9 @@ export default async function ConfiguracoesPage({
       .eq("id", ctx.clinicaId)
       .single();
 
-    assinaturaData = data as unknown as AssinaturaInfo | null;
+    if (data) {
+      assinaturaData = data as unknown as AssinaturaInfo;
+    }
 
     // Contar profissionais de saúde da clínica
     const { count } = await adminSupabase
@@ -328,7 +330,7 @@ export default async function ConfiguracoesPage({
       <Tabs papel={papel} />
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-6">
-        {currentTab === "assinatura" && ctx && assinaturaData && (
+        {currentTab === "assinatura" && ctx && (
           <AssinaturaTab
             clinicaId={ctx.clinicaId}
             subscriptionStatus={assinaturaData.subscription_status}
