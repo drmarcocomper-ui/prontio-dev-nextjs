@@ -7,7 +7,8 @@ import { rateLimit } from "@/lib/rate-limit";
 import { uuidValido } from "@/lib/validators";
 
 export async function criarCheckoutAssinatura(
-  clinicaId: string
+  clinicaId: string,
+  quantidade?: number
 ): Promise<{ error?: string }> {
   if (!clinicaId || !uuidValido(clinicaId)) {
     return { error: "Clínica inválida." };
@@ -47,7 +48,19 @@ export async function criarCheckoutAssinatura(
     .eq("clinica_id", clinicaId)
     .eq("papel", "profissional_saude");
 
-  const numProfissionais = Math.max(1, profCount ?? 0);
+  const minProfissionais = Math.max(1, profCount ?? 0);
+
+  // Se quantidade fornecida, validar que é >= mínimo; senão, usar contagem do DB
+  let numProfissionais = minProfissionais;
+  if (quantidade !== undefined) {
+    if (!Number.isInteger(quantidade) || quantidade < 1) {
+      return { error: "Quantidade inválida." };
+    }
+    if (quantidade < minProfissionais) {
+      return { error: `Quantidade mínima: ${minProfissionais} profissional(is).` };
+    }
+    numProfissionais = quantidade;
+  }
 
   const { data: clinica } = await admin
     .from("clinicas")

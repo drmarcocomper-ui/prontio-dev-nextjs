@@ -43,6 +43,15 @@ export default async function AssinaturaPage() {
     redirect("/");
   }
 
+  // Contar profissionais de saúde da clínica
+  const { count: profCount } = await admin
+    .from("usuarios_clinicas")
+    .select("id", { count: "exact", head: true })
+    .eq("clinica_id", clinicaId)
+    .eq("papel", "profissional_saude");
+
+  const numProfissionais = Math.max(1, profCount ?? 0);
+
   // Determinar estado para a UI
   let estado: "trial_expirado" | "past_due" | "canceled" = "trial_expirado";
   if (status === "past_due") {
@@ -62,7 +71,7 @@ export default async function AssinaturaPage() {
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-          <AssinaturaClient estado={estado} clinicaId={clinicaId} />
+          <AssinaturaClient estado={estado} clinicaId={clinicaId} numProfissionais={numProfissionais} />
         </div>
       </div>
     </div>

@@ -41,12 +41,13 @@ export function AssinaturaTab({
 
   const temAssinatura = status === "active" || status === "trialing" || status === "past_due";
 
-  const totalMensal = numProfissionais * 79;
+  const [quantidade, setQuantidade] = useState(numProfissionais);
+  const totalMensal = temAssinatura ? numProfissionais * 79 : quantidade * 79;
 
   function handleCheckout() {
     setError("");
     startTransition(async () => {
-      const result = await criarCheckoutAssinatura(clinicaId);
+      const result = await criarCheckoutAssinatura(clinicaId, quantidade);
       if (result?.error) setError(result.error);
     });
   }
@@ -90,17 +91,21 @@ export function AssinaturaTab({
           <span className="text-sm text-gray-900">R$ 79/mês por profissional</span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">Profissionais de saúde</span>
-          <span className="text-sm text-gray-900">{numProfissionais}</span>
-        </div>
+        {temAssinatura && (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Profissionais de saúde</span>
+              <span className="text-sm text-gray-900">{numProfissionais}</span>
+            </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">Total mensal estimado</span>
-          <span className="text-sm font-semibold text-gray-900">
-            R$ {totalMensal.toLocaleString("pt-BR")}/mês
-          </span>
-        </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Total mensal estimado</span>
+              <span className="text-sm font-semibold text-gray-900">
+                R$ {totalMensal.toLocaleString("pt-BR")}/mês
+              </span>
+            </div>
+          </>
+        )}
 
         {emTrial && diasRestantes !== null && (
           <div className="flex items-center justify-between">
@@ -124,6 +129,43 @@ export function AssinaturaTab({
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {/* Seletor de quantidade (quando sem assinatura) */}
+      {!temAssinatura && (
+        <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">Profissionais de saúde:</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setQuantidade((q) => Math.max(numProfissionais, q - 1))}
+                disabled={quantidade <= numProfissionais}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                </svg>
+              </button>
+              <span className="w-8 text-center text-base font-semibold text-gray-900">{quantidade}</span>
+              <button
+                type="button"
+                onClick={() => setQuantidade((q) => q + 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+            <span className="text-sm font-medium text-gray-700">Total:</span>
+            <span className="text-base font-bold text-gray-900">
+              R$ {(quantidade * 79).toLocaleString("pt-BR")}/mês
+            </span>
+          </div>
         </div>
       )}
 

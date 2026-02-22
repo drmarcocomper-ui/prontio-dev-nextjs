@@ -42,13 +42,16 @@ const ESTADOS = {
 export function AssinaturaClient({
   estado,
   clinicaId,
+  numProfissionais,
 }: {
   estado: "trial_expirado" | "past_due" | "canceled";
   clinicaId: string;
+  numProfissionais: number;
 }) {
   const info = ESTADOS[estado];
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
+  const [quantidade, setQuantidade] = useState(numProfissionais);
 
   function handleAction() {
     setError("");
@@ -57,7 +60,7 @@ export function AssinaturaClient({
         const result = await abrirPortalCliente(clinicaId);
         if (result?.error) setError(result.error);
       } else {
-        const result = await criarCheckoutAssinatura(clinicaId);
+        const result = await criarCheckoutAssinatura(clinicaId, quantidade);
         if (result?.error) setError(result.error);
       }
     });
@@ -73,10 +76,43 @@ export function AssinaturaClient({
       </div>
 
       {info.acao === "checkout" && (
-        <div className="rounded-xl border-2 border-sky-500 bg-sky-50 p-4 text-sm">
+        <div className="rounded-xl border-2 border-sky-500 bg-sky-50 p-4 text-sm space-y-3">
           <div className="font-semibold text-gray-900">R$ 79/mês por profissional de saúde</div>
-          <div className="mt-1 text-gray-500">
+          <div className="text-gray-500">
             Gestores, secretárias e financeiro não são cobrados.
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-sm font-medium text-gray-700">Profissionais de saúde:</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setQuantidade((q) => Math.max(numProfissionais, q - 1))}
+                disabled={quantidade <= numProfissionais}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                </svg>
+              </button>
+              <span className="w-8 text-center text-base font-semibold text-gray-900">{quantidade}</span>
+              <button
+                type="button"
+                onClick={() => setQuantidade((q) => q + 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-sky-200 pt-3">
+            <span className="text-sm font-medium text-gray-700">Total:</span>
+            <span className="text-base font-bold text-gray-900">
+              R$ {(quantidade * 79).toLocaleString("pt-BR")}/mês
+            </span>
           </div>
         </div>
       )}
