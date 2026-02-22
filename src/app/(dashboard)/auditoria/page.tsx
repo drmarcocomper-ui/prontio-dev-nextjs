@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, getAuthEmailMap } from "@/lib/supabase/admin";
 import { getClinicaAtual, isGestor } from "@/lib/clinica";
 import { Pagination } from "@/components/pagination";
@@ -50,9 +49,9 @@ export default async function AuditoriaPage({
   const { pagina, acao, recurso, data_inicio, data_fim } = await searchParams;
   const currentPage = Math.max(1, Number(pagina) || 1);
 
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
-  let query = supabase
+  let query = admin
     .from("audit_logs")
     .select("*", { count: "exact" })
     .eq("clinica_id", ctx.clinicaId)
@@ -81,7 +80,6 @@ export default async function AuditoriaPage({
   const uniqueUserIds = [...new Set(items.map((l) => l.user_id))];
   let emailMap: Record<string, string> = {};
   try {
-    const admin = createAdminClient();
     emailMap = await getAuthEmailMap(admin, uniqueUserIds);
   } catch {
     // If admin client fails, show user_id instead
