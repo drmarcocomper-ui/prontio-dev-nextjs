@@ -184,7 +184,9 @@ describe("ProntuarioForm", () => {
     localStorage.setItem("prontio_anamnese_seeded_user-2", "1");
     const seeds = [{ id: "s1", nome: "Seed", texto: "Texto" }];
     render(<ProntuarioForm userId="user-2" seedTemplates={seeds} />);
-    expect(screen.queryByTestId("template-select")).not.toBeInTheDocument();
+    const select = screen.getByTestId("template-select") as HTMLSelectElement;
+    expect(select).toBeDisabled();
+    expect(select.querySelector('option[value="s1"]')).toBeNull();
     localStorage.removeItem("prontio_anamnese_seeded_user-2");
   });
 
@@ -240,6 +242,14 @@ describe("ProntuarioForm", () => {
     const select = screen.getByTestId("template-select") as HTMLSelectElement;
     expect(select.querySelector('option[value="s1"]')).toBeNull();
     expect(select.querySelector('option[value="s2"]')).toBeInTheDocument();
+  });
+
+  it("dropdown aparece desabilitado quando não há templates", () => {
+    render(<ProntuarioForm />);
+    const select = screen.getByTestId("template-select") as HTMLSelectElement;
+    expect(select).toBeDisabled();
+    expect(select).toHaveTextContent("Nenhum template");
+    expect(screen.queryByTestId("manage-templates-btn")).not.toBeInTheDocument();
   });
 
   it("editar template altera nome e texto", () => {

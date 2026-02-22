@@ -271,23 +271,24 @@ export function ProntuarioForm({
           </div>
         )}
 
-        {templates.length > 0 && (
-          <div className="mt-2 flex items-center gap-2">
-            <select
-              data-testid="template-select"
-              className={INPUT_CLASS}
-              value=""
-              onChange={(e) => {
-                const t = templates.find((tpl) => tpl.id === e.target.value);
-                if (t) applyTemplate(t);
-                e.target.value = "";
-              }}
-            >
-              <option value="">Selecione um template...</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>{t.nome}</option>
-              ))}
-            </select>
+        <div className="mt-2 flex items-center gap-2">
+          <select
+            data-testid="template-select"
+            className={INPUT_CLASS}
+            value=""
+            disabled={templates.length === 0}
+            onChange={(e) => {
+              const t = templates.find((tpl) => tpl.id === e.target.value);
+              if (t) applyTemplate(t);
+              e.target.value = "";
+            }}
+          >
+            <option value="">{templates.length === 0 ? "Nenhum template — salve um acima" : "Selecione um template..."}</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>{t.nome}</option>
+            ))}
+          </select>
+          {templates.length > 0 && (
             <button
               type="button"
               onClick={() => setShowManageTemplates(!showManageTemplates)}
@@ -296,8 +297,8 @@ export function ProntuarioForm({
             >
               Gerenciar
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {showManageTemplates && templates.length > 0 && (
           <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3" data-testid="manage-templates-list">
