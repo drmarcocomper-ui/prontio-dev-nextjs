@@ -76,6 +76,30 @@ export default function SignupForm() {
           <FieldError id="confirm_password-error" message={state.fieldErrors?.confirm_password} />
         </div>
 
+        <div className="flex items-start gap-2">
+          <input
+            id="aceite_termos"
+            name="aceite_termos"
+            type="checkbox"
+            required
+            disabled={isPending}
+            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            {...ariaProps("aceite_termos", state.fieldErrors?.aceite_termos)}
+          />
+          <label htmlFor="aceite_termos" className="text-sm text-gray-600">
+            Li e aceito os{" "}
+            <Link href="/termos" target="_blank" className="font-medium text-primary-600 hover:text-primary-700">
+              Termos de Uso
+            </Link>{" "}
+            e a{" "}
+            <Link href="/privacidade" target="_blank" className="font-medium text-primary-600 hover:text-primary-700">
+              Política de Privacidade
+            </Link>
+            .
+          </label>
+        </div>
+        <FieldError id="aceite_termos-error" message={state.fieldErrors?.aceite_termos} />
+
         <button
           type="submit"
           disabled={isPending}

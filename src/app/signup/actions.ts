@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAuditEvent } from "@/lib/audit";
 import { SENHA_MIN, SENHA_MAX, EMAIL_MAX } from "@/app/(dashboard)/configuracoes/constants";
 
 export type SignupFormState = {
@@ -60,6 +61,11 @@ export async function signup(
     fieldErrors.confirm_password = "As senhas não coincidem.";
   }
 
+  const aceiteTermos = formData.get("aceite_termos") === "on";
+  if (!aceiteTermos) {
+    fieldErrors.aceite_termos = "Você precisa aceitar os Termos de Uso e a Política de Privacidade.";
+  }
+
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors };
   }
@@ -68,7 +74,7 @@ export async function signup(
 
   const origin = headersList.get("origin") || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -81,6 +87,20 @@ export async function signup(
       return { error: "Este e-mail já está cadastrado. Tente fazer login." };
     }
     return { error: "Erro ao criar conta. Tente novamente." };
+  }
+
+  if (data?.user) {
+    void logAuditEvent({
+      userId: data.user.id,
+      acao: "aceitar_termos",
+      recurso: "consentimento",
+      detalhes: {
+        termos_url: "/termos",
+        privacidade_url: "/privacidade",
+        ip,
+        user_agent: headersList.get("user-agent"),
+      },
+    });
   }
 
   redirect("/signup/confirmar");

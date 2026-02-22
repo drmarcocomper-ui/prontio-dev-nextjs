@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { CookieConsent } from "@/components/cookie-consent";
 import { getTheme } from "@/lib/theme.server";
 import "./globals.css";
 
@@ -67,6 +68,7 @@ export default async function RootLayout({
           <Toaster richColors position="top-right" />
         </div>
         <ServiceWorkerRegister />
+        <CookieConsent />
       </body>
     </html>
   );
