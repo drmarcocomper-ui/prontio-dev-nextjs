@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const formState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
@@ -168,12 +168,14 @@ describe("ProntuarioForm", () => {
     expect(screen.getByText("Salvar como template")).toBeInTheDocument();
   });
 
-  it("carrega seed templates quando não há templates existentes", () => {
+  it("carrega seed templates no dropdown quando não há templates existentes", () => {
     const seeds = [
       { id: "s1", nome: "Template 1", texto: "Texto 1" },
       { id: "s2", nome: "Template 2", texto: "Texto 2" },
     ];
     render(<ProntuarioForm userId="user-1" seedTemplates={seeds} />);
+    const select = screen.getByTestId("template-select") as HTMLSelectElement;
+    expect(select).toBeInTheDocument();
     expect(screen.getByText("Template 1")).toBeInTheDocument();
     expect(screen.getByText("Template 2")).toBeInTheDocument();
   });
@@ -182,7 +184,7 @@ describe("ProntuarioForm", () => {
     localStorage.setItem("prontio_anamnese_seeded_user-2", "1");
     const seeds = [{ id: "s1", nome: "Seed", texto: "Texto" }];
     render(<ProntuarioForm userId="user-2" seedTemplates={seeds} />);
-    expect(screen.queryByText("Seed")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("template-select")).not.toBeInTheDocument();
     localStorage.removeItem("prontio_anamnese_seeded_user-2");
   });
 
@@ -192,7 +194,65 @@ describe("ProntuarioForm", () => {
       JSON.stringify([{ id: "t1", nome: "Meu Template", texto: "Texto" }])
     );
     render(<ProntuarioForm userId="user-3" />);
+    const select = screen.getByTestId("template-select");
+    expect(select).toBeInTheDocument();
     expect(screen.getByText("Meu Template")).toBeInTheDocument();
     localStorage.removeItem("prontio_anamnese_templates_user-3");
+  });
+
+  it("selecionar template adiciona texto ao final do textarea", () => {
+    const seeds = [{ id: "s1", nome: "Template A", texto: "Texto do template" }];
+    render(<ProntuarioForm userId="user-append" seedTemplates={seeds} />);
+    const textarea = screen.getByLabelText(/Evolução/) as HTMLTextAreaElement;
+    textarea.value = "Texto existente";
+    const select = screen.getByTestId("template-select") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "s1" } });
+    expect(textarea.value).toBe("Texto existente\nTexto do template");
+  });
+
+  it("selecionar template em textarea vazio não adiciona newline", () => {
+    const seeds = [{ id: "s1", nome: "Template A", texto: "Texto do template" }];
+    render(<ProntuarioForm userId="user-empty" seedTemplates={seeds} />);
+    const textarea = screen.getByLabelText(/Evolução/) as HTMLTextAreaElement;
+    const select = screen.getByTestId("template-select") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "s1" } });
+    expect(textarea.value).toBe("Texto do template");
+  });
+
+  it("botão Gerenciar mostra e esconde a lista de templates", () => {
+    const seeds = [{ id: "s1", nome: "Template A", texto: "Texto" }];
+    render(<ProntuarioForm userId="user-manage" seedTemplates={seeds} />);
+    expect(screen.queryByTestId("manage-templates-list")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("manage-templates-btn"));
+    expect(screen.getByTestId("manage-templates-list")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("manage-templates-btn"));
+    expect(screen.queryByTestId("manage-templates-list")).not.toBeInTheDocument();
+  });
+
+  it("excluir template remove do dropdown", () => {
+    const seeds = [
+      { id: "s1", nome: "Template A", texto: "Texto A" },
+      { id: "s2", nome: "Template B", texto: "Texto B" },
+    ];
+    render(<ProntuarioForm userId="user-delete" seedTemplates={seeds} />);
+    fireEvent.click(screen.getByTestId("manage-templates-btn"));
+    fireEvent.click(screen.getByTestId("delete-btn-s1"));
+    const select = screen.getByTestId("template-select") as HTMLSelectElement;
+    expect(select.querySelector('option[value="s1"]')).toBeNull();
+    expect(select.querySelector('option[value="s2"]')).toBeInTheDocument();
+  });
+
+  it("editar template altera nome e texto", () => {
+    const seeds = [{ id: "s1", nome: "Original", texto: "Texto original" }];
+    render(<ProntuarioForm userId="user-edit" seedTemplates={seeds} />);
+    fireEvent.click(screen.getByTestId("manage-templates-btn"));
+    fireEvent.click(screen.getByTestId("edit-btn-s1"));
+    const nameInput = screen.getByTestId("edit-name-s1") as HTMLInputElement;
+    const textoInput = screen.getByTestId("edit-texto-s1") as HTMLTextAreaElement;
+    fireEvent.change(nameInput, { target: { value: "Editado" } });
+    fireEvent.change(textoInput, { target: { value: "Texto editado" } });
+    fireEvent.click(screen.getByTestId("edit-save-s1"));
+    const select = screen.getByTestId("template-select");
+    expect(select).toHaveTextContent("Editado");
   });
 });
