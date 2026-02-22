@@ -42,6 +42,7 @@ export default async function ConfiguracoesPage({
   // Load subscription data for "assinatura" tab
   type AssinaturaInfo = { subscription_status: string | null; trial_ends_at: string | null; current_period_end: string | null; stripe_price_id: string | null };
   let assinaturaData: AssinaturaInfo | null = null;
+  let numProfissionais = 0;
   if (currentTab === "assinatura" && ctx?.clinicaId) {
     const { createAdminClient } = await import("@/lib/supabase/admin");
     const adminSupabase = createAdminClient();
@@ -52,6 +53,15 @@ export default async function ConfiguracoesPage({
       .single();
 
     assinaturaData = data as unknown as AssinaturaInfo | null;
+
+    // Contar profissionais de saúde da clínica
+    const { count } = await adminSupabase
+      .from("usuarios_clinicas")
+      .select("id", { count: "exact", head: true })
+      .eq("clinica_id", ctx.clinicaId)
+      .eq("papel", "profissional_saude");
+
+    numProfissionais = Math.max(1, count ?? 0);
   }
 
   // Load clinic data for "clinica" tab
@@ -325,6 +335,7 @@ export default async function ConfiguracoesPage({
             trialEndsAt={assinaturaData.trial_ends_at}
             currentPeriodEnd={assinaturaData.current_period_end}
             stripePriceId={assinaturaData.stripe_price_id}
+            numProfissionais={numProfissionais}
           />
         )}
         {currentTab === "clinica" && (

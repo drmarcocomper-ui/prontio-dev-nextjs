@@ -47,7 +47,6 @@ export function AssinaturaClient({
   clinicaId: string;
 }) {
   const info = ESTADOS[estado];
-  const [plano, setPlano] = useState<"mensal" | "anual">("anual");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
@@ -58,7 +57,7 @@ export function AssinaturaClient({
         const result = await abrirPortalCliente(clinicaId);
         if (result?.error) setError(result.error);
       } else {
-        const result = await criarCheckoutAssinatura(clinicaId, plano);
+        const result = await criarCheckoutAssinatura(clinicaId);
         if (result?.error) setError(result.error);
       }
     });
@@ -74,31 +73,11 @@ export function AssinaturaClient({
       </div>
 
       {info.acao === "checkout" && (
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => setPlano("mensal")}
-            className={`flex-1 rounded-lg border-2 p-3 text-sm transition-colors ${
-              plano === "mensal"
-                ? "border-sky-500 bg-sky-50"
-                : "border-gray-200 hover:border-gray-300"
-            }`}
-          >
-            <div className="font-semibold text-gray-900">R$ 149/mês</div>
-            <div className="text-gray-500">Mensal</div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setPlano("anual")}
-            className={`flex-1 rounded-lg border-2 p-3 text-sm transition-colors ${
-              plano === "anual"
-                ? "border-sky-500 bg-sky-50"
-                : "border-gray-200 hover:border-gray-300"
-            }`}
-          >
-            <div className="font-semibold text-gray-900">R$ 1.190/ano</div>
-            <div className="text-emerald-600 font-medium">Economize 33%</div>
-          </button>
+        <div className="rounded-xl border-2 border-sky-500 bg-sky-50 p-4 text-sm">
+          <div className="font-semibold text-gray-900">R$ 79/mês por profissional de saúde</div>
+          <div className="mt-1 text-gray-500">
+            Gestores, secretárias e financeiro não são cobrados.
+          </div>
         </div>
       )}
 

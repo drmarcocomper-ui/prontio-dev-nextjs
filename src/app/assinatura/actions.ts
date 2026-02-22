@@ -4,8 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export async function criarCheckoutAssinatura(
-  clinicaId: string,
-  plano: "mensal" | "anual"
+  clinicaId: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -14,11 +13,20 @@ export async function criarCheckoutAssinatura(
   const { getStripe, STRIPE_PRICES } = await import("@/lib/stripe");
   const stripe = getStripe();
 
-  const priceId = plano === "anual" ? STRIPE_PRICES.anual : STRIPE_PRICES.mensal;
+  const priceId = STRIPE_PRICES.por_profissional;
   if (!priceId) return { error: "Preço não configurado." };
 
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
+
+  // Contar profissionais de saúde da clínica (mínimo 1)
+  const { count: profCount } = await admin
+    .from("usuarios_clinicas")
+    .select("id", { count: "exact", head: true })
+    .eq("clinica_id", clinicaId)
+    .eq("papel", "profissional_saude");
+
+  const numProfissionais = Math.max(1, profCount ?? 0);
 
   const { data: clinica } = await admin
     .from("clinicas")
@@ -46,7 +54,7 @@ export async function criarCheckoutAssinatura(
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: numProfissionais }],
     success_url: `${siteUrl}/configuracoes?tab=assinatura&checkout=success`,
     cancel_url: `${siteUrl}/configuracoes?tab=assinatura`,
   });

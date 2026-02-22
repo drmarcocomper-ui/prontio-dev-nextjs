@@ -14,6 +14,5 @@ export function getStripe(): Stripe {
 }
 
 export const STRIPE_PRICES = {
-  mensal: process.env.STRIPE_PRICE_MENSAL_ID ?? "",
-  anual: process.env.STRIPE_PRICE_ANUAL_ID ?? "",
+  por_profissional: process.env.STRIPE_PRICE_POR_PROFISSIONAL_ID ?? "",
 } as const;

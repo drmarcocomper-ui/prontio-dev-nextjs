@@ -9,6 +9,7 @@ interface AssinaturaTabProps {
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   stripePriceId: string | null;
+  numProfissionais: number;
 }
 
 const STATUS_LABELS: Record<string, { label: string; cor: string }> = {
@@ -25,9 +26,8 @@ export function AssinaturaTab({
   subscriptionStatus,
   trialEndsAt,
   currentPeriodEnd,
-  stripePriceId,
+  numProfissionais,
 }: AssinaturaTabProps) {
-  const [plano, setPlano] = useState<"mensal" | "anual">("anual");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
@@ -42,16 +42,12 @@ export function AssinaturaTab({
 
   const temAssinatura = status === "active" || status === "trialing" || status === "past_due";
 
-  // Determinar plano pelo price ID
-  const mensalPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_MENSAL_ID;
-  const planoNome = stripePriceId
-    ? stripePriceId === mensalPriceId ? "Mensal" : "Anual"
-    : null;
+  const totalMensal = numProfissionais * 79;
 
   function handleCheckout() {
     setError("");
     startTransition(async () => {
-      const result = await criarCheckoutAssinatura(clinicaId, plano);
+      const result = await criarCheckoutAssinatura(clinicaId);
       if (result?.error) setError(result.error);
     });
   }
@@ -90,12 +86,22 @@ export function AssinaturaTab({
           )}
         </div>
 
-        {planoNome && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Plano</span>
-            <span className="text-sm text-gray-900">{planoNome}</span>
-          </div>
-        )}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700">Plano</span>
+          <span className="text-sm text-gray-900">R$ 79/mês por profissional</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700">Profissionais de saúde</span>
+          <span className="text-sm text-gray-900">{numProfissionais}</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700">Total mensal estimado</span>
+          <span className="text-sm font-semibold text-gray-900">
+            R$ {totalMensal.toLocaleString("pt-BR")}/mês
+          </span>
+        </div>
 
         {emTrial && diasRestantes !== null && (
           <div className="flex items-center justify-between">
@@ -148,53 +154,24 @@ export function AssinaturaTab({
           )}
         </button>
       ) : (
-        <div className="space-y-4">
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setPlano("mensal")}
-              className={`flex-1 rounded-lg border-2 p-3 text-sm transition-colors ${
-                plano === "mensal"
-                  ? "border-sky-500 bg-sky-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              <div className="font-semibold text-gray-900">R$ 149/mês</div>
-              <div className="text-gray-500">Mensal</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setPlano("anual")}
-              className={`flex-1 rounded-lg border-2 p-3 text-sm transition-colors ${
-                plano === "anual"
-                  ? "border-sky-500 bg-sky-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              <div className="font-semibold text-gray-900">R$ 1.190/ano</div>
-              <div className="text-emerald-600 font-medium">Economize 33%</div>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleCheckout}
-            disabled={isPending}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
-          >
-            {isPending ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Processando...
-              </>
-            ) : (
-              "Assinar agora"
-            )}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleCheckout}
+          disabled={isPending}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
+        >
+          {isPending ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Processando...
+            </>
+          ) : (
+            "Assinar agora"
+          )}
+        </button>
       )}
     </div>
   );

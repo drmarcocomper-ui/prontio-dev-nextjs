@@ -352,9 +352,7 @@ export async function pularOnboarding(): Promise<void> {
 // Step 4: Iniciar checkout Stripe
 // ============================================
 
-export async function iniciarCheckout(
-  plano: "mensal" | "anual"
-): Promise<{ error?: string }> {
+export async function iniciarCheckout(): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Usuário não autenticado." };
@@ -366,11 +364,20 @@ export async function iniciarCheckout(
   const { getStripe, STRIPE_PRICES } = await import("@/lib/stripe");
   const stripe = getStripe();
 
-  const priceId = plano === "anual" ? STRIPE_PRICES.anual : STRIPE_PRICES.mensal;
+  const priceId = STRIPE_PRICES.por_profissional;
   if (!priceId) return { error: "Preço não configurado." };
 
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
+
+  // Contar profissionais de saúde da clínica (mínimo 1)
+  const { count: profCount } = await admin
+    .from("usuarios_clinicas")
+    .select("id", { count: "exact", head: true })
+    .eq("clinica_id", clinicaId)
+    .eq("papel", "profissional_saude");
+
+  const numProfissionais = Math.max(1, profCount ?? 0);
 
   // Buscar ou criar Stripe Customer
   const { data: clinica } = await admin
@@ -406,7 +413,7 @@ export async function iniciarCheckout(
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: numProfissionais }],
     ...(trialEndUnix ? { subscription_data: { trial_end: trialEndUnix } } : {}),
     success_url: `${siteUrl}/onboarding/sucesso?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${siteUrl}/onboarding?step=4`,

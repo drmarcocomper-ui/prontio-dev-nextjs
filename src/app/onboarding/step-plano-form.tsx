@@ -3,33 +3,14 @@
 import { useState, useTransition } from "react";
 import { iniciarCheckout, pularAssinatura } from "./actions";
 
-const PLANOS = [
-  {
-    id: "mensal" as const,
-    nome: "Mensal",
-    preco: "R$ 149",
-    periodo: "/mês",
-    destaque: false,
-  },
-  {
-    id: "anual" as const,
-    nome: "Anual",
-    preco: "R$ 1.190",
-    periodo: "/ano",
-    destaque: true,
-    badge: "Economize 33%",
-  },
-];
-
 export function StepPlanoForm() {
-  const [planoSelecionado, setPlanoSelecionado] = useState<"mensal" | "anual">("anual");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
   function handleCheckout() {
     setError("");
     startTransition(async () => {
-      const result = await iniciarCheckout(planoSelecionado);
+      const result = await iniciarCheckout();
       if (result?.error) {
         setError(result.error);
       }
@@ -44,54 +25,25 @@ export function StepPlanoForm() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {PLANOS.map((plano) => (
-          <button
-            key={plano.id}
-            type="button"
-            onClick={() => setPlanoSelecionado(plano.id)}
-            className={`relative rounded-xl border-2 p-5 text-left transition-colors ${
-              planoSelecionado === plano.id
-                ? "border-sky-500 bg-sky-50 ring-1 ring-sky-500"
-                : "border-gray-200 bg-white hover:border-gray-300"
-            }`}
-          >
-            {plano.badge && (
-              <span className="absolute -top-2.5 right-3 rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-semibold text-white">
-                {plano.badge}
-              </span>
-            )}
-            <div className="mb-1 text-sm font-medium text-gray-500">{plano.nome}</div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-gray-900">{plano.preco}</span>
-              <span className="text-sm text-gray-500">{plano.periodo}</span>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <div
-                className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                  planoSelecionado === plano.id
-                    ? "border-sky-500 bg-sky-500"
-                    : "border-gray-300"
-                }`}
-              >
-                {planoSelecionado === plano.id && (
-                  <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-sm text-gray-600">
-                {planoSelecionado === plano.id ? "Selecionado" : "Selecionar"}
-              </span>
-            </div>
-          </button>
-        ))}
+      <div className="rounded-xl border-2 border-sky-500 bg-sky-50 p-5 ring-1 ring-sky-500">
+        <div className="mb-1 text-sm font-medium text-gray-500">Por profissional de saúde</div>
+        <div className="flex items-baseline gap-1">
+          <span className="text-2xl font-bold text-gray-900">R$ 79</span>
+          <span className="text-sm text-gray-500">/mês por profissional</span>
+        </div>
+        <p className="mt-3 text-sm text-gray-600">
+          Cobrado por profissional de saúde vinculado à clínica (médicos, psicólogos, nutricionistas, etc.).
+          Gestores, secretárias e financeiro não são cobrados.
+        </p>
       </div>
 
-      <div className="rounded-lg bg-gray-50 p-4">
+      <div className="rounded-lg bg-gray-50 p-4 space-y-2">
         <p className="text-sm text-gray-600">
           Você tem <span className="font-semibold text-gray-900">14 dias grátis</span> para testar o Prontio.
           A cobrança só começa após o período de teste.
+        </p>
+        <p className="text-sm text-gray-500">
+          Durante o cadastro, a quantidade inicial será de 1 profissional (você).
         </p>
       </div>
 
