@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { tratarErroSupabase } from "@/lib/supabase-errors";
+import { escapeLikePattern } from "@/lib/sanitize";
 import { campoObrigatorio, tamanhoMaximo, dataNaoFutura, emailValido, valorPermitido, uuidValido } from "@/lib/validators";
 import {
   NOME_MAX_LENGTH, RG_MAX_LENGTH, EMAIL_MAX_LENGTH,
@@ -182,7 +183,8 @@ export async function atualizarPaciente(
       bairro, cidade, estado, convenio, observacoes,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("clinica_id", ctx.clinicaId);
 
   if (error) {
     if (error.code === "23505") {
@@ -261,6 +263,52 @@ export async function criarPacienteRapido(data: {
   revalidatePath("/", "page");
   return { id: inserted.id, nome: nome! };
 }
+
+export async function exportarPacientesCSV(filtros?: {
+  q?: string;
+  sexo?: string;
+}): Promise<PacienteCSV[]> {
+  const ctx = await getClinicaAtual();
+  if (!ctx) return [];
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("pacientes")
+    .select("nome, cpf, rg, data_nascimento, sexo, estado_civil, telefone, email, endereco, numero, complemento, bairro, cidade, estado, cep, convenio")
+    .order("nome", { ascending: true })
+    .limit(10000);
+
+  if (filtros?.q) {
+    const escaped = escapeLikePattern(filtros.q);
+    query = query.or(`nome.ilike.%${escaped}%,cpf.ilike.%${escaped}%,telefone.ilike.%${escaped}%`);
+  }
+  if (filtros?.sexo) {
+    query = query.eq("sexo", filtros.sexo);
+  }
+
+  const { data } = await query;
+  return (data ?? []) as PacienteCSV[];
+}
+
+export type PacienteCSV = {
+  nome: string;
+  cpf: string | null;
+  rg: string | null;
+  data_nascimento: string | null;
+  sexo: string | null;
+  estado_civil: string | null;
+  telefone: string | null;
+  email: string | null;
+  endereco: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+  cep: string | null;
+  convenio: string | null;
+};
 
 export async function excluirPaciente(id: string): Promise<void> {
   if (!uuidValido(id)) {
