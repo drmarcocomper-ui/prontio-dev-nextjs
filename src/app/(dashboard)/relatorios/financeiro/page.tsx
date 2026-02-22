@@ -23,6 +23,7 @@ import {
 } from "./utils";
 import { redirect } from "next/navigation";
 import { getClinicaAtual } from "@/lib/clinica";
+import { ReportNav } from "../components/report-nav";
 
 export const metadata: Metadata = { title: "Relatório Financeiro" };
 
@@ -70,9 +71,10 @@ export default async function RelatorioFinanceiroPage({
     <div className="animate-fade-in space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="space-y-3">
           <h1 className="text-2xl font-bold text-gray-900">Relatório Financeiro</h1>
-          <p className="mt-1 text-sm capitalize text-gray-500">{monthLabel}</p>
+          <ReportNav />
+          <p className="text-sm capitalize text-gray-500">{monthLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <MonthFilter currentMonth={currentMonth} />

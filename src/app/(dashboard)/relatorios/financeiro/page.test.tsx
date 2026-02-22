@@ -25,6 +25,10 @@ vi.mock("./export-csv-button", () => ({
   ExportCsvButton: () => <button data-testid="export-csv">Exportar CSV</button>,
 }));
 
+vi.mock("../components/report-nav", () => ({
+  ReportNav: () => <nav data-testid="report-nav" />,
+}));
+
 vi.mock("./utils", async () => {
   const actual = await vi.importActual("./utils");
   return { ...actual };
